@@ -1,0 +1,44 @@
+<!-- Sliding box -->
+
+<XML>
+  <DRIVER>
+    <camera position="0 7.0 0.5" target="0 0 0" up="0 0 1" />
+    <window location="0 0" size="640 480" />
+  </DRIVER>
+
+  <MOBY>
+    <Box id="ground-primitive" xlen="10" ylen="10" zlen="0.05" />
+
+    <ODEPACKIntegrator id="odepack" type="VectorN" stiff="false" min-step-size="0" rel-err-tol="0" abs-err-tol="1e-4" />
+    <EulerIntegrator id="euler" type="VectorN" />
+
+    <GeneralizedCCD id="ccd" ori-integrator-id="euler" eps-tolerance="1e-3" toi-tolerance="1e-3">
+      <Body body-id="box" />
+      <Body body-id="ground" />
+    </GeneralizedCCD>
+
+    <GravityForce id="gravity" accel="0 0 -9.81" />
+
+  <EventDrivenSimulator integrator-id="euler" collision-detector-id="ccd">
+    <RecurrentForce recurrent-force-id="gravity" enabled="true" /> 
+    <DynamicBody dynamic-body-id="box" />
+    <DynamicBody dynamic-body-id="ground" />
+    <ContactParameters object1-id="box" object2-id="ground" restitution="0" mu-coulomb="0.5" />
+  </EventDrivenSimulator>
+
+  <Box id="b1" xlen="1" ylen="1" zlen="1" density="1.0" edge-sample-length="1" />
+
+  <!-- the box -->
+  <RigidBody name="box" id="box" enabled="true" position="0 0 0.53" angular-velocity="0 0 0" visualization-id="b1" linear-velocity="0 0 0">
+    <InertiaFromPrimitive primitive-id="b1" />
+    <CollisionGeometry primitive-id="b1" />
+  </RigidBody>
+
+  <!-- setup the platform rigid body; it is not active -->
+  <RigidBody id="ground" enabled="false"
+    position="0 0 0" visualization-id="ground-primitive">
+    <CollisionGeometry primitive-id="ground-primitive" /> 
+  </RigidBody>
+
+  </MOBY>
+</XML>

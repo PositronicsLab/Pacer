@@ -23,7 +23,7 @@
     <RecurrentForce recurrent-force-id="gravity" enabled="true" /> 
     <DynamicBody dynamic-body-id="box" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="box" object2-id="ground" restitution="0" mu-coulomb="0.5" />
+    <ContactParameters object1-id="box" object2-id="ground" restitution="0" mu-coulomb="0.4" />
   </EventDrivenSimulator>
 
   <Box id="b1" xlen="1" ylen="1" zlen="1" density="1.0" edge-sample-length="1" />

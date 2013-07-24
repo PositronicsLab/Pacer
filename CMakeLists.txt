@@ -21,4 +21,5 @@ set(box_srcs estimatefrict.cpp Box.cpp output.cpp)
 set(hyq_srcs estimatefrict.cpp PD-controller.cpp output.cpp)
 
 add_library(${PROJECT_NAME} ${box_srcs})
+#add_library(${PROJECT_NAME} ${hyq_srcs})
 target_link_libraries(${PROJECT_NAME} Moby)

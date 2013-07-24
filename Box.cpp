@@ -58,10 +58,8 @@ Vec cf_moby;
 void event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empty)
 {
     contacts.clear();
+    // limit to minimum number of contacts (NX)
     int nc = e.size();
-
-    contacts.resize(nc);
-
     cf_moby.set_zero(nc*3);
     for(unsigned i=0;i<nc;i++){
         if (e[i].event_type == Event::eContact)
@@ -88,7 +86,7 @@ void event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empty)
             if(e[i].contact_impulse[2] != 0)
                 std::cout << "MU_APPLIED : " << (sqrt(e[i].contact_impulse[0] * e[i].contact_impulse[0] + e[i].contact_impulse[1] * e[i].contact_impulse[1])/e[i].contact_impulse[2]) <<  std::endl;
 
-            contacts[i] = c;
+            contacts.push_back(c);
         }
     }
 }
@@ -165,18 +163,19 @@ void controller(DynamicBodyPtr body, double t, void*)
 
     Mat N,D,M;
     Vec fext, uff;
-    Vec v(NSPATIAL);
+    Vec v(NSPATIAL), acc(NSPATIAL);
     body->get_generalized_velocity(DynamicBody::eAxisAngle,v);
+//    body->get_generalized_acceleration(DynamicBody::eAxisAngle,acc);
     outlog2(v,"vel");
 
     /// Apply control torques
     // setup impulse
     uff.set_zero(NSPATIAL);
-    uff[1] = test_frict_val;
-    uff[5] = -test_frict_val;
-    body->add_generalized_force(DynamicBody::eAxisAngle, uff);
-    if(dt>0)
-        test_frict_val *= 1.001;
+//    uff[1] = test_frict_val;
+//    uff[5] = -test_frict_val;
+//    body->add_generalized_force(DynamicBody::eAxisAngle, uff);
+//    if(dt>0)
+//        test_frict_val *= 1.001;
 
     MatrixN MU;
     MU.set_zero(NC,1);
@@ -247,5 +246,16 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real 
 
     // setup the controller
     box->controller = controller;
+
+    VectorN q_start(NSPATIAL+1),qd_start(NSPATIAL);
+    q_start.set_zero();
+    qd_start.set_zero();
+
+    q_start[2] = 0.53;
+
+    qd_start[0] = 3;
+
+    box->set_generalized_coordinates(DynamicBody::eRodrigues,q_start);
+    box->set_generalized_velocity(DynamicBody::eAxisAngle,qd_start);
 }
 } // end extern C

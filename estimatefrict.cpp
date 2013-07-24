@@ -85,7 +85,6 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                          const Mat& N,const Mat& D, const Mat& M, Mat& MU, Vec& cf)
 {
     static Vec v_, f_;  // previous values
-
     double norm_error = -1;
     int nc = N.columns();
 
@@ -259,7 +258,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
             if(m != 0)
             {
-                outlog2(P,"P");
+//                outlog2(P,"P");
 
                 Vec cN = z.get_sub_vec(0,nc);
 
@@ -269,21 +268,21 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
                 /// min l2-norm(cN)
                 Mat P_nc = P.get_sub_mat(0,nc,0,m);
-                outlog2(P_nc,"P_nc");
+//                outlog2(P_nc,"P_nc");
 //                P_nc.transpose_mult(P_nc,Q2);
                 // c = P'cN
 //                P_nc.transpose_mult(cN,c2);
 
                 /// min l2-norm(cf)
-//                P.transpose_mult(P,Q2);
+                P.transpose_mult(P,Q2);
                 // c = P'z
-//                P.transpose_mult(z,c2);
+                P.transpose_mult(z,c2);
 
                 /// min l2-norm(cST)
-                Mat P_tc = P.get_sub_mat(nc,P.rows(),0,m);
-                P_tc.transpose_mult(P_tc,Q2);
+//                Mat P_tc = P.get_sub_mat(nc,P.rows(),0,m);
+//                P_tc.transpose_mult(P_tc,Q2);
                 // c = P'z
-                P_tc.transpose_mult(z.get_sub_vec(nc,z.rows()),c2);
+//                P_tc.transpose_mult(z.get_sub_vec(nc,z.rows()),c2);
 #ifdef USE_D
                 Mat A(nvars+1,m);
                 Vec  b(nvars+1);

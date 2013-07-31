@@ -75,6 +75,7 @@ std::vector<RigidBodyPtr> eefs;
 // robot pointer
 RCArticulatedBodyPtr robot;
 
+Vec cf_moby;
 
 static map<string, Real> q_go0;
 
@@ -104,71 +105,7 @@ const U& get(const map<T, U>& m, const T& key)
   return i->second;
 }
 
-/// Event callback function for processing events
-void event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empty)
-{
-    contacts.clear();
-    for(unsigned i=0;i<e.size();i++){
-        if (e[i].event_type == Event::eContact)
-        {
-            ContactData c;
-            SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
-            SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
-
-            if (sb1->id.compare("ground") == 0){
-                c.normal = -e[i].contact_normal;
-                std::swap(sb1,sb2);
-            } else
-                c.normal = e[i].contact_normal;
-
-		if (std::find(eef_names_.begin(), eef_names_.end(), sb1->id) == eef_names_.end())
-			continue;
-
-            c.point = e[i].contact_point;
-            c.name = sb1->id;
-
-            if(c.normal[2] < 0)
-                c.normal *= -1.0;
-
-            std::cout << c.name << " : " << c.normal << " : " << c.point << " : " << e[i].contact_impulse <<  std::endl;
-            if(e[i].contact_impulse[2] != 0)
-                std::cout << "MU_APPLIED : " << (sqrt(e[i].contact_impulse[0] * e[i].contact_impulse[0] + e[i].contact_impulse[1] * e[i].contact_impulse[1])/e[i].contact_impulse[2]) <<  std::endl;
-
-            contacts.push_back(c);
-        }
-    }
-}
-
-/// Controls the robot
-void control_PID(RCArticulatedBodyPtr robot, const map<string, Real>& q_des, const map<string, Real>& qd_des, const map<string, Gains>& gains, Real time,Mat& ufb)
-{
-      const std::vector<JointPtr>& joints = robot->get_joints();
-
-      // clear and set motor torques
-      for (unsigned m=0,i=0; m< joints.size(); m++)
-      {
-            // get the joint
-            JointPtr j = joints[m];
-            if(j->q.rows() == 0) continue;
-
-            // get the two gains
-            const Real KP = get(gains,j->id).kp;
-            const Real KV = get(gains,j->id).kv;
-            const Real KI = get(gains,j->id).ki;
-
-            // add feedback torque to joints
-            Real perr = get(q_des,j->id) - j->q[0];
-            perr_sum[j->id] += perr;
-            Real ierr = perr_sum[j->id];
-            Real derr = get(qd_des,j->id) - j->qd[0];
-            VectorN fb_torque(1);
-            fb_torque[0] = perr*KP + derr*KV + ierr*KI;
-            ufb.set_row(i,fb_torque);
-            i++;
-      }
-}
-
-void determine_N_D(RCArticulatedBodyPtr robot,std::vector<ContactData>& contacts, MatrixN& N, MatrixN& D)
+void determine_N_D(std::vector<ContactData>& contacts, MatrixN& N, MatrixN& D)
 {
     int nc = contacts.size();
     const std::vector<RigidBodyPtr>& links = robot->get_links();
@@ -198,7 +135,7 @@ void determine_N_D(RCArticulatedBodyPtr robot,std::vector<ContactData>& contacts
           Vector3 tan1, tan2;
           Vector3::determine_orthonormal_basis(c.normal, tan1, tan2);
           // get the base Jacobian components
-          robot->calc_jacobian(c.point, eefs[i], J);
+          abrobot->calc_jacobian(c.point, eefs[i], J);
 
           // get the translational components of the Jacobian
           J.get_sub_mat(0,3,0,J.columns(), Jsub);
@@ -215,87 +152,40 @@ void determine_N_D(RCArticulatedBodyPtr robot,std::vector<ContactData>& contacts
       }
 }
 
-void apply_simulation_forces(RCArticulatedBodyPtr rcab, const Mat& u){
-    const std::vector<JointPtr>& joints = rcab->get_joints();
-    for(unsigned m=0,i=0;m< joints.size();m++){
-        if(joints[m]->q.size() == 0) continue;
-        // reset motor torque
-        joints[m]->reset_force();
-        joints[m]->add_force(u.get_row(i));
-        i++;
-    }
-}
-
-
-double friction_estimation(const Vec& v, const Vec& fext, double dt,
-                         const Mat& N,const Mat& ST, const Mat& M, Mat& MU, Vec& cf);
-
-/// The main control loop
-void controller(DynamicBodyPtr robot, Real t, void*)
+/// Event callback function for processing events
+void event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empty)
 {
-     static Mat uff(NJOINT,1),ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
-     unsigned NC = contacts.size();
-     static double last_time = t;
-     static double test_frict_val = 0.5;
-     static unsigned ITER = 1;
-     // setup dt
-     double dt = t - last_time;
-     last_time = t;
+    contacts.clear();
+    int nc = e.size();
+    cf_moby.set_zero(nc*3);
 
-     uff.set_zero();
-     ufb.set_zero();
-     u.set_zero();
-
-     std::cout << "iteration: " << ITER << std::endl;
-     std::cout << "simulation time : " << t << std::endl;
-     std::cout << "dt : " << dt << std::endl;
-
-     std::cerr << "iteration: " << ITER << std::endl;
-     std::cerr << "simulation time : " << t << std::endl;
-     std::cerr << "dt : " << dt << std::endl;
-
-      RCArticulatedBodyPtr rcab = dynamic_pointer_cast<RCArticulatedBody>(robot);
-
-
-      /// setup a steady state
-      static map<string, Real> q_des, qd_des;
-      const std::vector<JointPtr>& joints = rcab->get_joints();
-      if (q_des.empty())
-        for (unsigned i=0,m=0; m< joints.size(); m++)
+    for(unsigned i=0;i<e.size();i++){
+        if (e[i].event_type == Event::eContact)
         {
-            if(joints[m]->q.size() == 0) continue;
-            q_des[joints[m]->id] = q_go0[joints[m]->id];
-            qd_des[joints[m]->id] = 0.0;
-            i++;
+            ContactData c;
+            SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
+            SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
+
+            if (sb1->id.compare("ground") == 0){
+                c.normal = -e[i].contact_normal;
+                std::swap(sb1,sb2);
+            } else
+                c.normal = e[i].contact_normal;
+
+		if (std::find(eef_names_.begin(), eef_names_.end(), sb1->id) == eef_names_.end())
+			continue;
+
+            c.point = e[i].contact_point;
+            c.name = sb1->id;
+
+            contacts.push_back(c);
         }
-
-      ///  Record Robot State
-      for(unsigned m=0;m< joints.size();m++){
-          if(joints[m]->q.size() == 0) continue;
-          unsigned ind = joints[m]->get_coord_index() - NSPATIAL;
-          q.set_row(ind,joints[m]->q);
-          qd.set_row(ind,joints[m]->qd);
-      }
-
-      ///  Determine FB forces
-      control_PID(rcab, q_des, qd_des, gains,t,ufb);
-
-      // combine ufb and uff
-      u = ufb + uff;
-
-      apply_simulation_forces(rcab,u);
-
-
+    }
 
       Mat N,D,M(NDOFS,NDOFS);
       Vec fext(NDOFS);
-      
-      fext.set_zero();
-      fext[5] = test_frict_val;
-      rcab->add_generalized_force(DynamicBody::eAxisAngle, fext);
-      test_frict_val *= 1.001;
 
-      determine_N_D(rcab,contacts,N,D);
+      determine_N_D(contacts,N,D);
 
       robot->get_generalized_inertia(DynamicBody::eAxisAngle, M);
       fext.set_zero();
@@ -339,6 +229,102 @@ void controller(DynamicBodyPtr robot, Real t, void*)
           out << std::endl;
           out.close();
       }
+
+}
+
+/// Controls the robot
+void control_PID(const map<string, Real>& q_des, const map<string, Real>& qd_des, const map<string, Gains>& gains, Real time,Mat& ufb)
+{
+      const std::vector<JointPtr>& joints = robot->get_joints();
+
+      // clear and set motor torques
+      for (unsigned m=0,i=0; m< joints.size(); m++)
+      {
+            // get the joint
+            JointPtr j = joints[m];
+            if(j->q.rows() == 0) continue;
+
+            // get the two gains
+            const Real KP = get(gains,j->id).kp;
+            const Real KV = get(gains,j->id).kv;
+            const Real KI = get(gains,j->id).ki;
+
+            // add feedback torque to joints
+            Real perr = get(q_des,j->id) - j->q[0];
+            perr_sum[j->id] += perr;
+            Real ierr = perr_sum[j->id];
+            Real derr = get(qd_des,j->id) - j->qd[0];
+            VectorN fb_torque(1);
+            fb_torque[0] = perr*KP + derr*KV + ierr*KI;
+            ufb.set_row(i,fb_torque);
+            i++;
+      }
+}
+
+
+
+void apply_simulation_forces(RCArticulatedBodyPtr abrobot, const Mat& u){
+    const std::vector<JointPtr>& joints = abrobot->get_joints();
+    for(unsigned m=0,i=0;m< joints.size();m++){
+        if(joints[m]->q.size() == 0) continue;
+        // reset motor torque
+        joints[m]->reset_force();
+        joints[m]->add_force(u.get_row(i));
+        i++;
+    }
+}
+
+/// The main control loop
+void controller(DynamicBodyPtr dbp, Real t, void*)
+{
+     static Mat uff(NJOINT,1),ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
+     unsigned NC = contacts.size();
+     static double last_time = t;
+     static double test_frict_val = 0.5;
+     static unsigned ITER = 1;
+     // setup dt
+     double dt = t - last_time;
+     last_time = t;
+
+     uff.set_zero();
+     ufb.set_zero();
+     u.set_zero();
+
+      /// setup a steady state
+      static map<string, Real> q_des, qd_des;
+      const std::vector<JointPtr>& joints = abrobot->get_joints();
+      if (q_des.empty())
+        for (unsigned i=0,m=0; m< joints.size(); m++)
+        {
+            if(joints[m]->q.size() == 0) continue;
+            q_des[joints[m]->id] = q_go0[joints[m]->id];
+            qd_des[joints[m]->id] = 0.0;
+            i++;
+        }
+
+      ///  Record Robot State
+      for(unsigned m=0;m< joints.size();m++){
+          if(joints[m]->q.size() == 0) continue;
+          unsigned ind = joints[m]->get_coord_index() - NSPATIAL;
+          q.set_row(ind,joints[m]->q);
+          qd.set_row(ind,joints[m]->qd);
+      }
+
+      ///  Determine FB forces
+      control_PID(abrobot, q_des, qd_des, gains,t,ufb);
+
+      // combine ufb and uff
+      u = ufb + uff;
+
+      apply_simulation_forces(u);
+
+      fext.set_zero();
+      fext[5] = test_frict_val;
+      abrobot->add_generalized_force(DynamicBody::eAxisAngle, fext);
+      test_frict_val *= 1.001;
+
+
+
       ITER++;
 }
 
@@ -440,6 +426,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real 
       for(int i=0;i<q_go0.size();i++){
           int ind = robot->find_joint(joint_name_[i])->get_coord_index();
           q_start[ind+1] = q_go0[joint_name_[i]];
+          std::cout << ind << " " << joint_name_[i] << std::endl;
       }
 
       q_start[2] = 0.11;

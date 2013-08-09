@@ -81,22 +81,20 @@ bool first = true;
 
 /// Friction Estimation
 /// Calculates Coulomb friction at end-effectors
+Vec v_(6), f_(6);  // previous values
 double friction_estimation(const Vec& v, const Vec& f, double dt,
                          const Mat& N,const Mat& D, const Mat& M, bool post_event, Mat& MU, Vec& cf)
 {
     static int ITER = 0;
-    static Vec v_, f_;  // previous values
     double norm_error = -1;
     int nc = N.columns();
 
     if(post_event){
-        if(nc>0){
             ITER++;
             std::cout << "************** Friction Estimation **************" << std::endl;
             std::cout << "ITER: " << ITER << std::endl;
             std::cout << "dt = " << dt << std::endl;
             outlog2(N,"N");
-            outlog2(D,"D");
             outlog2(M,"M");
             outlog2(v,"post-event-vel");
             outlog2(v_,"pre-event-vel");
@@ -171,6 +169,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                     ST(j,nc+i) = D(j,i*nk+1);
                 }
             }
+           outlog2(ST,"ST");
            int n = N.columns()+ST.columns();
 
            Mat R(ngc,n);
@@ -201,40 +200,23 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
            if (!solve_qp(Q,c,A,b,z)){
                std::cout << "friction estimation failed" << std::endl;
            } else {
-               outlog2(z,"z");
+               outlog2(z,"cf");
+               outlog2(cf_moby,"cf_MOBY");
 
                Vec err(ngc);
                R.mult(z,err);
-               outlog2(err,"generalized force from cfs = [R*z]");
+//               outlog2(err,"generalized force from cfs = [R*z]");
                err -= jstar;
                norm_error =  err.norm();
 
-               outlog2(err,"err = [R*z - j_error]");
-               std::cout << "norm err: " << err.norm() << std::endl;
+//               outlog2(err,"err = [R*z - j_error]");
+//               std::cout << "norm err: " << err.norm() << std::endl;
 
-               //// TEST AGAINST MOBY FORCE ////
-               R.mult(cf_moby,err);
-               outlog2(err,"MOBY generalized force from cfs = [R*z]");
-
-               const Vec &err_ptr = err;
-               Vec dvM(err_ptr);
-               Mat iM = M;
-               Moby::LinAlg::factor_chol(iM);
-               Moby::LinAlg::solve_chol_fast(iM,dvM);
-               outlog2(dvM,"MOBY dv = [R*z - j_error]/M");
-
-
-
-               err -= jstar;
-               norm_error =  err.norm();
-
-               outlog2(err,"MOBY err = [R*z - j_error]");
-               std::cout << "MOBY  norm err: " << err.norm() << std::endl;
-    #endif
-
+  #endif
 
                /// //////////////////////////////
                /// STAGE II
+/*
 
                 // Q = R'R = RTR
                 int m = 0;
@@ -369,6 +351,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                         std::cout << "norm err2: " << err.norm() << std::endl;
                     }
                 }
+*/  
             }
     #ifdef USE_D
             for(int i = 0;i < nc;i++)
@@ -386,17 +369,15 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                 else
                     MU(i,0) = sqrt(-1);
 
-                std::cout << "cf Estimate = [" << cf[i+nc] << " " << cf[i+nc*2] << " " << cf[i] << "]" << std::endl;
-                std::cout << "MU_Estimate : " << MU(i,0) << std::endl;
+//                std::cout << "cf Estimate = [" << cf[i+nc] << " " << cf[i+nc*2] << " " << cf[i] << "]" << std::endl;
+//                std::cout << "MU_Estimate : " << MU(i,0) << std::endl;
             }
-        }
-        v_ = v;
-    } else {
-        f_ = f;
-
     }
 
-    first = false;
+    for(int i=0;i<6;i++){
+    	f_[i] = f[i];
+    	v_[i] = v[i];
+    }
 
     return norm_error;
 }

@@ -17,12 +17,6 @@ struct ContactData;
 
 extern Vec cf_moby;
 
- void setblock(Mat& M, int I, int J, int P, int Q, const Mat& m){
-     for(int i=0,ii=I;i<P;i++,ii++)
-         for(int j=0,jj=J;j<Q;j++,jj++)
-             M(ii,jj) = m(i,j);
- }
-
 static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
 {
   const int n = Q.rows();
@@ -36,26 +30,26 @@ static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
   Mat MMM;
   Vec zzz,qqq;
   MMM.set_zero(Q.rows()*2 + A.rows(), Q.rows()*2 + A.rows());
-  setblock(MMM,0,0,n,n,Q);
-  setblock(MMM,n,n,n,n,Q);
+  MMM.set_sub_mat(0,0,Q);
+  MMM.set_sub_mat(n,n,Q);
   Q.negate();
-  setblock(MMM,0,n,n,n,Q);
-  setblock(MMM,n,0,n,n,Q);
+  MMM.set_sub_mat(0,n,Q);
+  MMM.set_sub_mat(n,0,Q);
 
   // setup linear inequality constraints in LCP matrix
   Mat AT(A.columns(),A.rows());
   Mat::transpose(A,AT);
-  setblock(MMM,n,n*2,n,m,AT);
+  MMM.set_sub_mat(n,n*2,AT);
   AT.negate();
-  setblock(MMM,0,n*2,n,m,AT);
+  MMM.set_sub_mat(0,n*2,AT);
 
-  setblock(MMM,n*2,0,m,n,A);
+  MMM.set_sub_mat(n*2,0,A);
   A.negate();
-  setblock(MMM,n*2,n,m,n,A);
+  MMM.set_sub_mat(n*2,n,A);
 
   // setup LCP vector
   // qqq = [ c -c  b  0 ]'
-  qqq.resize(MMM.rows());
+  qqq.set_zero(MMM.rows());
   qqq.set_sub_vec(0,c);
   c.negate();
   qqq.set_sub_vec(n,c);
@@ -75,21 +69,19 @@ static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
   return SOLVE_FLAG;
 }
 
-bool first = true;
-
 //#define USE_D
 
 /// Friction Estimation
 /// Calculates Coulomb friction at end-effectors
-Vec v_(6), f_(6);  // previous values
 double friction_estimation(const Vec& v, const Vec& f, double dt,
                          const Mat& N,const Mat& D, const Mat& M, bool post_event, Mat& MU, Vec& cf)
 {
+    static Vec v_(6), f_(6);  // previous values
     static int ITER = 0;
     double norm_error = -1;
     int nc = N.columns();
 
-    if(post_event){
+    if(post_event && nc > 0 && N.rows() == f_.rows()){
             ITER++;
             std::cout << "************** Friction Estimation **************" << std::endl;
             std::cout << "ITER: " << ITER << std::endl;
@@ -105,20 +97,21 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             int nvars = nc+nk*nc;
             cf.resize(nc + nc*(nk/2));
 
+	    // dv = v_{t} - v_{}
             Vec dv =  v - v_;
             outlog2(dv,"dv");
 
-            // effective force (t-1 ==> t)
+            // j_obs = M*dv
             Vec jstar(M.rows());
             M.mult(dv,jstar);
             outlog2(jstar,"j_observed");
 
-            // acting force (last timestep)
+            // j_exp = f_{t-1}*dt 
             f_ *= dt;
 
             outlog2(f_,"j_expected");
 
-            // error in impulse (obs - exp) = err
+            // j* = (j_obs - j_exp) = j_err
             jstar -= f_;
             outlog2(jstar,"j_error");
 
@@ -128,8 +121,8 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             int n = N.columns()+D.columns();
 
             Mat R(ngc,n);
-            setblock(R,0,0,N.rows(),N.columns(),N);
-            setblock(R,0,N.columns(),D.rows(),D.columns(),D);
+            R.set_sub_mat(0,0,N);
+            R.set_sub_mat(0,N.columns(),D);
 
             /////////// OBJECTIVE ////////////
             // M
@@ -173,8 +166,8 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
            int n = N.columns()+ST.columns();
 
            Mat R(ngc,n);
-           setblock(R,0,0,N.rows(),N.columns(),N);
-           setblock(R,0,N.columns(),ST.rows(),ST.columns(),ST);
+           R.set_sub_mat(0,0,N);
+           R.set_sub_mat(0,N.columns(),ST);
 
            /////////// OBJECTIVE ////////////
            // Q = R'R
@@ -216,7 +209,6 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
                /// //////////////////////////////
                /// STAGE II
-/*
 
                 // Q = R'R = RTR
                 int m = 0;
@@ -349,9 +341,19 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                         norm_error =  err.norm();
 
                         std::cout << "norm err2: " << err.norm() << std::endl;
+                        
+                        // Print Moby Error
+ 			err.set_zero(ngc);
+                        R.mult(cf_moby,err);
+                        outlog2(err,"MOBY generalized force from cfs = [R*(z+z2)]");
+                        err -= jstar;
+
+                        outlog2(err,"MOBY err = [R*(z+z2) - j_error]");
+                        norm_error =  err.norm();
+
+                        std::cout << "MOBY norm err: " << err.norm() << std::endl;
                     }
                 }
-*/  
             }
     #ifdef USE_D
             for(int i = 0;i < nc;i++)

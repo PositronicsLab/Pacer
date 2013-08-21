@@ -136,7 +136,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
             cf_moby[i] = e[i].contact_impulse[2];
             cf_moby[i+nc] = e[i].contact_impulse[0];
             cf_moby[i+nc*2] = e[i].contact_impulse[1];
-            MU_moby(i,0) = sqrt(e[i].contact_impulse[0]*e[i].contact_impulse[0] + e[i].contact_impulse[0]*e[i].contact_impulse[0])/e[i].contact_impulse[2];
+            MU_moby(i,0) = sqrt(e[i].contact_impulse[0]*e[i].contact_impulse[0] + e[i].contact_impulse[1]*e[i].contact_impulse[1])/e[i].contact_impulse[2];
             //std::cout << "@"<< t << " : " << last_time << "+" << (e[i].t_true-last_time) << " -- " << c.name << " : " << c.normal << " : " << c.point << " : " << e[i].contact_impulse <<  std::endl;
 //            std::cerr << "@"<< t << " : " << last_time << "+" << (e[i].t_true-last_time) << " -- " << c.name << " : " << c.normal << " : " << c.point << " : " << e[i].contact_impulse <<  std::endl;
             contacts.push_back(c);
@@ -158,7 +158,7 @@ void controller(DynamicBodyPtr body, double time, void*)
     double dt = t - last_time;
     last_time = t;
 
-    static double test_frict_val = 0.7;
+    static double test_frict_val = 0.1;
     static unsigned ITER = 1;
 
     Vec uff;
@@ -166,11 +166,11 @@ void controller(DynamicBodyPtr body, double time, void*)
     /// Apply control torques
     // setup impulse
     uff.set_zero(NSPATIAL);
-    uff[0] = test_frict_val;
-    //uff[5] = test_frict_val;
+    //uff[1] = test_frict_val;
+    uff[5] = test_frict_val;
     body->add_generalized_force(DynamicBody::eAxisAngle, uff);
     if(dt>0){
-        test_frict_val *= 1.00001;
+        test_frict_val *= 1.01;
     }
 
     std::cerr << "ITER: " << ITER << std::endl;
@@ -182,6 +182,7 @@ void controller(DynamicBodyPtr body, double time, void*)
     Vec fext;
     Vec v(NSPATIAL);
     body->get_generalized_velocity(DynamicBody::eAxisAngle,v);
+    std::cerr << "vel = " << v << std::endl;
 
     MatrixN MU;
     MU.set_zero(nc,1);
@@ -198,13 +199,14 @@ void controller(DynamicBodyPtr body, double time, void*)
 	return;
     } else {
         determine_N_D(obj,contacts,N,D);
-    	Vec cf;
-    	double err = friction_estimation(v,fext,dt,N,D,M,true,MU,cf);
+    	err = friction_estimation(v,fext,dt,N,D,M,true,MU,cf);
     }
-    std::cerr << "cf = " << cf << std::endl;
-    std::cerr << "mu = " << MU << std::endl;
-    std::cerr << "moby_cf = " << cf_moby << std::endl;
-    std::cerr << "moby_MU = " << MU_moby << std::endl;
+    std::cout << "cf = " << cf << std::endl;
+    
+    std::cout << "mu = " << MU << std::endl;
+    std::cout << "moby_cf = " << cf_moby << std::endl;
+    
+    std::cout << "moby_MU = " << MU_moby << std::endl;
     /// Output to file
     std::ofstream out;
     { // output vals

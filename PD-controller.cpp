@@ -75,8 +75,6 @@ std::vector<ContactData> contacts;
 std::vector<RigidBodyPtr> eefs;
 
 // robot pointer
-
-
 static map<string, Real> q_go0;
 
 
@@ -372,29 +370,20 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real 
   for (std::map<std::string, BasePtr>::const_iterator i = read_map.begin(); i !=read_map.end(); i++) 
   {
     if (!sim)
-    {
       sim = dynamic_pointer_cast<EventDrivenSimulator>(i->second);
-
-    }
 
     // find the robot
     if (!abrobot)
     {
       abrobot = dynamic_pointer_cast<RCArticulatedBody>(i->second);
       dbrobot = dynamic_pointer_cast<DynamicBody>(i->second);
-
-      // setup the controller
-
     }
   }
-  if (sim){
+  if (sim && abrobot){
       sim->event_post_impulse_callback_fn = &post_event_callback_fn;
-      //sim->event_callback_fn = &pre_event_callback_fn;
-  }
-
-  if (abrobot)
+      // setup the controller
     abrobot->controller = &controller;
-  else
+  } else
     assert(false);
   // Create joint name vector
   joint_name_.push_back("LF_HFE");

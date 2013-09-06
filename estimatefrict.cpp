@@ -1,17 +1,22 @@
-#include <Moby/MatrixN.h>
-#include <Moby/VectorN.h>
-#include <Moby/LinAlg.h>
-#include <Moby/Optimization.h>
+#include <Ravelin/MatrixNd.h>
+#include <Ravelin/VectorNd.h>
+#include <Ravelin/LinAlgd.h>
+#include <Opt/LCP.h>
 
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 
-typedef Moby::MatrixN Mat;
-typedef Moby::VectorN Vec;
+typedef Ravelin::MatrixNd Mat;
+typedef Ravelin::VectorNd Vec;
+
+Opt::LCP lcp_;
+
 
 void outlog(const Mat& M, std::string name);
 void outlog(const Vec& z, std::string name);
 void outlog2(const Vec& M, std::string name);
 void outlog2(const Mat& z, std::string name);
+
+Ravelin::LinAlgd LA;
 
 struct ContactData;
 
@@ -60,7 +65,7 @@ static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
   zzz.set_zero(qqq.size());
 
   bool SOLVE_FLAG = true;
-  if(!Moby::Optimization::lcp_lemke_regularized(MMM,qqq,zzz))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz))
       SOLVE_FLAG = false;
 
   // extract x
@@ -98,7 +103,8 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             cf.resize(nc + nc*(nk/2));
 
 	    // dv = v_{t} - v_{}
-            Vec dv =  v - v_;
+            Vec dv =  v;
+            dv -= v_;
             outlog2(dv,"dv");
 
             // j_obs = M*dv
@@ -136,9 +142,10 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
             Vec z(n);
             z.set_zero();
-            if (!Moby::Optimization::lcp_lemke_regularized(Q,c,z)){
+            if (!lcp_.lcp_lemke_regularized(Q,c,z)){
                 std::cout << "friction estimation failed" << std::endl;
-            } else {
+            } else 
+	    {
 
                 outlog2(z,"z");
 
@@ -198,12 +205,12 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
                Vec err(ngc);
                R.mult(z,err);
-//               outlog2(err,"generalized force from cfs = [R*z]");
+               outlog2(err,"generalized force from cfs = [R*z]");
                err -= jstar;
                norm_error =  err.norm();
 
-//               outlog2(err,"err = [R*z - j_error]");
-//               std::cout << "norm err: " << err.norm() << std::endl;
+               outlog2(err,"err = [R*z - j_error]");
+               std::cout << "norm err: " << err.norm() << std::endl;
 
   #endif
 
@@ -214,7 +221,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                 int m = 0;
                 Mat U,V;
                 Vec S;
-                Moby::LinAlg::svd(Q,U,S,V);
+                LA.svd(Q,U,S,V);
 
                 Mat P;
                 // SVD decomp to retrieve nullspace of R'R
@@ -229,7 +236,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
                     // get the nullspace
                     P.resize(nvars,m);
-                    P = V.get_sub_mat(0,V.rows(),V.columns() - m,V.columns());
+                    V.get_sub_mat(0,V.rows(),V.columns() - m,V.columns(),P);
                 }
 
                 std::cout << "m: " << m << std::endl;
@@ -238,23 +245,25 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                 {
     //                outlog2(P,"P");
 
-                    Vec cN = z.get_sub_vec(0,nc);
+                    Vec cN(nc);
+                    z.get_sub_vec(0,nc,cN);
 
                     /// Objective
                     Mat Q2(m,m);
                     Vec c2(m), w(m);
 
                     /// min l2-norm(cN)
-                    Mat P_nc = P.get_sub_mat(0,nc,0,m);
+                    Mat P_nc(nc,m);
+		    P.get_sub_mat(0,nc,0,m,P_nc);
     //                outlog2(P_nc,"P_nc");
-    //                P_nc.transpose_mult(P_nc,Q2);
+                    P_nc.transpose_mult(P_nc,Q2);
                     // c = P'cN
-    //                P_nc.transpose_mult(cN,c2);
+                    P_nc.transpose_mult(cN,c2);
 
                     /// min l2-norm(cf)
-                    P.transpose_mult(P,Q2);
+    //                P.transpose_mult(P,Q2);
                     // c = P'z
-                    P.transpose_mult(z,c2);
+    //                P.transpose_mult(z,c2);
 
                     /// min l2-norm(cST)
     //                Mat P_tc = P.get_sub_mat(nc,P.rows(),0,m);
@@ -311,7 +320,9 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                     //  |   -R'jP   |   | w |    | +0 |
                     Vec cP(m);
                     P.transpose_mult(c,cP);
-                    A.set_row(0,cP);
+	            for(int i=0;i<m;i++)
+			A(0,i) = cP[i];
+                    //A.set_row(0,cP);
                     b[0] = 0;
 
                     //  | P[1:nc,:] | * | w | >= |-cN |

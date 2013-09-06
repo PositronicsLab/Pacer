@@ -6,6 +6,13 @@
 #include <sys/types.h>
 #include <sys/times.h>
 #include <fstream>
+
+#include <Ravelin/MatrixNd.h>
+#include <Ravelin/VectorNd.h>
+#include <Ravelin/LinAlgd.h>
+#include <Ravelin/AAngled.h>
+#include <Ravelin/SForced.h>
+
 #include <Moby/Simulator.h>
 #include <Moby/EventDrivenSimulator.h>
 #include <Moby/RCArticulatedBody.h>
@@ -13,13 +20,11 @@
 #include <Moby/DynamicBody.h>
 #include <Moby/RevoluteJoint.h>
 #include <Moby/GravityForce.h>
-#include <Moby/LinAlg.h>
 #include <Moby/Constants.h>
 #include <Moby/RNEAlgorithm.h>
-#include <osgDB/WriteFile>
-//#include <osgDB/ReaderWriterSTL>
 
 using namespace Moby;
+using namespace Ravelin;
 using boost::shared_ptr;
 using boost::dynamic_pointer_cast;
 using std::string;
@@ -27,13 +32,13 @@ using std::map;
 using std::pair;
 using std::vector;
 
-typedef Moby::MatrixN Mat;
-typedef Moby::VectorN Vec;
+typedef Ravelin::MatrixNd Mat;
+typedef Ravelin::VectorNd Vec;
 
 RigidBodyPtr obj;
 DynamicBodyPtr body;
 Vec cf_moby;
-MatrixN MU_moby;
+Mat MU_moby;
 
 void outlog(const Mat& M, std::string name);
 void outlog(const Vec& z, std::string name);
@@ -43,8 +48,8 @@ void outlog2(const Mat& z, std::string name);
 struct ContactData
 {
   bool on;
-  Vector3 point;  // contact point
-  Vector3 normal; // contact normal (pointing away from the ground)
+  Vector3d point;  // contact point
+  Vector3d normal; // contact normal (pointing away from the ground)
   std::string name;
 };
 
@@ -58,7 +63,7 @@ std::vector<ContactData> contacts;
 boost::shared_ptr<EventDrivenSimulator> sim;
 
 
-void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, MatrixN& N, MatrixN& D)
+void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N, Mat& D)
 {
       int nc = contacts.size();
 
@@ -74,32 +79,35 @@ void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, MatrixN
           ContactData& c = contacts[i];
 
           // generate the contact tangents here...
-          Vector3 tan1, tan2;
-          Vector3::determine_orthonormal_basis(c.normal, tan1, tan2);
+          Vector3d tan1, tan2;
+          Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
 
-          Vector3 torque;
+          Vector3d torque;
           torque.set_zero();
 
-          VectorN col(NSPATIAL);
-
-          obj->convert_to_generalized_force(DynamicBody::eAxisAngle,obj, c.point, c.normal, torque, col);
+          Vec col(NSPATIAL);
+          SForced sfn(c.normal,torque);
+          obj->convert_to_generalized_force(obj,sfn, c.point, col);
           N.set_column(i,col);
           for(int k=0;k<nk;k++){
-              if(k%2 == 0)
-                  obj->convert_to_generalized_force(DynamicBody::eAxisAngle,obj, c.point, tan1, torque, col);
-              else
-                  obj->convert_to_generalized_force(DynamicBody::eAxisAngle,obj, c.point, tan2, torque, col);
+              if(k%2 == 0) {
+          	  SForced sfs(tan1,torque);
+          	  obj->convert_to_generalized_force(obj,sfs, c.point, col);
+              } else {
+          	  SForced sft(tan2,torque);
+          	  obj->convert_to_generalized_force(obj,sft, c.point, col);
+              }
               if(k>=2) col.negate();
               D.set_column(i*nk + k,col);
           }
       }
 }
 
-void calculate_dyn_properties(RigidBodyPtr obj, MatrixN& M, VectorN& fext){
+void calculate_dyn_properties(RigidBodyPtr obj, Mat& M, Vec& fext){
     M.resize(NSPATIAL,NSPATIAL);
     fext.resize(NSPATIAL);
-    obj->get_generalized_inertia(DynamicBody::eAxisAngle, M);
-    obj->get_generalized_forces(DynamicBody::eAxisAngle, fext);
+    obj->get_generalized_inertia(M);
+    obj->get_generalized_forces(fext);
 }
 
 double last_time = 0;
@@ -168,9 +176,9 @@ void controller(DynamicBodyPtr body, double time, void*)
     uff.set_zero(NSPATIAL);
     //uff[1] = test_frict_val;
     uff[5] = test_frict_val;
-    body->add_generalized_force(DynamicBody::eAxisAngle, uff);
+    body->add_generalized_force(uff);
     if(dt>0){
-        test_frict_val *= 1.01;
+        test_frict_val *= 1.0001;
     }
 
     std::cerr << "ITER: " << ITER << std::endl;
@@ -181,10 +189,10 @@ void controller(DynamicBodyPtr body, double time, void*)
     Mat N,D,M;
     Vec fext;
     Vec v(NSPATIAL);
-    body->get_generalized_velocity(DynamicBody::eAxisAngle,v);
+    body->get_generalized_velocity(DynamicBody::eSpatial,v);
     std::cerr << "vel = " << v << std::endl;
 
-    MatrixN MU;
+    Mat MU;
     MU.set_zero(nc,1);
 
     calculate_dyn_properties(obj,M,fext);
@@ -201,12 +209,14 @@ void controller(DynamicBodyPtr body, double time, void*)
         determine_N_D(obj,contacts,N,D);
     	err = friction_estimation(v,fext,dt,N,D,M,true,MU,cf);
     }
+    std::cout << "err = " << err << std::endl;
     std::cout << "cf = " << cf << std::endl;
     
     std::cout << "mu = " << MU << std::endl;
     std::cout << "moby_cf = " << cf_moby << std::endl;
     
     std::cout << "moby_MU = " << MU_moby << std::endl;
+    
     /// Output to file
     std::ofstream out;
     { // output vals
@@ -244,7 +254,7 @@ void controller(DynamicBodyPtr body, double time, void*)
 
 /// plugin must be "extern C"
 extern "C" {
-void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real time)
+void init(void* separator, const std::map<std::string, BasePtr>& read_map, double time)
 {
     // get a reference to the EventDrivenSimulator instance
     for (std::map<std::string, BasePtr>::const_iterator i = read_map.begin(); i !=read_map.end(); i++)
@@ -260,7 +270,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real 
     if (!body)
       throw std::runtime_error("controller.cpp:init() - unable to cast obj to type DynamicBody");
 
-    VectorN q_start(NSPATIAL+1),qd_start(NSPATIAL);
+    Vec q_start(NSPATIAL+1),qd_start(NSPATIAL);
     q_start.set_zero();
     qd_start.set_zero();
 
@@ -270,8 +280,8 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real 
 
 //    qd_start[0] = 1;
 
-    body->set_generalized_coordinates(DynamicBody::eRodrigues,q_start);
-    body->set_generalized_velocity(DynamicBody::eAxisAngle,qd_start);
+    body->set_generalized_coordinates(DynamicBody::eEuler,q_start);
+    body->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
 
     // setup the controller
     body->controller = controller;
@@ -286,8 +296,8 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, Real 
     Mat N,D,M;
     Vec fext;
     Vec v(NSPATIAL);
-    body->get_generalized_velocity(DynamicBody::eAxisAngle,v);
-    MatrixN MU;
+    body->get_generalized_velocity(DynamicBody::eSpatial,v);
+    Mat MU;
     calculate_dyn_properties(obj,M,fext);
 
     // estimated contact forces

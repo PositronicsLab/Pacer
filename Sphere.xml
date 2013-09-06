@@ -26,7 +26,7 @@
     <ContactParameters object1-id="obj" object2-id="ground" mu-coulomb="0.4" />
   </EventDrivenSimulator>
 
-  <Box id="b1" xlen="1" ylen="1" zlen="1" density="1.0" edge-sample-length="1" />
+  <Sphere id="b1" radius="0.5" density="1.0" num-points="2500" />
 
   <!-- the obj -->
   <RigidBody id="obj" enabled="true" position="0 0 1" angular-velocity="0 0 0" linear-velocity="0 0 0">

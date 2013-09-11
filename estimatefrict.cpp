@@ -120,10 +120,12 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             // j* = (j_obs - j_exp) = j_err
             jstar -= f_;
             outlog2(jstar,"j_error");
+           
 
             /// //////////////////////////////
             /// STAGE I
     #ifdef USE_D
+           outlog2(D,"D");
             int n = N.columns()+D.columns();
 
             Mat R(ngc,n);
@@ -175,7 +177,16 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
            Mat R(ngc,n);
            R.set_sub_mat(0,0,N);
            R.set_sub_mat(0,N.columns(),ST);
+           outlog2(R,"R");
 
+           // Some additional Printouts
+            Vec vprint = jstar,cvprint;
+	    Mat iM = M;
+	    LA.factor_chol(iM);
+	    LA.solve_chol_fast(iM,vprint);
+	    R.transpose_mult(vprint,cvprint);
+            outlog2(vprint,"v_error");
+            outlog2(cvprint,"cv_error");
            /////////// OBJECTIVE ////////////
            // Q = R'R
            Mat Q(R.columns(),R.columns());
@@ -256,14 +267,14 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                     Mat P_nc(nc,m);
 		    P.get_sub_mat(0,nc,0,m,P_nc);
     //                outlog2(P_nc,"P_nc");
-                    P_nc.transpose_mult(P_nc,Q2);
+    //                P_nc.transpose_mult(P_nc,Q2);
                     // c = P'cN
-                    P_nc.transpose_mult(cN,c2);
+    //                P_nc.transpose_mult(cN,c2);
 
                     /// min l2-norm(cf)
-    //                P.transpose_mult(P,Q2);
+                    P.transpose_mult(P,Q2);
                     // c = P'z
-    //                P.transpose_mult(z,c2);
+                    P.transpose_mult(z,c2);
 
                     /// min l2-norm(cST)
     //                Mat P_tc = P.get_sub_mat(nc,P.rows(),0,m);
@@ -295,11 +306,13 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
                     b[0] = 0;//c.dot(z);
                     //  |   P  || : | >= |-z |
-                    Mat nP = -P;
+                    Mat nP = P;
+		    nP.negate();
                     A.set_sub_mat(1,0,nP);
 
                     // b = z
-                    Vec cNST = -z;
+                    Vec cNST = z;
+		    cNST.negate();
                     outlog2(cNST,"cNST");
                     outlog2(z,"z");
 

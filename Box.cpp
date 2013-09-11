@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/times.h>
 #include <fstream>
-
+#include <boost/shared_ptr.hpp>
 #include <Ravelin/MatrixNd.h>
 #include <Ravelin/VectorNd.h>
 #include <Ravelin/LinAlgd.h>
@@ -47,7 +47,6 @@ void outlog2(const Mat& z, std::string name);
 
 struct ContactData
 {
-  bool on;
   Vector3d point;  // contact point
   Vector3d normal; // contact normal (pointing away from the ground)
   std::string name;
@@ -84,21 +83,30 @@ void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N,
 
           Vector3d torque;
           torque.set_zero();
+          outlog2(c.point,"point");
 
           Vec col(NSPATIAL);
-          SForced sfn(c.normal,torque);
+          AAngled aa(0,0,1,0);
+          Origin3d o(c.point);
+          boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
+          SForced sfn(c.normal,torque,pose);
+          outlog2(c.normal,"norm");
           obj->convert_to_generalized_force(obj,sfn, c.point, col);
           N.set_column(i,col);
+          outlog2(col,"N_col");
           for(int k=0;k<nk;k++){
               if(k%2 == 0) {
-          	  SForced sfs(tan1,torque);
+                  outlog2(tan1,"tanS");
+          	  SForced sfs(tan1,torque,pose);
           	  obj->convert_to_generalized_force(obj,sfs, c.point, col);
               } else {
-          	  SForced sft(tan2,torque);
+                  outlog2(tan2,"tanT");
+          	  SForced sft(tan2,torque,pose);
           	  obj->convert_to_generalized_force(obj,sft, c.point, col);
               }
               if(k>=2) col.negate();
               D.set_column(i*nk + k,col);
+              outlog2(col,"D_col");
           }
       }
 }
@@ -118,6 +126,10 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
     double t = sim->current_time;
     double dt = t - last_time;
 
+    Vec q;
+    body->get_generalized_coordinates(DynamicBody::eEuler,q);
+    outlog2(q,"G Coords");
+
     /// PROCESS CONTACTS
     contacts.clear();
     int nc = e.size();
@@ -127,7 +139,6 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
         if (e[i].event_type == Event::eContact)
         {
             ContactData c;
-            c.on = true;
             SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
             SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
@@ -138,6 +149,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
                 c.normal = e[i].contact_normal;
 
             c.point = e[i].contact_point;
+            outlog2(c.point,"C Coords");
 
             c.name = sb1->id;
 
@@ -166,7 +178,7 @@ void controller(DynamicBodyPtr body, double time, void*)
     double dt = t - last_time;
     last_time = t;
 
-    static double test_frict_val = 0.1;
+    static double test_frict_val = 0.2;
     static unsigned ITER = 1;
 
     Vec uff;
@@ -174,12 +186,19 @@ void controller(DynamicBodyPtr body, double time, void*)
     /// Apply control torques
     // setup impulse
     uff.set_zero(NSPATIAL);
-    //uff[1] = test_frict_val;
+    uff[1] = test_frict_val;
     uff[5] = test_frict_val;
     body->add_generalized_force(uff);
-    if(dt>0){
-        test_frict_val *= 1.0001;
-    }
+    
+    Vec v(NSPATIAL);
+    body->get_generalized_velocity(DynamicBody::eSpatial,v);
+    std::cerr << "vel = " << v << std::endl;
+
+    if(v.norm() < 0.01)
+        test_frict_val *= 1.001;
+    else
+        test_frict_val /= 1.001;
+
 
     std::cerr << "ITER: " << ITER << std::endl;
     std::cerr << "dt = " << dt << std::endl;
@@ -188,9 +207,6 @@ void controller(DynamicBodyPtr body, double time, void*)
     // RUN OPTIMIZATION TO FIND CFs
     Mat N,D,M;
     Vec fext;
-    Vec v(NSPATIAL);
-    body->get_generalized_velocity(DynamicBody::eSpatial,v);
-    std::cerr << "vel = " << v << std::endl;
 
     Mat MU;
     MU.set_zero(nc,1);
@@ -238,7 +254,7 @@ void controller(DynamicBodyPtr body, double time, void*)
     { // output moby vals
         out.open("muM.out",std::ios::out | std::ios::app);
         for(int i=0;i<nc;i++)
-          out << " " << MU_moby(i,0);
+          out << ((i==0)? "":" ") << MU_moby(i,0);
         out << std::endl;
         out.close();
 

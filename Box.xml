@@ -23,13 +23,13 @@
     <RecurrentForce recurrent-force-id="gravity" /> 
     <DynamicBody dynamic-body-id="obj" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="obj" object2-id="ground" mu-coulomb="0.4" />
+    <ContactParameters object1-id="obj" object2-id="ground" mu-coulomb="0.3" />
   </EventDrivenSimulator>
 
   <Box id="b1" xlen="1" ylen="1" zlen="1" density="1.0" edge-sample-length="1" />
 
   <!-- the obj -->
-  <RigidBody id="obj" enabled="true" position="0 0 1" angular-velocity="0 0 0" linear-velocity="0 0 0">
+  <RigidBody id="obj" enabled="true" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0">
     <InertiaFromPrimitive primitive-id="b1" />
     <CollisionGeometry primitive-id="b1" />
   </RigidBody>

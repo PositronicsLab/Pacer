@@ -17,6 +17,7 @@
    <GeneralizedCCD id="ccd" ori-integrator-id="euler" eps-tolerance="1e-3" toi-tolerance="1e-3">
       <Body body-id="hyq" />
       <Body body-id="ground" />
+      <DisabledPair object1-id="hyq" object2-id="hyq"/>
     </GeneralizedCCD>
 
   <EventDrivenSimulator integrator-id="euler" collision-detector-id="ccd">

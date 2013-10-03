@@ -2,14 +2,15 @@
 
 <XML>
   <DRIVER>
-    <camera position="0 7.0 0.5" target="0 0 0" up="0 0 1" />
+    <camera position="0 7.0 0.5" target="0 0 0" up="0 1 0" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 
   <MOBY>
-    <Box id="ground-primitive" xlen="10" ylen="10" zlen="0.05" />
+    <Box id="ground-primitive" xlen="10" ylen=".05" zlen="10" />
 
     <ODEPACKIntegrator id="odepack" stiff="false" min-step-size="0" rel-err-tol="0" abs-err-tol="1e-4" />
+    <RungeKuttaIntegrator id="rk4" />
     <EulerIntegrator id="euler" />
 
     <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
@@ -17,9 +18,9 @@
       <Body body-id="ground" />
     </GeneralizedCCD>
 
-    <GravityForce id="gravity" accel="0 0 -9.81" />
+    <GravityForce id="gravity" accel="0 -9.81 0" />
 
-  <EventDrivenSimulator integrator-id="euler" collision-detector-id="ccd">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd">
     <RecurrentForce recurrent-force-id="gravity" /> 
     <DynamicBody dynamic-body-id="obj" />
     <DynamicBody dynamic-body-id="ground" />
@@ -29,7 +30,7 @@
   <Box id="b1" xlen="1" ylen="1" zlen="1" density="1.0" edge-sample-length="1" />
 
   <!-- the obj -->
-  <RigidBody id="obj" enabled="true" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0">
+  <RigidBody id="obj" enabled="true" position="0 0.5 0" angular-velocity="0 0 0" linear-velocity="0 0 0">
     <InertiaFromPrimitive primitive-id="b1" />
     <CollisionGeometry primitive-id="b1" />
   </RigidBody>

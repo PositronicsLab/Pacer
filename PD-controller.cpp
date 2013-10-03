@@ -351,7 +351,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       ///  Record Robot State
       for(unsigned m=0;m< joints.size();m++){
           if(joints[m]->q.size() == 0) continue;
-          unsigned ind = joints[m]->get_coord_index() - NSPATIAL;
+          unsigned ind = joints[m]->get_coord_index();
           q.set_row(ind,joints[m]->q);
           qd.set_row(ind,joints[m]->qd);
       }
@@ -473,11 +473,11 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
 
       for(int i=0;i<q_go0.size();i++){
           int ind = abrobot->find_joint(joint_name_[i])->get_coord_index();
-          q_start[ind+1] = q_go0[joint_name_[i]];
+          q_start[ind] = q_go0[joint_name_[i]];
           std::cout << ind << " " << joint_name_[i] << std::endl;
       }
 
-      q_start[2] = 1.05;
+      q_start[14] = 0.7;
       for(int i=0;i<q_start.rows();i++)
           std::cerr << q_start[i] << std::endl;
 

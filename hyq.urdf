@@ -32,7 +32,7 @@
                              izx="-.0110167" izy="-.0000229" izz=".0006758" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0" rpy="0.000000 0.000000 0.000000"/>
+                    <origin xyz="0 0 0" rpy="0 0.000000 0"/>
                     <geometry>
                             <cylinder radius="0.08" length="0.3735"/>
                     </geometry>
@@ -41,7 +41,7 @@
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0" rpy="0.000000 0.000000 0.000000"/>
+                    <origin xyz="0 0 0" rpy="0 0.000000 0"/>
                     <geometry>
                             <cylinder radius="0.08" length="0.3735"/>
                     </geometry>
@@ -56,19 +56,17 @@
                     <mass value="1.772"/>
             </inertial>
             <visual>
-                    <origin xyz="0 0 0" rpy="0.000000 0.0 0.000000"/>
+                    <origin xyz="0 0 0" rpy="1.5708000 0.0 1.570800"/>
                     <geometry>
-                            <!-- <cylinder radius="0.01" length="0.35"/> -->
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
+                            <cylinder radius="0.01" length="0.35"/> 
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0" rpy="0.000000 0.0 0.000000"/>
+                    <origin xyz="0 0 0" rpy="1.570800 0.0 1.570800"/>
                     <geometry>
-                            <!-- <cylinder radius="0.01" length="0.35"/> -->
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
+                            <cylinder radius="0.01" length="0.35"/> 
                     </geometry>
             </collision>
     </link>
@@ -79,17 +77,17 @@
                     <inertia ixx="0.000423"  ixy="-0.000003" ixz="0.000000" iyx="-0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0" rpy="0.000000 0.0 0.000000"/>
+                    <origin xyz="0 0 0" rpy="1.5708000 0.0 1.5708000"/>
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
+                            <cylinder radius="0.01" length="0.33"/> 
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0" rpy="0.000000 0.0 0.000000"/>
+                    <origin xyz="0 0 0" rpy="1.5708000 0.0 1.5708000000"/>
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
+                            <cylinder radius="0.01" length="0.33"/> 
                     </geometry>
             </collision>
     </link>
@@ -143,19 +141,17 @@
                     <inertia ixx="0.095613"  ixy="0.000015" ixz="0.011017" iyx="0.000015"  iyy="0.101263" iyz="-0.000023"  izx="0.011017"  izy="-0.000023"  izz="0.000676" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
-                            <!-- cylinder radius="0.01" length="0.35"/ -->
+                            <cylinder radius="0.01" length="0.35" />
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <!-- cylinder radius="0.01" length="0.35"/ -->
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
+                            <cylinder radius="0.01" length="0.35" />
                     </geometry>
             </collision>
     </link>
@@ -166,19 +162,17 @@
                     <inertia ixx="0.000423"  ixy="-0.000003" ixz="0.000000" iyx="-0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <!-- cylinder radius="0.01" length="0.33"/ -->
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
+                            <cylinder radius="0.01" length="0.33" />
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
-                            <!-- cylinder radius="0.01" length="0.33"/ -->
+                            <cylinder radius="0.01" length="0.33" />
                     </geometry>
             </collision>
     </link>
@@ -232,19 +226,17 @@
                     <inertia ixx="0.095613"  ixy="0.000015" ixz="0.011017" iyx="0.000015"  iyy="0.101263" iyz="-0.000023"  izx="0.011017"  izy="-0.000023"  izz="0.000676" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
-                            <!-- cylinder radius="0.01" length="0.35"/ -->
+                            <cylinder radius="0.01" length="0.35" />
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
-                            <!-- cylinder radius="0.01" length="0.35"/ -->
+                            <cylinder radius="0.01" length="0.35"/>
                     </geometry>
             </collision>
     </link>
@@ -255,19 +247,17 @@
                     <inertia ixx="0.000423"  ixy="0.000003" ixz="0.000000" iyx="0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708" />
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
-                            <!-- cylinder radius="0.01" length="0.33"/ -->
+                            <cylinder radius="0.01" length="0.33"/>
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
-                            <!-- cylinder radius="0.01" length="0.33"/ -->
+                            <cylinder radius="0.01" length="0.33"/>
                     </geometry>
             </collision>
     </link>
@@ -321,19 +311,17 @@
                     <inertia ixx="0.095613"  ixy="-0.000015" ixz="-0.011017" iyx="-0.000015"  iyy="0.101263" iyz="-0.000023"  izx="-0.011017"  izy="-0.000023"  izz="0.000676" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
                     <geometry>
-                            <!-- cylinder radius="0.01" length="0.35"/ -->
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
+                            <cylinder radius="0.01" length="0.35"/>
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.35.obj" />
-                            <!-- cylinder radius="0.01" length="0.35"/ -->
+                            <cylinder radius="0.01" length="0.35"/>
                     </geometry>
             </collision>
     </link>
@@ -344,19 +332,18 @@
                     <inertia ixx="0.000423"  ixy="0.000003" ixz="0.000000" iyx="0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
                     <geometry>
                             <mesh filename="ycyl-r0.01-l0.33.obj" />
-                            <!-- cylinder radius="0.01" length="0.33"/ -->
+                            <cylinder radius="0.01" length="0.33"/>
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0"/>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
                     <geometry>
-                            <mesh filename="ycyl-r0.01-l0.33.obj" />
-                            <!-- cylinder radius="0.01" length="0.33"/ -->
+                            <cylinder radius="0.01" length="0.33"/>
                     </geometry>
             </collision>
     </link>

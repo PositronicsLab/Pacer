@@ -10,9 +10,11 @@ add_definitions(-DBUILD_DOUBLE)
 add_definitions(-DUSE_OSG)
 add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
-include_directories(/usr/include /usr/include/libxml2 /usr/local/include include ${Boost_INCLUDE_DIR} /usr/local/Cellar/qhull/2012.1/include/libqhull)
-link_directories(/usr/local/lib /home/samzapo/ThirdParty/Ravelin/build /home/samzapo/ThirdParty/Moby/build /home/samzapo/ThirdParty/Opt/build)
+
 include_directories (/home/samzapo/ThirdParty/Ravelin/include /home/samzapo/ThirdParty/Moby/include /home/samzapo/ThirdParty/Opt/include)
+include_directories(/usr/include /usr/include/libxml2 /usr/local/include include ${Boost_INCLUDE_DIR} /usr/local/Cellar/qhull/2012.1/include/libqhull)
+
+link_directories( /home/samzapo/ThirdParty/Ravelin/build /home/samzapo/ThirdParty/Moby/build /home/samzapo/ThirdParty/Opt/build /usr/local/lib)
 
 # g++ -g0 -O3 -I/usr/include/libxml2 -I../../include -DBUILD_DOUBLE -DSAFESTATIC=static -DUSE_OSG -DUSE_GLPK PD-controller.cpp estimatefrict.cpp output.cpp -L../../../debug -lMoby -shared -o libcontroller.so
 set(box_srcs estimatefrict.cpp Box.cpp output.cpp)

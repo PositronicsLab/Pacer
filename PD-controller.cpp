@@ -2,86 +2,18 @@
  * Simple PD controller 
  ****************************************************************************/
 
-#include <cmath>
-#include <sys/types.h>
-#include <sys/times.h>
-#include <fstream>
+#include <Control.h>
 
-#include <boost/shared_ptr.hpp>
-#include <Ravelin/MatrixNd.h>
-#include <Ravelin/VectorNd.h>
-#include <Ravelin/Vector3d.h>
-#include <Ravelin/LinAlgd.h>
-#include <Ravelin/AAngled.h>
-#include <Ravelin/SForced.h>
-
-
-#include <Moby/Simulator.h>
-#include <Moby/EventDrivenSimulator.h>
-#include <Moby/RCArticulatedBody.h>
-#include <Moby/DeformableBody.h>
-#include <Moby/DynamicBody.h>
-#include <Moby/RevoluteJoint.h>
-#include <Moby/GravityForce.h>
-#include <Moby/Constants.h>
-#include <Moby/RNEAlgorithm.h>
+#define USE_DUMMY_CONTACTS
 
 using namespace Moby;
 using namespace Ravelin;
-using boost::shared_ptr;
-using boost::dynamic_pointer_cast;
-using std::string;
-using std::map;
-using std::pair;
-using std::vector;
-
-enum RobotDOFs {
-  LF_HFE = 0,
-  LF_HAA,
-  LF_KFE,
-
-  LH_HFE,
-  LH_HAA,
-  LH_KFE,
-
-  RF_HFE,
-  RF_HAA,
-  RF_KFE,
-
-  RH_HFE,
-  RH_HAA,
-  RH_KFE,
-
-  NJOINT
-};
-
-const unsigned NUM_EEFS = 4,
-               NDOFS = NJOINT+6,
-               N_FIXED_JOINTS = 4,
-	       NSPATIAL = 6;
-
-typedef Ravelin::MatrixNd Mat;
-typedef Ravelin::VectorNd Vec;
-
-void outlog(const Mat& M, std::string name);
-void outlog(const Vec& z, std::string name);
-void outlog2(const Vec& M, std::string name);
-void outlog2(const Mat& z, std::string name);
-double friction_estimation(const Vec& v, const Vec& fext, double dt,
-                         const Mat& N,const Mat& ST, const Mat& M, bool post_event, Mat& MU, Vec& cf);
-
-struct ContactData
-{
-  Vector3d point;  // contact point
-  Vector3d normal; // contact normal (pointing away from the ground)
-  std::string name;
-};
-
 
 std::vector<std::string> eef_names_, joint_name_;
 std::vector<ContactData> contacts;
 std::vector<RigidBodyPtr> eefs;
 static map<string, double> q_go0;
+
 // simulator 
 boost::shared_ptr<EventDrivenSimulator> sim;
 // robot pointer
@@ -90,8 +22,7 @@ DynamicBodyPtr dbrobot;
 Vec cf_moby;
 Mat MU_moby;
 
-// integration error
-map<string, double> perr_sum;
+///////////////////////// PID /////////////////////////////
 
 struct Gains
 {
@@ -103,6 +34,9 @@ struct Gains
 // map of gains
 map<string, Gains> gains;
 
+// integration error
+map<string, double> perr_sum;
+
 template <typename T, typename U>
 const U& get(const map<T, U>& m, const T& key)
 {
@@ -111,6 +45,37 @@ const U& get(const map<T, U>& m, const T& key)
     throw std::runtime_error("Unexpectedly couldn't find key in map!");
   return i->second;
 }
+
+/// Controls the robot
+void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Mat& ufb)
+{
+      const std::vector<JointPtr>& joints = abrobot->get_joints();
+
+      // clear and set motor torques
+      for (unsigned m=0,i=0; m< joints.size(); m++)
+      {
+            // get the joint
+            JointPtr j = joints[m];
+            if(j->q.rows() == 0) continue;
+
+            // get the two gains
+            const double KP = get(gains,j->id).kp;
+            const double KV = get(gains,j->id).kv;
+            const double KI = get(gains,j->id).ki;
+
+            // add feedback torque to joints
+            double perr = get(q_des,j->id) - j->q[0];
+            perr_sum[j->id] += perr;
+            double ierr = perr_sum[j->id];
+            double derr = get(qd_des,j->id) - j->qd[0];
+            Vec fb_torque(1);
+            fb_torque[0] = perr*KP + derr*KV + ierr*KI;
+            ufb.set_row(i,fb_torque);
+            i++;
+      }
+}
+
+///////////////////// Contact DATA ////////////////////////
 
 void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
 {
@@ -123,7 +88,6 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
             if(contacts[j].name.compare(links[i]->id) == 0)
                 eefs[j] = links[i];
 
-    int nk = 4;
     static Mat J, Jsub;
     static Vec col;
 
@@ -143,7 +107,7 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
           Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
           Vector3d torque;
           torque.set_zero();
-          outlog2(c.point,"point");
+//          outlog2(c.point,"point");
 
           RigidBodyPtr sbfoot = eefs[i];
  
@@ -152,23 +116,23 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
           Origin3d o(c.point);
           boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
           SForced sfn(c.normal,torque,pose);
-          outlog2(c.normal,"norm");
+//          outlog2(c.normal,"norm");
           abrobot->convert_to_generalized_force(sbfoot,sfn, c.point, col);
           N.set_column(i,col);
-          outlog2(col,"N_col");
+//          outlog2(col,"N_col");
           for(int k=0;k<nk;k++){
               if(k%2 == 0) {
-                  outlog2(tan1,"tanS");
+//                  outlog2(tan1,"tanS");
                   SForced sfs(tan1,torque,pose);
                   abrobot->convert_to_generalized_force(sbfoot,sfs, c.point, col);
               } else {
-                  outlog2(tan2,"tanT");
+//                  outlog2(tan2,"tanT");
                   SForced sft(tan2,torque,pose);
                   abrobot->convert_to_generalized_force(sbfoot,sft, c.point, col);
               }
               if(k>=2) col.negate();
               D.set_column(i*nk + k,col);
-              outlog2(col,"D_col");
+//              outlog2(col,"D_col");
           }
      }
 }
@@ -179,6 +143,8 @@ void calculate_dyn_properties(Mat& M, Vec& fext){
     abrobot->get_generalized_inertia(M);
     abrobot->get_generalized_forces(fext);
 }
+
+///////////////////// Controllers ////////////////////////
 
     double last_time = 0;
 /// Event callback function for processing events
@@ -219,94 +185,12 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
             contacts.push_back(c);
         }
     }
-
-      Mat N,D,M(NDOFS,NDOFS);
-      Vec fext(NDOFS);
-
-      Mat MU;
-      MU.set_zero(nc,1);
-
-      determine_N_D(contacts,N,D);
-
-      calculate_dyn_properties(M,fext);
-
-      Vec v(NDOFS);
-      dbrobot->get_generalized_velocity(DynamicBody::eSpatial,v);
-
-    // estimated contact forces
-    Vec cf;
-    double err = friction_estimation(v,fext,dt,N,D,M,true,MU,cf);
-    contacts.clear();
-    /// Output to file
-    std::ofstream out;
-
-    { // output mu vals
-        out.open("mu.out",std::ios::out | std::ios::app);
-        out << err << " " << v.norm() << " " << nc << " " << dt;
-        for(int i=0;i<nc;i++)
-          out << " " << MU(i,0);
-        out << std::endl;
-        out.close();
-        
-        out.open("cf.out",std::ios::out | std::ios::app);
-        for(int i=0;i<cf.rows();i++)
-          out << ((i==0)? "":" ") << cf[i];
-        out << std::endl;
-        out.close();
-    }
-
-    { // output moby vals
-        out.open("muM.out",std::ios::out | std::ios::app);
-        for(int i=0;i<nc;i++)
-          out << ((i==0)? "":" ") << MU_moby(i,0);
-        out << std::endl;
-        out.close();
-
-        out.open("cfM.out",std::ios::out | std::ios::app);
-        for(int i=0;i<cf_moby.rows();i++)
-          out << ((i==0)? "":" ") << cf_moby[i];
-        out << std::endl;
-        out.close();
-    }
-
-    last_time = t;
+//    last_time = t;
 }
 
 
 /// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty)
-{}
-
-/// Controls the robot
-void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Mat& ufb)
-{
-      const std::vector<JointPtr>& joints = abrobot->get_joints();
-
-      // clear and set motor torques
-      for (unsigned m=0,i=0; m< joints.size(); m++)
-      {
-            // get the joint
-            JointPtr j = joints[m];
-            if(j->q.rows() == 0) continue;
-
-            // get the two gains
-            const double KP = get(gains,j->id).kp;
-            const double KV = get(gains,j->id).kv;
-            const double KI = get(gains,j->id).ki;
-
-            // add feedback torque to joints
-            double perr = get(q_des,j->id) - j->q[0];
-            perr_sum[j->id] += perr;
-            double ierr = perr_sum[j->id];
-            double derr = get(qd_des,j->id) - j->qd[0];
-            Vec fb_torque(1);
-            fb_torque[0] = perr*KP + derr*KV + ierr*KI;
-            ufb.set_row(i,fb_torque);
-            i++;
-      }
-}
-
-
+void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty){}
 
 void apply_simulation_forces(const Mat& u){
     const std::vector<JointPtr>& joints = abrobot->get_joints();
@@ -326,9 +210,32 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     static double test_frict_val = 0.1;
      static Mat uff(NJOINT,1),ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
     double dt = t - last_time;
-     
-     unsigned nc = contacts.size();
 
+#ifdef USE_DUMMY_CONTACTS
+    // PROCESS CONTACTS
+    contacts.clear();
+    int nc = 4;
+    const std::vector<RigidBodyPtr>& links = abrobot->get_links();
+    std::vector<RigidBodyPtr> eefs(nc);
+
+    for(unsigned i=0;i<links.size();i++)
+        for(unsigned j=0;j<nc;j++)
+            if(eef_names_[j].compare(links[i]->id) == 0)
+                eefs[j] = links[i];
+
+    for(unsigned i=0;i<nc;i++){
+      Ravelin::VectorNd gc;
+      eefs[i]->get_generalized_coordinates(DynamicBody::eSpatial,gc);
+      ContactData c;
+      c.normal = Ravelin::Vector3d(0,0,1);
+      gc.get_sub_vec(0,3,c.point);
+      c.name = eef_names_[i];
+      contacts.push_back(c);
+
+    }
+#else
+     unsigned nc = contacts.size();
+#endif
      //static double test_frict_val = 0.5;
      static unsigned ITER = 1;
 
@@ -356,6 +263,80 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           qd.set_row(ind,joints[m]->qd);
       }
 
+      if (nc > 0 && dt>0) {
+        /// Run friction estimation
+        Mat N,D,M(NDOFS,NDOFS);
+        Vec fext(NDOFS);
+
+        Mat MU;
+        MU.set_zero(nc,1);
+        for(int i=0;i<nc;i++)
+          MU(i,0) = 0.4;
+
+        determine_N_D(contacts,N,D);
+
+        Mat ST;
+        ST.resize(D.rows(),D.columns()/2);
+        ST.set_zero();
+        // remove negations from D to create ST
+        // of the form [S T]
+
+        for(int i=0;i<N.columns();i++){
+          for(int j=0;j<N.rows();j++){
+                ST(j,i) = D(j,i*nk);
+                ST(j,nc+i) = D(j,i*nk+1);
+            }
+        }
+//        outlog2(ST,"ST");
+
+        calculate_dyn_properties(M,fext);
+
+        Vec v(NDOFS);
+        dbrobot->get_generalized_velocity(DynamicBody::eSpatial,v);
+        // estimated contact forces
+
+        Vec qdd = Vec::zero(NJOINT);
+        Vec cf, ff = uff.column(0);
+        idyn(v,qdd,M,N,D,fext,dt,MU,ff);
+        uff.set_column(0,ff);
+//        outlog2(uff,"uff");
+
+//        double err = friction_estimation(v,fext,dt,N,D,M,true,MU,cf);
+        contacts.clear();
+
+        /// Output to file
+        /*
+        {
+          std::ofstream out;
+          // output mu vals
+          out.open("mu.out",std::ios::out | std::ios::app);
+          out << err << " " << v.norm() << " " << nc << " " << dt;
+          for(int i=0;i<nc;i++)
+            out << " " << MU(i,0);
+          out << std::endl;
+          out.close();
+
+          out.open("cf.out",std::ios::out | std::ios::app);
+          for(int i=0;i<cf.rows();i++)
+            out << ((i==0)? "":" ") << cf[i];
+          out << std::endl;
+          out.close();
+        // output moby vals
+          out.open("muM.out",std::ios::out | std::ios::app);
+          for(int i=0;i<nc;i++)
+            out << ((i==0)? "":" ") << MU_moby(i,0);
+          out << std::endl;
+          out.close();
+
+          out.open("cfM.out",std::ios::out | std::ios::app);
+          for(int i=0;i<cf_moby.rows();i++)
+            out << ((i==0)? "":" ") << cf_moby[i];
+          out << std::endl;
+          out.close();
+        }
+        */
+      }
+
       ///  Determine FB forces
       control_PID(q_des, qd_des, gains,t,ufb);
 
@@ -364,17 +345,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       u += uff;
 
       apply_simulation_forces(u);
-
-      Vec fext;
-      fext.set_zero(NDOFS);
-      fext[5] = test_frict_val;
-      abrobot->add_generalized_force(fext);
-      if(dt>0){
-        std::cerr << "iteration: " << ITER << std::endl;
-      	test_frict_val *= 1.001;
-      	ITER++;
-      }
-
 
     last_time = t;
 }

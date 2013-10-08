@@ -11,16 +11,17 @@
 
     <ODEPACKIntegrator id="odepack" type="VectorN" stiff="false" min-step-size="0" rel-err-tol="0" abs-err-tol="1e-4" />
     <EulerIntegrator id="euler" type="VectorN" />
+    <RungeKuttaIntegrator id="rk4" rel-err-tol="1e-6" abs-err-tol="1e-6" />
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
 
-   <GeneralizedCCD id="ccd" ori-integrator-id="euler" eps-tolerance="1e-3" toi-tolerance="1e-3">
+   <GeneralizedCCD id="ccd" ori-integrator-id="rk4" eps-tolerance="1e-3" toi-tolerance="1e-3">
       <Body body-id="hyq" />
       <Body body-id="ground" />
       <DisabledPair object1-id="hyq" object2-id="hyq"/>
     </GeneralizedCCD>
 
-  <EventDrivenSimulator integrator-id="euler" collision-detector-id="ccd">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd">
     <RecurrentForce recurrent-force-id="gravity" enabled="true" /> 
     <DynamicBody dynamic-body-id="hyq" />
     <DynamicBody dynamic-body-id="ground" />

@@ -11,19 +11,20 @@ add_definitions(-DUSE_OSG)
 add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
-include_directories (/home/samzapo/ThirdParty/Ravelin/include /home/samzapo/ThirdParty/Moby/include /home/samzapo/ThirdParty/Opt/include)
+include_directories(/home/samzapo/ThirdParty/Ravelin/include /home/samzapo/ThirdParty/Moby/include /home/samzapo/ThirdParty/Opt/include ./)
 include_directories(/usr/include /usr/include/libxml2 /usr/local/include include ${Boost_INCLUDE_DIR} /usr/local/Cellar/qhull/2012.1/include/libqhull)
 
 link_directories( /home/samzapo/ThirdParty/Ravelin/build /home/samzapo/ThirdParty/Moby/build /home/samzapo/ThirdParty/Opt/build /usr/local/lib)
 
 # g++ -g0 -O3 -I/usr/include/libxml2 -I../../include -DBUILD_DOUBLE -DSAFESTATIC=static -DUSE_OSG -DUSE_GLPK PD-controller.cpp estimatefrict.cpp output.cpp -L../../../debug -lMoby -shared -o libcontroller.so
-set(box_srcs estimatefrict.cpp Box.cpp output.cpp)
-set(hyq_srcs estimatefrict.cpp PD-controller.cpp output.cpp)
+#set(box_srcs estimatefrict.cpp Box.cpp output.cpp)
+#set(hyq_srcs estimatefrict.cpp PD-controller.cpp output.cpp)
+set(hyq_srcs idyn.cpp PD-controller.cpp output.cpp)
 
-add_library(BOX${PROJECT_NAME} ${box_srcs})
+#add_library(BOX${PROJECT_NAME} ${box_srcs})
 add_library(HYQ${PROJECT_NAME} ${hyq_srcs})
-add_library(RCH${PROJECT_NAME} RestingContact-test.cpp)
+#add_library(RCH${PROJECT_NAME} RestingContact-test.cpp)
 
-target_link_libraries(BOX${PROJECT_NAME} Moby Ravelin Opt)
+#target_link_libraries(BOX${PROJECT_NAME} Moby Ravelin Opt)
 target_link_libraries(HYQ${PROJECT_NAME} Moby Ravelin Opt)
-target_link_libraries(RCH${PROJECT_NAME} Moby Ravelin)
+#target_link_libraries(RCH${PROJECT_NAME} Moby Ravelin)

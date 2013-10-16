@@ -162,6 +162,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
         for (unsigned i=0,m=0; m< joints.size(); m++)
         {
             if(joints[m]->q.size() == 0) continue;
+            unsigned ind = joints[m]->get_coord_index();
             q_des[joints[m]->id] = joints[m]->q[0];
             qd_des[joints[m]->id] = 0.0;
             std::cout << "(" << q_des[joints[m]->id] << ",0) ";
@@ -223,7 +224,12 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   eef_names_.push_back("RH_FOOT");
 
   // now, setup gains
-  for(unsigned i=0;i<joint_name_.size();i++){
+  const std::vector<JointPtr>& joints = abrobot->get_joints();
+
+
+  for (unsigned i=0,m=0; m< joints.size(); m++)
+  {
+      if(joints[m]->q.size() == 0) continue;
       double kp,kv,ki;
       switch(i%3){
       case 0:
@@ -244,9 +250,10 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       default: break;
       }
       // pass gain values to respective joint
-      gains[joint_name_[i]].kp = kp;
-      gains[joint_name_[i]].kv = kv;
-      gains[joint_name_[i]].ki = ki;
+      gains[joints[m]->id].kp = kp;
+      gains[joints[m]->id].kv = kv;
+      gains[joints[m]->id].ki = ki;
+      i++;
   }
 }
 

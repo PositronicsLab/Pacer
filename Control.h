@@ -23,8 +23,8 @@
 #include <Moby/GravityForce.h>
 #include <Moby/Constants.h>
 #include <Moby/RNEAlgorithm.h>
-
-#include <Opt/LCP.h>
+#include <Moby/LCP.h>
+//#include <Opt/LCP.h>
 
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
@@ -32,6 +32,7 @@ typedef Ravelin::VectorNd Vec;
 void outlog(const Mat& M, std::string name);
 void outlog(const Vec& z, std::string name);
 void outlog2(const Vec& M, std::string name);
+void outlog2(const Ravelin::SharedVectorNd& M, std::string name);
 void outlog2(const Mat& z, std::string name);
 //double friction_estimation(const Vec& v, const Vec& fext,
 //                           double dt, const Mat& N,

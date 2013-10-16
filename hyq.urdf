@@ -100,7 +100,7 @@
             <visual>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
                     <material name="Red">
                     </material>
@@ -108,7 +108,7 @@
             <collision>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
             </collision>
     </link>
@@ -185,7 +185,7 @@
             <visual>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
                     <material name="Red">
                     </material>
@@ -193,7 +193,7 @@
             <collision>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
             </collision>
     </link>
@@ -270,7 +270,7 @@
             <visual>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
                     <material name="Red">
                     </material>
@@ -278,7 +278,7 @@
             <collision>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
             </collision>
     </link>
@@ -343,7 +343,7 @@
             <collision>
                     <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
                     <geometry>
-                            <cylinder radius="0.01" length="0.33"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
             </collision>
     </link>
@@ -356,7 +356,7 @@
             <visual>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
                     <material name="Red">
                     </material>
@@ -364,32 +364,29 @@
             <collision>
                     <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                            <sphere radius="0.02"/>
+                        <box size="0.02 0.02 0.02"/>
                     </geometry>
             </collision>
     </link>
 <!-- ROBOT JOINTS -->
    <!-- LF_LEG JOINTS -->
-    <joint name="LF_HFE" type="revolute">
+    <joint name="LF_HFE" type="continuous">
             <origin xyz="0.08 0.0 0.0" rpy="1.570796 0.0 0.0"/>
             <parent link="LF_HIP_AA"/>
             <child link="LF_HIP_FE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-0.873" upper="1.222"/>
     </joint>
-    <joint name="LF_HAA" type="revolute">
+    <joint name="LF_HAA" type="continuous">
             <origin xyz="0.3735 0.207 0.0" rpy="0 1.570796 3.141593"/>
             <parent link="base_link"/>
             <child link="LF_HIP_AA"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-1.571" upper="0.524"/>
     </joint>
-    <joint name="LF_KFE" type="revolute">
+    <joint name="LF_KFE" type="continuous">
             <origin xyz="0.35 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="LF_HIP_FE"/>
             <child link="LF_KNEE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-2.443" upper="-0.349"/>
     </joint>
     <joint name="LF_LLF" type="fixed">
             <origin xyz="0.33 0.0 0.0" rpy="0.0 0.0 0.0"/>
@@ -397,26 +394,23 @@
             <child link="LF_FOOT"/>
     </joint>
     <!-- RF_LEG JOINTS -->
-    <joint name="RF_HFE" type="revolute">
+    <joint name="RF_HFE" type="continuous">
             <origin xyz="0.08 0.0 0.0" rpy="-1.570796 0.0 0.0"/>
             <parent link="RF_HIP_AA"/>
             <child link="RF_HIP_FE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-0.873" upper="1.222"/>
     </joint>
-    <joint name="RF_HAA" type="revolute">
+    <joint name="RF_HAA" type="continuous">
             <origin xyz="0.3735 -0.207 0.0" rpy="0 1.570796 0"/>
             <parent link="base_link"/>
             <child link="RF_HIP_AA"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-1.571" upper="0.524"/>
     </joint>
-    <joint name="RF_KFE" type="revolute">
+    <joint name="RF_KFE" type="continuous">
             <origin xyz="0.35 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="RF_HIP_FE"/>
             <child link="RF_KNEE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-2.443" upper="-0.349"/>
     </joint>
     <joint name="RF_LLF" type="fixed">
             <origin xyz="0.33 0.0 0.0" rpy="0.0 -1.570796 -1.570796"/>
@@ -424,26 +418,23 @@
             <child link="RF_FOOT"/>
     </joint>
     <!-- LH_LEG JOINTS -->
-    <joint name="LH_HFE" type="revolute">
+    <joint name="LH_HFE" type="continuous">
             <origin xyz="0.08 0.0 0.0" rpy="1.570796 0.0 0.0"/>
             <parent link="LH_HIP_AA"/>
             <child link="LH_HIP_FE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-1.222" upper="0.873"/>
     </joint>
-    <joint name="LH_HAA" type="revolute">
+    <joint name="LH_HAA" type="continuous">
             <origin xyz="-0.3735 0.207 0.0" rpy="3.141593 1.570796 0.0"/>
             <parent link="base_link"/>
             <child link="LH_HIP_AA"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-1.571" upper="0.524"/>
     </joint>
-    <joint name="LH_KFE" type="revolute">
+    <joint name="LH_KFE" type="continuous">
             <origin xyz="0.35 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="LH_HIP_FE"/>
             <child link="LH_KNEE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="0.349" upper="2.443"/>
     </joint>
     <joint name="LH_LLF" type="fixed">
             <origin xyz="0.33 0.0 0.0" rpy="0.0 -1.570796 -1.570796"/>
@@ -451,26 +442,23 @@
             <child link="LH_FOOT"/>
     </joint>
     <!-- RH_LEG JOINTS -->
-    <joint name="RH_HFE" type="revolute">
+    <joint name="RH_HFE" type="continuous">
             <origin xyz="0.08 0.0 0.0" rpy="-1.570796 0.0 0.0"/>
             <parent link="RH_HIP_AA"/>
             <child link="RH_HIP_FE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-1.222" upper="0.873"/>
     </joint>
-    <joint name="RH_HAA" type="revolute">
+    <joint name="RH_HAA" type="continuous">
             <origin xyz="-0.3735 -0.207 0.0" rpy="0.0 1.570796 0.0"/>
             <parent link="base_link"/>
             <child link="RH_HIP_AA"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="-1.571" upper="0.524"/>
     </joint>
-    <joint name="RH_KFE" type="revolute">
+    <joint name="RH_KFE" type="continuous">
             <origin xyz="0.35 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="RH_HIP_FE"/>
             <child link="RH_KNEE"/>
             <axis xyz="0 0 1"/>
-            <limit effort="100.000000" velocity="10.0" lower="0.349" upper="2.443"/>
     </joint>
     <joint name="RH_LLF" type="fixed">
             <origin xyz="0.33 0.0 0.0" rpy="0.0 -1.570796 -1.570796"/>

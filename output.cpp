@@ -42,3 +42,10 @@ void outlog2(const Ravelin::VectorNd& z, std::string name){
         str << std::setprecision(9) << z[i] << " ";
     std::cout << name << " = [ %"  << z.rows() << "\n" << str.str() << "]';" << std::endl;
 }
+
+void outlog2(const Ravelin::SharedVectorNd& z, std::string name){
+    std::ostringstream str;
+    for(int i=0;i<z.rows();i++)
+        str << std::setprecision(9) << z[i] << " ";
+    std::cout << name << " = [ %"  << z.rows() << "\n" << str.str() << "]';" << std::endl;
+}

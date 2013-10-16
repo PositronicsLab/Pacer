@@ -173,6 +173,7 @@ void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty){}
 /// The main control loop
 void controller(DynamicBodyPtr body, double time, void*)
 {
+  /*
     double t = sim->current_time;
     int nc = contacts.size();
     double dt = t - last_time;
@@ -266,6 +267,14 @@ void controller(DynamicBodyPtr body, double time, void*)
     }
 
     contacts.clear(); 
+    */
+
+  Vec q(NSPATIAL+1), qd(NSPATIAL);
+  body->get_generalized_coordinates(DynamicBody::eEuler,q);
+  std::cerr << "q = " << q << std::endl;
+
+  body->get_generalized_velocity(DynamicBody::eSpatial,qd);
+  std::cerr << "qd = " << qd << std::endl;
 }
 
 /// plugin must be "extern C"
@@ -290,34 +299,34 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
     q_start.set_zero();
     qd_start.set_zero();
 
-    q_start[2] = 0.526;
-    q_start[0] = 0;
-    q_start[1] = 0;
+    //    q_start[2] = 0.526;
+    //    q_start[0] = 0;
+    //    q_start[1] = 0;
 
 //    qd_start[0] = 1;
 
-    body->set_generalized_coordinates(DynamicBody::eEuler,q_start);
-    body->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
+//    body->set_generalized_coordinates(DynamicBody::eEuler,q_start);
+//    body->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
 
     // setup the controller
     body->controller = controller;
 
     obj = dynamic_pointer_cast<RigidBody>(body);
 
-    sim->event_post_impulse_callback_fn = post_event_callback_fn;
+//    sim->event_post_impulse_callback_fn = post_event_callback_fn;
 
  //   sim->event_callback_fn = pre_event_callback_fn;
 
     // RUN OPTIMIZATION TO FIND CFs
-    Mat N,D,M;
-    Vec fext;
-    Vec v(NSPATIAL);
-    body->get_generalized_velocity(DynamicBody::eSpatial,v);
-    Mat MU;
-    calculate_dyn_properties(obj,M,fext);
+//    Mat N,D,M;
+//    Vec fext;
+//    Vec v(NSPATIAL);
+//    body->get_generalized_velocity(DynamicBody::eSpatial,v);
+//    Mat MU;
+//    calculate_dyn_properties(obj,M,fext);
 
-    // estimated contact forces
-    Vec cf;
-    friction_estimation(v,fext,0,N,D,M,false,MU,cf);
+//    // estimated contact forces
+//    Vec cf;
+//    friction_estimation(v,fext,0,N,D,M,false,MU,cf);
 }
 } // end extern C

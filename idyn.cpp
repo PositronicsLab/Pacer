@@ -2,7 +2,7 @@
 
 #define NDEBUG
 
-Opt::LCP lcp_;
+Moby::LCP lcp_;
 Ravelin::LinAlgd LA_;
 
  static bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)

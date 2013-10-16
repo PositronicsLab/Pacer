@@ -2,7 +2,7 @@
 
 <XML>
   <DRIVER>
-    <camera position="0 2.5 0.5" target="0 0 0" up="0 0 1" />
+    <camera position="5 5.5 3.5" target="0 0 0" up="0 0 1" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 
@@ -15,7 +15,7 @@
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
 
-   <GeneralizedCCD id="ccd" ori-integrator-id="rk4" eps-tolerance="1e-3" toi-tolerance="1e-3">
+   <GeneralizedCCD id="ccd" ori-integrator-id="odepack" eps-tolerance="1e-3" toi-tolerance="1e-3">
       <Body body-id="hyq" />
       <Body body-id="ground" />
       <DisabledPair object1-id="hyq" object2-id="hyq"/>
@@ -25,7 +25,7 @@
     <RecurrentForce recurrent-force-id="gravity" enabled="true" /> 
     <DynamicBody dynamic-body-id="hyq" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="hyq" object2-id="ground" restitution="0" mu-coulomb="0.1" />
+    <ContactParameters object1-id="hyq" object2-id="ground" restitution="0" mu-coulomb="1" />
   </EventDrivenSimulator>
 
   <RCArticulatedBody id="hyq" urdf="hyq.urdf" fdyn-algorithm="crb" fdyn-algorithm-frame="link" floating-base="true" translate="0 0 .80469" />

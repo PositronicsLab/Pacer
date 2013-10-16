@@ -8,7 +8,7 @@ const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
 
-Opt::LCP lcp_;
+Opt::LCP lcp2_;
 
 
 void outlog(const Mat& M, std::string name);
@@ -20,7 +20,7 @@ Ravelin::LinAlgd LA;
 
 struct ContactData;
 
-extern Vec cf_moby;
+//extern Vec cf_moby;
 
 static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
 {
@@ -65,7 +65,7 @@ static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
   zzz.set_zero(qqq.size());
 
   bool SOLVE_FLAG = true;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz))
+  if(!lcp2_.lcp_lemke_regularized(MMM,qqq,zzz))
       SOLVE_FLAG = false;
 
   // extract x
@@ -144,7 +144,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
             Vec z(n);
             z.set_zero();
-            if (!lcp_.lcp_lemke_regularized(Q,c,z)){
+            if (!lcp2_.lcp_lemke_regularized(Q,c,z)){
                 std::cout << "friction estimation failed" << std::endl;
             } else 
 	    {
@@ -212,7 +212,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                std::cout << "friction estimation failed" << std::endl;
            } else {
                outlog2(z,"cf");
-               outlog2(cf_moby,"cf_MOBY");
+//               outlog2(cf_moby,"cf_MOBY");
 
                Vec err(ngc);
                R.mult(z,err);
@@ -368,7 +368,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
                         
                         // Print Moby Error
  			err.set_zero(ngc);
-                        R.mult(cf_moby,err);
+//                        R.mult(cf_moby,err);
                         outlog2(err,"MOBY generalized force from cfs = [R*(z+z2)]");
                         err -= jstar;
 

@@ -96,16 +96,20 @@ const U& get(const map<T, U>& m, const T& key)
 
     double last_time = 0;
 /// Controls the robot
-void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Mat& ufb)
+void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Vec& u)
 {
       const std::vector<JointPtr>& joints = abrobot->get_joints();
 
+      // reset u
+      u.set_zero();
+
       // clear and set motor torques
-      for (unsigned m=0,i=0; m< joints.size(); m++)
+      for (unsigned m=0; m< joints.size(); m++)
       {
             // get the joint
             JointPtr j = joints[m];
             if(j->q.rows() == 0) continue;
+            unsigned i = j->get_coord_index();
 
             // get the two gains
             const double KP = get(gains,j->id).kp;
@@ -119,21 +123,22 @@ void control_PID(const map<string, double>& q_des, const map<string, double>& qd
             double derr = get(qd_des,j->id) - j->qd[0];
             Vec fb_torque(1);
             fb_torque[0] = perr*KP + derr*KV + ierr*KI;
-            ufb.set_row(i,fb_torque);
+            u.set_sub_vec(i,fb_torque);
             i++;
       }
 }
 
 
 
-void apply_simulation_forces(const Mat& u){
+void apply_simulation_forces(const Vec& u){
     const std::vector<JointPtr>& joints = abrobot->get_joints();
-    for(unsigned m=0,i=0;m< joints.size();m++){
+    for(unsigned m=0;m< joints.size();m++){
         if(joints[m]->q.size() == 0) continue;
         // reset motor torque
+        unsigned i = joints[m]->get_coord_index();
         Vec row;
         joints[m]->reset_force();
-        joints[m]->add_force(u.get_row(i,row));
+        joints[m]->add_force(u.get_sub_vec(i,i+joints[m]->num_dof(), row));
         i++;
     }
 }
@@ -141,12 +146,11 @@ void apply_simulation_forces(const Mat& u){
 /// The main control loop
 void controller(DynamicBodyPtr dbp, double t, void*)
 {
-    static Mat ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
+    static Vec u(NJOINT), q(NJOINT), qd(NJOINT);
     double dt = t - last_time;
      
      static unsigned ITER = 1;
 
-     ufb.set_zero();
      u.set_zero();
 
       /// setup a steady state
@@ -158,7 +162,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
         for (unsigned i=0,m=0; m< joints.size(); m++)
         {
             if(joints[m]->q.size() == 0) continue;
-            q_des[joints[m]->id] = q_go0[joints[m]->id];
+            q_des[joints[m]->id] = joints[m]->q[0];
             qd_des[joints[m]->id] = 0.0;
             std::cout << "(" << q_des[joints[m]->id] << ",0) ";
             i++;
@@ -171,17 +175,14 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       for(unsigned m=0;m< joints.size();m++){
           if(joints[m]->q.size() == 0) continue;
           unsigned ind = joints[m]->get_coord_index();
-          q.set_row(ind,joints[m]->q);
-          qd.set_row(ind,joints[m]->qd);
+          q.set_sub_vec(ind,joints[m]->q);
+          qd.set_sub_vec(ind,joints[m]->qd);
           std::cout << "(" << joints[m]->q[0] << "," << joints[m]->qd[0] << ") ";
       }
       std::cout << std::endl;
 
       ///  Determine FB forces
-      control_PID(q_des, qd_des, gains,t,ufb);
-
-      // combine ufb and uff
-      u += ufb; 
+      control_PID(q_des, qd_des, gains,t,u);
 
       apply_simulation_forces(u);
 
@@ -215,36 +216,6 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   }
   // setup the controller
   abrobot->controller = &controller;
-  // Create joint name vector
-  joint_name_.push_back("LF_HFE");
-  joint_name_.push_back("LF_HAA");
-  joint_name_.push_back("LF_KFE");
-  joint_name_.push_back("LH_HFE");
-  joint_name_.push_back("LH_HAA");
-  joint_name_.push_back("LH_KFE");
-  joint_name_.push_back("RF_HFE");
-  joint_name_.push_back("RF_HAA");
-  joint_name_.push_back("RF_KFE");
-  joint_name_.push_back("RH_HFE");
-  joint_name_.push_back("RH_HAA");
-  joint_name_.push_back("RH_KFE");
-  
-  // robot's go0 configuration
-  q_go0["LF_HFE"] =  0.6;
-  q_go0["LF_HAA"] = -0.35;
-  q_go0["LF_KFE"] = -1.4;
-
-  q_go0["RF_HFE"] =  0.6;
-  q_go0["RF_HAA"] = -0.35;
-  q_go0["RF_KFE"] = -1.4;
-
-  q_go0["LH_HFE"] = -0.6;
-  q_go0["LH_HAA"] = -0.35;
-  q_go0["LH_KFE"] =  1.4;
-
-  q_go0["RH_HFE"] = -0.6;
-  q_go0["RH_HAA"] = -0.35;
-  q_go0["RH_KFE"] =  1.4;
 
   eef_names_.push_back("LF_FOOT");
   eef_names_.push_back("RF_FOOT");
@@ -277,23 +248,6 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       gains[joint_name_[i]].kv = kv;
       gains[joint_name_[i]].ki = ki;
   }
-
-      Vec q_start(q_go0.size()+7),qd_start(q_go0.size()+6);
-      q_start.set_zero();
-      qd_start.set_zero();
-
-      for(int i=0;i<q_go0.size();i++){
-          int ind = abrobot->find_joint(joint_name_[i])->get_coord_index();
-          q_start[ind+1] = q_go0[joint_name_[i]];
-          std::cout << ind << " " << joint_name_[i] << std::endl;
-      }
-
-      q_start[2] = 1.05;
-      for(int i=0;i<q_start.rows();i++)
-          std::cerr << q_start[i] << std::endl;
-
-      abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
-      abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
 }
 
 } // end extern C

@@ -20,11 +20,14 @@ link_directories( /home/samzapo/ThirdParty/Ravelin/build /home/samzapo/ThirdPart
 set(box_srcs estimatefrict.cpp Box.cpp output.cpp)
 #set(hyq_srcs estimatefrict.cpp PD-controller.cpp output.cpp)
 set(hyq_srcs simple-PD.cpp output.cpp)
+set(links_srcs Controller.cpp output.cpp)
 
 add_library(BOX${PROJECT_NAME} ${box_srcs})
 add_library(HYQ${PROJECT_NAME} ${hyq_srcs})
+add_library(LINKS${PROJECT_NAME} ${links_srcs})
 #add_library(RCH${PROJECT_NAME} RestingContact-test.cpp)
 
 target_link_libraries(BOX${PROJECT_NAME} Moby Ravelin Opt)
 target_link_libraries(HYQ${PROJECT_NAME} Moby Ravelin Opt)
+target_link_libraries(LINKS${PROJECT_NAME} Moby Ravelin Opt)
 #target_link_libraries(RCH${PROJECT_NAME} Moby Ravelin)

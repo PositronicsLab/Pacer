@@ -59,7 +59,9 @@ using std::pair;
 using std::vector;
 
 enum RobotDOFs {
-  LF_HFE = 0,
+  BODY_JOINT = 0,
+
+  LF_HFE,
   LF_HAA,
   LF_KFE,
 
@@ -79,7 +81,7 @@ enum RobotDOFs {
 };
 
 const unsigned NUM_EEFS = 4,
-               NDOFS = NJOINT+6,
+               NDOFS = NJOINT+6, // NDFOFS for forces, accel, & velocities
                N_FIXED_JOINTS = 4,
                NSPATIAL = 6,
                nk = 4;

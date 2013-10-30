@@ -1,8 +1,8 @@
-<!-- The HyQ robot --> 
+<!-- The Links(Lynx) robot -->
 
 <XML>
   <DRIVER>
-    <camera position="5 5.5 3.5" target="0 0 0" up="0 0 1" />
+    <camera position="1 1.5 1.5" target="0 0 0" up="0 0 1" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 
@@ -15,20 +15,20 @@
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
 
-   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" toi-tolerance="1e-3">
-      <Body body-id="hyq" />
+   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
+      <Body body-id="links" />
       <Body body-id="ground" />
-      <DisabledPair object1-id="hyq" object2-id="hyq"/>
+      <DisabledPair object1-id="links" object2-id="links"/>
     </GeneralizedCCD>
 
   <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd">
-    <RecurrentForce recurrent-force-id="gravity" enabled="true" /> 
-    <DynamicBody dynamic-body-id="hyq" />
+    <RecurrentForce recurrent-force-id="gravity" />
+    <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="hyq" object2-id="ground" restitution="0" mu-coulomb="0.01" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.5" />
   </EventDrivenSimulator>
 
-  <RCArticulatedBody id="hyq" urdf="hyq.urdf" fdyn-algorithm="crb" fdyn-algorithm-frame="link" floating-base="true" translate="0 0 .80469" />
+  <RCArticulatedBody id="links" urdf="links.urdf" fdyn-algorithm="crb" fdyn-algorithm-frame="link" floating-base="true" translate="0 0 0.2" />
 
   <!-- setup the platform rigid body; it is not active -->
   <RigidBody id="ground" enabled="false"

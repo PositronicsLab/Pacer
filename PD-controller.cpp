@@ -355,6 +355,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 //      u += uff;
 
       apply_simulation_forces(u);
+
       outlog2(u,"u");
 
     last_time = t;

@@ -63,9 +63,9 @@ const unsigned NUM_EEFS = 4,
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
 
-std::vector<std::string> eef_names_, joint_name_;
+std::vector<std::string> eef_names_;
 std::vector<RigidBodyPtr> eefs;
-static map<string, double> q_go0;
+static map<string, double> q0;
 // simulator 
 boost::shared_ptr<EventDrivenSimulator> sim;
 // robot pointer
@@ -98,102 +98,103 @@ const U& get(const map<T, U>& m, const T& key)
 /// Controls the robot
 void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Vec& u)
 {
-      const std::vector<JointPtr>& joints = abrobot->get_joints();
+  const std::vector<JointPtr>& joints = abrobot->get_joints();
 
-      // reset u
-      u.set_zero();
+  // reset u
+  u.set_zero();
 
-      // clear and set motor torques
-      for (unsigned m=0; m< joints.size(); m++)
-      {
-            // get the joint
-            JointPtr j = joints[m];
-            if(j->q.rows() == 0) continue;
-            unsigned i = j->get_coord_index();
+  // clear and set motor torques
+  for (unsigned m=0; m< joints.size(); m++)
+  {
+    // get the joint
+    JointPtr j = joints[m];
+    if(j->q.rows() == 0) continue;
+    unsigned i = j->get_coord_index();
 
-            // get the two gains
-            const double KP = get(gains,j->id).kp;
-            const double KV = get(gains,j->id).kv;
-            const double KI = get(gains,j->id).ki;
+    // get the two gains
+    const double KP = get(gains,j->id).kp;
+    const double KV = get(gains,j->id).kv;
+    const double KI = get(gains,j->id).ki;
 
-            // add feedback torque to joints
-            double perr = get(q_des,j->id) - j->q[0];
-            perr_sum[j->id] += perr;
-            double ierr = perr_sum[j->id];
-            double derr = get(qd_des,j->id) - j->qd[0];
-            Vec fb_torque(1);
-            fb_torque[0] = perr*KP + derr*KV + ierr*KI;
-            u.set_sub_vec(i,fb_torque);
-            i++;
-      }
+    // add feedback torque to joints
+    double perr = get(q_des,j->id) - j->q[0];
+    perr_sum[j->id] += perr;
+    double ierr = perr_sum[j->id];
+    double derr = get(qd_des,j->id) - j->qd[0];
+    Vec fb_torque(1);
+    fb_torque[0] = perr*KP + derr*KV + ierr*KI;
+    u.set_sub_vec(i,fb_torque);
+    i++;
+  }
 }
 
 
 
 void apply_simulation_forces(const Vec& u){
-    const std::vector<JointPtr>& joints = abrobot->get_joints();
-    for(unsigned m=0;m< joints.size();m++){
-        if(joints[m]->q.size() == 0) continue;
-        // reset motor torque
-        unsigned i = joints[m]->get_coord_index();
-        Vec row;
-        joints[m]->reset_force();
-        joints[m]->add_force(u.get_sub_vec(i,i+joints[m]->num_dof(), row));
-        i++;
-    }
+  const std::vector<JointPtr>& joints = abrobot->get_joints();
+  for(unsigned m=0;m< joints.size();m++){
+    if(joints[m]->q.size() == 0) continue;
+    // reset motor torque
+    unsigned i = joints[m]->get_coord_index();
+    Vec row;
+    joints[m]->reset_force();
+    joints[m]->add_force(u.get_sub_vec(i,i+joints[m]->num_dof(), row));
+    i++;
+  }
 }
 
 /// The main control loop
 void controller(DynamicBodyPtr dbp, double t, void*)
 {
-    static Vec u(NJOINT), q(NJOINT), qd(NJOINT);
-    double dt = t - last_time;
-     
-     static unsigned ITER = 1;
+  static Vec u(NJOINT), q(NJOINT), qd(NJOINT);
+  double dt = t - last_time;
 
-     u.set_zero();
+  static unsigned ITER = 1;
 
-      /// setup a steady state
-      static map<string, double> q_des, qd_des;
-      const std::vector<JointPtr>& joints = abrobot->get_joints();
-      if (q_des.empty())
-      {
-        std::cout << "desired q/qd: ";
-        for (unsigned i=0,m=0; m< joints.size(); m++)
-        {
-            if(joints[m]->q.size() == 0) continue;
-            unsigned ind = joints[m]->get_coord_index();
-            q_des[joints[m]->id] = joints[m]->q[0];
-            qd_des[joints[m]->id] = 0.0;
-            std::cout << "(" << q_des[joints[m]->id] << ",0) ";
-            i++;
-        }
-      }
-      std::cout << std::endl;
+  u.set_zero();
 
-      std::cout << "current q/qd: ";
-      ///  Record Robot State
-      for(unsigned m=0;m< joints.size();m++){
-          if(joints[m]->q.size() == 0) continue;
-          unsigned ind = joints[m]->get_coord_index();
-          q.set_sub_vec(ind,joints[m]->q);
-          qd.set_sub_vec(ind,joints[m]->qd);
-          std::cout << "(" << joints[m]->q[0] << "," << joints[m]->qd[0] << ") ";
-      }
-      std::cout << std::endl;
+  /// setup a steady state
+  static map<string, double> q_des, qd_des;
+  const std::vector<JointPtr>& joints = abrobot->get_joints();
+  if (q_des.empty())
+  {
+    std::cout << "desired q/qd: ";
+    for (unsigned i=0,m=0; m< joints.size(); m++)
+    {
+      if(joints[m]->q.size() == 0) continue;
+      unsigned ind = joints[m]->get_coord_index();
+      q_des[joints[m]->id] = q0[joints[m]->id];// joints[m]->q[0];
+      qd_des[joints[m]->id] = 0.0;
+      std::cout << "(" << q_des[joints[m]->id] << ",0) ";
+      i++;
+    }
+  }
+  std::cout << std::endl;
 
-      ///  Determine FB forces
-      control_PID(q_des, qd_des, gains,t,u);
+  std::cout << "current q/qd: ";
+  ///  Record Robot State
+  for(unsigned m=0;m< joints.size();m++){
+    if(joints[m]->q.size() == 0) continue;
+    unsigned ind = joints[m]->get_coord_index();
+    q.set_sub_vec(ind,joints[m]->q);
+    qd.set_sub_vec(ind,joints[m]->qd);
+    std::cout << "(" << joints[m]->q[0] << "," << joints[m]->qd[0] << ") ";
+  }
+  std::cout << std::endl;
 
-      apply_simulation_forces(u);
+  ///  Determine FB forces
+  control_PID(q_des, qd_des, gains,t,u);
 
-      if(dt>0){
-        std::cerr << "iteration: " << ITER << std::endl;
-      	ITER++;
-      }
+  //apply_simulation_forces(u);
 
+  std::cout << " u = (" << u << ") \n";
 
-    last_time = t;
+  if(dt>0){
+    std::cerr << "iteration: " << ITER << std::endl;
+    ITER++;
+  }
+
+  last_time = t;
 }
 
 
@@ -223,37 +224,52 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   eef_names_.push_back("LH_FOOT");
   eef_names_.push_back("RH_FOOT");
 
+  q0["LF_HFE"] =  0.6;
+  q0["LF_HAA"] = -0.35;
+  q0["LF_KFE"] = -1.4;
+
+  q0["RF_HFE"] =  0.6;
+  q0["RF_HAA"] = -0.35;
+  q0["RF_KFE"] = -1.4;
+
+  q0["LH_HFE"] = -0.6;
+  q0["LH_HAA"] = -0.35;
+  q0["LH_KFE"] =  1.4;
+
+  q0["RH_HFE"] = -0.6;
+  q0["RH_HAA"] = -0.35;
+  q0["RH_KFE"] =  1.4;
+
   // now, setup gains
   const std::vector<JointPtr>& joints = abrobot->get_joints();
 
-
   for (unsigned i=0,m=0; m< joints.size(); m++)
   {
-      if(joints[m]->q.size() == 0) continue;
-      double kp,kv,ki;
-      switch(i%3){
+    if(joints[m]->q.size() == 0) continue;
+    double kp,kv,ki;
+    switch(i%3){
       case 0:
-          kp = 300;
-          kv = 6;
-          ki = 0;
-          break;
+        kp = 300;
+        kv = 6;
+        ki = 0;
+        break;
       case 1:
-          kp = 10;
-          kv = 6;
-          ki = 0;
-          break;
+        kp = 10;
+        kv = 6;
+        ki = 0;
+        break;
       case 2:
-          kp = 300;
-          kv = 6;
-          ki = 0;
-          break;
+        kp = 300;
+        kv = 6;
+        ki = 0;
+        break;
       default: break;
-      }
-      // pass gain values to respective joint
-      gains[joints[m]->id].kp = kp;
-      gains[joints[m]->id].kv = kv;
-      gains[joints[m]->id].ki = ki;
-      i++;
+    }
+    // pass gain values to respective joint
+    gains[joints[m]->id].kp = kp;
+    gains[joints[m]->id].kv = kv;
+    gains[joints[m]->id].ki = ki;
+    i++;
   }
 }
 

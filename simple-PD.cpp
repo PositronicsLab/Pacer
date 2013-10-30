@@ -216,8 +216,27 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       dbrobot = dynamic_pointer_cast<DynamicBody>(i->second);
     }
   }
-  // setup the controller
-  abrobot->controller = &controller;
+  
+  const std::vector<RigidBodyPtr>& links = abrobot->get_links();
+  const std::vector<JointPtr>& joints = abrobot->get_joints();
+
+  for (unsigned i=0; i< links.size(); i++)
+  {
+    Pose3d P = *links[i]->get_pose();
+    P.update_relative_pose(GLOBAL);
+    std::cout << "link " << links[i]->id << " pose: " << P << std::endl;
+  }
+  for (unsigned i=0; i< joints.size(); i++)
+  {
+    Point3d p = joints[i]->get_location();
+    shared_ptr<RevoluteJoint> j = dynamic_pointer_cast<RevoluteJoint>(joints[i]);
+    if (!j)
+      continue;
+    std::cout << "joint " << joints[i]->id << " location: " << Pose3d::transform_point(GLOBAL, p) << " axis: " << Pose3d::transform_vector(GLOBAL, j->get_axis()) << std::endl;
+  }
+  joints.front()->qd[0] = 1.0;
+
+//  abrobot->controller = &controller;
 
   eef_names_.push_back("LF_FOOT");
   eef_names_.push_back("RF_FOOT");
@@ -241,7 +260,6 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   q0["RH_KFE"] =  1.4;
 
   // now, setup gains
-  const std::vector<JointPtr>& joints = abrobot->get_joints();
 
   for (unsigned i=0,m=0; m< joints.size(); m++)
   {

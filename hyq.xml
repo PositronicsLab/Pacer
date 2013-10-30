@@ -2,14 +2,14 @@
 
 <XML>
   <DRIVER>
-    <camera position="5 5.5 3.5" target="0 0 0" up="0 0 1" />
+    <camera position="3 3 3" target="0 0 0.8" up="0 0 1" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 
   <MOBY>
     <Box id="ground-primitive" xlen="10" ylen="10" zlen="0.05" />
 
-    <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+    <ODEPACKIntegrator id="odepack" abs-err-tol="1e-8" rel-err-tol="1e-8" />
     <EulerIntegrator id="euler" />
     <RungeKuttaIntegrator id="rk4" />
 

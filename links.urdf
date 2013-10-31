@@ -3,13 +3,13 @@
     <link name="ABDOMEN">
             <inertial>
               <origin xyz="0 0 0"/>
-                    <mass value="25.000000"/>
-                    <inertia ixx="1.259832"  ixy="0.030529"  ixz="-0.058400" iyx="0.030529"  iyy="6.565043" iyz="-0.026018"  izx="-0.058400"  izy="-0.026018"  izz="6.692983" />
+                    <mass value="3.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
                     <origin xyz="0 0 0" rpy="0.0 0.0 0.0"/>
                     <geometry>
-                        <box size="0.0355 0.101 0.0356"/>
+                        <box size="0.0860 0.101 0.0356"/>
                     </geometry>
                     <material name="blue">
                             <color rgba=".20 .20 .100 1.0"/>
@@ -19,17 +19,18 @@
                     <origin xyz="0 0 0" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
                     <box size="0.0355 0.101 0.0356"/>
+                    <box size="0.0860 0.0356 0.0356"/>
                     </geometry>
             </collision>
     </link>
     <link name="THORAX">
             <inertial>
-              <origin xyz="0 0 0"/>
-                    <mass value="25.000000"/>
-                    <inertia ixx="1.259832"  ixy="0.030529"  ixz="-0.058400" iyx="0.030529"  iyy="6.565043" iyz="-0.026018"  izx="-0.058400"  izy="-0.026018"  izz="6.692983" />
+              <origin xyz="0.02525 0 0"/>
+                    <mass value="2.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0" rpy="0.0 0.0 0.0"/>
+              <origin xyz="0.02525 0 0"/>
                     <geometry>
                     <box size="0.0355 0.101 0.0356"/>
                     </geometry>
@@ -38,7 +39,7 @@
                     </material>
             </visual>
             <collision>
-                    <origin xyz="0 0 0" rpy="0.000000 0.000000 0.000000"/>
+              <origin xyz="0.02525 0 0"/>
                     <geometry>
                     <box size="0.0355 0.101 0.0356"/>
                     </geometry>
@@ -48,10 +49,8 @@
     <link name="LF_HIP">
             <inertial>
                     <origin xyz="0.02525 0 0"/>
-                    <mass value="1.772000"/>
-                    <inertia ixx=".0956126"  ixy="-.0000151" ixz="-.0110167"
-                             iyx="-.0000151" iyy=".1012626"  iyz="-.0000229"
-                             izx="-.0110167" izy="-.0000229" izz=".0006758" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
                 <origin xyz="0.02525 0 0"/>
@@ -72,10 +71,8 @@
     <link name="LF_ULEG">
             <inertial>
             <origin xyz="0.02525 0 0"/>
-                    <inertia ixx=".0027712"  ixy=".0054381"  ixz=".000002"
-                             iyx=".0054381"  iyy=".0694937"  iyz="0.0"
-                             izx=".000002"   izy="0.0"       izz=".07045" />
-                    <mass value="1.772"/>
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.02525 0 0"/>
@@ -95,8 +92,8 @@
     <link name="LF_LLEG">
             <inertial>
             <origin xyz="0.04 0 0"/>
-                    <mass value="1.600000"/>
-                    <inertia ixx="0.000423"  ixy="-0.000003" ixz="0.000000" iyx="-0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0"/>
@@ -118,8 +115,8 @@
     <link name="RF_HIP">
             <inertial>
             <origin xyz="0.02525 0 0"/>
-                    <mass value="1.772000"/>
-                    <inertia ixx="0.002771"  ixy="0.005438" ixz="0.000000" iyx="0.005438"  iyy="0.069494" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.070450" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.02525 0 0"/>
@@ -139,8 +136,8 @@
     <link name="RF_ULEG">
             <inertial>
             <origin xyz="0.02525 0 0"/>
-                    <mass value="2.482000"/>
-                    <inertia ixx="0.095613"  ixy="0.000015" ixz="0.011017" iyx="0.000015"  iyy="0.101263" iyz="-0.000023"  izx="0.011017"  izy="-0.000023"  izz="0.000676" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.02525 0 0"/>
@@ -160,8 +157,8 @@
     <link name="RF_LLEG">
             <inertial>
             <origin xyz="0.04 0 0"/>
-                    <mass value="1.600000"/>
-                    <inertia ixx="0.000423"  ixy="-0.000003" ixz="0.000000" iyx="-0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0"/>
@@ -181,30 +178,30 @@
     <!-- LH_LEG LINKS -->
     <link name="LH_HIP">
             <inertial>
-            <origin xyz="0.02525 0 0"/>
-                    <mass value="1.772000"/>
-                    <inertia ixx="0.002771"  ixy="-0.005438" ixz="-0.000000" iyx="-0.005438"  iyy="0.069494" iyz="0.000000"  izx="-0.000000"  izy="0.000000"  izz="0.070450" />
+            <origin xyz="0.0355 0 0"/>
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-            <origin xyz="0.02525 0 0"/>
+            <origin xyz="0.0355 0 0"/>
                     <geometry>
-                    <box size="0.0505 0.0355 0.0356"/>
+                    <box size="0.0611 0.0402 0.041"/>
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.02525 0 0"/>
+            <origin xyz="0.0355 0 0"/>
                     <geometry>
-                    <box size="0.0505 0.0355 0.0356"/>
+                    <box size="0.0611 0.0402 0.041"/>
                     </geometry>
             </collision>
     </link>
     <link name="LH_ULEG">
             <inertial>
             <origin xyz="0.02525 0 0"/>
-                    <mass value="2.482000"/>
-                    <inertia ixx="0.095613"  ixy="0.000015" ixz="0.011017" iyx="0.000015"  iyy="0.101263" iyz="-0.000023"  izx="0.011017"  izy="-0.000023"  izz="0.000676" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.02525 0 0"/>
@@ -224,8 +221,8 @@
     <link name="LH_LLEG">
             <inertial>
             <origin xyz="0.04 0 0"/>
-                    <mass value="1.600000"/>
-                    <inertia ixx="0.000423"  ixy="0.000003" ixz="0.000000" iyx="0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0"/>
@@ -245,30 +242,30 @@
     <!-- RH_LEG LINKS -->
     <link name="RH_HIP">
             <inertial>
-            <origin xyz="0.02525 0 0"/>
-                    <mass value="1.772000"/>
-                    <inertia ixx="0.002771"  ixy="-0.005438" ixz="-0.000000" iyx="-0.005438"  iyy="0.069494" iyz="0.000000"  izx="-0.000000"  izy="0.000000"  izz="0.070450" />
+            <origin xyz="0.0355 0 0"/>
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-            <origin xyz="0.02525 0 0"/>
+            <origin xyz="0.0355 0 0"/>
                     <geometry>
-                    <box size="0.0505 0.0355 0.0356"/>
+                    <box size="0.0611 0.0402 0.041"/>
                     </geometry>
                     <material name="Red">
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.02525 0 0"/>
+            <origin xyz="0.0355 0 0"/>
                     <geometry>
-                    <box size="0.0505 0.0355 0.0356"/>
+                    <box size="0.0611 0.0402 0.041"/>
                     </geometry>
             </collision>
     </link>
     <link name="RH_ULEG">
             <inertial>
             <origin xyz="0.02525 0 0"/>
-                    <mass value="2.482000"/>
-                    <inertia ixx="0.095613"  ixy="-0.000015" ixz="-0.011017" iyx="-0.000015"  iyy="0.101263" iyz="-0.000023"  izx="-0.011017"  izy="-0.000023"  izz="0.000676" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.02525 0 0"/>
@@ -288,8 +285,8 @@
     <link name="RH_LLEG">
             <inertial>
                     <origin xyz="0.04 0 0"/>
-                    <mass value="1.600000"/>
-                    <inertia ixx="0.000423"  ixy="0.000003" ixz="0.000000" iyx="0.000003"  iyy="0.022033" iyz="0.000000"  izx="0.000000"  izy="0.000000"  izz="0.021843" />
+                    <mass value="1.0"/>
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0"/>
@@ -308,7 +305,7 @@
     </link>
 <!-- ROBOT JOINTS -->
     <joint name="BODY_JOINT" type="continuous">
-            <origin xyz="-0.0505 0.0 0.0" rpy="0.0 0.0 3.1415"/>
+            <origin xyz="0.043 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="ABDOMEN"/>
             <child link="THORAX"/>
             <axis xyz="0 1 0"/>
@@ -316,7 +313,7 @@
 
    <!-- LF_LEG JOINTS -->
    <joint name="LF_HIP_AA" type="continuous">
-           <origin xyz="0.0355 0.0505 0.0" rpy="0 0 0"/>
+           <origin xyz="0.043 0.0475 0.0" rpy="0 0 0"/>
            <parent link="THORAX"/>
            <child link="LF_HIP"/>
            <axis xyz="1 0 0"/>
@@ -336,7 +333,7 @@
 
     <!-- RF_LEG JOINTS -->
     <joint name="RF_HIP_AA" type="continuous">
-            <origin xyz="0.0355 -0.0505 0.0" rpy="0 0 0"/>
+            <origin xyz="0.043 -0.0475 0.0" rpy="0 0 0"/>
             <parent link="THORAX"/>
             <child link="RF_HIP"/>
             <axis xyz="1 0 0"/>
@@ -356,13 +353,13 @@
 
     <!-- LH_LEG JOINTS -->
     <joint name="LH_HIP_AA" type="continuous">
-            <origin xyz="0.0355 0.0505 0.0" rpy="0 0 0.0"/>
+            <origin xyz="-0.043 0.0475 0.0" rpy="0 0 3.1416"/>
             <parent link="ABDOMEN"/>
             <child link="LH_HIP"/>
             <axis xyz="1 0 0"/>
     </joint>
     <joint name="LH_HIP_FE" type="continuous">
-            <origin xyz="0.0505 0.0 0.0" rpy="0 0 0.0"/>
+            <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
             <parent link="LH_HIP"/>
             <child link="LH_ULEG"/>
             <axis xyz="0 1 0"/>
@@ -376,13 +373,13 @@
 
     <!-- RH_LEG JOINTS -->
     <joint name="RH_HIP_AA" type="continuous">
-            <origin xyz="0.0355 -0.0505 0.0" rpy="0.0 0.0 0.0"/>
+            <origin xyz="-0.043 -0.0475 0.0" rpy="0 0 3.1416"/>
             <parent link="ABDOMEN"/>
             <child link="RH_HIP"/>
             <axis xyz="1 0 0"/>
     </joint>
     <joint name="RH_HIP_FE" type="continuous">
-            <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
+            <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
             <parent link="RH_HIP"/>
             <child link="RH_ULEG"/>
             <axis xyz="0 1 0"/>

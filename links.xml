@@ -2,7 +2,7 @@
 
 <XML>
   <DRIVER>
-    <camera position="1 1.5 1.5" target="0 0 0" up="0 0 1" />
+    <camera position="-1 -1.5 1.5" target="0 0 0" up="0 0 1" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 

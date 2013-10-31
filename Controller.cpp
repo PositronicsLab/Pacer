@@ -9,7 +9,7 @@
 //#define USE_DUMMY_CONTACTS
 //#define CONTROL_IDYN
 //#define FRICTION_EST
-//#define CONTROL_ZMP
+#define CONTROL_ZMP
 
 //#define USE_ROBOT
 
@@ -298,7 +298,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
         dbrobot->get_generalized_velocity(DynamicBody::eSpatial,v);
 
 #ifdef CONTROL_ZMP
-
+        
 #endif
         Vec qdd = Vec::zero(NJOINT);
         Vec cf, ff = uff.column(0);

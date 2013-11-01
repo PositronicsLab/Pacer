@@ -18,8 +18,7 @@
             <collision>
                     <origin xyz="0 0 0" rpy="0.000000 0.000000 0.000000"/>
                     <geometry>
-                    <box size="0.0355 0.101 0.0356"/>
-                    <box size="0.0860 0.0356 0.0356"/>
+                    <box size="0.0860 0.101 0.0356"/>
                     </geometry>
             </collision>
     </link>
@@ -91,12 +90,12 @@
     </link>
     <link name="LF_LLEG">
             <inertial>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -104,7 +103,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -156,12 +155,12 @@
     </link>
     <link name="RF_LLEG">
             <inertial>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -169,7 +168,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -220,12 +219,12 @@
     </link>
     <link name="LH_LLEG">
             <inertial>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -233,7 +232,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -284,12 +283,12 @@
     </link>
     <link name="RH_LLEG">
             <inertial>
-                    <origin xyz="0.04 0 0"/>
+                    <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="0.1" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -297,7 +296,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0"/>
+            <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>

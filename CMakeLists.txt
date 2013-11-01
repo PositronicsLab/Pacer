@@ -20,7 +20,7 @@ link_directories( /home/samzapo/ThirdParty/Ravelin/build /home/samzapo/ThirdPart
 set(box_srcs estimatefrict.cpp Box.cpp output.cpp)
 #set(hyq_srcs estimatefrict.cpp PD-controller.cpp output.cpp)
 set(hyq_srcs simple-PD.cpp output.cpp)
-set(links_srcs Controller.cpp output.cpp estimatefrict.cpp idyn.cpp)
+set(links_srcs Controller.cpp output.cpp estimatefrict.cpp idyn.cpp Visualization.cpp)
 
 add_library(BOX${PROJECT_NAME} ${box_srcs})
 add_library(HYQ${PROJECT_NAME} ${hyq_srcs})

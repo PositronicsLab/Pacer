@@ -8,7 +8,7 @@
 /// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
 //#define USE_DUMMY_CONTACTS
 //#define CONTROL_IDYN
-#define FRICTION_EST
+//#define FRICTION_EST
 #define CONTROL_ZMP
 #define RENDER_CONTACT
 //#define USE_ROBOT
@@ -161,11 +161,10 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
   // PROCESS CONTACTS
   contacts.clear();
   int nc = e.size();
-
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
-//      sim->visualize_contact(e[i]);
+      visualize_contact(e[i],sim);
       ContactData c;
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
@@ -177,6 +176,14 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
           c.normal = e[i].contact_normal;
 
       if (std::find(eef_names_.begin(), eef_names_.end(), sb1->id) == eef_names_.end())
+        continue;
+
+      bool contact_used = false;
+      for(int j=0;j<contacts.size();j++)
+        if(contacts[j].name.compare(sb1->id) == 0)
+          contact_used = true;
+
+      if(contact_used)
         continue;
 
       c.point = e[i].contact_point;
@@ -209,7 +216,7 @@ Vector3d& calc_com(Vector3d& com){
      RigidBody& link = *links[i];
      double m = link.get_mass();
 //     Vector3d comi = link.get_inertial_pose(); // NOTE: where is this func?
-\  }
+  }
 }
 
 /// The main control loop
@@ -250,8 +257,11 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      for(int c=0;c<nc;c++)
       for(int i=0;i<3;i++)
         support_poly(i,c) = contacts[c].point[i];
-//     outlog2(support_poly,"Support Polygon");
-//     sim->add_transient_data();
+     outlog2(support_poly,"Support Polygon");
+
+     if(nc > 0)
+      visualize_polygon(support_poly,sim);
+
 
 #endif
 
@@ -273,15 +283,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
             qd_des[joints[m]->id] = 0.0;
         }
 
-/*
-      std::cout << "\tqdes\tq\tqddes\tqd" << std::endl;
-      for (unsigned i=0, m=0; m< joints.size(); m++)
-      {
-          if(joints[m]->q.size() == 0) continue;
-          std::cout << std::setprecision(3) << "\t" << q_des[joints[m]->id]<< "\t" << q(joints[m]->get_coord_index(),0) << "\t" << qd_des[joints[m]->id]  << "\t" << qd(joints[m]->get_coord_index(),0) << std::endl;
-          i++;
-      }
-*/
       ///  Record Robot State
       for(unsigned m=0;m< joints.size();m++){
           if(joints[m]->q.size() == 0) continue;
@@ -293,63 +294,62 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       outlog2(q.column(0),"q");
       outlog2(qd.column(0),"qd");
 
+      /// Run friction estimation
+      static Mat N,D,M(NDOFS,NDOFS);
+      static Vec fext(NDOFS);
 
-        /// Run friction estimation
-        static Mat N,D,M(NDOFS,NDOFS);
-        static Vec fext(NDOFS);
+      calculate_dyn_properties(M,fext);
+      static Vec vel(NDOFS), gc(NDOFS+1),acc(NDOFS);
+      dbrobot->get_generalized_acceleration(acc);
+      dbrobot->get_generalized_velocity(DynamicBody::eSpatial,vel);
+      dbrobot->get_generalized_coordinates(DynamicBody::eSpatial,gc);
 
-        determine_N_D(contacts,N,D);
+      determine_N_D(contacts,N,D);
 
-        static Mat ST;
-        ST.set_zero(D.rows(),D.columns()/2);
-        // remove negations from D to create ST
-        // of the form [S T]
+      static Mat MU;
+      MU.set_zero(nc,1);
+#ifdef FRICTION_EST
+      static Mat ST;
+      ST.set_zero(D.rows(),D.columns()/2);
+      // remove negations from D to create ST
+      // of the form [S T]
 
-        for(int i=0;i<N.columns();i++){
-          for(int j=0;j<N.rows();j++){
-            ST(j,i) = D(j,i*nk);
-            ST(j,nc+i) = D(j,i*nk+1);
-          }
+      for(int i=0;i<N.columns();i++){
+        for(int j=0;j<N.rows();j++){
+          ST(j,i) = D(j,i*nk);
+          ST(j,nc+i) = D(j,i*nk+1);
         }
+      }
 
-        calculate_dyn_properties(M,fext);
-
-        static Vec vel(NDOFS), gc(NDOFS+1),acc(NDOFS);
-        dbrobot->get_generalized_acceleration(acc);
-        dbrobot->get_generalized_velocity(DynamicBody::eSpatial,vel);
-        dbrobot->get_generalized_coordinates(DynamicBody::eEuler,gc);
+      double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
+      outlog2(MU,"MU");
+      outlog2(cf,"contact_forces");
+#else
+      for(int i=0;i<nc;i++)
+         MU(i,0) = 0.01;
+#endif
 
 #ifdef CONTROL_ZMP
-        // NOTE: This only finds ZMP of Base
-        Vector2d ZmP(
-                      gc[(NJOINT-1)] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)])/acc[(NJOINT-1)+2],
-                      gc[(NJOINT-1)+1] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)+1])/acc[(NJOINT-1)+2]
+      // NOTE: This only finds ZMP of Base
+      Vector2d ZmP(
+                    gc[(NJOINT-1)] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)])/acc[(NJOINT-1)+2],
+                    gc[(NJOINT-1)+1] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)+1])/acc[(NJOINT-1)+2]
                     );
 
-        // Find true COM
-        Vector3d CoM;
-        calc_com(CoM);
-        std::cout <<"CoM : "<< gc.get_sub_vec((NJOINT-1),(NJOINT-1)+2,workv_) << std::endl;
-        std::cout <<"ZmP : "<< ZmP << std::endl;
+      // Find true COM
+      Vector3d CoM;
+      calc_com(CoM);
+      std::cout <<"CoM : "<< gc.get_sub_vec((NJOINT-1),(NJOINT-1)+2,workv_) << std::endl;
+      std::cout <<"ZmP : "<< ZmP << std::endl;
 #endif
-        static Vec qdd = Vec::zero(NJOINT);
-        static Vec cf, ff = uff.column(0);
-        static Mat MU;
-        MU.set_zero(nc,1);
-#ifdef FRICTION_EST
-        double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
-        outlog2(MU,"MU");
-        outlog2(cf,"contact_forces");
-#else
-        for(int i=0;i<nc;i++)
-          MU(i,0) = 0.01;
-#endif
+      static Vec qdd = Vec::zero(NJOINT);
+      static Vec cf, ff = uff.column(0);
 
 #ifdef CONTROL_IDYN
-        idyn(vel,qdd,M,N,D,fext,dt,MU,ff);
-        uff.set_column(0,ff);
+      idyn(vel,qdd,M,N,D,fext,dt,MU,ff);
+      uff.set_column(0,ff);
 #endif
-        contacts.clear();
+      contacts.clear();
 
       ///  Determine FB forces
       control_PID(q_des, qd_des, gains,t,ufb);

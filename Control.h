@@ -35,15 +35,20 @@ void outlog(const Vec& z, std::string name);
 void outlog2(const Vec& M, std::string name);
 void outlog2(const Ravelin::SharedVectorNd& M, std::string name);
 void outlog2(const Mat& z, std::string name);
+
 double friction_estimation(const Vec& v, const Vec& fext,
                            double dt, const Mat& N,
                            const Mat& ST, const Mat& M,
                            Mat& MU, Vec& cf);
 
+void visualize_contact( const Moby::Event& e,
+                        boost::shared_ptr<Moby::EventDrivenSimulator> sim );
+void visualize_polygon( const Mat& verts,
+                        boost::shared_ptr<Moby::EventDrivenSimulator> sim );
+
 void idyn(const Vec& v, const Vec& qdd, const Mat& M,
           const  Mat& N, const Mat& ST, const Vec& fext,
           double h, const Mat& MU, Vec& uff);
-
 
 struct ContactData
 {

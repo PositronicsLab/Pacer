@@ -165,7 +165,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
-      sim->visualize_contact(e[i]);
+//      sim->visualize_contact(e[i]);
       ContactData c;
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
@@ -208,9 +208,8 @@ Vector3d& calc_com(Vector3d& com){
   for(int i=0;i<links.size();i++){
      RigidBody& link = *links[i];
      double m = link.get_mass();
-     Vector3d comi = link.get_inertial_pose(); // NOTE: where is this func?
-     comi.
-  }
+//     Vector3d comi = link.get_inertial_pose(); // NOTE: where is this func?
+\  }
 }
 
 /// The main control loop
@@ -251,7 +250,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      for(int c=0;c<nc;c++)
       for(int i=0;i<3;i++)
         support_poly(i,c) = contacts[c].point[i];
-     outlog2(support_poly,"Support Polygon");
+//     outlog2(support_poly,"Support Polygon");
 //     sim->add_transient_data();
 
 #endif

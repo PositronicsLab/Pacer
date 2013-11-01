@@ -304,91 +304,104 @@
             </collision>
     </link>
 <!-- ROBOT JOINTS -->
-    <joint name="BODY_JOINT" type="continuous">
+    <joint name="BODY_JOINT" type="revolute">
             <origin xyz="0.043 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="ABDOMEN"/>
             <child link="THORAX"/>
             <axis xyz="0 1 0"/>
+            <limits upper="0.7854" lower="-0.7854" />
     </joint>
 
    <!-- LF_LEG JOINTS -->
-   <joint name="LF_HIP_AA" type="continuous">
+   <joint name="LF_HIP_AA" type="revolute">
            <origin xyz="0.043 0.0475 0.0" rpy="0 0 0"/>
            <parent link="THORAX"/>
            <child link="LF_HIP"/>
            <axis xyz="1 0 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
    </joint>
-    <joint name="LF_HIP_FE" type="continuous">
+    <joint name="LF_HIP_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="LF_HIP"/>
             <child link="LF_ULEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="LF_LEG_FE" type="continuous">
+    <joint name="LF_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="LF_ULEG"/>
             <child link="LF_LLEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
 
     <!-- RF_LEG JOINTS -->
-    <joint name="RF_HIP_AA" type="continuous">
+    <joint name="RF_HIP_AA" type="revolute">
             <origin xyz="0.043 -0.0475 0.0" rpy="0 0 0"/>
             <parent link="THORAX"/>
             <child link="RF_HIP"/>
             <axis xyz="1 0 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="RF_HIP_FE" type="continuous">
+    <joint name="RF_HIP_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="RF_HIP"/>
             <child link="RF_ULEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="RF_LEG_FE" type="continuous">
+    <joint name="RF_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="RF_ULEG"/>
             <child link="RF_LLEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
 
     <!-- LH_LEG JOINTS -->
-    <joint name="LH_HIP_AA" type="continuous">
+    <joint name="LH_HIP_AA" type="revolute">
             <origin xyz="-0.043 0.0475 0.0" rpy="0 0 3.1416"/>
             <parent link="ABDOMEN"/>
             <child link="LH_HIP"/>
             <axis xyz="1 0 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="LH_HIP_FE" type="continuous">
+    <joint name="LH_HIP_FE" type="revolute">
             <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
             <parent link="LH_HIP"/>
             <child link="LH_ULEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="LH_LEG_FE" type="continuous">
+    <joint name="LH_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0.0 0.0 0.0"/>
             <parent link="LH_ULEG"/>
             <child link="LH_LLEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
 
     <!-- RH_LEG JOINTS -->
-    <joint name="RH_HIP_AA" type="continuous">
+    <joint name="RH_HIP_AA" type="revolute">
             <origin xyz="-0.043 -0.0475 0.0" rpy="0 0 3.1416"/>
             <parent link="ABDOMEN"/>
             <child link="RH_HIP"/>
             <axis xyz="1 0 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="RH_HIP_FE" type="continuous">
+    <joint name="RH_HIP_FE" type="revolute">
             <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
             <parent link="RH_HIP"/>
             <child link="RH_ULEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
-    <joint name="RH_LEG_FE" type="continuous">
+    <joint name="RH_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0.0 0.0"/>
             <parent link="RH_ULEG"/>
             <child link="RH_LLEG"/>
             <axis xyz="0 1 0"/>
+            <limits upper="2.3562" lower="-2.3562" />
     </joint>
 
  </robot>

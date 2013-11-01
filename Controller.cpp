@@ -8,9 +8,9 @@
 /// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
 //#define USE_DUMMY_CONTACTS
 //#define CONTROL_IDYN
-//#define FRICTION_EST
+#define FRICTION_EST
 #define CONTROL_ZMP
-
+#define RENDER_CONTACT
 //#define USE_ROBOT
 
 #ifdef USE_ROBOT
@@ -30,8 +30,8 @@ boost::shared_ptr<EventDrivenSimulator> sim;
 // robot pointer
 RCArticulatedBodyPtr abrobot;
 DynamicBodyPtr dbrobot;
-Vec cf_moby;
-Mat MU_moby;
+static Vec workv_;
+static Mat workM_;
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// PID ///////////////////////////////////////
@@ -157,15 +157,15 @@ void calculate_dyn_properties(Mat& M, Vec& fext){
 
 /// Event callback function for processing [contact] events
 void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empty)
-{
+{  
   // PROCESS CONTACTS
   contacts.clear();
   int nc = e.size();
-  cf_moby.set_zero(nc*3);
 
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
+      sim->visualize_contact(e[i]);
       ContactData c;
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
@@ -187,7 +187,6 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
   }
 }
 
-
 /// Event callback function for setting friction vars pre-event
 void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty){}
 
@@ -201,6 +200,17 @@ void apply_simulation_forces(const Mat& u){
         joints[m]->add_force(u.get_row(i,row));
         i++;
     }
+}
+
+
+Vector3d& calc_com(Vector3d& com){
+  const std::vector<RigidBodyPtr>& links = abrobot->get_links();
+  for(int i=0;i<links.size();i++){
+     RigidBody& link = *links[i];
+     double m = link.get_mass();
+     Vector3d comi = link.get_inertial_pose(); // NOTE: where is this func?
+     comi.
+  }
 }
 
 /// The main control loop
@@ -235,6 +245,17 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #else
      unsigned nc = contacts.size();
 #endif
+
+#ifdef RENDER_CONTACT
+     Mat support_poly(3,nc);
+     for(int c=0;c<nc;c++)
+      for(int i=0;i<3;i++)
+        support_poly(i,c) = contacts[c].point[i];
+     outlog2(support_poly,"Support Polygon");
+//     sim->add_transient_data();
+
+#endif
+
      //static double test_frict_val = 0.5;
      static unsigned ITER = 1;
 
@@ -253,6 +274,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
             qd_des[joints[m]->id] = 0.0;
         }
 
+/*
       std::cout << "\tqdes\tq\tqddes\tqd" << std::endl;
       for (unsigned i=0, m=0; m< joints.size(); m++)
       {
@@ -260,7 +282,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           std::cout << std::setprecision(3) << "\t" << q_des[joints[m]->id]<< "\t" << q(joints[m]->get_coord_index(),0) << "\t" << qd_des[joints[m]->id]  << "\t" << qd(joints[m]->get_coord_index(),0) << std::endl;
           i++;
       }
-
+*/
       ///  Record Robot State
       for(unsigned m=0;m< joints.size();m++){
           if(joints[m]->q.size() == 0) continue;
@@ -274,14 +296,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
 
         /// Run friction estimation
-        Mat N,D,M(NDOFS,NDOFS);
-        Vec fext(NDOFS);
+        static Mat N,D,M(NDOFS,NDOFS);
+        static Vec fext(NDOFS);
 
         determine_N_D(contacts,N,D);
 
-        Mat ST;
-        ST.resize(D.rows(),D.columns()/2);
-        ST.set_zero();
+        static Mat ST;
+        ST.set_zero(D.rows(),D.columns()/2);
         // remove negations from D to create ST
         // of the form [S T]
 
@@ -294,24 +315,39 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
         calculate_dyn_properties(M,fext);
 
-        Vec v(NDOFS);
-        dbrobot->get_generalized_velocity(DynamicBody::eSpatial,v);
+        static Vec vel(NDOFS), gc(NDOFS+1),acc(NDOFS);
+        dbrobot->get_generalized_acceleration(acc);
+        dbrobot->get_generalized_velocity(DynamicBody::eSpatial,vel);
+        dbrobot->get_generalized_coordinates(DynamicBody::eEuler,gc);
 
 #ifdef CONTROL_ZMP
-        
+        // NOTE: This only finds ZMP of Base
+        Vector2d ZmP(
+                      gc[(NJOINT-1)] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)])/acc[(NJOINT-1)+2],
+                      gc[(NJOINT-1)+1] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)+1])/acc[(NJOINT-1)+2]
+                    );
+
+        // Find true COM
+        Vector3d CoM;
+        calc_com(CoM);
+        std::cout <<"CoM : "<< gc.get_sub_vec((NJOINT-1),(NJOINT-1)+2,workv_) << std::endl;
+        std::cout <<"ZmP : "<< ZmP << std::endl;
 #endif
-        Vec qdd = Vec::zero(NJOINT);
-        Vec cf, ff = uff.column(0);
-        Mat MU; MU.set_zero(nc,1);
+        static Vec qdd = Vec::zero(NJOINT);
+        static Vec cf, ff = uff.column(0);
+        static Mat MU;
+        MU.set_zero(nc,1);
 #ifdef FRICTION_EST
-        double err = friction_estimation(v,fext,dt,N,D,M,true,MU,cf);
+        double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
+        outlog2(MU,"MU");
+        outlog2(cf,"contact_forces");
 #else
         for(int i=0;i<nc;i++)
           MU(i,0) = 0.01;
 #endif
 
 #ifdef CONTROL_IDYN
-        idyn(v,qdd,M,N,D,fext,dt,MU,ff);
+        idyn(vel,qdd,M,N,D,fext,dt,MU,ff);
         uff.set_column(0,ff);
 #endif
         contacts.clear();
@@ -325,10 +361,9 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
       apply_simulation_forces(u);
 
-    outlog2(u.transpose(),"u"); u.transpose();
+//    outlog2(u.transpose(),"u"); u.transpose();
     last_time = t;
 }
-
 
 /// plugin must be "extern C"
 extern "C" {
@@ -384,10 +419,10 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   q0["RH_HIP_FE"] = 3*M_PI_4;
   q0["RH_LEG_FE"] = -M_PI_2;
 
-  eef_names_.push_back("LF_FOOT");
-  eef_names_.push_back("RF_FOOT");
-  eef_names_.push_back("LH_FOOT");
-  eef_names_.push_back("RH_FOOT");
+  eef_names_.push_back("LF_LLEG");
+  eef_names_.push_back("RF_LLEG");
+  eef_names_.push_back("LH_LLEG");
+  eef_names_.push_back("RH_LLEG");
 
   gains[joint_name_[0]].kp = 100;
   gains[joint_name_[0]].kv = 10;

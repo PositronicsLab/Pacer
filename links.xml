@@ -28,7 +28,7 @@
     <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.5" />
   </EventDrivenSimulator>
 
-  <RCArticulatedBody id="links" urdf="links.urdf" fdyn-algorithm="crb" fdyn-algorithm-frame="link" floating-base="true" translate="0 0 0.2" />
+  <RCArticulatedBody id="links" urdf="links.urdf" fdyn-algorithm="crb" fdyn-algorithm-frame="link" floating-base="true" translate="0 0 0.13"/>
 
   <!-- setup the platform rigid body; it is not active -->
   <RigidBody id="ground" enabled="false"

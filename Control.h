@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/times.h>
 #include <fstream>
+#include <iostream>     // std::cout, std::fixed
+#include <iomanip>      // std::setprecision
 
 #include <boost/shared_ptr.hpp>
 #include <Ravelin/MatrixNd.h>
@@ -14,11 +16,11 @@
 #include <Ravelin/LinAlgd.h>
 #include <Ravelin/AAngled.h>
 #include <Ravelin/SForced.h>
+#include <Ravelin/Pose3d.h>
 
 #include <Moby/Simulator.h>
 #include <Moby/EventDrivenSimulator.h>
 #include <Moby/RCArticulatedBody.h>
-#include <Moby/DeformableBody.h>
 #include <Moby/DynamicBody.h>
 #include <Moby/RevoluteJoint.h>
 #include <Moby/GravityForce.h>
@@ -87,7 +89,8 @@ enum RobotDOFs {
 };
 
 const unsigned NUM_EEFS = 4,
-               NDOFS = NJOINT+6, // NDFOFS for forces, accel, & velocities
+               N_JOINTS = NJOINT-1,
+               NDOFS = N_JOINTS+6, // NDFOFS for forces, accel, & velocities
                N_FIXED_JOINTS = 4,
                NSPATIAL = 6,
                nk = 4;

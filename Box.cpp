@@ -16,7 +16,6 @@
 #include <Moby/Simulator.h>
 #include <Moby/EventDrivenSimulator.h>
 #include <Moby/RCArticulatedBody.h>
-#include <Moby/DeformableBody.h>
 #include <Moby/DynamicBody.h>
 #include <Moby/RevoluteJoint.h>
 #include <Moby/GravityForce.h>

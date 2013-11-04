@@ -1,6 +1,6 @@
 #include <Control.h>
 
-#define NDEBUG
+//#define NDEBUG
 
 Moby::LCP lcp_;
 Ravelin::LinAlgd LA_;

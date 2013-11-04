@@ -3,7 +3,7 @@
     <link name="ABDOMEN">
             <inertial>
               <origin xyz="0 0 0"/>
-                    <mass value="3.0"/>
+                    <mass value="10.0"/>
                     <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
@@ -25,7 +25,7 @@
     <link name="THORAX">
             <inertial>
               <origin xyz="0.02525 0 0"/>
-                    <mass value="2.0"/>
+                    <mass value="10.0"/>
                     <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
@@ -92,7 +92,7 @@
             <inertial>
             <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
@@ -157,7 +157,7 @@
             <inertial>
             <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
@@ -221,7 +221,7 @@
             <inertial>
             <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
@@ -285,7 +285,7 @@
             <inertial>
                     <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>
                     <mass value="1.0"/>
-                    <inertia ixx="0.1"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
+                    <inertia ixx="1.0"  ixy="0.0"  ixz="0.0" iyx="0.0"  iyy="1.0" iyz="0.0"  izx="0.0"  izy="0.0"  izz="1.0" />
             </inertial>
             <visual>
             <origin xyz="0.04 0 0" rpy="0.7854 0 0"/>

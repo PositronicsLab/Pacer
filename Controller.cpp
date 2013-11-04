@@ -6,6 +6,7 @@
 #include <iomanip>      // std::setprecision
 
 /// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
+#define NDEBUG
 //#define USE_DUMMY_CONTACTS
 //#define CONTROL_IDYN
 //#define FRICTION_EST
@@ -14,7 +15,7 @@
 //#define USE_ROBOT
 
 #ifdef USE_ROBOT
-  #include <Dynamixel.h>
+  #include <dxl/Dynamixel.h>
 #endif
 
 using namespace Moby;
@@ -227,7 +228,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     double dt = t - last_time;
 
 #ifdef USE_DUMMY_CONTACTS
-    // PROCESS CONTACTS
     contacts.clear();
     int nc = 4;
     const std::vector<RigidBodyPtr>& links = abrobot->get_links();
@@ -239,14 +239,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
                 eefs[j] = links[i];
 
     for(unsigned i=0;i<nc;i++){
-      Ravelin::VectorNd gc;
-      eefs[i]->get_generalized_coordinates(DynamicBody::eSpatial,gc);
+      boost::shared_ptr<const Ravelin::Pose3d> pose = eefs[i]->get_gc_pose();
       ContactData c;
       c.normal = Ravelin::Vector3d(0,0,1);
-      gc.get_sub_vec(0,3,c.point);
-      c.name = eef_names_[i];
+      c.point = -pose->x;
+      c.name = eefs[i]->id;
+      std::cout << c.name << std::endl;
       contacts.push_back(c);
-
     }
 #else
      unsigned nc = contacts.size();
@@ -255,18 +254,12 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #ifdef RENDER_CONTACT
      Mat support_poly(3,nc);
      for(int c=0;c<nc;c++)
-      for(int i=0;i<3;i++)
-        support_poly(i,c) = contacts[c].point[i];
-     outlog2(support_poly,"Support Polygon");
+       for(int i=0;i<3;i++)
+         support_poly(i,c) = contacts[c].point[i];
 
      if(nc > 0)
       visualize_polygon(support_poly,sim);
-
-
 #endif
-
-     //static double test_frict_val = 0.5;
-     static unsigned ITER = 1;
 
      uff.set_zero();
      ufb.set_zero();
@@ -278,10 +271,41 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       if (q_des.empty())
         for (unsigned m=0; m< joints.size(); m++)
         {
-            if(joints[m]->q.size() == 0) continue;
-            q_des[joints[m]->id] = q0[joints[m]->id];
-            qd_des[joints[m]->id] = 0.0;
+          if(joints[m]->q.size() == 0) continue; // NOTE: Currently this is not used
+           q_des[joints[m]->id] = q0[joints[m]->id];
+           qd_des[joints[m]->id] = 0.0;
         }
+
+
+       double joint_vel = M_PI_4*cos(t*3);
+
+//       std::cout << " ( "<< joint_pos << " , " << joint_vel << " ) " << std::endl;
+
+       // HIP FE
+       q_des["BODY_JOINT"] = q0["BODY_JOINT"];
+        q_des["LF_HIP_FE"] += dt*joint_vel;
+        q_des["LH_HIP_FE"] -= dt*joint_vel;
+        q_des["RF_HIP_FE"] -= dt*joint_vel;
+        q_des["RH_HIP_FE"] += dt*joint_vel;
+
+       qd_des["LF_HIP_FE"] = joint_vel;
+       qd_des["LH_HIP_FE"] = -joint_vel;
+       qd_des["RF_HIP_FE"] = -joint_vel;
+       qd_des["RH_HIP_FE"] = joint_vel;
+
+       // KNEE FE
+       joint_vel *= 2;
+       q_des["LF_LEG_FE"] -= dt*joint_vel;
+       q_des["LH_LEG_FE"] += dt*joint_vel;
+       q_des["RF_LEG_FE"] += dt*joint_vel;
+       q_des["RH_LEG_FE"] -= dt*joint_vel;
+
+       qd_des["LF_LEG_FE"] = -joint_vel;
+       qd_des["LH_LEG_FE"] = joint_vel;
+       qd_des["RF_LEG_FE"] = joint_vel;
+       qd_des["RH_LEG_FE"] = -joint_vel;
+
+
 
       ///  Record Robot State
       for(unsigned m=0;m< joints.size();m++){
@@ -290,9 +314,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           q.set_row(ind,joints[m]->q);
           qd.set_row(ind,joints[m]->qd);
       }
-
-      outlog2(q.column(0),"q");
-      outlog2(qd.column(0),"qd");
 
       /// Run friction estimation
       static Mat N,D,M(NDOFS,NDOFS);
@@ -339,14 +360,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       // Find true COM
       Vector3d CoM;
       calc_com(CoM);
-      std::cout <<"CoM : "<< gc.get_sub_vec((NJOINT-1),(NJOINT-1)+2,workv_) << std::endl;
-      std::cout <<"ZmP : "<< ZmP << std::endl;
 #endif
       static Vec qdd = Vec::zero(NJOINT);
       static Vec cf, ff = uff.column(0);
 
 #ifdef CONTROL_IDYN
-      idyn(vel,qdd,M,N,D,fext,dt,MU,ff);
+      if(nc > 0)
+        idyn(vel,qdd,M,N,D,fext,dt,MU,ff);
       uff.set_column(0,ff);
 #endif
       contacts.clear();
@@ -360,7 +380,55 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
       apply_simulation_forces(u);
 
-//    outlog2(u.transpose(),"u"); u.transpose();
+      { // NOTE: Code for kinematic simulation
+        for(unsigned m=0;m< joints.size();m++){
+            if(joints[m]->q.size() == 0) continue;
+            unsigned ind = joints[m]->get_coord_index();
+            joints[m]->q[0] = q_des[joints[m]->id];
+            joints[m]->qd[0] = qd_des[joints[m]->id];
+        }
+        abrobot->update_link_poses();
+        abrobot->update_link_velocities();
+      }
+
+#ifndef NDEBUG
+      outlog2(q.column(0),"q");
+      std::cout << "q_des: ";
+      for(unsigned m=0;m< joints.size();m++){
+        std::cout << q_des[joints[m]->id] << " ";
+      }
+      std::cout << std::endl;
+
+      outlog2(qd.column(0),"qd");
+      std::cout << "qd_des: ";
+      for(unsigned m=0;m< joints.size();m++){
+        std::cout << qd_des[joints[m]->id] << " ";
+      }
+      std::cout << std::endl;
+
+
+# ifdef CONTROL_ZMP
+      std::cout <<"CoM : "<< gc.get_sub_vec((NJOINT-1),(NJOINT-1)+2,workv_) << std::endl;
+      std::cout <<"ZmP : "<< ZmP << std::endl;
+# endif
+
+# ifdef RENDER_CONTACT
+     outlog2(support_poly,"Support Polygon");
+# endif
+
+     std::cout << "JOINT\t: U\t| Q\t: des\t| Qd\t: des\t|" << std::endl;
+     for(unsigned m=0;m< joints.size();m++)
+       std::cout << joints[m]->id
+                 << "\t: "  << std::setprecision(3) << u(joints[m]->get_coord_index(),0)
+                 << "\t| " << q(joints[m]->get_coord_index(),0)
+                 << "\t: " << q_des[joints[m]->id]
+                 << "\t| " << qd(joints[m]->get_coord_index(),0)
+                 << "\t: " << qd_des[joints[m]->id]
+                 << "\t| " << std::endl;
+#endif
+
+
+
     last_time = t;
 }
 
@@ -403,20 +471,20 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   // robot's go0 configuration
   q0["BODY_JOINT"] =  0.0;
   q0["LF_HIP_AA"] = 0;
-  q0["LF_HIP_FE"] = 3*M_PI_4;
-  q0["LF_LEG_FE"] = -M_PI_2;
+  q0["LF_HIP_FE"] = M_PI_4;
+  q0["LF_LEG_FE"] = M_PI_2;
 
   q0["RF_HIP_AA"] = 0;
-  q0["RF_HIP_FE"] =  3*M_PI_4;
-  q0["RF_LEG_FE"] = -M_PI_2;
+  q0["RF_HIP_FE"] =  M_PI_4;
+  q0["RF_LEG_FE"] =  M_PI_2;
 
   q0["LH_HIP_AA"] = 0;
-  q0["LH_HIP_FE"] = 3*M_PI_4;
-  q0["LH_LEG_FE"] = -M_PI_2;
+  q0["LH_HIP_FE"] = M_PI_4;
+  q0["LH_LEG_FE"] = M_PI_2;
 
   q0["RH_HIP_AA"] = 0;
-  q0["RH_HIP_FE"] = 3*M_PI_4;
-  q0["RH_LEG_FE"] = -M_PI_2;
+  q0["RH_HIP_FE"] = M_PI_4;
+  q0["RH_LEG_FE"] = M_PI_2;
 
   eef_names_.push_back("LF_LLEG");
   eef_names_.push_back("RF_LLEG");
@@ -436,12 +504,12 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       ki = 0;
       break;
     case 1:
-      kp = 100;
+      kp = 50;
       kv = 10;
       ki = 0;
       break;
     case 2:
-      kp = 100;
+      kp = 50;
       kv = 10;
       ki = 0;
       break;

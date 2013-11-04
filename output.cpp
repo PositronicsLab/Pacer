@@ -3,7 +3,7 @@
 #include <Ravelin/MatrixNd.h>
 #include <Ravelin/VectorNd.h>
 
-#define NO_OUTPUT
+//#define NO_OUTPUT
 
 void outlog(const Ravelin::MatrixNd& M, std::string name){
 #ifndef NO_OUTPUT

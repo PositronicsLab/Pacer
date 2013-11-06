@@ -158,8 +158,66 @@ void visualize_contact( const Event& event, boost::shared_ptr<EventDrivenSimulat
 }
 
 /// Draws a ray directed from a contact point along the contact normal
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, boost::shared_ptr<EventDrivenSimulator> sim ) {
+
+  // random color for this contact visualization
+  double r = (double) rand() / (double) RAND_MAX * VIBRANCY;
+  double g = (double) rand() / (double) RAND_MAX * VIBRANCY;
+  double b = (double) rand() / (double) RAND_MAX * VIBRANCY;
+  osg::Vec4 color = osg::Vec4( r, g, 1.0, 1.0 );
+
+  const double point_radius = 0.25;
+
+  // the osg node this event visualization will attach to
+  osg::Group* contact_root = new osg::Group();
+
+  // turn off lighting for this node
+  osg::StateSet *contact_state = contact_root->getOrCreateStateSet();
+  contact_state->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
+
+  // a geode for the visualization geometry
+  osg::Geode* contact_geode = new osg::Geode();
+
+  // add some hints to reduce the polygonal complexity of the visualization
+  osg::TessellationHints *hints = new osg::TessellationHints();
+  hints->setTessellationMode( osg::TessellationHints::USE_TARGET_NUM_FACES );
+  hints->setCreateNormals( true );
+  hints->setDetailRatio( 0.001 );
+
+  // add the contact point as a sphere at the origin of the geode's frame
+  osg::Sphere* point_geometry = new osg::Sphere( osg::Vec3d(point[0],point[1],point[2]), point_radius );
+  osg::ShapeDrawable* point_shape = new osg::ShapeDrawable( point_geometry, hints );
+  point_shape->setColor( color );
+  contact_geode->addDrawable( point_shape );
+
+  osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+  osg::ref_ptr<osg::DrawArrays> drawArrayLines =
+      new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP);
+
+  osg::ref_ptr<osg::Vec3Array> vertexData = new osg::Vec3Array;
+
+  geom->addPrimitiveSet(drawArrayLines);
+  geom->setVertexArray(vertexData);
+
+  //loop through points
+  vertexData->push_back(osg::Vec3d(point[0],point[1],point[2]));
+  vertexData->push_back(osg::Vec3d(vec[0],vec[1],vec[2]));
+
+  drawArrayLines->setFirst(0);
+  drawArrayLines->setCount(vertexData->size());
+
+  // Add the Geometry (Drawable) to a Geode and return the Geode.
+  polygon_geode->addDrawable( geom.get() );
+}
+
+/// Draws a ray directed from a contact point along the contact normal
 void visualize_polygon( const Mat& verts, boost::shared_ptr<EventDrivenSimulator> sim ) {
 
+    /* must be ordered:
+     *  1 - 2
+     *  |   |
+     *  3 - 4
+     */
       double r = (double) rand() / (double) RAND_MAX * VIBRANCY;
       double g = (double) rand() / (double) RAND_MAX * VIBRANCY;
       double b = (double) rand() / (double) RAND_MAX * VIBRANCY;

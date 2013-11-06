@@ -11,11 +11,13 @@
 //#define CONTROL_IDYN
 //#define FRICTION_EST
 #define CONTROL_ZMP
-#define RENDER_CONTACT
+//#define RENDER_CONTACT
 //#define USE_ROBOT
+#define CONTROL_KINEMATICS
 
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
+    Dynamixel* dxl_;
 #endif
 
 using namespace Moby;
@@ -165,7 +167,9 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
-      visualize_contact(e[i],sim);
+#ifdef RENDER_CONTACT
+        visualize_contact(e[i],sim);
+#endif
       ContactData c;
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
@@ -211,13 +215,17 @@ void apply_simulation_forces(const Mat& u){
 }
 
 
-Vector3d& calc_com(Vector3d& com){
+Vector3d& calc_com(Vector3d& weighted_com){
   const std::vector<RigidBodyPtr>& links = abrobot->get_links();
   for(int i=0;i<links.size();i++){
      RigidBody& link = *links[i];
      double m = link.get_mass();
-//     Vector3d comi = link.get_inertial_pose(); // NOTE: where is this func?
+     Ravelin::Pose3d link_com(link.get_inertial_pose()); // NOTE: where is this func?
+     link_com.update_relative_pose(Moby::GLOBAL);
+     weighted_com += link_com.x * m;
   }
+  weighted_com /= links.size();
+  return weighted_com;
 }
 
 /// The main control loop
@@ -277,7 +285,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
         }
 
 
-       double joint_vel = M_PI_4*cos(t*3);
+       double joint_vel = M_PI_4*cos(t*3*5)*5;
 
 //       std::cout << " ( "<< joint_pos << " , " << joint_vel << " ) " << std::endl;
 
@@ -352,14 +360,15 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
 #ifdef CONTROL_ZMP
       // NOTE: This only finds ZMP of Base
+      // Find true COM
+      Vector3d CoM(0,0,0);
+      calc_com(CoM);
       Vector2d ZmP(
-                    gc[(NJOINT-1)] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)])/acc[(NJOINT-1)+2],
-                    gc[(NJOINT-1)+1] - (gc[(NJOINT-1)+2]*acc[(NJOINT-1)+1])/acc[(NJOINT-1)+2]
+                    CoM[0] - (CoM[2]*acc[(NJOINT-1)])/acc[(NJOINT-1)+2],
+                    CoM[1] - (CoM[2]*acc[(NJOINT-1)+1])/acc[(NJOINT-1)+2]
                     );
 
-      // Find true COM
-      Vector3d CoM;
-      calc_com(CoM);
+
 #endif
       static Vec qdd = Vec::zero(NJOINT);
       static Vec cf, ff = uff.column(0);
@@ -378,18 +387,32 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       u += ufb;
       u += uff;
 
-      apply_simulation_forces(u);
-
       { // NOTE: Code for kinematic simulation
         for(unsigned m=0;m< joints.size();m++){
             if(joints[m]->q.size() == 0) continue;
             unsigned ind = joints[m]->get_coord_index();
+            q(ind,0) = q_des[joints[m]->id];
+            qd(ind,0) = qd_des[joints[m]->id];
             joints[m]->q[0] = q_des[joints[m]->id];
             joints[m]->qd[0] = qd_des[joints[m]->id];
         }
         abrobot->update_link_poses();
         abrobot->update_link_velocities();
       }
+
+#ifdef USE_ROBOT
+# ifdef CONTROL_KINEMATICS
+      Vec qdat = q.column(0);
+      Vec qddat = qd.column(0);
+//      dxl_->set_state(qdat.data(),qddat.data());
+      dxl_->set_position(qdat.data());
+# else
+      Vec udat = u.column(0);
+      dxl_->set_torque(udat.data());
+# endif
+#endif
+
+      apply_simulation_forces(u);
 
 #ifndef NDEBUG
       outlog2(q.column(0),"q");
@@ -416,20 +439,22 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      outlog2(support_poly,"Support Polygon");
 # endif
 
-     std::cout << "JOINT\t: U\t| Q\t: des\t| Qd\t: des\t|" << std::endl;
+
+#endif
+     std::cout << "JOINT\t: U\t| Q\t: des\t| Qd\t: des\t| @ time = " << t << std::endl;
      for(unsigned m=0;m< joints.size();m++)
        std::cout << joints[m]->id
-                 << "\t: "  << std::setprecision(3) << u(joints[m]->get_coord_index(),0)
+                 << "\t "  << std::setprecision(3) << u(joints[m]->get_coord_index(),0)
                  << "\t| " << q(joints[m]->get_coord_index(),0)
-                 << "\t: " << q_des[joints[m]->id]
+                 << "\t " << q_des[joints[m]->id]
                  << "\t| " << qd(joints[m]->get_coord_index(),0)
-                 << "\t: " << qd_des[joints[m]->id]
+                 << "\t " << qd_des[joints[m]->id]
                  << "\t| " << std::endl;
-#endif
+     std::cout <<"CoM : "<< CoM << std::endl;
+     std::cout <<"ZmP : "<< ZmP << std::endl;
+     std::cout << std::endl;
 
-
-
-    last_time = t;
+     last_time = t;
 }
 
 /// plugin must be "extern C"
@@ -504,12 +529,12 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       ki = 0;
       break;
     case 1:
-      kp = 50;
+      kp = 100;
       kv = 10;
       ki = 0;
       break;
     case 2:
-      kp = 50;
+      kp = 100;
       kv = 10;
       ki = 0;
       break;
@@ -533,6 +558,9 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
   abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
 
+#ifdef USE_ROBOT
+  dxl_ = new Dynamixel;
+#endif
 }
 
 } // end extern C

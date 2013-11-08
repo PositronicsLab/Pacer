@@ -110,7 +110,7 @@ void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N,
       }
 }
 
-void calculate_dyn_properties(RigidBodyPtr obj, Mat& M, Vec& fext){
+void calculate_dyn_properties(Mat& M, Vec& fext){
     M.resize(NSPATIAL,NSPATIAL);
     fext.resize(NSPATIAL);
     obj->get_generalized_inertia(M);
@@ -267,6 +267,18 @@ void controller(DynamicBodyPtr body, double time, void*)
 
     contacts.clear(); 
     */
+
+  Mat N,D,M;
+  Vec fext;
+
+  calculate_dyn_properties(M,fext);
+
+  //floating robot
+  Vec resist_base_forces = fext;
+  resist_base_forces.negate();
+  resist_base_forces[0] += 1;
+  resist_base_forces[4] += 1;
+  obj->add_generalized_force(resist_base_forces);
 
   Vec q(NSPATIAL+1), qd(NSPATIAL);
   body->get_generalized_coordinates(DynamicBody::eEuler,q);

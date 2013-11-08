@@ -11,9 +11,9 @@ Ravelin::LinAlgd LA_;
      const int m = A.rows();
 
      Mat MMM;
-     Vec zzz(n*2 + m),qqq(n*2 + m);
+     Vec zzz(n + m),qqq(n + m);
      // init and setup MMM
-     MMM.set_zero(n*2 + m,n*2 + m);
+     MMM.set_zero(n + m,n + m);
      Mat nAT = A;
      nAT.transpose();
      nAT.negate();
@@ -76,8 +76,8 @@ Ravelin::LinAlgd LA_;
   outlog(c,"c");
 #endif
 
-//  if(!lcp_.lcp_lemke_regularized(Q,c,x))
-    if(!lcp_.lcp_lemke(Q,c,x))
+  if(!lcp_.lcp_lemke_regularized(Q,c,x))
+//    if(!lcp_.lcp_lemke(Q,c,x))
       SOLVE_FLAG = false;
 #ifndef NDEBUG
   std::cout << "Solutions" << std::endl;
@@ -377,7 +377,7 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     V.get_sub_mat(0,V.rows(),V.columns()-m,V.columns(),P);
   }
 
-  if(m != 0)
+  if(m != 0 && false)
   {
     // compute U
     Mat U;

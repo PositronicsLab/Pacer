@@ -167,16 +167,17 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   osg::Vec4 color = osg::Vec4( r, g, 1.0, 1.0 );
 
   const double point_radius = 0.25;
+  const double point_scale = 0.01;
 
   // the osg node this event visualization will attach to
-  osg::Group* contact_root = new osg::Group();
+  osg::Group* point_root = new osg::Group();
 
   // turn off lighting for this node
-  osg::StateSet *contact_state = contact_root->getOrCreateStateSet();
-  contact_state->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
+  osg::StateSet *point_state = point_root->getOrCreateStateSet();
+  point_state->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
 
   // a geode for the visualization geometry
-  osg::Geode* contact_geode = new osg::Geode();
+  osg::Geode* point_geode = new osg::Geode();
 
   // add some hints to reduce the polygonal complexity of the visualization
   osg::TessellationHints *hints = new osg::TessellationHints();
@@ -184,12 +185,29 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   hints->setCreateNormals( true );
   hints->setDetailRatio( 0.001 );
 
-  // add the contact point as a sphere at the origin of the geode's frame
-  osg::Sphere* point_geometry = new osg::Sphere( osg::Vec3d(point[0],point[1],point[2]), point_radius );
+  osg::Sphere* point_geometry = new osg::Sphere( osg::Vec3( 0,0,0 ), point_radius );
   osg::ShapeDrawable* point_shape = new osg::ShapeDrawable( point_geometry, hints );
   point_shape->setColor( color );
-  contact_geode->addDrawable( point_shape );
+  point_geode->addDrawable( point_shape );
 
+  osg::PositionAttitudeTransform* point_transform;
+  point_transform = new osg::PositionAttitudeTransform();
+  point_transform->setPosition( osg::Vec3( point[0], point[1], point[2] ) );
+  point_transform->setScale( osg::Vec3( point_scale, point_scale, point_scale ) );
+
+  // add the geode to the transform
+  point_transform->addChild( point_geode );
+
+  // add the transform to the root
+  point_root->addChild( point_transform );
+
+  // add the root to the transient data scene graph
+  sim->add_transient_vdata( point_root );
+  
+  // ----- LINE -------
+  
+  osg::Group* vec_root = new osg::Group();
+  osg::Geode* vec_geode = new osg::Geode();
   osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
   osg::ref_ptr<osg::DrawArrays> drawArrayLines =
       new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP);
@@ -207,7 +225,22 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   drawArrayLines->setCount(vertexData->size());
 
   // Add the Geometry (Drawable) to a Geode and return the Geode.
-  polygon_geode->addDrawable( geom.get() );
+  vec_geode->addDrawable( geom.get() );
+  // the osg node this event visualization will attach to
+
+  // add the root to the transient data scene graph
+  // create the visualization transform
+  osg::PositionAttitudeTransform* vec_transform;
+  vec_transform = new osg::PositionAttitudeTransform();
+
+  // add the geode to the transform
+  vec_transform->addChild( vec_geode );
+
+  // add the transform to the root
+  vec_root->addChild( vec_transform );
+
+  // add the root to the transient data scene graph
+  sim->add_transient_vdata( vec_root );
 }
 
 /// Draws a ray directed from a contact point along the contact normal
@@ -290,14 +323,9 @@ void visualize_polygon( const Mat& verts, boost::shared_ptr<EventDrivenSimulator
       // Add the Geometry (Drawable) to a Geode and return the Geode.
       polygon_geode->addDrawable( geom.get() );
 
-      /// -----------------------------------------------------
-      /// -----------------------------------------------------
-
       // create the visualization transform
       osg::PositionAttitudeTransform* polygon_transform;
       polygon_transform = new osg::PositionAttitudeTransform();
-//      polygon_transform->setPosition( osg::Vec3( event.contact_point[0], event.contact_point[1], event.contact_point[2] ) );
-//      polygon_transform->setScale( osg::Vec3( point_scale, point_scale, point_scale ) );
 
       // add the geode to the transform
       polygon_transform->addChild( polygon_geode );

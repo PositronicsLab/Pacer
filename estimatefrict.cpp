@@ -20,8 +20,6 @@ Ravelin::LinAlgd LA;
 
 struct ContactData;
 
-//extern Vec cf_moby;
-
 static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
 {
   const int n = Q.rows();
@@ -252,7 +250,8 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
 //          std::cout << "m: " << m << std::endl;
 
-          if(m != 0)
+          // NOTE:: stage 2 is inactive
+          if(m != 0 && false)
           {
 //            outlog2(P,"P");
 

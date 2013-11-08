@@ -22,12 +22,8 @@
 #include <Moby/EventDrivenSimulator.h>
 #include <Moby/RCArticulatedBody.h>
 #include <Moby/DynamicBody.h>
-#include <Moby/RevoluteJoint.h>
-#include <Moby/GravityForce.h>
-#include <Moby/Constants.h>
 #include <Moby/RNEAlgorithm.h>
 #include <Moby/LCP.h>
-//#include <Opt/LCP.h>
 
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
@@ -47,7 +43,7 @@ void visualize_contact( const Moby::Event& e,
                         boost::shared_ptr<Moby::EventDrivenSimulator> sim );
 void visualize_polygon( const Mat& verts,
                         boost::shared_ptr<Moby::EventDrivenSimulator> sim );
-void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, boost::shared_ptr<EventDrivenSimulator> sim ) {
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 
 void idyn(const Vec& v, const Vec& qdd, const Mat& M,
           const  Mat& N, const Mat& ST, const Vec& fext,

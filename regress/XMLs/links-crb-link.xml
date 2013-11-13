@@ -30,7 +30,7 @@
 
   <!-- setup the robot articulated rigid body -->
   <RCArticulatedBody id="links" urdf="links.urdf"
-            fdyn-algorithm="crb" fdyn-algorithm-frame="global"
+            fdyn-algorithm="crb" fdyn-algorithm-frame="link"
             floating-base="true" translate="0 0 0.1"/>
 
   <!-- setup the platform rigid body; it is not active -->

@@ -380,6 +380,7 @@
       <parent link="LF_HIP_AA"/>
       <child link="LF_HIP_FE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="LF_HAA" type="continuous">
       <!-- the current frame is aligned with the global frame (and the y-axis
@@ -390,6 +391,7 @@
       <parent link="base_link"/>
       <child link="LF_HIP_AA"/>
       <axis xyz="0 0 -1"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="LF_KFE" type="continuous">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -399,6 +401,7 @@
       <parent link="LF_HIP_FE"/>
       <child link="LF_KNEE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="LF_LLF" type="fixed">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -407,6 +410,7 @@
       <origin xyz="0 0 -0.33" rpy="0.0 0.0 0.0"/>
       <parent link="LF_KNEE"/>
       <child link="LF_FOOT"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <!-- RF_LEG JOINTS -->
   <joint name="RF_HFE" type="continuous">
@@ -419,6 +423,7 @@
       <parent link="RF_HIP_AA"/>
       <child link="RF_HIP_FE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="RF_HAA" type="continuous">
       <!-- the current frame is aligned with the global frame (and the y-axis
@@ -429,6 +434,7 @@
       <parent link="base_link"/>
       <child link="RF_HIP_AA"/>
       <axis xyz="0 0 -1"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="RF_KFE" type="continuous">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -438,6 +444,7 @@
       <parent link="RF_HIP_FE"/>
       <child link="RF_KNEE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="RF_LLF" type="fixed">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -446,6 +453,7 @@
       <origin xyz="0 0 -0.33" rpy="0.0 0 0"/>
       <parent link="RF_KNEE"/>
       <child link="RF_FOOT"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <!-- LH_LEG JOINTS -->
   <joint name="LH_HFE" type="continuous">
@@ -458,6 +466,7 @@
       <parent link="LH_HIP_AA"/>
       <child link="LH_HIP_FE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="LH_HAA" type="continuous">
       <!-- the current frame is aligned with the global frame (and the y-axis
@@ -468,6 +477,7 @@
       <parent link="base_link"/>
       <child link="LH_HIP_AA"/>
       <axis xyz="0 0 -1"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="LH_KFE" type="continuous">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -477,6 +487,7 @@
       <parent link="LH_HIP_FE"/>
       <child link="LH_KNEE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="LH_LLF" type="fixed">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -485,6 +496,7 @@
       <origin xyz="0 0 -0.33" rpy="0.0 0 0"/>
       <parent link="LH_KNEE"/>
       <child link="LH_FOOT"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <!-- RH_LEG JOINTS -->
   <joint name="RH_HFE" type="continuous">
@@ -497,6 +509,7 @@
       <parent link="RH_HIP_AA"/>
       <child link="RH_HIP_FE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="RH_HAA" type="continuous">
       <!-- the current frame is aligned with the global frame (and the y-axis
@@ -507,6 +520,7 @@
       <parent link="base_link"/>
       <child link="RH_HIP_AA"/>
       <axis xyz="0 0 -1"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="RH_KFE" type="continuous">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -516,6 +530,7 @@
       <parent link="RH_HIP_FE"/>
       <child link="RH_KNEE"/>
       <axis xyz="0 1 0"/>
+      <dynamics damping="1" friction="0" />
   </joint>
   <joint name="RH_LLF" type="fixed">
       <!-- the current frame is aligned with the global frame, and we wish
@@ -524,5 +539,6 @@
       <origin xyz="0 0 -0.33" rpy="0.0 0 0"/>
       <parent link="RH_KNEE"/>
       <child link="RH_FOOT"/>
+      <dynamics damping="1" friction="0" />
   </joint>
  </robot>

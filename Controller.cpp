@@ -246,51 +246,66 @@ Vector3d& calc_com(Vector3d& weighted_com,Vector3d& com_acc){
 void get_trajectory(double time,double dt, map<string, double>& q_des, map<string, double>& qd_des){
   double joint_vel = 0, joint_pos = 0;
 
-  double t = time*0.5;
+  double t = time;
 
-  joint_pos = M_PI_8*sin(t*3);
-  q_des["LF_HIP_FE"] =  q0["LF_HIP_FE"] + joint_pos;
-  joint_pos = M_PI_8*sin(t*3-M_PI_2);
-  q_des["LF_LEG_FE"] =  q0["LF_LEG_FE"] + joint_pos;
+  if(0){
 
-  joint_vel = 3*M_PI_8*cos(t*3);
-  qd_des["LF_HIP_FE"] =  joint_vel;
-  joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
-  qd_des["LF_LEG_FE"] =  joint_vel;
+  } else {
+    joint_pos = M_PI_8*sin(-t*3);
+    q_des["LF_HIP_FE"] =  q0["LF_HIP_FE"] + joint_pos;
+    joint_pos = M_PI_8*sin(-t*3-M_PI_2);
+    q_des["LF_LEG_FE"] =  q0["LF_LEG_FE"] + joint_pos;
 
-
-  joint_pos = M_PI_8*sin(t*3);
-  q_des["RF_HIP_FE"] =  q0["RF_HIP_FE"] + joint_pos;
-  joint_pos = M_PI_8*sin(t*3-M_PI_2);
-  q_des["RF_LEG_FE"] =  q0["RF_LEG_FE"] + joint_pos;
-
-  joint_vel = 3*M_PI_8*cos(t*3);
-  qd_des["RF_HIP_FE"] =  joint_vel;
-  joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
-  qd_des["RF_LEG_FE"] =  joint_vel;
-
-  ///////////////
-
-  joint_pos = M_PI_8*sin(t*3);
-  q_des["LH_HIP_FE"] =  q0["LH_HIP_FE"] + joint_pos;
-  joint_pos = M_PI_8*sin(t*3-M_PI_2);
-  q_des["LH_LEG_FE"] =  q0["LH_LEG_FE"] + joint_pos;
-
-  joint_vel = 3*M_PI_8*cos(t*3);
-  qd_des["LH_HIP_FE"] =  joint_vel;
-  joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
-  qd_des["LH_LEG_FE"] =  joint_vel;
+    joint_vel = -3*M_PI_8*cos(-t*3);
+    qd_des["LF_HIP_FE"] =  joint_vel;
+    joint_vel = -3*M_PI_8*cos(-t*3-M_PI_2);
+    qd_des["LF_LEG_FE"] =  joint_vel;
 
 
-  joint_pos = M_PI_8*sin(t*3);
-  q_des["RH_HIP_FE"] =  q0["RH_HIP_FE"] + joint_pos;
-  joint_pos = M_PI_8*sin(t*3-M_PI_2);
-  q_des["RH_LEG_FE"] =  q0["RH_LEG_FE"] + joint_pos;
+    joint_pos = M_PI_8*sin(-t*3);
+    q_des["RF_HIP_FE"] =  q0["RF_HIP_FE"] + joint_pos;
+    joint_pos = M_PI_8*sin(-t*3-M_PI_2);
+    q_des["RF_LEG_FE"] =  q0["RF_LEG_FE"] + joint_pos;
 
-  joint_vel = 3*M_PI_8*cos(t*3);
-  qd_des["RH_HIP_FE"] =  joint_vel;
-  joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
-  qd_des["RH_LEG_FE"] =  joint_vel;
+    joint_vel = -3*M_PI_8*cos(-t*3);
+    qd_des["RF_HIP_FE"] =  joint_vel;
+    joint_vel = -3*M_PI_8*cos(-t*3-M_PI_2);
+    qd_des["RF_LEG_FE"] =  joint_vel;
+
+    ///////////////
+
+    joint_pos = M_PI_8*sin(t*3);
+    q_des["LH_HIP_FE"] =  q0["LH_HIP_FE"] + joint_pos;
+    joint_pos = M_PI_8*sin(t*3-M_PI_2);
+    q_des["LH_LEG_FE"] =  q0["LH_LEG_FE"] + joint_pos;
+
+    joint_vel = 3*M_PI_8*cos(t*3);
+    qd_des["LH_HIP_FE"] =  joint_vel;
+    joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
+    qd_des["LH_LEG_FE"] =  joint_vel;
+
+
+    joint_pos = M_PI_8*sin(t*3);
+    q_des["RH_HIP_FE"] =  q0["RH_HIP_FE"] + joint_pos;
+    joint_pos = M_PI_8*sin(t*3-M_PI_2);
+    q_des["RH_LEG_FE"] =  q0["RH_LEG_FE"] + joint_pos;
+
+    joint_vel = 3*M_PI_8*cos(t*3);
+    qd_des["RH_HIP_FE"] =  joint_vel;
+    joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
+    qd_des["RH_LEG_FE"] =  joint_vel;
+
+    q_des["BODY_JOINT"] = 0;
+    q_des["LF_HIP_AA"] =  M_PI_8;
+    q_des["RF_HIP_AA"] = -M_PI_8;
+    q_des["LH_HIP_AA"] =  M_PI_8;
+    q_des["RH_HIP_AA"] = -M_PI_8;
+    qd_des["BODY_JOINT"] = 0;
+    qd_des["LF_HIP_AA"] = 0;
+    qd_des["RF_HIP_AA"] = 0;
+    qd_des["LH_HIP_AA"] = 0;
+    qd_des["RH_HIP_AA"] = 0;
+  }
 }
 
 /// The main control loop
@@ -341,12 +356,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       /// setup a steady state
       static map<string, double> q_des, qd_des;
       if (q_des.empty())
-        for (unsigned m=0; m< joints_.size(); m++)
-        {
-          if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
-           q_des[joints_[m]->id] = q0[joints_[m]->id];
-           qd_des[joints_[m]->id] = 0.0;
-        }
+        get_trajectory(0,0.001,q_des,qd_des);
+//        for (unsigned m=0; m< joints_.size(); m++)
+//        {
+//          if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
+//           q_des[joints_[m]->id] = q0[joints_[m]->id];
+//           qd_des[joints_[m]->id] = 0.0;
+//        }
 
       /// Get next Traj step
 //      get_trajectory(t,dt,q_des,qd_des);
@@ -444,7 +460,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           u(m,0) = -u_max[joints_[m]->id];
       }
 
-//      apply_simulation_forces(u);
+      apply_simulation_forces(u);
 
 #ifdef USE_ROBOT
 # ifdef CONTROL_KINEMATICS
@@ -549,14 +565,14 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
 
   /// LOCALLY SET VALUES
   // robot's go0 configuration
-  q0["BODY_JOINT"] = -M_PI_16;
+  q0["BODY_JOINT"] = 0;
   q0["LF_HIP_AA"] =  M_PI_8;
-  q0["LF_HIP_FE"] =  0;
-  q0["LF_LEG_FE"] =  M_PI_2;
+  q0["LF_HIP_FE"] =  M_PI_2;
+  q0["LF_LEG_FE"] = -M_PI_2;
 
   q0["RF_HIP_AA"] = -M_PI_8;
-  q0["RF_HIP_FE"] =  0;
-  q0["RF_LEG_FE"] =  M_PI_2;
+  q0["RF_HIP_FE"] =  M_PI_2;
+  q0["RF_LEG_FE"] =  -M_PI_2;
 
   q0["LH_HIP_AA"] =  M_PI_8;
   q0["LH_HIP_FE"] =  M_PI_2;
@@ -567,67 +583,70 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   q0["RH_LEG_FE"] =  -M_PI_2;
 
   // Maximum torques
-  u_max["BODY_JOINT"]=  260;
-  u_max["LF_HIP_AA"] =  260;
-  u_max["LF_HIP_FE"] =  260;
-  u_max["LF_LEG_FE"] =  260;
+  u_max["BODY_JOINT"]=  2.60;
+  u_max["LF_HIP_AA"] =  2.60;
+  u_max["LF_HIP_FE"] =  2.60;
+  u_max["LF_LEG_FE"] =  2.60;
 
-  u_max["RF_HIP_AA"] =  260;
-  u_max["RF_HIP_FE"] =  260;
-  u_max["RF_LEG_FE"] =  260;
+  u_max["RF_HIP_AA"] =  2.60;
+  u_max["RF_HIP_FE"] =  2.60;
+  u_max["RF_LEG_FE"] =  2.60;
 
-  u_max["LH_HIP_AA"] =  260;
-  u_max["LH_HIP_FE"] =  600;
-  u_max["LH_LEG_FE"] =  260;
+  u_max["LH_HIP_AA"] =  2.60;
+  u_max["LH_HIP_FE"] =  6.00;
+  u_max["LH_LEG_FE"] =  2.60;
 
-  u_max["RH_HIP_AA"] =  260;
-  u_max["RH_HIP_FE"] =  600;
-  u_max["RH_LEG_FE"] =  260;
+  u_max["RH_HIP_AA"] =  2.60;
+  u_max["RH_HIP_FE"] =  6.00;
+  u_max["RH_LEG_FE"] =  2.60;
 
   eef_names_.push_back("LF_LLEG");
   eef_names_.push_back("RF_LLEG");
   eef_names_.push_back("LH_LLEG");
   eef_names_.push_back("RH_LLEG");
 
-//  double Ku = 0.001;
-//  double Pu = 0.0001;
-
-//  gains[joints_[0]->id].kp = Ku/1.7;
-//  gains[joints_[0]->id].kv = Pu/2;
-//  gains[joints_[0]->id].ki = Pu/8;
-//  // now, setup gains
-//  for(unsigned i=1;i<joints_.size();i++){
-//    double kp,kv,ki;
-//    switch((i-1)%3){
-//    case 0:
-//      kp = Ku/1.7;
-//      kv = Pu/2;
-//      ki = Pu/8;
-//      break;
-//    case 1:
-//      kp = Ku/1.7;
-//      kv = Pu/2;
-//      ki = Pu/8;
-//      break;
-//    case 2:
-//      kp = Ku/1.7;
-//      kv = Pu/2;
-//      ki = Pu/8;
-//      break;
-//    default: break;
-//    }
-//    // pass gain values to respective joint
-//    gains[joints_[i]->id].kp = kp;
-//    gains[joints_[i]->id].kv = kv;
-//    gains[joints_[i]->id].ki = ki;
-//  }
+  gains[joints_[0]->id].kp = 0.1;
+  gains[joints_[0]->id].kv = 0.01;
+  gains[joints_[0]->id].ki = 0;
+  // now, setup gains
+  for(unsigned i=1;i<joints_.size();i++){
+    double kp,kv,ki;
+    switch((i-1)%3){
+    case 0:
+      kp = 0.1;
+      kv = 0.01;
+      ki = 0;
+      break;
+    case 1:
+      kp = 0.1;
+      kv = 0.01;
+      ki = 0;
+      break;
+    case 2:
+      kp = 0.1;
+      kv = 0.01;
+      ki = 0;
+      break;
+    default: break;
+    }
+    // pass gain values to respective joint
+    gains[joints_[i]->id].kp = kp;
+    gains[joints_[i]->id].kv = kv;
+    gains[joints_[i]->id].ki = ki;
+  }
 
   Vec q_start(q0.size()+7),qd_start(q0.size()+6);
   abrobot->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
 
-  for(int i=0;i<q0.size();i++)
-    q_start[i] = q0[joints_[i]->id];
+  static map<string, double> q_des, qd_des;
+  get_trajectory(0,0.001,q_des,qd_des);
+
+  for(int i=0;i<joints_.size();i++){
+    q_start[i] = q_des[joints_[i]->id];
+    qd_start[i] = 0;//qd_des[joints_[i]->id];
+  }
+
   abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
   abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
 

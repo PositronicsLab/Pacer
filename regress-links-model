@@ -8,7 +8,7 @@
 echo "Regenerating data for LYNX robot example"
 echo "CRB Algorithm============================="
 echo "    link Frame============================="
-$1moby-regress -mi=300 $2/XMLs/links-crb-link.xml $2links-crb-link.dat
+$1moby-regress -r -mi=300 $2/XMLs/links-crb-link.xml $2links-crb-link.dat
 echo "    global Frame============================="
 $1moby-regress -mi=300 $2/XMLs/links-crb-global.xml $2links-crb-global.dat
 echo "    linkinertial Frame============================="

@@ -29,7 +29,7 @@
   </EventDrivenSimulator>
 
   <!-- setup the robot articulated rigid body -->
-  <RCArticulatedBody id="links" urdf="links.urdf"
+  <RCArticulatedBody id="links" urdf="../../links.urdf"
             fdyn-algorithm="crb" fdyn-algorithm-frame="global"
             floating-base="true" translate="0 0 0.1"/>
 

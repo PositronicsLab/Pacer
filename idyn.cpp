@@ -167,10 +167,11 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   int nk = ST.columns()/nc;
   int nvars = nc*(nk+1);
 
-  Mat workM1,workM2;
-  Vec workv1, workv2;
+  static Mat workM1,workM2;
+  static Vec workv1, workv2;
 
-  Vec vqstar = qdd;
+  static Vec vqstar;
+  vqstar = qdd;
   vqstar *= h;
   vqstar += v.get_sub_vec(6,n,workv1);
 
@@ -190,39 +191,40 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   outlog2(R,"R");
 #endif
 
-
-
   Vec z(nvars),cf(nvars);
   // compute A, B, and C
-  Mat A(6,6);
+  static Mat A(6,6);
   M.get_sub_mat(nq,n,nq,n,A);
-  Mat B(6,nq);
+  static Mat B(6,nq);
   M.get_sub_mat(nq,n,0,nq,B);
-  Mat C(nq,nq);
+  static Mat C(nq,nq);
   M.get_sub_mat(0,nq,0,nq,C);
 
   // compute D, E, and F
-  Mat iM_chol = M;
+  static Mat iM_chol;
+  iM_chol = M;
   LA_.factor_chol(iM_chol);
 
-  Mat iM = Mat::identity(n);
+  static Mat iM;
+  iM = Mat::identity(n);
   LA_.solve_chol_fast(iM_chol,iM);
-  Mat D(6,6);
+  static Mat D(6,6);
   iM.get_sub_mat(nq,n,nq,n,D);
-  Mat E(6,nq);
+  static Mat E(6,nq);
   iM.get_sub_mat(nq,n,0,nq,E);
-  Mat F(nq,nq);
+  static Mat F(nq,nq);
   iM.get_sub_mat(0,nq,0,nq,F);
-  Mat iF = F;
+  static Mat iF;
+  iF = F;
   LA_.factor_chol(iF);
 
   /// Stage 1 optimization energy minimization
 
   // determine vb, vq, vbstar, vqstar
 
-  Vec vb(6);
+  static Vec vb(6);
   v.get_sub_vec(nq,n,vb);
-  Vec vq(nq);
+  static Vec vq(nq);
   v.get_sub_vec(0,nq,vq);
 
   workv1.set_zero(nq);
@@ -234,17 +236,18 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   fext.get_sub_vec(0,nq,uff);
   F.mult(workv1,uff,1,-1);
 
-  Vec zuff;
-  zuff.set_zero(n);
+  static Vec zuff(n);
+  zuff.set_zero();
   zuff.set_sub_vec(6,uff);
 
   // compute j and k
-  // [D E]
+  // [D,E]
   Mat DE(D.rows(),D.columns()+E.columns());
   DE.set_sub_mat(0,0,D);
   DE.set_sub_mat(0,D.columns(),E);
-  // [E'F]
-  Mat ETF(E.columns(),E.rows()+F.columns()), ET = E;
+  // [E',F]
+  Mat ETF(E.columns(),E.rows()+F.columns()),
+      ET = E;
   ET.transpose();
   ETF.set_sub_mat(0,0,ET);
   ETF.set_sub_mat(0,ET.columns(),F);
@@ -253,12 +256,13 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   workv1 = fext;
   workv1 += zuff;
   workv1 *= h;
+  // j = [D,E]*(fext + zuff)*h
   Vec j(6);
   DE.mult(workv1,j);
   j += vb;
+  // k = [E',F]*(fext + zuff)*h  +  vq
   Vec k = vq;
   ETF.mult(workv1,k,1,1);
-//      k += vq;
 
   // compute Z and p
   Mat Z(DE.rows(), R.columns());
@@ -280,6 +284,10 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // compute objective function
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
+
+  /////////////////////////////////////////////////////////
+  ////////////// Objective //////////////////////////////
+
   Mat qG = H;
   // qc = Z'*A*p + Z'*B*vqstar;
   Vec qc(Z.columns());
@@ -323,6 +331,10 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     // rhs is zer
     qq2[ii] = 0;
   }
+
+  /////////////////////////////////////////////////////////
+  ////////////// CONSTRAINTS //////////////////////////////
+
   // combine all linear inequality constraints
   assert(qM1.columns() == qM2.columns());
   Mat qM(qM1.rows()+qM2.rows(),qM1.columns());
@@ -360,8 +372,6 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // SVD decomp to retrieve nullspace of Z'AZ
   LA_.svd(H,U,S,V);
 
-//    outlog2(S,"S");
-
   if(S.rows() != 0){
     // Calculate the tolerance for ruling that a singular value is supposed to be zero
     double ZERO_TOL = std::numeric_limits<double>::epsilon() * H.rows() * S[0];
@@ -370,13 +380,12 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
       if(S[i] > ZERO_TOL)
         break;
 
-//        std::cout  << "Null Vectors: " << m << std::endl;
-
     // get the nullspace
     P.set_zero(nvars,m);
     V.get_sub_mat(0,V.rows(),V.columns()-m,V.columns(),P);
   }
 
+  // NOTE: STAGE II is disabled
   if(m != 0 && false)
   {
     // compute U
@@ -498,11 +507,15 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
        // return the inverse dynamics forces
 //    uff += iF*(vqstar - k - ETF*R*(cf)) * (1/h);
     uff = vqstar;
+    outlog(uff,"uff");
     uff -= k;
+    outlog(uff,"uff");
     ETF.mult(R,workM1);
     workM1.mult(cf,uff,-1,1);
     uff *= (1/h);
+    outlog(uff,"uff");
     LA_.solve_chol_fast(iF,uff);
+    outlog(uff,"uff");
 #ifndef NDEBUG
     outlog(uff,"finalUFF");
 #endif

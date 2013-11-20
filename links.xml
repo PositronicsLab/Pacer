@@ -7,7 +7,7 @@
   </DRIVER>
 
   <MOBY>
-    <Box id="ground-primitive" xlen="10" ylen="1" zlen="0.1" />
+    <Box id="ground-primitive" xlen="10" ylen="10" zlen="0.1" />
 
     <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
     <EulerIntegrator id="euler" />
@@ -21,11 +21,11 @@
       <DisabledPair object1-id="links" object2-id="links"/>
     </GeneralizedCCD>
 
-  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd">
+  <EventDrivenSimulator integrator-id="odepack" collision-detector-id="ccd">
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0" />
   </EventDrivenSimulator>
 
   <!-- setup the robot articulated rigid body -->

@@ -31,7 +31,7 @@
   <!-- setup the robot articulated rigid body -->
   <RCArticulatedBody id="links" urdf="../../links.urdf"
             fdyn-algorithm="fsab" fdyn-algorithm-frame="joint"
-            floating-base="true" translate="0 0 0.1"/>
+            floating-base="true" translate="0 0 0.2"/>
 
   <!-- setup the platform rigid body; it is not active -->
   <RigidBody id="ground" enabled="false"

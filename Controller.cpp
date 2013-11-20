@@ -9,16 +9,19 @@
 #define NDEBUG
 //#define USE_DUMMY_CONTACTS
 //#define CONTROL_IDYN
-#define FRICTION_EST
+//#define FRICTION_EST
 #define CONTROL_ZMP
 #define RENDER_CONTACT
 //#define USE_ROBOT
 #define CONTROL_KINEMATICS
+//#define FOLLOW_TRAJECTORY
 
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
     Dynamixel* dxl_;
 #endif
+
+#define grav 9.8 // M/s.s
 #define M_PI_16 0.19634954084
 #define M_PI_8 0.39269908169
 const double TORQUE_LIMIT = 3; //N.m
@@ -218,6 +221,24 @@ void apply_simulation_forces(const Mat& u){
     }
 }
 
+double calc_energy(Vec& v, Mat& M){
+  // Potential Energy
+  double PE = 0;
+  const std::vector<RigidBodyPtr>& links = abrobot->get_links();
+  for(int i=0;i<links.size();i++){
+     RigidBody& link = *links[i];
+     double m = link.get_mass();
+     Ravelin::Pose3d link_com = *link.get_inertial_pose();
+     link_com.update_relative_pose(Moby::GLOBAL);
+     PE += link_com.x[2] * m * grav;
+  }
+  M.mult(v, workv_);
+  double KE = workv_.dot(v);
+  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
+  std::cout << "Total Energy = " << (KE + PE) << std::endl;
+  return (0.5*KE + PE);
+  // Kinetic Energy
+}
 
 Vector3d& calc_com(Vector3d& weighted_com,Vector3d& com_acc){
   weighted_com.set_zero();
@@ -356,16 +377,18 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       /// setup a steady state
       static map<string, double> q_des, qd_des;
       if (q_des.empty())
-        get_trajectory(0,0.001,q_des,qd_des);
-//        for (unsigned m=0; m< joints_.size(); m++)
-//        {
-//          if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
-//           q_des[joints_[m]->id] = q0[joints_[m]->id];
-//           qd_des[joints_[m]->id] = 0.0;
-//        }
+        for (unsigned m=0; m< joints_.size(); m++)
+        {
+          if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
+           q_des[joints_[m]->id] = q0[joints_[m]->id];
+           qd_des[joints_[m]->id] = 0.0;
+        }
 
       /// Get next Traj step
-//      get_trajectory(t,dt,q_des,qd_des);
+#ifdef FOLLOW_TRAJECTORY
+      get_trajectory(t,dt,q_des,qd_des);
+
+#endif
 
       ///  Record Robot State
       for(unsigned m=0;m< joints_.size();m++){
@@ -421,6 +444,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #endif
 
 #ifdef CONTROL_ZMP
+      calc_energy(vel,M);
       Vector3d CoM,acc_CoM;
       calc_com(CoM,acc_CoM);
 
@@ -449,8 +473,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       // combine ufb and uff
       u += ufb;
       u += uff;
-      outlog2(ufb,"ufb");
-      outlog2(uff,"uff");
+//      outlog2(ufb,"ufb");
+//      outlog2(uff,"uff");
 
       /// Limit Torques
       for(unsigned m=0;m< joints_.size();m++){
@@ -460,7 +484,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           u(m,0) = -u_max[joints_[m]->id];
       }
 
-      apply_simulation_forces(u);
+//      apply_simulation_forces(u);
 
 #ifdef USE_ROBOT
 # ifdef CONTROL_KINEMATICS
@@ -552,9 +576,9 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
     }
   }
 
-//  sim->event_post_impulse_callback_fn = &post_event_callback_fn;
+  sim->event_post_impulse_callback_fn = &post_event_callback_fn;
     // setup the controller
-//  abrobot->controller = &controller;
+  abrobot->controller = &controller;
 
   std::vector<JointPtr> joints = abrobot->get_joints();
   joints_.resize(joints.size());
@@ -566,21 +590,21 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   /// LOCALLY SET VALUES
   // robot's go0 configuration
   q0["BODY_JOINT"] = 0;
-  q0["LF_HIP_AA"] =  M_PI_8;
-  q0["LF_HIP_FE"] =  M_PI_2;
-  q0["LF_LEG_FE"] = -M_PI_2;
+  q0["LF_HIP_AA"] =  0;
+  q0["LF_HIP_FE"] = 0;
+  q0["LF_LEG_FE"] = -0;
 
-  q0["RF_HIP_AA"] = -M_PI_8;
-  q0["RF_HIP_FE"] =  M_PI_2;
-  q0["RF_LEG_FE"] =  -M_PI_2;
+  q0["RF_HIP_AA"] = -0;
+  q0["RF_HIP_FE"] =  0;
+  q0["RF_LEG_FE"] =  -0;
 
-  q0["LH_HIP_AA"] =  M_PI_8;
-  q0["LH_HIP_FE"] =  M_PI_2;
-  q0["LH_LEG_FE"] =  -M_PI_2;
+  q0["LH_HIP_AA"] =  0;
+  q0["LH_HIP_FE"] =  0;
+  q0["LH_LEG_FE"] =  -0;
 
-  q0["RH_HIP_AA"] = -M_PI_8;
-  q0["RH_HIP_FE"] =  M_PI_2;
-  q0["RH_LEG_FE"] =  -M_PI_2;
+  q0["RH_HIP_AA"] = -0;
+  q0["RH_HIP_FE"] =  0;
+  q0["RH_LEG_FE"] =  -0;
 
   // Maximum torques
   u_max["BODY_JOINT"]=  2.60;
@@ -643,8 +667,8 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   get_trajectory(0,0.001,q_des,qd_des);
 
   for(int i=0;i<joints_.size();i++){
-    q_start[i] = q_des[joints_[i]->id];
-    qd_start[i] = 0;//qd_des[joints_[i]->id];
+    q_start[i] = q0[joints[i]->id];// q_des[joints[i]->id];
+    qd_start[i] = 0;//qd_des[joints[i]->id];
   }
 
   abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);

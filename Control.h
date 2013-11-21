@@ -24,6 +24,7 @@
 #include <Moby/DynamicBody.h>
 #include <Moby/RNEAlgorithm.h>
 #include <Moby/LCP.h>
+#include <math.h>
 
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
@@ -49,12 +50,20 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,
           const  Mat& N, const Mat& ST, const Vec& fext,
           double h, const Mat& MU, Vec& uff);
 
+std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector3d>& control_points, std::vector<Ravelin::Vector3d>& trajectory);
+
+/// 4 foot (body-fixed) state-space traj to joint-space traj
+std::vector<Vec>& trajectoryIK(Moby::RCArticulatedBody abrobot, const std::vector<std::vector<Ravelin::Vector3d> >& feet_trajectory,
+                               std::vector<Vec>& joint_trajectory,const std::vector<std::string>& eef_names);
+
 struct ContactData
 {
   Ravelin::Vector3d point;  // contact point
   Ravelin::Vector3d normal; // contact normal (pointing away from the ground)
   std::string name;
 };
+void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D);
+void determine_N_D2(std::vector<ContactData>& contacts, Mat& N, Mat& ST);
 
 using boost::shared_ptr;
 using boost::dynamic_pointer_cast;

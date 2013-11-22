@@ -233,10 +233,10 @@ double calc_energy(Vec& v, Mat& M){
      PE += link_com.x[2] * m * grav;
   }
   M.mult(v, workv_);
-  double KE = workv_.dot(v);
+  double KE = workv_.dot(v)*0.5;
   std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
   std::cout << "Total Energy = " << (KE + PE) << std::endl;
-  return (0.5*KE + PE);
+  return (KE + PE);
   // Kinetic Energy
 }
 
@@ -484,7 +484,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           u(m,0) = -u_max[joints_[m]->id];
       }
 
-//      apply_simulation_forces(u);
+      apply_simulation_forces(u);
 
 #ifdef USE_ROBOT
 # ifdef CONTROL_KINEMATICS

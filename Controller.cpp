@@ -102,60 +102,6 @@ void control_PID(const map<string, double>& q_des, const map<string, double>& qd
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Contact DATA //////////////////////////////////
 
-void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
-{
-  int nc = contacts.size();
-  const std::vector<RigidBodyPtr>& links = abrobot->get_links();
-  std::vector<RigidBodyPtr> eefs(nc);
-
-  for(unsigned i=0;i<links.size();i++)
-    for(unsigned j=0;j<nc;j++)
-      if(contacts[j].name.compare(links[i]->id) == 0)
-        eefs[j] = links[i];
-
-  static Mat J, Jsub;
-  static Vec col;
-
-  // resize temporary N and ST
-  N.resize(NJOINT+6,nc);
-  D.resize(NJOINT+6,nc*nk);
-
-  J.resize(NSPATIAL, NJOINT);
-
-  // loop over all contacts
-  for(int i = 0; i < nc; i++){
-    // get the contact point and normal
-    ContactData& c = contacts[i];
-
-    // generate the contact tangents here...
-    Vector3d tan1, tan2;
-    Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
-    Vector3d torque;
-    torque.set_zero();
-
-    RigidBodyPtr sbfoot = eefs[i];
-
-    Vec col(NSPATIAL);
-    AAngled aa(0,0,1,0);
-    Origin3d o(c.point);
-    boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
-    SForced sfn(c.normal,torque,pose);
-    abrobot->convert_to_generalized_force(sbfoot,sfn, c.point, col);
-    N.set_column(i,col);
-    for(int k=0;k<nk;k++){
-      if(k%2 == 0) {
-        SForced sfs(tan1,torque,pose);
-        abrobot->convert_to_generalized_force(sbfoot,sfs, c.point, col);
-      } else {
-        SForced sft(tan2,torque,pose);
-        abrobot->convert_to_generalized_force(sbfoot,sft, c.point, col);
-      }
-      if(k>=2) col.negate();
-      D.set_column(i*nk + k,col);
-    }
-  }
-}
-
 void calculate_dyn_properties(Mat& M, Vec& fext){
     M.resize(NDOFS,NDOFS);
     fext.resize(NDOFS);
@@ -339,7 +285,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #ifdef USE_DUMMY_CONTACTS
     contacts.clear();
     int nc = 4;
-    const std::vector<RigidBodyPtr>& links = abrobot->get_links();
     std::vector<RigidBodyPtr> eefs(nc);
 
     for(unsigned i=0;i<links.size();i++)
@@ -387,7 +332,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       /// Get next Traj step
 #ifdef FOLLOW_TRAJECTORY
       get_trajectory(t,dt,q_des,qd_des);
-
 #endif
 
       ///  Record Robot State
@@ -418,22 +362,14 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       dbrobot->get_generalized_coordinates(DynamicBody::eSpatial,gc);
 
       determine_N_D(contacts,N,D);
+      static Mat ST;
+      determine_N_D2(contacts,N,ST);
 
       static Mat MU;
       MU.set_zero(nc,1);
 #ifdef FRICTION_EST
-      static Mat ST;
       static Vec cf;
-      ST.set_zero(D.rows(),D.columns()/2);
-      // remove negations from D to create ST
-      // of the form [S T]
 
-      for(int i=0;i<N.columns();i++){
-        for(int j=0;j<N.rows();j++){
-          ST(j,i) = D(j,i*nk);
-          ST(j,nc+i) = D(j,i*nk+1);
-        }
-      }
 
       double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
       outlog2(MU,"MU");
@@ -673,6 +609,35 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
 
   abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
   abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
+
+  unsigned num_feet;
+  if(eefs.size() != eef_names_.size()){
+      std::vector<RigidBodyPtr> eefs(eef_names_.size());
+
+      for(unsigned i=0;i<links.size();i++)
+          for(unsigned j=0;j<eef_names_.size();j++)
+              if(eef_names_[j].compare(links_[i]->id) == 0)
+                  eefs[j] = links_[i];
+  }
+  std::vector<Vector3d> foot_control_points(4);
+
+  Ravelin::Pose3d link_pose = *(eefs[0]->get_pose());
+  link_pose.x[0] += 0.04;
+  link_pose.update_relative_pose(Moby::GLOBAL);
+
+  foot_control_points[0] = link_pose.x;
+  foot_control_points[1] = link_pose.x;
+  foot_control_points[2] = link_pose.x;
+  foot_control_points[3] = link_pose.x;
+  std::vector<Vector3d> foot_trajectory(10000);
+  stepTrajectory(foot_control_points,foot_trajectory);
+  std::vector<std::vector<Ravelin::Vector3d> > feet_trajectory(10000);
+  for(unsigned j=0;j<feet_trajectory.size();j++){
+        feet_trajectory[j] = std::vector<Vector3d>(4);
+        feet_trajectory[j][0] = foot_trajectory[j];
+  }
+  std::vector<Vec> traj;
+  trajectoryIK(*abrobot,feet_trajectory,traj,eef_names_);
 
 
 #ifdef USE_ROBOT

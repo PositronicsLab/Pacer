@@ -614,7 +614,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   if(eefs.size() != eef_names_.size()){
       std::vector<RigidBodyPtr> eefs(eef_names_.size());
 
-      for(unsigned i=0;i<links.size();i++)
+      for(unsigned i=0;i<links_.size();i++)
           for(unsigned j=0;j<eef_names_.size();j++)
               if(eef_names_[j].compare(links_[i]->id) == 0)
                   eefs[j] = links_[i];
@@ -631,13 +631,16 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   foot_control_points[3] = link_pose.x;
   std::vector<Vector3d> foot_trajectory(10000);
   stepTrajectory(foot_control_points,foot_trajectory);
-  std::vector<std::vector<Ravelin::Vector3d> > feet_trajectory(10000);
-  for(unsigned j=0;j<feet_trajectory.size();j++){
-        feet_trajectory[j] = std::vector<Vector3d>(4);
-        feet_trajectory[j][0] = foot_trajectory[j];
+  for(unsigned j=0;j<foot_trajectory.size();j++){
+      std::vector<Ravelin::Vector3d> feet_trajectory(4);
+      feet_trajectory[0] = foot_trajectory[j];
+      feet_trajectory[1] = Ravelin::Vector3d::zero();
+      feet_trajectory[2] = Ravelin::Vector3d::zero();
+      feet_trajectory[3] = Ravelin::Vector3d::zero();
+      std::vector<Ravelin::Vector3d> traj(4);
+      trajectoryIK(feet_trajectory,traj);
   }
-  std::vector<Vec> traj;
-  trajectoryIK(*abrobot,feet_trajectory,traj,eef_names_);
+
 
 
 #ifdef USE_ROBOT

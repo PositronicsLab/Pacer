@@ -182,3 +182,8 @@ void determine_N_D2(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
     ST.set_column(i+nc,col);
   }
 }
+
+// kinematics solver
+/*
+
+  */

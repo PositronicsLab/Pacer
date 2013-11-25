@@ -311,7 +311,7 @@
             <dynamics damping="0.001" friction="0" />
    </joint>
     <joint name="LF_HIP_FE" type="revolute">
-            <origin xyz="0.0505 0.0 0.0" rpy="0 0.78539 0"/>
+            <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
             <parent link="LF_HIP"/>
             <child link="LF_ULEG"/>
             <axis xyz="0 1 0"/>
@@ -337,7 +337,7 @@
             <dynamics damping="0.001" friction="0" />
     </joint>
     <joint name="RF_HIP_FE" type="revolute">
-            <origin xyz="0.0505 0.0 0.0" rpy="0 0.78539 0"/>
+            <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
             <parent link="RF_HIP"/>
             <child link="RF_ULEG"/>
             <axis xyz="0 1 0"/>
@@ -363,7 +363,7 @@
             <dynamics damping="0.001" friction="0" />
     </joint>
     <joint name="LH_HIP_FE" type="revolute">
-            <origin xyz="0.0611 0.0 0.0" rpy="0 0.78539 0"/>
+            <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
             <parent link="LH_HIP"/>
             <child link="LH_ULEG"/>
             <axis xyz="0 1 0"/>
@@ -389,7 +389,7 @@
             <dynamics damping="0.001" friction="0" />
     </joint>
     <joint name="RH_HIP_FE" type="revolute">
-            <origin xyz="0.0611 0.0 0.0" rpy="0 0.78539 0"/>
+            <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
             <parent link="RH_HIP"/>
             <child link="RH_ULEG"/>
             <axis xyz="0 1 0"/>
@@ -397,7 +397,7 @@
             <dynamics damping="0.001" friction="0" />
     </joint>
     <joint name="RH_LEG_FE" type="revolute">
-            <origin xyz="0.0505 0.0 0.0" rpy="0 1.5708 0.0"/>
+            <origin xyz="0.0505 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="RH_ULEG"/>
             <child link="RH_LLEG"/>
             <axis xyz="0 1 0"/>

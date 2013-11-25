@@ -22,3 +22,4 @@ links.urdf
 Visualization.cpp
 StepBezier.cpp
 kinematics.cpp
+inverseKinematics.cpp

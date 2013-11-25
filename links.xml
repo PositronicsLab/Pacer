@@ -25,7 +25,7 @@
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" />
   </EventDrivenSimulator>
 
   <!-- setup the robot articulated rigid body -->

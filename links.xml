@@ -25,13 +25,13 @@
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscose="1" />
   </EventDrivenSimulator>
 
   <!-- setup the robot articulated rigid body -->
   <RCArticulatedBody id="links" urdf="links.urdf"
             fdyn-algorithm="crb" fdyn-algorithm-frame="global"
-            floating-base="true" translate="0 0 0.1"/>
+            floating-base="true" translate="0 0 0.11"/>
 
   <!-- setup the platform rigid body; it is not active -->
   <RigidBody id="ground" enabled="false"

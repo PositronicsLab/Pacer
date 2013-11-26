@@ -15,6 +15,7 @@
 //#define USE_ROBOT
 #define CONTROL_KINEMATICS
 //#define FOLLOW_TRAJECTORY
+#define FOOT_TRAJ
 
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
@@ -31,18 +32,14 @@ using namespace Ravelin;
 
 std::vector<std::string> eef_names_;
 std::vector<ContactData> contacts;
-std::vector<RigidBodyPtr> eefs;
 static map<string, double> q0,u_max;
 
 // simulator
-boost::shared_ptr<EventDrivenSimulator> sim;
-// robot pointer
-RCArticulatedBodyPtr abrobot;
-DynamicBodyPtr dbrobot;
- std::vector<JointPtr> joints_;
- std::vector<RigidBodyPtr> links_;
-
-
+boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+ Moby::RCArticulatedBodyPtr abrobot;
+ Moby::DynamicBodyPtr dbrobot;
+ std::vector<Moby::JointPtr> joints_;
+ std::vector<Moby::RigidBodyPtr> links_,eefs_;
 static Vec workv_;
 static Mat workM_;
 
@@ -276,28 +273,89 @@ void get_trajectory(double time,double dt, map<string, double>& q_des, map<strin
 }
 
 /// The main control loop
+
 void controller(DynamicBodyPtr dbp, double t, void*)
 {
+    static int ITER = 0;
     static double last_time = 0;
     static Mat uff(NJOINT,1),ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
     double dt = t - last_time;
 
+    /// setup a steady state
+    static map<string, double> q_des, qd_des;
+    if (q_des.empty())
+      for (unsigned m=0; m< joints_.size(); m++)
+      {
+        if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
+         q_des[joints_[m]->id] = q0[joints_[m]->id];
+         qd_des[joints_[m]->id] = 0.0;
+      }
+
+#ifdef FOOT_TRAJ
+    static int NSTEPS = 10;
+    static std::vector<std::vector<Ravelin::Vector3d> > joint_trajectory(NSTEPS);
+    if(ITER%NSTEPS == 0){
+      std::vector<Vector3d> foot_control_points(4);
+      std::vector<Ravelin::Vector3d> feet_trajectory(4);
+
+      Ravelin::Pose3d link_pose = *eefs_[0]->get_pose();
+      link_pose.x[0] += 0.04;
+      link_pose.update_relative_pose(links_[0]->get_pose());
+      std::cout << "link_pose: " << link_pose.x << std::endl;
+
+      foot_control_points[0] = link_pose.x;
+      foot_control_points[1] = link_pose.x;
+      foot_control_points[1][2] += 0.2;
+      foot_control_points[2] = link_pose.x;
+      foot_control_points[2][0] += 0.2;
+      foot_control_points[3] = link_pose.x;
+
+      for(unsigned j=0;j<foot_control_points.size();j++)
+        std::cout << "Foot CP: " << foot_control_points[j] << std::endl;
+
+      std::vector<Vector3d> foot_trajectory(NSTEPS);
+      stepTrajectory(foot_control_points,foot_trajectory);
+      foot_trajectory[0] = link_pose.x;
+      for(unsigned j=0;j<foot_trajectory.size();j++){
+          feet_trajectory[0] = foot_trajectory[j];
+          feet_trajectory[1] = Ravelin::Vector3d::zero();
+          feet_trajectory[2] = Ravelin::Vector3d::zero();
+          feet_trajectory[3] = Ravelin::Vector3d::zero();
+          std::cout << "Step" << std::endl;
+          std::cout << "Foot Loc: " << foot_trajectory[0] << std::endl;
+          joint_trajectory[j] = std::vector<Vector3d>(4);
+          trajectoryIK(feet_trajectory,joint_trajectory[j]);
+          std::cout << "Joint Loc: " << joint_trajectory[j][0] << std::endl;
+      }
+    }
+    std::cout << "Joint Des Loc[" <<  ITER%NSTEPS << "]: " << joint_trajectory[ITER%NSTEPS][0] << std::endl;
+    q_des["LF_HIP_AA"] = 0;
+    q_des["LF_HIP_FE"] = joint_trajectory[ITER%NSTEPS][0][1];
+    q_des["LF_LEG_FE"] = joint_trajectory[ITER%NSTEPS][0][2];
+
+    std::cout << "Joint True Loc: " << joints_[3]->q[0] << "," << joints_[7]->q[0]<< "," << joints_[11]->q[0] << std::endl;
+    std::cout << "Joint Des Loc: " << q_des["LF_HIP_AA"] << "," << q_des["LF_HIP_FE"] << "," <<  q_des["LF_LEG_FE"] << std::endl;
+#endif
+
 #ifdef USE_DUMMY_CONTACTS
     contacts.clear();
     int nc = 4;
-    std::vector<RigidBodyPtr> eefs(nc);
+    std::vector<RigidBodyPtr> eefs_(nc);
 
     for(unsigned i=0;i<links.size();i++)
         for(unsigned j=0;j<nc;j++)
             if(eef_names_[j].compare(links[i]->id) == 0)
-                eefs[j] = links[i];
+                eefs_[j] = links[i];
 
     for(unsigned i=0;i<nc;i++){
-      boost::shared_ptr<const Ravelin::Pose3d> pose = eefs[i]->get_gc_pose();
+      Ravelin::Pose3d pose = *eefs_[i]->get_gc_pose();
+      pose->x[0] += 0.04;
+      pose.update_relative_pose(Moby::GLOBAL);
       ContactData c;
       c.normal = Ravelin::Vector3d(0,0,1);
-      c.point = -pose->x;
-      c.name = eefs[i]->id;
+      c.point = pose->x;
+      c.point =
+      c.name = eefs_[i]->id;
       std::cout << c.name << std::endl;
       contacts.push_back(c);
     }
@@ -318,16 +376,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      uff.set_zero();
      ufb.set_zero();
      u.set_zero();
-
-      /// setup a steady state
-      static map<string, double> q_des, qd_des;
-      if (q_des.empty())
-        for (unsigned m=0; m< joints_.size(); m++)
-        {
-          if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
-           q_des[joints_[m]->id] = q0[joints_[m]->id];
-           qd_des[joints_[m]->id] = 0.0;
-        }
 
       /// Get next Traj step
 #ifdef FOLLOW_TRAJECTORY
@@ -480,17 +528,30 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      last_time = t;
 
 
-     { // NOTE: Code for kinematic simulation
-       for(unsigned m=0;m< joints_.size();m++){
-           if(joints_[m]->q.size() == 0) continue;
-           q(m,0) = q_des[joints_[m]->id];
-           qd(m,0) = qd_des[joints_[m]->id];
-           joints_[m]->q[0] = q_des[joints_[m]->id];
-           joints_[m]->qd[0] = qd_des[joints_[m]->id];
+# ifdef CONTROL_KINEMATICS
+     //       for(unsigned m=0;m< joints_.size();m++){
+     //           if(joints_[m]->q.size() == 0) continue;
+     //           q(m,0) = q_des[joints_[m]->id];
+     //           qd(m,0) = qd_des[joints_[m]->id];
+     //           joints_[m]->q[0] = q_des[joints_[m]->id];
+     //           joints_[m]->qd[0] = qd_des[joints_[m]->id];
+     //       }
+
+       Vec q_start(q0.size()+7),qd_start(q0.size()+6);
+       qd_start.set_zero();
+       q_start.set_zero();
+       q_start[NJOINT+2] = 0.1;
+       for(int i=0;i<joints_.size();i++){
+         q_start[i] = q_des[joints_[i]->id];
+         qd_start[i] = 0;
        }
+
+       abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
+       abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
        abrobot->update_link_poses();
        abrobot->update_link_velocities();
-     }
+#endif
+       ITER++;
 }
 
 /// plugin must be "extern C"
@@ -512,6 +573,10 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
     }
   }
 
+#ifdef CONTROL_KINEMATICS
+  abrobot->set_kinematic(true);
+#endif
+
   sim->event_post_impulse_callback_fn = &post_event_callback_fn;
     // setup the controller
   abrobot->controller = &controller;
@@ -520,27 +585,41 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   joints_.resize(joints.size());
   for(unsigned i=0;i<joints.size();i++){
     joints_[joints[i]->get_coord_index()] = joints[i];
+     std::cout << joints[i]->get_coord_index() << " "<< joints_[joints[i]->get_coord_index()]->id << std::endl;
   }
   links_ = abrobot->get_links();
+  for(unsigned i=0;i<joints.size();i++)
+    std::cout << i << " " << links_[i]->id << std::endl;
+
+  eef_names_.push_back("LF_LLEG");
+  eef_names_.push_back("RF_LLEG");
+  eef_names_.push_back("LH_LLEG");
+  eef_names_.push_back("RH_LLEG");
+
+  eefs_.resize(eef_names_.size());
+  for(unsigned i=0;i<links_.size();i++)
+      for(unsigned j=0;j<eef_names_.size();j++)
+          if(eef_names_[j].compare(links_[i]->id) == 0)
+             eefs_[j] = links_[i];
 
   /// LOCALLY SET VALUES
   // robot's go0 configuration
   q0["BODY_JOINT"] = 0;
   q0["LF_HIP_AA"] =  0;
-  q0["LF_HIP_FE"] = 0;
-  q0["LF_LEG_FE"] = -0;
+  q0["LF_HIP_FE"] = 0.6;
+  q0["LF_LEG_FE"] = 1.6;
 
-  q0["RF_HIP_AA"] = -0;
-  q0["RF_HIP_FE"] =  0;
-  q0["RF_LEG_FE"] =  -0;
+  q0["RF_HIP_AA"] =  -0.1;
+  q0["RF_HIP_FE"] =  0.8;
+  q0["RF_LEG_FE"] =  1.4;
 
-  q0["LH_HIP_AA"] =  0;
-  q0["LH_HIP_FE"] =  0;
-  q0["LH_LEG_FE"] =  -0;
+  q0["LH_HIP_AA"] =  0.1;
+  q0["LH_HIP_FE"] =  0.8;
+  q0["LH_LEG_FE"] =  1.4;
 
-  q0["RH_HIP_AA"] = -0;
-  q0["RH_HIP_FE"] =  0;
-  q0["RH_LEG_FE"] =  -0;
+  q0["RH_HIP_AA"] =  -0.1;
+  q0["RH_HIP_FE"] =  0.8;
+  q0["RH_LEG_FE"] =  1.4;
 
   // Maximum torques
   u_max["BODY_JOINT"]=  2.60;
@@ -559,11 +638,6 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   u_max["RH_HIP_AA"] =  2.60;
   u_max["RH_HIP_FE"] =  6.00;
   u_max["RH_LEG_FE"] =  2.60;
-
-  eef_names_.push_back("LF_LLEG");
-  eef_names_.push_back("RF_LLEG");
-  eef_names_.push_back("LH_LLEG");
-  eef_names_.push_back("RH_LLEG");
 
   gains[joints_[0]->id].kp = 0.1;
   gains[joints_[0]->id].kv = 0.01;
@@ -599,49 +673,13 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   abrobot->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
 
-  static map<string, double> q_des, qd_des;
-  get_trajectory(0,0.001,q_des,qd_des);
-
   for(int i=0;i<joints_.size();i++){
-    q_start[i] = q0[joints[i]->id];// q_des[joints[i]->id];
-    qd_start[i] = 0;//qd_des[joints[i]->id];
+    q_start[i] = q0[joints_[i]->id];
+    qd_start[i] = 0;
   }
 
   abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
   abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
-
-  unsigned num_feet;
-  if(eefs.size() != eef_names_.size()){
-      std::vector<RigidBodyPtr> eefs(eef_names_.size());
-
-      for(unsigned i=0;i<links_.size();i++)
-          for(unsigned j=0;j<eef_names_.size();j++)
-              if(eef_names_[j].compare(links_[i]->id) == 0)
-                  eefs[j] = links_[i];
-  }
-  std::vector<Vector3d> foot_control_points(4);
-
-  Ravelin::Pose3d link_pose = *(eefs[0]->get_pose());
-  link_pose.x[0] += 0.04;
-  link_pose.update_relative_pose(Moby::GLOBAL);
-
-  foot_control_points[0] = link_pose.x;
-  foot_control_points[1] = link_pose.x;
-  foot_control_points[2] = link_pose.x;
-  foot_control_points[3] = link_pose.x;
-  std::vector<Vector3d> foot_trajectory(10000);
-  stepTrajectory(foot_control_points,foot_trajectory);
-  for(unsigned j=0;j<foot_trajectory.size();j++){
-      std::vector<Ravelin::Vector3d> feet_trajectory(4);
-      feet_trajectory[0] = foot_trajectory[j];
-      feet_trajectory[1] = Ravelin::Vector3d::zero();
-      feet_trajectory[2] = Ravelin::Vector3d::zero();
-      feet_trajectory[3] = Ravelin::Vector3d::zero();
-      std::vector<Ravelin::Vector3d> traj(4);
-      trajectoryIK(feet_trajectory,traj);
-  }
-
-
 
 #ifdef USE_ROBOT
   dxl_ = new Dynamixel;

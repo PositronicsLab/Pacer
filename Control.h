@@ -73,24 +73,23 @@ using std::vector;
 
 enum RobotDOFs {
   BODY_JOINT = 0,
+  LF_HFE = 3,
+  LF_HAA = 7,
+  LF_KFE = 11,
 
-  LF_HFE,
-  LF_HAA,
-  LF_KFE,
+  LH_HFE = 1,
+  LH_HAA = 5,
+  LH_KFE = 9,
 
-  LH_HFE,
-  LH_HAA,
-  LH_KFE,
+  RF_HFE = 4,
+  RF_HAA = 8,
+  RF_KFE = 12,
 
-  RF_HFE,
-  RF_HAA,
-  RF_KFE,
+  RH_HFE = 2,
+  RH_HAA = 6,
+  RH_KFE = 10,
 
-  RH_HFE,
-  RH_HAA,
-  RH_KFE,
-
-  NJOINT
+  NJOINT = 13
 };
 
 const unsigned NUM_EEFS = 4,
@@ -99,5 +98,11 @@ const unsigned NUM_EEFS = 4,
                N_FIXED_JOINTS = 4,
                NSPATIAL = 6,
                nk = 4;
+
+// robot pointer
+extern Moby::RCArticulatedBodyPtr abrobot;
+extern Moby::DynamicBodyPtr dbrobot;
+extern std::vector<Moby::JointPtr> joints_;
+extern std::vector<Moby::RigidBodyPtr> links_,eefs_;
 
 #endif // CONTROL_H

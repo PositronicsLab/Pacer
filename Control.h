@@ -93,7 +93,7 @@ enum RobotDOFs {
 };
 
 const unsigned NUM_EEFS = 4,
-               N_JOINTS = NJOINT-1,
+               N_JOINTS = NJOINT,
                NDOFS = N_JOINTS+6, // NDFOFS for forces, accel, & velocities
                N_FIXED_JOINTS = 4,
                NSPATIAL = 6,

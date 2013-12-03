@@ -12,9 +12,9 @@ add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
 include_directories(.)
-include_directories(/Applications/Mathematica.app/SystemFiles/IncludeFiles/C /usr/include /usr/include/libxml2 /usr/local/include include ${Boost_INCLUDE_DIR} )
+include_directories(/Applications/Mathematica.app/SystemFiles/IncludeFiles/C /usr/include /usr/include/libxml2 /usr/local/include include ${Boost_INCLUDE_DIR} /opt/local/include /opt/X11/include)
 
-link_directories(/usr/local/lib /Applications/Mathematica.app/SystemFiles/Libraries/MacOSX-x86)
+link_directories(/usr/local/lib /Applications/Mathematica.app/SystemFiles/Libraries/MacOSX-x86 /opt/local/lib /opt/X11/lib)
 
 # g++ -g0 -O3 -I/usr/include/libxml2 -I../../include -DBUILD_DOUBLE -DSAFESTATIC=static -DUSE_OSG -DUSE_GLPK PD-controller.cpp estimatefrict.cpp output.cpp -L../../../debug -lMoby -shared -o libcontroller.so
 #set(box_srcs estimatefrict.cpp Box.cpp output.cpp)
@@ -30,5 +30,5 @@ add_library(LINKS${PROJECT_NAME} ${links_srcs})
 
 #target_link_libraries(BOX${PROJECT_NAME} Moby Ravelin Opt)
 #target_link_libraries(HYQ${PROJECT_NAME} Moby Ravelin Opt)
-target_link_libraries(LINKS${PROJECT_NAME} Moby Ravelin Opt glut GLU)
+target_link_libraries(LINKS${PROJECT_NAME} Moby Ravelin Opt glut GLU osg osgDB OpenThreads)
 #target_link_libraries(RCH${PROJECT_NAME} Moby Ravelin)

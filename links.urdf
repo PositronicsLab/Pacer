@@ -291,6 +291,90 @@
                     </geometry>
             </collision>
     </link>
+    <link name="LF_FOOT">
+            <inertial>
+                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <mass value="0.001"/>
+                    <inertia ixx="0.00001" iyy="0.00001" izz="0.00001" />
+            </inertial>
+            <visual>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+                    <material name="red">
+                    </material>
+            </visual>
+            <collision>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+            </collision>
+    </link>
+    <link name="RF_FOOT">
+            <inertial>
+                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <mass value="0.001"/>
+                    <inertia ixx="0.00001" iyy="0.00001" izz="0.00001" />
+            </inertial>
+            <visual>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+                    <material name="red">
+                    </material>
+            </visual>
+            <collision>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+            </collision>
+    </link>
+    <link name="LH_FOOT">
+            <inertial>
+                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <mass value="0.001"/>
+                    <inertia ixx="0.00001" iyy="0.00001" izz="0.00001" />
+            </inertial>
+            <visual>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+                    <material name="red">
+                    </material>
+            </visual>
+            <collision>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+            </collision>
+    </link>
+    <link name="RH_FOOT">
+            <inertial>
+                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <mass value="0.001"/>
+                    <inertia ixx="0.00001" iyy="0.00001" izz="0.00001" />
+            </inertial>
+            <visual>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+                    <material name="red">
+                    </material>
+            </visual>
+            <collision>
+            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <geometry>
+                    <sphere radius="0.005"/>
+                    </geometry>
+            </collision>
+    </link>
 <!-- ROBOT JOINTS -->
     <joint name="BODY_JOINT" type="revolute">
             <origin xyz="0.043 0.0 0.0" rpy="0 0 0"/>
@@ -403,5 +487,26 @@
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
             <dynamics damping="0.001" friction="0" />
+    </joint>
+
+    <joint name="LF_ANKLE" type="fixed">
+            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <parent link="LF_LLEG"/>
+            <child link="LF_FOOT"/>
+    </joint>
+    <joint name="RF_ANKLE" type="fixed">
+            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <parent link="RF_LLEG"/>
+            <child link="RF_FOOT"/>
+    </joint>
+    <joint name="LH_ANKLE" type="fixed">
+            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <parent link="LH_LLEG"/>
+            <child link="LH_FOOT"/>
+    </joint>
+    <joint name="RH_ANKLE" type="fixed">
+            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <parent link="RH_LLEG"/>
+            <child link="RH_FOOT"/>
     </joint>
  </robot>

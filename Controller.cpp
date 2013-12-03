@@ -14,7 +14,7 @@
 #define RENDER_CONTACT
 //#define USE_ROBOT
 #define CONTROL_KINEMATICS
-//#define FOLLOW_TRAJECTORY
+#define FOLLOW_TRAJECTORY
 #define FOOT_TRAJ
 
 #ifdef USE_ROBOT
@@ -72,7 +72,7 @@ const U& get(const map<T, U>& m, const T& key)
 void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Mat& ufb)
 {
   // clear and set motor torques
-  for (unsigned m=0,i=0; m< joints_.size(); m++)
+  for (unsigned m=0,i=0; m< N_JOINTS; m++)
   {
     // get the joint
     JointPtr j = joints_[m];
@@ -154,7 +154,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
 void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty){}
 
 void apply_simulation_forces(const Mat& u){
-    for(unsigned m=0,i=0;m< joints_.size();m++){
+    for(unsigned m=0,i=0;m< N_JOINTS;m++){
         if(joints_[m]->q.size() == 0) continue;
         // reset motor torque
         Vec row;
@@ -284,7 +284,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     /// setup a steady state
     static map<string, double> q_des, qd_des;
     if (q_des.empty())
-      for (unsigned m=0; m< joints_.size(); m++)
+      for (unsigned m=0; m< N_JOINTS; m++)
       {
         if(joints_[m]->q.size() == 0) continue; // NOTE: Currently this is not used
          q_des[joints_[m]->id] = q0[joints_[m]->id];
@@ -383,7 +383,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #endif
 
       ///  Record Robot State
-      for(unsigned m=0;m< joints_.size();m++){
+      for(unsigned m=0;m< N_JOINTS;m++){
           if(joints_[m]->q.size() == 0) continue;
           q.set_row(m,joints_[m]->q);
           qd.set_row(m,joints_[m]->qd);
@@ -461,7 +461,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 //      outlog2(uff,"uff");
 
       /// Limit Torques
-      for(unsigned m=0;m< joints_.size();m++){
+      for(unsigned m=0;m< N_JOINTS;m++){
         if(u(m,0) > u_max[joints_[m]->id])
           u(m,0) = u_max[joints_[m]->id];
         else if(u(m,0) < -u_max[joints_[m]->id])
@@ -485,14 +485,14 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #ifndef NDEBUG
       outlog2(q.column(0),"q");
       std::cout << "q_des: ";
-      for(unsigned m=0;m< joints_.size();m++){
+      for(unsigned m=0;m< N_JOINTS;m++){
         std::cout << q_des[joints_[m]->id] << " ";
       }
       std::cout << std::endl;
 
       outlog2(qd.column(0),"qd");
       std::cout << "qd_des: ";
-      for(unsigned m=0;m< joints_.size();m++){
+      for(unsigned m=0;m< N_JOINTS;m++){
         std::cout << qd_des[joints_[m]->id] << " ";
       }
       std::cout << std::endl;
@@ -511,7 +511,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #endif
 
      std::cout << "JOINT\t: U\t| Q\t: des\t: err\t| Qd\t: des\t: err\t| @ time = " << t << std::endl;
-     for(unsigned m=0;m< joints_.size();m++)
+     for(unsigned m=0;m< N_JOINTS;m++)
        std::cout << joints_[m]->id
                  << "\t " <<  std::setprecision(4) << u(m,0)
                  << "\t| " << joints_[m]->q[0]
@@ -529,7 +529,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
 
 # ifdef CONTROL_KINEMATICS
-     //       for(unsigned m=0;m< joints_.size();m++){
+     //       for(unsigned m=0;m< N_JOINTS;m++){
      //           if(joints_[m]->q.size() == 0) continue;
      //           q(m,0) = q_des[joints_[m]->id];
      //           qd(m,0) = qd_des[joints_[m]->id];
@@ -541,7 +541,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
        qd_start.set_zero();
        q_start.set_zero();
        q_start[NJOINT+2] = 0.1;
-       for(int i=0;i<joints_.size();i++){
+       for(int i=0;i<N_JOINTS;i++){
          q_start[i] = q_des[joints_[i]->id];
          qd_start[i] = 0;
        }
@@ -588,13 +588,13 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
      std::cout << joints[i]->get_coord_index() << " "<< joints_[joints[i]->get_coord_index()]->id << std::endl;
   }
   links_ = abrobot->get_links();
-  for(unsigned i=0;i<joints.size();i++)
+  for(unsigned i=0;i<links_.size();i++)
     std::cout << i << " " << links_[i]->id << std::endl;
 
-  eef_names_.push_back("LF_LLEG");
-  eef_names_.push_back("RF_LLEG");
-  eef_names_.push_back("LH_LLEG");
-  eef_names_.push_back("RH_LLEG");
+  eef_names_.push_back("LF_FOOT");
+  eef_names_.push_back("RF_FOOT");
+  eef_names_.push_back("LH_FOOT");
+  eef_names_.push_back("RH_FOOT");
 
   eefs_.resize(eef_names_.size());
   for(unsigned i=0;i<links_.size();i++)
@@ -609,7 +609,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   q0["LF_HIP_FE"] = 0.6;
   q0["LF_LEG_FE"] = 1.6;
 
-  q0["RF_HIP_AA"] =  -0.1;
+  q0["RF_HIP_AA"] =  0.1;
   q0["RF_HIP_FE"] =  0.8;
   q0["RF_LEG_FE"] =  1.4;
 
@@ -617,7 +617,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   q0["LH_HIP_FE"] =  0.8;
   q0["LH_LEG_FE"] =  1.4;
 
-  q0["RH_HIP_AA"] =  -0.1;
+  q0["RH_HIP_AA"] =  0.1;
   q0["RH_HIP_FE"] =  0.8;
   q0["RH_LEG_FE"] =  1.4;
 
@@ -643,7 +643,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   gains[joints_[0]->id].kv = 0.01;
   gains[joints_[0]->id].ki = 0;
   // now, setup gains
-  for(unsigned i=1;i<joints_.size();i++){
+  for(unsigned i=1;i<N_JOINTS;i++){
     double kp,kv,ki;
     switch((i-1)%3){
     case 0:
@@ -673,7 +673,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
   abrobot->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
 
-  for(int i=0;i<joints_.size();i++){
+  for(int i=0;i<N_JOINTS;i++){
     q_start[i] = q0[joints_[i]->id];
     qd_start[i] = 0;
   }

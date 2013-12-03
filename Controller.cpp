@@ -11,11 +11,11 @@
 //#define CONTROL_IDYN
 //#define FRICTION_EST
 #define CONTROL_ZMP
-#define RENDER_CONTACT
+//#define RENDER_CONTACT
 //#define USE_ROBOT
 #define CONTROL_KINEMATICS
-#define FOLLOW_TRAJECTORY
-#define FOOT_TRAJ
+//#define FOLLOW_TRAJECTORY
+//#define FOOT_TRAJ
 
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>

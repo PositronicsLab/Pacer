@@ -21,14 +21,17 @@ link_directories(/usr/local/lib /Applications/Mathematica.app/SystemFiles/Librar
 #set(hyq_srcs estimatefrict.cpp PD-controller.cpp output.cpp)
 #set(hyq_srcs simple-PD.cpp output.cpp)
 set(links_srcs Controller.cpp output.cpp estimatefrict.cpp idyn.cpp Visualization.cpp StepBezier.cpp inverseKinematics.cpp kinematics.cpp)
+set(cd_srcs LinksColdetPlugin.cpp)
 
 #add_library(BOX${PROJECT_NAME} ${box_srcs})
 #add_library(HYQ${PROJECT_NAME} ${hyq_srcs})
 add_library(LINKS${PROJECT_NAME} ${links_srcs})
+add_library(LinksColdetPlugin MODULE ${cd_srcs})
 #add_library(RCH${PROJECT_NAME} RestingContact-test.cpp)
 #add_executable(lfIK lfIK.cpp)
 
 #target_link_libraries(BOX${PROJECT_NAME} Moby Ravelin Opt)
 #target_link_libraries(HYQ${PROJECT_NAME} Moby Ravelin Opt)
 target_link_libraries(LINKS${PROJECT_NAME} Moby Ravelin Opt glut GLU osg osgDB OpenThreads)
+target_link_libraries(LinksColdetPlugin Moby Ravelin Opt glut GLU)
 #target_link_libraries(RCH${PROJECT_NAME} Moby Ravelin)

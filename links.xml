@@ -20,8 +20,14 @@
       <Body body-id="ground" />
       <DisabledPair object1-id="links" object2-id="links"/>
     </GeneralizedCCD>
+    
+    <CollisionDetectionPlugin id="simpleccd" plugin="libLinksColdetPlugin.so" >
+      <Body body-id="links" />
+      <Body body-id="ground" />
+      <DisabledPair object1-id="links" object2-id="links"/>
+    </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="odepack" collision-detector-id="ccd">
+  <EventDrivenSimulator integrator-id="odepack" collision-detector-id="simpleccd">
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />

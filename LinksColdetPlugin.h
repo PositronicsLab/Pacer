@@ -31,10 +31,10 @@ namespace Moby {
 class LinksColdetPlugin : public CollisionDetection 
 {
   public:
+    LinksColdetPlugin() {}
     virtual ~LinksColdetPlugin() {}
-    virtual void load_from_xml(boost::shared_ptr<const XMLTree> node, std::map<std::string, BasePtr>& id_map);
-    virtual void add_rigid_body(RigidBodyPtr body) { assert(!body->geometries.empty()); _ground_cg = body->geometries.front(); }
     virtual void add_articulated_body(ArticulatedBodyPtr abody, bool disable_adjacent) { _robot = abody; }
+    virtual void add_rigid_body(RigidBodyPtr body) { assert(!body->geometries.empty()); _ground_cg = body->geometries.front(); }
 
     /// Determines whether there is a contact between the given pairs of states 
     /**
@@ -62,6 +62,12 @@ class LinksColdetPlugin : public CollisionDetection
     DynamicBodyPtr _robot;
     CollisionGeometryPtr _ground_cg;
 };
+
+extern "C"
+{
+  boost::shared_ptr<CollisionDetection> factory() { return boost::shared_ptr<CollisionDetection>(new LinksColdetPlugin()); } 
+};
+
 } // end namespace Moby
 
 #endif

@@ -10,7 +10,7 @@ bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, 
 {
   // set bodies to all q0 coordinates
   for (unsigned i=0; i< q0.size(); i++)
-    q0[i].first->set_generalized_coordinates(DynamicBody::eSpatial, q0[i].second);
+    q0[i].first->set_generalized_coordinates(DynamicBody::eEuler, q0[i].second);
 
   // clear the vector of contacts
   contacts.clear();

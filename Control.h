@@ -53,7 +53,9 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,
 std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector3d>& control_points, std::vector<Ravelin::Vector3d>& trajectory);
 
 /// 4 foot (body-fixed) state-space traj to joint-space traj
-std::vector<Ravelin::Vector3d>& trajectoryIK(const std::vector<Ravelin::Vector3d>& feet_positions, std::vector<Ravelin::Vector3d>& joint_positions);
+std::vector<Ravelin::Vector3d>& trajectoryIK(
+        const std::vector<std::vector<Ravelin::Vector3d> >& feet_positions,
+        std::vector<std::vector<Ravelin::Vector3d> >& joint_positions);
 
 struct ContactData
 {

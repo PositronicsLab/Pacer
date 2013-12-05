@@ -25,7 +25,7 @@ set(cd_srcs LinksColdetPlugin.cpp)
 
 #add_library(BOX${PROJECT_NAME} ${box_srcs})
 #add_library(HYQ${PROJECT_NAME} ${hyq_srcs})
-add_library(LINKS${PROJECT_NAME} ${links_srcs})
+add_library(LINKS${PROJECT_NAME} MODULE ${links_srcs})
 add_library(LinksColdetPlugin MODULE ${cd_srcs})
 #add_library(RCH${PROJECT_NAME} RestingContact-test.cpp)
 #add_executable(lfIK lfIK.cpp)

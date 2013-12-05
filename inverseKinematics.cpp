@@ -3351,10 +3351,15 @@ return false;
 #include <Control.h>
 
 std::vector<Ravelin::Vector3d>& trajectoryIK(
-        const std::vector<Ravelin::Vector3d>& feet_positions,
-        std::vector<Ravelin::Vector3d>& joint_positions){
-
-  lf(feet_positions[0].data(),joint_positions[0].data());
+        const std::vector<std::vector<Ravelin::Vector3d> >& feet_positions,
+        std::vector<std::vector<Ravelin::Vector3d> >& joint_positions){
+    int num_steps = joint_positions.size();
+    for(int i=0;i<num_steps;i++){
+        lf(feet_positions[0][i].data(),joint_positions[i][0].data());
+        rf(feet_positions[1][i].data(),joint_positions[i][1].data());
+        lh(feet_positions[2][i].data(),joint_positions[i][2].data());
+        rh(feet_positions[3][i].data(),joint_positions[i][3].data());
+    }
 }
 
 /** Use this to convert from MATHEMATICA

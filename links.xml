@@ -27,11 +27,11 @@
       <DisabledPair object1-id="links" object2-id="links"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="odepack" collision-detector-id="simpleccd">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="simpleccd">
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscose="1" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1000" mu-viscous="1000" />
   </EventDrivenSimulator>
 
   <!-- setup the robot articulated rigid body -->

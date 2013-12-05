@@ -14,6 +14,7 @@
     <RungeKuttaIntegrator id="rk4" />
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
+    <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />
 
    <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
       <Body body-id="links" />
@@ -29,6 +30,7 @@
 
   <EventDrivenSimulator integrator-id="odepack" collision-detector-id="simpleccd">
     <RecurrentForce recurrent-force-id="gravity" />
+    <RecurrentForce recurrent-force-id="drag" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
     <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscose="1" />

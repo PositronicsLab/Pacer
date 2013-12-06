@@ -10,9 +10,9 @@ Ravelin::Vector3d& drawBezier(const Ravelin::Vector3d& A, const Ravelin::Vector3
     return P;
 }
 
-std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector3d>& control_points, std::vector<Ravelin::Vector3d>& trajectory){
-    int num_segments = trajectory.size();
-    for(int t = 0;t <= num_segments; t++) {
-      drawBezier(control_points[0], control_points[1], control_points[2], control_points[3],  1.0/(double)t,trajectory[t]);
+std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector3d>& control_points, int num_segments, std::vector<Ravelin::Vector3d>& trajectory){
+//    int num_segments = trajectory.size();
+    for(int t = 0;t < num_segments; t++) {
+      drawBezier(control_points[0], control_points[1], control_points[2], control_points[3], (double)t/(double)num_segments ,trajectory[t]);
     }
 }

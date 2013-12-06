@@ -382,7 +382,7 @@
             <child link="THORAX"/>
             <axis xyz="0 1 0"/>
             <limits upper="0.7854" lower="-0.7854" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
 
    <!-- LF_LEG JOINTS -->
@@ -392,7 +392,7 @@
            <child link="LF_HIP"/>
            <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
    </joint>
     <joint name="LF_HIP_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
@@ -400,7 +400,7 @@
             <child link="LF_ULEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
     <joint name="LF_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
@@ -408,7 +408,7 @@
             <child link="LF_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
 
     <!-- RF_LEG JOINTS -->
@@ -418,14 +418,14 @@
             <child link="RF_HIP"/>
             <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
     <joint name="RF_HIP_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
             <parent link="RF_HIP"/>
             <child link="RF_ULEG"/>
             <axis xyz="0 1 0"/>
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
             <limits upper="2.3562" lower="-2.3562" />
     </joint>
     <joint name="RF_LEG_FE" type="revolute">
@@ -434,7 +434,7 @@
             <child link="RF_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
 
     <!-- LH_LEG JOINTS -->
@@ -444,7 +444,7 @@
             <child link="LH_HIP"/>
             <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
     <joint name="LH_HIP_FE" type="revolute">
             <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
@@ -452,7 +452,7 @@
             <child link="LH_ULEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
     <joint name="LH_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
@@ -460,7 +460,7 @@
             <child link="LH_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
 
     <!-- RH_LEG JOINTS -->
@@ -470,7 +470,7 @@
             <child link="RH_HIP"/>
             <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
     <joint name="RH_HIP_FE" type="revolute">
             <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
@@ -478,7 +478,7 @@
             <child link="RH_ULEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
     <joint name="RH_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0.0"/>
@@ -486,7 +486,7 @@
             <child link="RH_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0.1" friction="0" />
+            <dynamics damping="0" friction="0" />
     </joint>
 
     <joint name="LF_ANKLE" type="fixed">

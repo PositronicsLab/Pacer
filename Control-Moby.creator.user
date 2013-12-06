@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by Qt Creator 2.5.2, 2013-11-25T22:37:30. -->
+<!-- Written by Qt Creator 2.5.2, 2013-12-06T11:29:40. -->
 <qtcreator>
  <data>
   <variable>GenericProjectManager.GenericProject.Toolchain</variable>
@@ -60,7 +60,7 @@
    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">GenericProjectManager.GenericTarget</value>
    <value type="int" key="ProjectExplorer.Target.ActiveBuildConfiguration">0</value>
    <value type="int" key="ProjectExplorer.Target.ActiveDeployConfiguration">0</value>
-   <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">6</value>
+   <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">4</value>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.BuildConfiguration.0">
     <value type="QString" key="GenericProjectManager.GenericBuildConfiguration.BuildDirectory">/home/samzapo/Projects/Control-Moby</value>
     <value type="QString" key="ProjectExplorer.BuildCOnfiguration.ToolChain">ProjectExplorer.ToolChain.Gcc:{955974db-1bcb-4afc-9c15-2044d8ebf11a}</value>
@@ -325,13 +325,13 @@
      <value type="int">13</value>
      <value type="int">14</value>
     </valuelist>
-    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments">-oi -s=0.01 -p=libLINKSMobyController.so links.xml</value>
+    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments">-r -p=libLINKSMobyController.so links.xml</value>
     <value type="int" key="ProjectExplorer.CustomExecutableRunConfiguration.BaseEnvironmentBase">2</value>
-    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/samzapo/ThirdParty/Moby/build/moby-kinematics</value>
+    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/samzapo/ThirdParty/Moby/build/moby-driver</value>
     <value type="bool" key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal">false</value>
     <valuelist type="QVariantList" key="ProjectExplorer.CustomExecutableRunConfiguration.UserEnvironmentChanges"/>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory">%{buildDir}</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Run /home/samzapo/ThirdParty/Moby/build/moby-kinematics</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Run /home/samzapo/ThirdParty/Moby/build/moby-driver</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">links + kinematics</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.CustomExecutableRunConfiguration</value>
     <value type="uint" key="RunConfiguration.QmlDebugServerPort">3768</value>

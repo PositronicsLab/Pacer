@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>     // std::cout, std::fixed
 #include <iomanip>      // std::setprecision
+#include <math.h>
 
 #include <boost/shared_ptr.hpp>
 #include <Ravelin/MatrixNd.h>
@@ -50,7 +51,7 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,
           const  Mat& N, const Mat& ST, const Vec& fext,
           double h, const Mat& MU, Vec& uff);
 
-std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector3d>& control_points, std::vector<Ravelin::Vector3d>& trajectory);
+std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector3d>& control_points, int num_segments, std::vector<Ravelin::Vector3d>& trajectory);
 
 /// 4 foot (body-fixed) state-space traj to joint-space traj
 std::vector<Ravelin::Vector3d>& trajectoryIK(

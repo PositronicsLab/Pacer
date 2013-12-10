@@ -14,7 +14,7 @@
     <RungeKuttaIntegrator id="rk4" />
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
-    <StokesDragForce id="drag" drag-b=".2" drag-b-ang=".2" />
+    <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />
 
    <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
       <Body body-id="links" />
@@ -33,13 +33,13 @@
     <RecurrentForce recurrent-force-id="drag" />
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1000" mu-viscous="1000" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.5" mu-viscous="0.5" />
   </EventDrivenSimulator>
 
   <!-- setup the robot articulated rigid body -->
   <RCArticulatedBody id="links" urdf="links.urdf"
             fdyn-algorithm="crb" fdyn-algorithm-frame="global"
-            floating-base="true" translate="0 0 0.11"/>
+            floating-base="true" translate="0 0 0.1"/>
 
   <!-- setup the platform rigid body; it is not active -->
   <RigidBody id="ground" enabled="false"

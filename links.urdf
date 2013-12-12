@@ -7,7 +7,7 @@
                     <inertia ixx="0.000019209503" iyy="0.000014511128" izz="0.029474975" />
             </inertial>
             <visual>
-                    <origin xyz="0 0 0" rpy="0 0 0"/>
+                    <origin xyz="0 0 0"/>
                     <geometry>
                         <box size="0.0860 0.101 0.0356"/>
                     </geometry>
@@ -87,18 +87,18 @@
     </link>
     <link name="LF_LLEG">
             <inertial>
-                <origin xyz="0.04 0 0" rpy="0 0 0"/>
+                <origin xyz="0.04 0 0"/>
                 <mass value="0.063"/>
                 <inertia ixx="0.000000833333" iyy="0.00002708333" izz="0.00002708333" />
             </inertial>
             <visual>
-                <origin xyz="0.04 0 0" rpy="0 0 0"/>
+                <origin xyz="0.04 0 0"/>
                 <geometry>
                     <box size="0.08 0.01 0.01"/>
                 </geometry>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0 0 0"/>
+            <origin xyz="0.04 0 0"/>
                 <geometry>
                     <box size="0.08 0.01 0.01"/>
                 </geometry>
@@ -146,18 +146,18 @@
     </link>
     <link name="RF_LLEG">
             <inertial>
-                <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
+                <origin xyz="0.04 0 0"/>
                 <mass value="0.063"/>
                 <inertia ixx="0.000000833333" iyy="0.00002708333" izz="0.00002708333" />
             </inertial>
             <visual>
-                <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
+                <origin xyz="0.04 0 0"/>
                 <geometry>
                     <box size="0.08 0.01 0.01"/>
                 </geometry>
             </visual>
             <collision>
-                <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
+                <origin xyz="0.04 0 0"/>
                 <geometry>
                     <box size="0.08 0.01 0.01"/>
                 </geometry>
@@ -208,12 +208,12 @@
     </link>
     <link name="LH_LLEG">
             <inertial>
-            <origin xyz="0.04 0 0"  rpy="0.7854 0 0"/>
+            <origin xyz="0.04 0 0"/>
                     <mass value="0.063"/>
                     <inertia ixx="0.000000833333" iyy="0.00002708333" izz="0.00002708333" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0" rpy="0 0 0"/>
+            <origin xyz="0.04 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -221,7 +221,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0 0 0"/>
+            <origin xyz="0.04 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -272,12 +272,12 @@
     </link>
     <link name="RH_LLEG">
             <inertial>
-                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <origin xyz="0.04 0 0"/>
                     <mass value="0.05"/>
                     <inertia ixx="0.000000833333" iyy="0.00002708333" izz="0.00002708333" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0.04 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -285,7 +285,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0 0 0"/>
+            <origin xyz="0.04 0 0"/>
                     <geometry>
                     <box size="0.08 0.01 0.01"/>
                     </geometry>
@@ -293,33 +293,33 @@
     </link>
     <link name="LF_FOOT">
             <inertial>
-                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <origin xyz="0 0 0"/>
                     <mass value="0.001"/>
                     <inertia ixx="0.00000001" iyy="0.00000001" izz="0.00000001" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
-                    <geometry>
-                    <sphere radius="0.005"/>
-                    </geometry>
-                    <material name="red">
-                    </material>
+                <origin xyz="0 0 0"/>
+                <geometry>
+                <sphere radius="0.005"/>
+                </geometry>
+                <material name="red">
+                </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
-                    <geometry>
-                    <sphere radius="0.005"/>
-                    </geometry>
+                <origin xyz="0 0 0"/>
+                <geometry>
+                <sphere radius="0.005"/>
+                </geometry>
             </collision>
     </link>
     <link name="RF_FOOT">
             <inertial>
-                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <mass value="0.001"/>
                     <inertia ixx="0.00000001" iyy="0.00000001" izz="0.00000001" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <geometry>
                     <sphere radius="0.005"/>
                     </geometry>
@@ -327,7 +327,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <geometry>
                     <sphere radius="0.005"/>
                     </geometry>
@@ -335,12 +335,12 @@
     </link>
     <link name="LH_FOOT">
             <inertial>
-                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <mass value="0.001"/>
                     <inertia ixx="0.00000001" iyy="0.00000001" izz="0.00000001" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <geometry>
                     <sphere radius="0.005"/>
                     </geometry>
@@ -348,7 +348,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0.0 0 0" rpy="0.0 0 0"/>
                     <geometry>
                     <sphere radius="0.005"/>
                     </geometry>
@@ -356,12 +356,12 @@
     </link>
     <link name="RH_FOOT">
             <inertial>
-                    <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+                    <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <mass value="0.001"/>
                     <inertia ixx="0.00000001" iyy="0.00000001" izz="0.00000001" />
             </inertial>
             <visual>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <geometry>
                     <sphere radius="0.005"/>
                     </geometry>
@@ -369,7 +369,7 @@
                     </material>
             </visual>
             <collision>
-            <origin xyz="0.04 0 0" rpy="0.0 0 0"/>
+            <origin xyz="0 0 0" rpy="0.0 0 0"/>
                     <geometry>
                     <sphere radius="0.005"/>
                     </geometry>
@@ -382,7 +382,7 @@
             <child link="THORAX"/>
             <axis xyz="0 1 0"/>
             <limits upper="0.7854" lower="-0.7854" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
 
    <!-- LF_LEG JOINTS -->
@@ -392,7 +392,7 @@
            <child link="LF_HIP"/>
            <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
    </joint>
     <joint name="LF_HIP_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
@@ -400,7 +400,7 @@
             <child link="LF_ULEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
     <joint name="LF_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
@@ -408,7 +408,7 @@
             <child link="LF_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
 
     <!-- RF_LEG JOINTS -->
@@ -418,14 +418,14 @@
             <child link="RF_HIP"/>
             <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
     <joint name="RF_HIP_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
             <parent link="RF_HIP"/>
             <child link="RF_ULEG"/>
             <axis xyz="0 1 0"/>
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
             <limits upper="2.3562" lower="-2.3562" />
     </joint>
     <joint name="RF_LEG_FE" type="revolute">
@@ -434,7 +434,7 @@
             <child link="RF_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
 
     <!-- LH_LEG JOINTS -->
@@ -444,7 +444,7 @@
             <child link="LH_HIP"/>
             <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
     <joint name="LH_HIP_FE" type="revolute">
             <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
@@ -452,7 +452,7 @@
             <child link="LH_ULEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
     <joint name="LH_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0"/>
@@ -460,7 +460,7 @@
             <child link="LH_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
 
     <!-- RH_LEG JOINTS -->
@@ -470,7 +470,7 @@
             <child link="RH_HIP"/>
             <axis xyz="1 0 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
     <joint name="RH_HIP_FE" type="revolute">
             <origin xyz="0.0611 0.0 0.0" rpy="0 0 0"/>
@@ -478,7 +478,7 @@
             <child link="RH_ULEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
     <joint name="RH_LEG_FE" type="revolute">
             <origin xyz="0.0505 0.0 0.0" rpy="0 0 0.0"/>
@@ -486,26 +486,26 @@
             <child link="RH_LLEG"/>
             <axis xyz="0 1 0"/>
             <limits upper="2.3562" lower="-2.3562" />
-            <dynamics damping="0" friction="0" />
+            <dynamics damping="0.0001" friction="0" />
     </joint>
 
     <joint name="LF_ANKLE" type="fixed">
-            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <origin xyz="0.08 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="LF_LLEG"/>
             <child link="LF_FOOT"/>
     </joint>
     <joint name="RF_ANKLE" type="fixed">
-            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <origin xyz="0.08 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="RF_LLEG"/>
             <child link="RF_FOOT"/>
     </joint>
     <joint name="LH_ANKLE" type="fixed">
-            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <origin xyz="0.08 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="LH_LLEG"/>
             <child link="LH_FOOT"/>
     </joint>
     <joint name="RH_ANKLE" type="fixed">
-            <origin xyz="0.04 0.0 0.0" rpy="0 0 0.0"/>
+            <origin xyz="0.08 0.0 0.0" rpy="0 0 0.0"/>
             <parent link="RH_LLEG"/>
             <child link="RH_FOOT"/>
     </joint>

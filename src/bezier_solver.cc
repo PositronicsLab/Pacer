@@ -1,4 +1,4 @@
-#include <Control.h>
+#include <project_common.h>
 
 // Calculate the next bezier point.
 Ravelin::Vector3d& drawBezier(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P) {
@@ -15,4 +15,5 @@ std::vector<Ravelin::Vector3d>& stepTrajectory(const std::vector<Ravelin::Vector
     for(int t = 0;t < num_segments; t++) {
       drawBezier(control_points[0], control_points[1], control_points[2], control_points[3], (double)t/(double)num_segments ,trajectory[t]);
     }
+    return trajectory;
 }

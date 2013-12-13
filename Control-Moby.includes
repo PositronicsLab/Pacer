@@ -1,5 +1,5 @@
-/home/samzapo/ThirdParty/Moby/include
-/home/samzapo/ThirdParty/Ravelin/include
-/home/samzapo/ThirdParty/Opt/include
-/home/samzapo/Projects/Lynx/DynamixelMonitor
-/Applications/Mathematica.app/SystemFiles/IncludeFiles/C
+include
+/usr/local/include
+/usr/include
+/opt/include
+/opt/local/include

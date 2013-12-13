@@ -1,6 +1,4 @@
-#include <Ravelin/MatrixNd.h>
-#include <Ravelin/VectorNd.h>
-#include <Ravelin/LinAlgd.h>
+#include <project_common.h>
 #include <Opt/LCP.h>
 
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
@@ -10,11 +8,8 @@ typedef Ravelin::VectorNd Vec;
 
 Opt::LCP lcp2_;
 
-
 void outlog(const Mat& M, std::string name);
 void outlog(const Vec& z, std::string name);
-void outlog2(const Vec& M, std::string name);
-void outlog2(const Mat& z, std::string name);
 
 Ravelin::LinAlgd LA;
 

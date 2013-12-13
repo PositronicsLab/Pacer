@@ -1,7 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Visualization /////////////////////////////////
 
-#include <Control.h>
+#include <boost/shared_ptr.hpp>
+#include <Moby/EventDrivenSimulator.h>
 
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
@@ -11,6 +12,9 @@
 #include <osg/Plane>
 #include <osg/LineSegment>
 #include <osg/LineWidth>
+
+#include <project_common.h>
+
 using namespace Moby;
 using namespace Ravelin;
 
@@ -244,7 +248,7 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
 }
 
 /// Draws a ray directed from a contact point along the contact normal
-void visualize_polygon( const Mat& verts, boost::shared_ptr<EventDrivenSimulator> sim ) {
+void visualize_polygon( const Ravelin::MatrixNd& verts, boost::shared_ptr<EventDrivenSimulator> sim ) {
 
     /* must be ordered:
      *  1 - 2

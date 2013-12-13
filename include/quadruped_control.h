@@ -1,40 +1,10 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
-#include <cmath>
-#include <sys/types.h>
-#include <sys/times.h>
-#include <fstream>
-#include <iostream>     // std::cout, std::fixed
-#include <iomanip>      // std::setprecision
-#include <math.h>
-
-#include <boost/shared_ptr.hpp>
-#include <Ravelin/MatrixNd.h>
-#include <Ravelin/VectorNd.h>
-#include <Ravelin/Vector3d.h>
-#include <Ravelin/Vector2d.h>
-#include <Ravelin/LinAlgd.h>
-#include <Ravelin/AAngled.h>
-#include <Ravelin/SForced.h>
-#include <Ravelin/Pose3d.h>
-
-#include <Moby/Simulator.h>
-#include <Moby/EventDrivenSimulator.h>
-#include <Moby/RCArticulatedBody.h>
-#include <Moby/DynamicBody.h>
-#include <Moby/RNEAlgorithm.h>
-#include <Moby/LCP.h>
-#include <math.h>
+#include <project_common.h>
 
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
-
-void outlog(const Mat& M, std::string name);
-void outlog(const Vec& z, std::string name);
-void outlog2(const Vec& M, std::string name);
-void outlog2(const Ravelin::SharedVectorNd& M, std::string name);
-void outlog2(const Mat& z, std::string name);
 
 double friction_estimation(const Vec& v, const Vec& fext,
                            double dt, const Mat& N,
@@ -102,7 +72,6 @@ const unsigned NUM_EEFS = 4,
                NSPATIAL = 6,
                nk = 4;
 
-// robot pointer
 extern Moby::RCArticulatedBodyPtr abrobot;
 extern Moby::DynamicBodyPtr dbrobot;
 extern std::vector<Moby::JointPtr> joints_;

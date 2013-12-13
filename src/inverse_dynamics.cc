@@ -1,9 +1,10 @@
-#include <Control.h>
-
-//#define NDEBUG
+#include <project_common.h>
 
 Moby::LCP lcp_;
 Ravelin::LinAlgd LA_;
+
+typedef Ravelin::MatrixNd Mat;
+typedef Ravelin::VectorNd Vec;
 
  static bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
 {
@@ -101,9 +102,11 @@ static bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec
   nA.negate();
   AT.transpose();
   nQ.negate();
+
   Vec zzz,qqq, nc=c, nb=b;
   nc.negate();
   nb.negate();
+
   MMM.set_zero(Q.rows()*2 + A.rows(), Q.rows()*2 + A.rows());
   MMM.set_sub_mat(0,0,Q);
   MMM.set_sub_mat(n,n,Q);
@@ -114,6 +117,7 @@ static bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec
   MMM.set_sub_mat(n,n*2,AT);
   AT.negate();
   MMM.set_sub_mat(0,n*2,AT);
+
   MMM.set_sub_mat(n*2,0,A);
   MMM.set_sub_mat(n*2,n,nA);
 
@@ -181,14 +185,14 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   R.set_sub_mat(0,nc,ST);
 
 #ifndef NDEBUG
-  outlog2(M,"M");
-  outlog2(N,"N");
-  outlog2(ST,"ST");
-  outlog2(v,"v");
-  outlog2(vqstar,"vqstar");
-  outlog2(fext,"fext");
-  outlog2(MU,"MU");
-  outlog2(R,"R");
+  outlog(M,"M");
+  outlog(N,"N");
+  outlog(ST,"ST");
+  outlog(v,"v");
+  outlog(vqstar,"vqstar");
+  outlog(fext,"fext");
+  outlog(MU,"MU");
+  outlog(R,"R");
 #endif
 
   Vec z(nvars),cf(nvars);
@@ -308,7 +312,8 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   Vec pvqstar(n);
   pvqstar.set_sub_vec(nq,p);
   pvqstar.set_sub_vec(0,vqstar);
-  pvqstar.negate();
+  // NOTE: UNDO THIS
+//  pvqstar.negate();
 
   Vec qq1(N.columns());
   N.transpose_mult(pvqstar,qq1);
@@ -316,9 +321,11 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // setup linear inequality constraints -- friction
   Mat qM2 = Mat::zero(nc, nvars);
   Vec qq2(nc);
-  for (int ii=0;ii<nc;ii++){
+  double polygon_rad = cos(M_PI/nk);
+  for (int ii=0;ii < nc;ii++){
+      double friction = polygon_rad*MU(ii,0);
     // normal force
-    qM2(ii,ii) = MU(ii,0);
+    qM2(ii,ii) = friction;
 
     // tangent forces
     for(int kk=nc+nk*ii;kk<nc+nk*ii+nk/2;kk++)
@@ -345,10 +352,10 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   qq.set_sub_vec(qq1.rows(),qq2);
 
 #ifndef NDEBUG
-  outlog2(qG,"qG");
-  outlog2(qM,"qM");
-  outlog2(qc,"qc");
-  outlog2(qq,"q");
+  outlog(qG,"qG");
+  outlog(qM,"qM");
+  outlog(qc,"qc");
+  outlog(qq,"q");
 #endif
   if(!solve_qp_pos(qG,qc,qM,qq,z)){
     std::cout  << "ERROR: Unable to solve stage 1!" << std::endl;
@@ -385,8 +392,10 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     V.get_sub_mat(0,V.rows(),V.columns()-m,V.columns(),P);
   }
 
-  // NOTE: STAGE II is disabled
-  if(m != 0 && false)
+  outlog(S,"Singular Values");
+  outlog(P,"Null Space(P)");
+
+  if(m != 0)
   {
     // compute U
     Mat U;
@@ -400,14 +409,20 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     workM1.mult(P,workM2);
     workM2.transpose_mult(workM2,qG);
 
+    // NOTE: workM2 = iF*U*P
+    // NOTE: workM1 = iF*U
+
     //  qc = z'*U'*iF'*iF*U*P - vqstar'*iF'*iF*U*P + k'*iF'*iF*U*P;
+    // qc = (iF*U*P)'*iF*U*z
     workM2.transpose_mult(workM1.mult(z,workv1),workv2);
     qc = workv2;
 
+    // qc -= (iF*U*P)'* iF*vqstar
     workv1 = vqstar;
     workM2.transpose_mult(LA_.solve_chol_fast(iF,workv1),workv2);
     qc -= workv2;
 
+    // qc += (iF*U*P)'* iF*k
     workv1 = k;
     workM2.transpose_mult(LA_.solve_chol_fast(iF,workv1),workv2);
     qc += workv2;
@@ -431,39 +446,38 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     N.transpose_mult(ZP,qM2);
     N.transpose_mult(workv2,qq2);
     qq2.negate();
+
     // compute new friction constraints
     nvars = P.columns();
     Mat qM3(nc, nvars);
     qM3.set_zero();
     Vec qq3(nc);
     qq3.set_zero();
+
+//    double polygon_rad = cos(M_PI/nk);
     for (int ii=0;ii < nc;ii++){
+        double friction = polygon_rad*MU(ii,0);
       // normal force
       //  qM3(ii,:) = P(ii,:)*MU(ii,0)
       //  qq3(ii,1) = -z(ii)*MU(ii,0)
-      workv1 = P.row(ii);
-      workv1 *= MU(ii,0);
-        qM3.set_row(ii,workv1);
-      qq3[ii] = -z[ii]*MU(ii,0);
+      (workv1 = P.row(ii)) *= friction;
+      qM3.set_row(ii,workv1);
+      qq3[ii] = -z[ii]*friction;
 
       // first direction tangent forces
       for (int kk=nc+nk*ii;kk<nc+nk*ii+nk/2;kk++){
-        //  qM3(ii,:) -= P(kk,:)*MU(ii,2)^2;
-        //  qq3(ii,1) +=  z(kk)*MU(ii,2)^2;
-        workv1 = qM3.row(ii);
-        workv1 -= P.row(kk);
-        qM3.set_row(ii,workv1);
-        qq3[ii] = qq3[ii] + z[kk];
+        //  qM3(ii,:) -= P(kk,:);
+        //  qq3(ii,1) +=  z(kk);
+        qM3.row(ii) -= P.row(kk);
+        qq3[ii] += z[kk];
       }
 
       // second direction tangent forces
       for (int kk=nc+nk*ii+nk/2;kk<nc+nk*ii+nk;kk++){
-        //  qM3(ii,:) -= P(kk,:)*MU(ii,1)^2;
-        //  qq3(ii,1) +=  z(kk)*MU(ii,0)^2;
-        workv1 = qM3.row(ii);
-        workv1 -= P.row(kk);
-        qM3.set_row(ii,workv1);
-        qq3[ii] = qq3[ii] + z[kk];
+        //  qM3(ii,:) -= P(kk,:);
+        //  qq3(ii,1) +=  z(kk);
+        qM3.row(ii) -= P.row(kk);
+        qq3[ii] += z[kk];
       }
     }
 
@@ -506,16 +520,13 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 #endif
        // return the inverse dynamics forces
 //    uff += iF*(vqstar - k - ETF*R*(cf)) * (1/h);
-    uff = vqstar;
-    outlog(uff,"uff");
+    uff += vqstar;
     uff -= k;
-    outlog(uff,"uff");
     ETF.mult(R,workM1);
     workM1.mult(cf,uff,-1,1);
-    uff *= (1/h);
-    outlog(uff,"uff");
     LA_.solve_chol_fast(iF,uff);
-    outlog(uff,"uff");
+    uff *= (1/h);
+
 #ifndef NDEBUG
     outlog(uff,"finalUFF");
 #endif

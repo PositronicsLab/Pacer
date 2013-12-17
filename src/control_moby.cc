@@ -402,7 +402,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       std::cout << links_[f]->id << " coords (wrt global): "
                 << link_pose.x << std::endl;
     }
-    for(int f=0;f<joints_.size() - eefs_.size() + 1;f++){
+    for(int f=0;f<N_JOINTS;f++){
         Ravelin::Pose3d link_pose = *joints_[f]->get_pose();
 
         // Transform to base (ABDOMEN) coords
@@ -411,7 +411,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
                   << link_pose.x << std::endl;
     }
 
-    for(int f=0;f<eefs_.size();f++){
+    for(int f=0;f<NUM_EEFS;f++){
         Ravelin::Pose3d link_pose = *eefs_[f]->get_pose();
 
         // Transform to base (ABDOMEN) coords
@@ -725,7 +725,8 @@ void init(void* separator,
   }
 
   // Set Initial State
-  Vec q_start(q0.size()+7),qd_start(q0.size()+6);
+  Vec q_start(N_JOINTS+NEULER),qd_start(NDOFS);
+
   abrobot->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
   q_start.set_sub_vec(N_JOINTS,BASE_ORIGIN);

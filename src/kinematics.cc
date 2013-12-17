@@ -6,6 +6,73 @@ typedef Ravelin::VectorNd Vec;
 using namespace Ravelin;
 using namespace Moby;
 
+
+void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat& D, Mat& ST)
+{
+  int nc = contacts.size();
+
+  for(unsigned i=0;i<links_.size();i++)
+    for(unsigned j=0;j<nc;j++)
+      if(contacts[j].name.compare(links_[i]->id) == 0)
+        eefs_[j] = links_[i];
+
+  static Mat J, Jsub;
+  static Vec col;
+
+  // resize temporary N and ST
+  N.resize(N_JOINTS+6,nc);
+  D.resize(N_JOINTS+6,nc*NK);
+  ST.resize(N_JOINTS+6,nc*2);
+
+  J.resize(NSPATIAL, N_JOINTS);
+
+  // loop over all contacts
+  for(int i = 0; i < nc; i++){
+    // get the contact point and normal
+    ContactData& c = contacts[i];
+
+    // generate the contact tangents here...
+    Vector3d tan1, tan2;
+    Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
+    Vector3d torque;
+    torque.set_zero();
+
+    RigidBodyPtr sbfoot = eefs_[i];
+
+    Vec col(NSPATIAL);
+    AAngled aa(0,0,1,0);
+    Origin3d o(c.point);
+    boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
+
+    // Fill in N values
+    SForced sfn(c.normal,torque,pose);
+    abrobot->convert_to_generalized_force(sbfoot,sfn, c.point, col);
+    N.set_column(i,col);
+
+    // Fill in ST values
+    SForced sfs(tan1,torque,pose);
+    abrobot->convert_to_generalized_force(sbfoot,sfs, c.point, col);
+    ST.set_column(i,col);
+
+    SForced sft = SForced(tan2,torque,pose);
+    abrobot->convert_to_generalized_force(sbfoot,sft, c.point, col);
+    ST.set_column(i+nc,col);
+
+    // Fill in D values
+    for(int k=0;k<NK;k++){
+      if(k%2 == 0) {
+        SForced sfs(tan1,torque,pose);
+        abrobot->convert_to_generalized_force(sbfoot,sfs, c.point, col);
+      } else {
+        SForced sft(tan2,torque,pose);
+        abrobot->convert_to_generalized_force(sbfoot,sft, c.point, col);
+      }
+      if(k>=2) col.negate();
+      D.set_column(i*NK + k,col);
+    }
+  }
+}
+
 void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
 {
   int nc = contacts.size();
@@ -19,10 +86,10 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
   static Vec col;
 
   // resize temporary N and ST
-  N.resize(NJOINT+6,nc);
-  D.resize(NJOINT+6,nc*nk);
+  N.resize(N_JOINTS+6,nc);
+  D.resize(N_JOINTS+6,nc*NK);
 
-  J.resize(NSPATIAL, NJOINT);
+  J.resize(NSPATIAL, N_JOINTS);
 
   // loop over all contacts
   for(int i = 0; i < nc; i++){
@@ -44,7 +111,7 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
     SForced sfn(c.normal,torque,pose);
     abrobot->convert_to_generalized_force(sbfoot,sfn, c.point, col);
     N.set_column(i,col);
-    for(int k=0;k<nk;k++){
+    for(int k=0;k<NK;k++){
       if(k%2 == 0) {
         SForced sfs(tan1,torque,pose);
         abrobot->convert_to_generalized_force(sbfoot,sfs, c.point, col);
@@ -53,12 +120,12 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
         abrobot->convert_to_generalized_force(sbfoot,sft, c.point, col);
       }
       if(k>=2) col.negate();
-      D.set_column(i*nk + k,col);
+      D.set_column(i*NK + k,col);
     }
   }
 }
 
-void determine_N_D2(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
+void determine_N_ST(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
 {
   int nc = contacts.size(),nk = 2;
 
@@ -71,10 +138,10 @@ void determine_N_D2(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
   static Vec col;
 
   // resize temporary N and ST
-  N.resize(NJOINT+6,nc);
-  ST.resize(NJOINT+6,nc*nk);
+  N.resize(N_JOINTS+6,nc);
+  ST.resize(N_JOINTS+6,nc*nk);
 
-  J.resize(NSPATIAL, NJOINT);
+  J.resize(NSPATIAL, N_JOINTS);
 
   // loop over all contacts
   for(int i = 0; i < nc; i++){

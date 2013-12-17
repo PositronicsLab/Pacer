@@ -29,6 +29,7 @@ set(links_srcs  src/control_moby.cc
                 src/bezier_solver.cc
                 src/inverse_kinematics.cc
                 src/kinematics.cc
+                src/solve_qp.cc
     )
 set(coldet_srcs src/LinksColdetPlugin.cpp)
 

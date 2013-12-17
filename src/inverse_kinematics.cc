@@ -1,6 +1,16 @@
+#include <Log.h>
 #include <math.h>
 #include <stdio.h>
 #include <iostream>
+
+void check_vals(double th[3]){
+  for(int i=0;i<3;i++){
+    if(!isfinite(th[i])){
+      th[i] = 0;
+      OUT_LOG(logDEBUG4) << "Inverse kinematics solution was NaN, setting to zero!" << std::endl;
+    }
+  }
+}
 
 void lf(const double X[3],double th[3]){
        th[0] = -1.*acos((-400.*X[2])/
@@ -26,6 +36,7 @@ void lf(const double X[3],double th[3]){
        th[2] = acos(1.4775061881188118 - 33.78712871287129*X[0] +
           123.76237623762377*pow(X[0],2) - 11.757425742574258*X[1] +
           123.76237623762377*pow(X[1],2) + 123.76237623762377*pow(X[2],2));
+       check_vals(th);
 }
 void rf(const double X[3],double th[3]){
        th[0] = -1.*acos((-400.*X[2])/
@@ -51,6 +62,7 @@ void rf(const double X[3],double th[3]){
        th[2] = acos(1.4775061881188118 - 33.78712871287129*X[0] +
           123.76237623762377*pow(X[0],2) + 11.757425742574258*X[1] +
           123.76237623762377*pow(X[1],2) + 123.76237623762377*pow(X[2],2));
+       check_vals(th);
 }
 
 void lh(const double X[3],double th[3]){
@@ -77,6 +89,7 @@ void lh(const double X[3],double th[3]){
        th[2] = acos(0.5127240099009901 + 25.76732673267327*X[0] +
           123.76237623762377*pow(X[0],2) - 11.757425742574258*X[1] +
           123.76237623762377*pow(X[1],2) + 123.76237623762377*pow(X[2],2));
+       check_vals(th);
 }
 
 void rh(const double X[3],double th[3]){
@@ -103,4 +116,5 @@ void rh(const double X[3],double th[3]){
        th[2] = acos(0.5127240099009901 + 25.76732673267327*X[0] +
           123.76237623762377*pow(X[0],2) + 11.757425742574258*X[1] +
           123.76237623762377*pow(X[1],2) + 123.76237623762377*pow(X[2],2));
+       check_vals(th);
 }

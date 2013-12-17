@@ -29,9 +29,9 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 
-void outlog(const Ravelin::VectorNd& M, std::string name);
-void outlog(const Ravelin::SharedVectorNd& M, std::string name);
-void outlog(const Ravelin::MatrixNd& z, std::string name);
+void OUTLOG(const Ravelin::VectorNd& M, std::string name);
+void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name);
+void OUTLOG(const Ravelin::MatrixNd& z, std::string name);
 
 #include <Log.h>
 

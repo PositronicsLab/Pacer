@@ -1,166 +1,15 @@
 #include <project_common.h>
 
-Moby::LCP lcp_;
-Ravelin::LinAlgd LA_;
+static Ravelin::LinAlgd LA_;
 
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
 
- static bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
-{
-     const int n = Q.rows();
-     const int m = A.rows();
+extern bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x);
+extern bool solve_qp_pos(const Mat& Q, const Vec& c, Vec& x);
+extern bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x);
 
-     Mat MMM;
-     Vec zzz(n + m),qqq(n + m);
-     // init and setup MMM
-     MMM.set_zero(n + m,n + m);
-     Mat nAT = A;
-     nAT.transpose();
-     nAT.negate();
-     MMM.set_sub_mat(0,0,Q);
-     MMM.set_sub_mat(0,n,nAT);
-     MMM.set_sub_mat(n,0,A);
-
-  // setup qqq
-  qqq.set_sub_vec(0,c);
-  Vec nb = b;
-  nb.negate();
-  qqq.set_sub_vec(n,nb);
-
-  // solve the LCP
-  zzz.set_zero();
-  bool SOLVE_FLAG = true;
-
-#ifndef NDEBUG
-  std::cout << " >> solve qp positive" << std::endl;
-  std::cout << "QP variables" << std::endl;
-  outlog(Q,"G");
-  outlog(c,"c");
-  outlog(A,"A");
-  outlog(b,"b");
-  std::cout << "LCP variables" << std::endl;
-  outlog(MMM,"M");
-  outlog(qqq,"q");
-#endif
-
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz))
-//    if(!lcp_.lcp_lemke(MMM,qqq,zzz))
-      SOLVE_FLAG = false;
-
-  // extract x
-  for(int i=0;i<n;i++)
-      x[i] = zzz[i];
-#ifndef NDEBUG
-  std::cout << "Solutions" << std::endl;
-  outlog(zzz,"LCPz");
-  outlog(x,"QPx");
-  std::cout << " << solve qp positive" << std::endl;
-#endif
-  return SOLVE_FLAG;
-}
-
- static bool solve_qp_pos(const Mat& Q, const Vec& c, Vec& x)
-{
-     const int n = Q.rows();
-     const int m = 0;
-
-     // solve the LCP
-  x.set_zero();
-  bool SOLVE_FLAG = true;
-
-#ifndef NDEBUG
-  std::cout << " >> solve qp positive" << std::endl;
-  std::cout << "QP variables" << std::endl;
-  std::cout << "LCP variables" << std::endl;
-  outlog(Q,"G");
-  outlog(c,"c");
-#endif
-
-  if(!lcp_.lcp_lemke_regularized(Q,c,x))
-//    if(!lcp_.lcp_lemke(Q,c,x))
-      SOLVE_FLAG = false;
-#ifndef NDEBUG
-  std::cout << "Solutions" << std::endl;
-  outlog(x,"QPx");
-  std::cout << " << solve qp positive" << std::endl;
-#endif
-  return SOLVE_FLAG;
-}
-
-
-static bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
-{
-  const int n = Q.rows();
-  const int m = A.rows();
-
-  // setup the LCP matrix
-  // MMM = |  Q -Q -A' |
-  //       | -Q  Q  A' |
-  //       |  A -A  0  |
-  Mat MMM,AT = A, nA = A, nQ = Q;
-  nA.negate();
-  AT.transpose();
-  nQ.negate();
-
-  Vec zzz,qqq, nc=c, nb=b;
-  nc.negate();
-  nb.negate();
-
-  MMM.set_zero(Q.rows()*2 + A.rows(), Q.rows()*2 + A.rows());
-  MMM.set_sub_mat(0,0,Q);
-  MMM.set_sub_mat(n,n,Q);
-  MMM.set_sub_mat(0,n,nQ);
-  MMM.set_sub_mat(n,0,nQ);
-
-  // setup linear inequality constraints in LCP matrix
-  MMM.set_sub_mat(n,n*2,AT);
-  AT.negate();
-  MMM.set_sub_mat(0,n*2,AT);
-
-  MMM.set_sub_mat(n*2,0,A);
-  MMM.set_sub_mat(n*2,n,nA);
-
-  // setup LCP vector
-  qqq.resize(MMM.rows());
-  qqq.set_sub_vec(0,c);
-  qqq.set_sub_vec(n,nc);
-  qqq.set_sub_vec(2*n,nb);
-
-#ifndef NDEBUG
-  std::cout << " >> solve qp" << std::endl;
-  std::cout << "QP variables" << std::endl;
-  outlog(Q,"G");
-  outlog(c,"c");
-  outlog(A,"A");
-  outlog(b,"b");
-  std::cout << "LCP variables" << std::endl;
-  outlog(MMM,"M");
-  outlog(qqq,"q");
-#endif
-
-  // solve the LCP
-  zzz.set_zero(qqq.size());
-
-  bool SOLVE_FLAG = true;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz))
-//    if(!lcp_.lcp_lemke(MMM,qqq,zzz))
-      SOLVE_FLAG = false;
-
-  // extract x
-  for(int i=0;i<n;i++)
-      x[i] = zzz[i] - zzz[n+i];
-
-#ifndef NDEBUG
-  std::cout << "Solutions" << std::endl;
-  outlog(zzz,"LCPz");
-  outlog(x,"QPx");
-  std::cout << " << solve qp positive" << std::endl;
-#endif
-  return SOLVE_FLAG;
-}
-
-void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
+void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
                          const Mat& ST, const Vec& fext, double h, const Mat& MU, Vec& uff){
 
 
@@ -174,26 +23,30 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   static Mat workM1,workM2;
   static Vec workv1, workv2;
 
+  static Vec vb(6);
+  v.get_sub_vec(nq,n,vb);
+  static Vec vq(nq);
+  v.get_sub_vec(0,nq,vq);
+
   static Vec vqstar;
   vqstar = qdd;
   vqstar *= h;
-  vqstar += v.get_sub_vec(6,n,workv1);
+  vqstar += vq;
 
   // setup R
   Mat R(n, nc + (nc*nk) );
   R.set_sub_mat(0,0,N);
   R.set_sub_mat(0,nc,ST);
 
-#ifndef NDEBUG
-  outlog(M,"M");
-  outlog(N,"N");
-  outlog(ST,"ST");
-  outlog(v,"v");
-  outlog(vqstar,"vqstar");
-  outlog(fext,"fext");
-  outlog(MU,"MU");
-  outlog(R,"R");
-#endif
+  // Log these function variables
+  OUTLOG(M,"M");
+  OUTLOG(N,"N");
+  OUTLOG(ST,"ST");
+  OUTLOG(v,"v");
+  OUTLOG(vqstar,"vqstar");
+  OUTLOG(fext,"fext");
+  OUTLOG(MU,"MU");
+  OUTLOG(R,"R");
 
   Vec z(nvars),cf(nvars);
   // compute A, B, and C
@@ -224,25 +77,23 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
   /// Stage 1 optimization energy minimization
 
-  // determine vb, vq, vbstar, vqstar
+  // determine vbstar, vqstar
 
-  static Vec vb(6);
-  v.get_sub_vec(nq,n,vb);
-  static Vec vq(nq);
-  v.get_sub_vec(0,nq,vq);
-
+  static Vec fID;
   workv1.set_zero(nq);
-  uff.set_zero(nq);
-  // compute tff
+  fID.set_zero(nq);
+  // compute fID
+  // fID = (vq* - vq)/h
   workv1 = vqstar;
   workv1 -= vq;
-  workv1 *= (1/h);
-  fext.get_sub_vec(0,nq,uff);
-  F.mult(workv1,uff,1,-1);
+  workv1 /= h;
+  fext.get_sub_vec(0,nq,fID);
+  F.mult(workv1,fID,1,-1);
 
+//  return;
   static Vec zuff(n);
   zuff.set_zero();
-  zuff.set_sub_vec(6,uff);
+  zuff.set_sub_vec(0,fID);
 
   // compute j and k
   // [D,E]
@@ -282,7 +133,6 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   workv1 -= k;
   LA_.solve_chol_fast(iF,workv1);
   E.mult(workv1,p,1,1);
-//      p += j;
 
   Mat H(Z.columns(),Z.columns());
   // compute objective function
@@ -295,11 +145,12 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   Mat qG = H;
   // qc = Z'*A*p + Z'*B*vqstar;
   Vec qc(Z.columns());
+  // HINT: workM1 = Z'*A
+  // qc = Z'*A*p
   workM1.mult(p,qc);
   Z.transpose_mult(B,workM2);
+  // qc += Z'*B*vqstar
   workM2.mult(vqstar,qc,1,1);
-//      workM2.mult(vqstar,workv1);
-//      qc += workv1;
 
   // setup linear inequality constraints -- noninterpenetration
   Mat Z1(n,Z.columns());
@@ -312,8 +163,7 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   Vec pvqstar(n);
   pvqstar.set_sub_vec(nq,p);
   pvqstar.set_sub_vec(0,vqstar);
-  // NOTE: UNDO THIS
-//  pvqstar.negate();
+  pvqstar.negate();
 
   Vec qq1(N.columns());
   N.transpose_mult(pvqstar,qq1);
@@ -329,14 +179,14 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
     // tangent forces
     for(int kk=nc+nk*ii;kk<nc+nk*ii+nk/2;kk++)
-      qM2(ii,kk) = -1;
+      qM2(ii,kk) = -1.0;
 
     // negative tangent force
     for(int kk=nc+nk*ii+nk/2;kk<nc+nk*ii+nk;kk++)
-      qM2(ii,kk) = -1;
+      qM2(ii,kk) = -1.0;
 
     // rhs is zer
-    qq2[ii] = 0;
+    qq2[ii] = 0.0;
   }
 
   /////////////////////////////////////////////////////////
@@ -351,12 +201,6 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   qq.set_sub_vec(0,qq1);
   qq.set_sub_vec(qq1.rows(),qq2);
 
-#ifndef NDEBUG
-  outlog(qG,"qG");
-  outlog(qM,"qM");
-  outlog(qc,"qc");
-  outlog(qq,"q");
-#endif
   if(!solve_qp_pos(qG,qc,qM,qq,z)){
     std::cout  << "ERROR: Unable to solve stage 1!" << std::endl;
     return;
@@ -364,10 +208,9 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
   Vec feas = qq;
   qM.mult(z,feas,1,-1);
-#ifndef NDEBUG
-  outlog(feas,"feas1op");
-  outlog(z,"z1op");
-#endif
+
+  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
+  OUTLOG(z,"Z_OP1");
 
   /// Stage 2 optimization command smoothing
 
@@ -392,10 +235,10 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     V.get_sub_mat(0,V.rows(),V.columns()-m,V.columns(),P);
   }
 
-  outlog(S,"Singular Values");
-  outlog(P,"Null Space(P)");
+  OUTLOG(S,"Singular Values");
+  OUTLOG(P,"Null Space(P)");
 
-  if(m != 0)
+  if(m != 0 && false)
   {
     // compute U
     Mat U;
@@ -403,14 +246,14 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
     // second optimization necessary
     // compute objective function
-//        qG = P'*U'*iF'*iF*U*P;
+    // qG = P'*U'*iF'*iF*U*P;
     workM1 = U;
     LA_.solve_chol_fast(iF,workM1);
     workM1.mult(P,workM2);
     workM2.transpose_mult(workM2,qG);
 
-    // NOTE: workM2 = iF*U*P
-    // NOTE: workM1 = iF*U
+    // HINT: workM2 = iF*U*P
+    // HINT: workM1 = iF*U
 
     //  qc = z'*U'*iF'*iF*U*P - vqstar'*iF'*iF*U*P + k'*iF'*iF*U*P;
     // qc = (iF*U*P)'*iF*U*z
@@ -448,6 +291,7 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     qq2.negate();
 
     // compute new friction constraints
+    //
     nvars = P.columns();
     Mat qM3(nc, nvars);
     qM3.set_zero();
@@ -493,6 +337,7 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
         qq.set_sub_vec(qq1.rows(),qq2);
         qq.set_sub_vec(qq1.rows()+qq2.rows(),qq3);
         // optimize
+
         Vec w(m);
         if(!solve_qp(qG,qc,qM,qq,w)){
           std::cout << "ERROR: Unable to solve stage 2!" << std::endl;
@@ -500,13 +345,12 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
         }
 
         feas = qq;
-        qM.mult(w,feas,1,-1);
+        qM.mult(w,feas,1,1);
 
-#ifndef NDEBUG
-      outlog(feas,"feas2op");
-      outlog(w,"w2op");
-#endif
-        // return the solution (contact forces)
+      OUTLOG(feas,"feas_OP2 =[ % (A*w-b >= 0)");
+      OUTLOG(w,"W_OP2");
+
+      // return the solution (contact forces)
         // cf = z + P*w;
         cf = z;
         P.mult(w,cf,1,1);
@@ -515,19 +359,22 @@ void idyn(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
       } else {
         cf = z;
       }
-#ifndef NDEBUG
-    outlog(cf,"finalCF");
-#endif
-       // return the inverse dynamics forces
-//    uff += iF*(vqstar - k - ETF*R*(cf)) * (1/h);
-    uff += vqstar;
+
+    OUTLOG(cf,"contact_force");
+
+  // return the inverse dynamics forces
+  // uff = fID + iF*(vqstar - k - ETF*R*(cf))/h
+    OUTLOG(fID,"fID");
+    uff = vqstar;
     uff -= k;
     ETF.mult(R,workM1);
     workM1.mult(cf,uff,-1,1);
     LA_.solve_chol_fast(iF,uff);
-    uff *= (1/h);
+    uff /= h;
 
-#ifndef NDEBUG
-    outlog(uff,"finalUFF");
-#endif
+    OUTLOG(uff,"zuff");
+
+    uff += fID;
+
+    OUTLOG(uff,"feed_forward_force");
 }

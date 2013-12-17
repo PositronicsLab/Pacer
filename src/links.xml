@@ -58,7 +58,8 @@
         <CollisionGeometry primitive-id="abdomen" />
         <InertiaFromPrimitive primitive-id="abdomen" />
       </RigidBody>
-      <RevoluteJoint id="BODY_JOINT" qd="0" location="0.043 0 0.101" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />
+      <FixedJoint id="BODY_JOINT" qd="0" location="0.043 0 0.101" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />
+<!--      <RevoluteJoint id="BODY_JOINT" qd="0" location="0.043 0 0.101" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />-->
       <RigidBody id="THORAX" position="0.06825 0 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="thorax">
         <CollisionGeometry primitive-id="thorax" />
         <InertiaFromPrimitive primitive-id="thorax" />

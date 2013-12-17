@@ -1,71 +1,13 @@
 #include <project_common.h>
-#include <Opt/LCP.h>
-
-const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 
 typedef Ravelin::MatrixNd Mat;
 typedef Ravelin::VectorNd Vec;
 
-Opt::LCP lcp2_;
+static Ravelin::LinAlgd LA_;
 
-void outlog(const Mat& M, std::string name);
-void outlog(const Vec& z, std::string name);
+const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 
-Ravelin::LinAlgd LA;
-
-struct ContactData;
-
-static bool solve_qp( Mat& Q,  Vec& c,  Mat& A,  Vec& b, Vec& x)
-{
-  const int n = Q.rows();
-  const int m = A.rows();
-
-  x.resize(n);
-  // setup the LCP matrix
-  // MMM = |  Q -Q -A' |
-  //       | -Q  Q  A' |
-  //       |  A -A  0  |
-  Mat MMM;
-  Vec zzz,qqq;
-  MMM.set_zero(Q.rows()*2 + A.rows(), Q.rows()*2 + A.rows());
-  MMM.set_sub_mat(0,0,Q);
-  MMM.set_sub_mat(n,n,Q);
-  Q.negate();
-  MMM.set_sub_mat(0,n,Q);
-  MMM.set_sub_mat(n,0,Q);
-
-  // setup linear inequality constraints in LCP matrix
-  Mat AT(A.columns(),A.rows());
-  Mat::transpose(A,AT);
-  MMM.set_sub_mat(n,n*2,AT);
-  AT.negate();
-  MMM.set_sub_mat(0,n*2,AT);
-
-  MMM.set_sub_mat(n*2,0,A);
-  A.negate();
-  MMM.set_sub_mat(n*2,n,A);
-
-  // setup LCP vector
-  // qqq = [ c -c  b  0 ]'
-  qqq.set_zero(MMM.rows());
-  qqq.set_sub_vec(0,c);
-  c.negate();
-  qqq.set_sub_vec(n,c);
-  b.negate();
-  qqq.set_sub_vec(2*n,b);
-
-  // solve the LCP
-  zzz.set_zero(qqq.size());
-
-  bool SOLVE_FLAG = true;
-  if(!lcp2_.lcp_lemke_regularized(MMM,qqq,zzz))
-      SOLVE_FLAG = false;
-
-  // extract x
-  for(int i=0;i<n;i++)
-      x[i] = zzz[i] - zzz[n+i];
-  return SOLVE_FLAG;
-}
+extern bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x);
 
 //#define USE_D
 
@@ -86,11 +28,11 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 //      std::cout << "************** Friction Estimation **************" << std::endl;
 //      std::cout << "ITER: " << ITER << std::endl;
 //      std::cout << "dt = " << dt << std::endl;
-//      outlog2(N,"N");
-//      outlog2(M,"M");
-//      outlog2(v,"post-event-vel");
-//      outlog2(v_,"pre-event-vel");
-//      outlog2(f_,"f_external");
+//      OUTLOG2(N,"N");
+//      OUTLOG2(M,"M");
+//      OUTLOG2(v,"post-event-vel");
+//      OUTLOG2(v_,"pre-event-vel");
+//      OUTLOG2(f_,"f_external");
 
       int ngc = f_.rows();
       int nq = ngc - 6, nk = D.columns()/nc;
@@ -100,27 +42,27 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
      // dv = v_{t} - v_{}
       Vec dv =  v;
       dv -= v_;
-//      outlog2(dv,"dv");
+//      OUTLOG2(dv,"dv");
 
       // j_obs = M*dv
       Vec jstar(M.rows());
       M.mult(dv,jstar);
-//      outlog2(jstar,"j_observed");
+//      OUTLOG2(jstar,"j_observed");
 
       // j_exp = f_{t-1}*dt
       f_ *= dt;
 
-//      outlog2(f_,"j_expected");
+//      OUTLOG2(f_,"j_expected");
 
       // j* = (j_obs - j_exp) = j_err
       jstar -= f_;
-//      outlog2(jstar,"j_error");
+//      OUTLOG2(jstar,"j_error");
 
 
       /// //////////////////////////////
       /// STAGE I
 #ifdef USE_D
-     outlog2(D,"D");
+     OUTLOG2(D,"D");
       int n = N.columns()+D.columns();
 
       Mat R(ngc,n);
@@ -143,14 +85,14 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
           std::cout << "friction estimation failed" << std::endl;
       } else {
 
-      outlog2(z,"z");
+      OUTLOG2(z,"z");
 
       Vec err(ngc);
       R.mult(z,err);
-      outlog2(err,"gf");
+      OUTLOG2(err,"gf");
       err -= jstar;
 
-      outlog2(err,"err");
+      OUTLOG2(err,"err");
       std::cout << "norm err: " << err.norm() << std::endl;
 #else // use ST
       Mat ST;
@@ -163,22 +105,22 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
         ST.set_column(i,D.column(i*nk));
         ST.set_column(nc+i,D.column(i*nk+1));
       }
-//     outlog2(ST,"ST");
+//     OUTLOG2(ST,"ST");
      int n = N.columns()+ST.columns();
 
      Mat R(ngc,n);
      R.set_sub_mat(0,0,N);
      R.set_sub_mat(0,N.columns(),ST);
-//     outlog2(R,"R");
+//     OUTLOG2(R,"R");
 
      // Some additional Printouts
       Vec vprint = jstar,cvprint;
       Mat iM = M;
-      LA.factor_chol(iM);
-      LA.solve_chol_fast(iM,vprint);
+      LA_.factor_chol(iM);
+      LA_.solve_chol_fast(iM,vprint);
       R.transpose_mult(vprint,cvprint);
-//      outlog2(vprint,"v_error");
-//      outlog2(cvprint,"cv_error");
+//      OUTLOG2(vprint,"v_error");
+//      OUTLOG2(cvprint,"cv_error");
      /////////// OBJECTIVE ////////////
      // Q = R'R
      Mat Q(R.columns(),R.columns());
@@ -204,16 +146,16 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
          std::cout << "friction estimation failed" << std::endl;
      }
      else {
-//       outlog2(z,"cf");
-//       outlog2(cf_moby,"cf_MOBY");
+//       OUTLOG2(z,"cf");
+//       OUTLOG2(cf_moby,"cf_MOBY");
 
        Vec err(ngc);
        R.mult(z,err);
-//       outlog2(err,"generalized force from cfs = [R*z]");
+//       OUTLOG2(err,"generalized force from cfs = [R*z]");
        err -= jstar;
        norm_error =  err.norm();
 
-//       outlog2(err,"err = [R*z - j_error]");
+//       OUTLOG2(err,"err = [R*z - j_error]");
 //       std::cout << "norm err: " << err.norm() << std::endl;
 
 #endif
@@ -225,7 +167,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
           int m = 0;
           Mat U,V;
           Vec S;
-          LA.svd(Q,U,S,V);
+          LA_.svd(Q,U,S,V);
 
           Mat P;
           // SVD decomp to retrieve nullspace of R'R
@@ -248,7 +190,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
           // NOTE:: stage 2 is inactive
           if(m != 0 && false)
           {
-//            outlog2(P,"P");
+//            OUTLOG2(P,"P");
 
             Vec cN(nc);
             z.get_sub_vec(0,nc,cN);
@@ -260,7 +202,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             /// min l2-norm(cN)
             Mat P_nc(nc,m);
             P.get_sub_mat(0,nc,0,m,P_nc);
-//                outlog2(P_nc,"P_nc");
+//                OUTLOG2(P_nc,"P_nc");
 //                P_nc.transpose_mult(P_nc,Q2);
             // c = P'cN
 //                P_nc.transpose_mult(cN,c2);
@@ -307,8 +249,8 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             // b = z
             Vec cNST = z;
             cNST.negate();
-            outlog2(cNST,"cNST");
-            outlog2(z,"z");
+            OUTLOG2(cNST,"cNST");
+            OUTLOG2(z,"z");
 
             b.set_sub_vec(1,z);
 #else // USE_ST
@@ -341,21 +283,21 @@ A(0,i) = cP[i];
             if(!solve_qp(Q2,c2,A,b,w)) {
                 std::cout << "friction estimation 2 failed" << std::endl;
             } else {
-//              outlog2(w,"w");
+//              OUTLOG2(w,"w");
 
               Vec z2(nvars);
               P.mult(w,z2);
 
-//              outlog2(z2," z2");
+//              OUTLOG2(z2," z2");
               z += z2;
-//              outlog2(z,"z+z2");
+//              OUTLOG2(z,"z+z2");
 
               err.set_zero(ngc);
               R.mult(z,err);
-//              outlog2(err,"generalized force from cfs = [R*(z+z2)]");
+//              OUTLOG2(err,"generalized force from cfs = [R*(z+z2)]");
 //              err -= jstar;
 
-//              outlog2(err,"err = [R*(z+z2) - j_error]");
+//              OUTLOG2(err,"err = [R*(z+z2) - j_error]");
 //              norm_error =  err.norm();
 
 //              std::cout << "norm err2: " << err.norm() << std::endl;
@@ -363,10 +305,10 @@ A(0,i) = cP[i];
 //              // Print Moby Error
 //err.set_zero(ngc);
 ////                        R.mult(cf_moby,err);
-//              outlog2(err,"MOBY generalized force from cfs = [R*(z+z2)]");
+//              OUTLOG2(err,"MOBY generalized force from cfs = [R*(z+z2)]");
 //              err -= jstar;
 
-//              outlog2(err,"MOBY err = [R*(z+z2) - j_error]");
+//              OUTLOG2(err,"MOBY err = [R*(z+z2) - j_error]");
 //              norm_error =  err.norm();
 
 //              std::cout << "MOBY norm err: " << err.norm() << std::endl;

@@ -26,3 +26,4 @@ src/test.m
 src/visualize_moby.cc
 CMakeLists.txt
 include/project_common.h
+src/solve_qp.cc

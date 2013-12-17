@@ -108,7 +108,7 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
           Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
           Vector3d torque;
           torque.set_zero();
-//          outlog2(c.point,"point");
+//          OUTLOG2(c.point,"point");
 
           RigidBodyPtr sbfoot = eefs[i];
  
@@ -117,23 +117,23 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
           Origin3d o(c.point);
           boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
           SForced sfn(c.normal,torque,pose);
-//          outlog2(c.normal,"norm");
+//          OUTLOG2(c.normal,"norm");
           abrobot->convert_to_generalized_force(sbfoot,sfn, c.point, col);
           N.set_column(i,col);
-//          outlog2(col,"N_col");
+//          OUTLOG2(col,"N_col");
           for(int k=0;k<nk;k++){
               if(k%2 == 0) {
-//                  outlog2(tan1,"tanS");
+//                  OUTLOG2(tan1,"tanS");
                   SForced sfs(tan1,torque,pose);
                   abrobot->convert_to_generalized_force(sbfoot,sfs, c.point, col);
               } else {
-//                  outlog2(tan2,"tanT");
+//                  OUTLOG2(tan2,"tanT");
                   SForced sft(tan2,torque,pose);
                   abrobot->convert_to_generalized_force(sbfoot,sft, c.point, col);
               }
               if(k>=2) col.negate();
               D.set_column(i*nk + k,col);
-//              outlog2(col,"D_col");
+//              OUTLOG2(col,"D_col");
           }
      }
 }
@@ -271,8 +271,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
           qd.set_row(ind,joints[m]->qd);
       }
 
-      outlog2(q.column(0),"q");
-      outlog2(qd.column(0),"qd");
+      OUTLOG2(q.column(0),"q");
+      OUTLOG2(qd.column(0),"qd");
 
 
         /// Run friction estimation
@@ -298,7 +298,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
                 ST(j,nc+i) = D(j,i*nk+1);
             }
         }
-//        outlog2(ST,"ST");
+//        OUTLOG2(ST,"ST");
 
         calculate_dyn_properties(M,fext);
 
@@ -356,7 +356,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
       apply_simulation_forces(u);
 
-      outlog2(u,"u");
+      OUTLOG2(u,"u");
 
     last_time = t;
 }

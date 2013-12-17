@@ -39,10 +39,10 @@ DynamicBodyPtr body;
 Vec cf_moby;
 Mat MU_moby;
 
-void outlog(const Mat& M, std::string name);
-void outlog(const Vec& z, std::string name);
-void outlog2(const Vec& M, std::string name);
-void outlog2(const Mat& z, std::string name);
+void OUTLOG(const Mat& M, std::string name);
+void OUTLOG(const Vec& z, std::string name);
+void OUTLOG2(const Vec& M, std::string name);
+void OUTLOG2(const Mat& z, std::string name);
 
 struct ContactData
 {
@@ -82,30 +82,30 @@ void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N,
 
           Vector3d torque;
           torque.set_zero();
-          outlog2(c.point,"point");
+          OUTLOG2(c.point,"point");
 
           Vec col(NSPATIAL);
           AAngled aa(0,0,1,0);
           Origin3d o(c.point);
           boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
           SForced sfn(c.normal,torque,pose);
-          outlog2(c.normal,"norm");
+          OUTLOG2(c.normal,"norm");
           obj->convert_to_generalized_force(obj,sfn, c.point, col);
           N.set_column(i,col);
-          outlog2(col,"N_col");
+          OUTLOG2(col,"N_col");
           for(int k=0;k<nk;k++){
               if(k%2 == 0) {
-                  outlog2(tan1,"tanS");
+                  OUTLOG2(tan1,"tanS");
           	  SForced sfs(tan1,torque,pose);
           	  obj->convert_to_generalized_force(obj,sfs, c.point, col);
               } else {
-                  outlog2(tan2,"tanT");
+                  OUTLOG2(tan2,"tanT");
           	  SForced sft(tan2,torque,pose);
           	  obj->convert_to_generalized_force(obj,sft, c.point, col);
               }
               if(k>=2) col.negate();
               D.set_column(i*nk + k,col);
-              outlog2(col,"D_col");
+              OUTLOG2(col,"D_col");
           }
       }
 }
@@ -127,7 +127,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
 
     Vec q;
     body->get_generalized_coordinates(DynamicBody::eEuler,q);
-    outlog2(q,"G Coords");
+    OUTLOG2(q,"G Coords");
 
     /// PROCESS CONTACTS
     contacts.clear();
@@ -148,7 +148,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
                 c.normal = e[i].contact_normal;
 
             c.point = e[i].contact_point;
-            outlog2(c.point,"C Coords");
+            OUTLOG2(c.point,"C Coords");
 
             c.name = sb1->id;
 

@@ -32,8 +32,8 @@ inline Log::Log()
 
 inline std::ostringstream& Log::Get(TLogLevel level)
 {
-    os << "- " << NowTime();
-    os << " " << ToString(level) << ": ";
+//    os << "- " << NowTime();
+//    os << " " << ToString(level) << ": ";
     os << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
     return os;
 }
@@ -41,8 +41,8 @@ inline std::ostringstream& Log::Get(TLogLevel level)
 inline Log::~Log()
 {
     os << std::endl;
-    fprintf(stderr, "%s", os.str().c_str());
-    fflush(stderr);
+    fprintf(stdout, "%s", os.str().c_str());
+    fflush(stdout);
 }
 
 inline TLogLevel& Log::ReportingLevel()

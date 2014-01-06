@@ -11,7 +11,7 @@ void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat
 {
   int nc = contacts.size();
 
-  for(unsigned i=0;i<links_.size();i++)
+  for(unsigned i=0;i<NUM_LINKS;i++)
     for(unsigned j=0;j<nc;j++)
       if(contacts[j].name.compare(links_[i]->id) == 0)
         eefs_[j] = links_[i];
@@ -20,11 +20,11 @@ void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat
   static Vec col;
 
   // resize temporary N and ST
-  N.resize(N_JOINTS+6,nc);
-  D.resize(N_JOINTS+6,nc*NK);
-  ST.resize(N_JOINTS+6,nc*2);
+  N.resize(NUM_JOINTS+6,nc);
+  D.resize(NUM_JOINTS+6,nc*NK);
+  ST.resize(NUM_JOINTS+6,nc*2);
 
-  J.resize(NSPATIAL, N_JOINTS);
+  J.resize(NSPATIAL, NUM_JOINTS);
 
   // loop over all contacts
   for(int i = 0; i < nc; i++){
@@ -73,11 +73,34 @@ void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat
   }
 }
 
+void get_q_qd_qdd(const std::vector<std::vector<Ravelin::Vector3d> >& joint_trajectory, unsigned TIME, map<string, double>& q_des,map<string, double>& qd_des,map<string, double>& qdd_des){
+  static map<string, double> q;
+  q_des["BASE_JOINT"] = 0;
+  qd_des["BASE_JOINT"] = 0;
+  qdd_des["BASE_JOINT"] = 0;
+
+  q_des["LF_HIP_AA"] = joint_trajectory[TIME][0][0];
+  q_des["LF_HIP_FE"] = joint_trajectory[TIME][0][1];
+  q_des["LF_LEG_FE"] = joint_trajectory[TIME][0][2];
+
+  q_des["RF_HIP_AA"] = joint_trajectory[TIME][1][0];
+  q_des["RF_HIP_FE"] = joint_trajectory[TIME][1][1];
+  q_des["RF_LEG_FE"] = joint_trajectory[TIME][1][2];
+
+  q_des["LH_HIP_AA"] = joint_trajectory[TIME][2][0];
+  q_des["LH_HIP_FE"] = joint_trajectory[TIME][2][1];
+  q_des["LH_LEG_FE"] = joint_trajectory[TIME][2][2];
+
+  q_des["RH_HIP_AA"] = joint_trajectory[TIME][3][0];
+  q_des["RH_HIP_FE"] = joint_trajectory[TIME][3][1];
+  q_des["RH_LEG_FE"] = joint_trajectory[TIME][3][2];
+}
+
 void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
 {
   int nc = contacts.size();
 
-  for(unsigned i=0;i<links_.size();i++)
+  for(unsigned i=0;i<NUM_LINKS;i++)
     for(unsigned j=0;j<nc;j++)
       if(contacts[j].name.compare(links_[i]->id) == 0)
         eefs_[j] = links_[i];
@@ -86,10 +109,10 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
   static Vec col;
 
   // resize temporary N and ST
-  N.resize(N_JOINTS+6,nc);
-  D.resize(N_JOINTS+6,nc*NK);
+  N.resize(NUM_JOINTS+6,nc);
+  D.resize(NUM_JOINTS+6,nc*NK);
 
-  J.resize(NSPATIAL, N_JOINTS);
+  J.resize(NSPATIAL, NUM_JOINTS);
 
   // loop over all contacts
   for(int i = 0; i < nc; i++){
@@ -129,7 +152,7 @@ void determine_N_ST(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
 {
   int nc = contacts.size(),nk = 2;
 
-  for(unsigned i=0;i<links_.size();i++)
+  for(unsigned i=0;i<NUM_LINKS;i++)
     for(unsigned j=0;j<nc;j++)
       if(contacts[j].name.compare(links_[i]->id) == 0)
         eefs_[j] = links_[i];
@@ -138,10 +161,10 @@ void determine_N_ST(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
   static Vec col;
 
   // resize temporary N and ST
-  N.resize(N_JOINTS+6,nc);
-  ST.resize(N_JOINTS+6,nc*nk);
+  N.resize(NUM_JOINTS+6,nc);
+  ST.resize(NUM_JOINTS+6,nc*nk);
 
-  J.resize(NSPATIAL, N_JOINTS);
+  J.resize(NSPATIAL, NUM_JOINTS);
 
   // loop over all contacts
   for(int i = 0; i < nc; i++){

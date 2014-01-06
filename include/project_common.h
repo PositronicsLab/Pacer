@@ -28,6 +28,7 @@
 #include <iostream>     // std::cout, std::fixed
 #include <iomanip>      // std::setprecision
 #include <math.h>
+#include <numeric>
 
 void OUTLOG(const Ravelin::VectorNd& M, std::string name);
 void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name);

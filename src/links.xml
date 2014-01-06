@@ -28,7 +28,7 @@
     <RungeKuttaIntegrator id="rk4" />
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
-<!--    <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />-->
+<!--    <StokesDragForce id="drag" drag-b=".001" drag-b-ang=".001" />-->
 
    <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
       <Body body-id="links" />
@@ -66,6 +66,7 @@
       </RigidBody>
 
       <!-- LF leg -->
+<!--      <FixedJoint id="LF_HIP_AA" qd="0" location="0.086 0.0475 0.101" inboard-link-id="THORAX" outboard-link-id="LF_HIP" axis="1 0 0" />-->
       <RevoluteJoint id="LF_HIP_AA" qd="0" location="0.086 0.0475 0.101" inboard-link-id="THORAX" outboard-link-id="LF_HIP" axis="1 0 0" />
       <RigidBody id="LF_HIP" position="0.11125 0.0475 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="RX-24F">
         <CollisionGeometry primitive-id="RX-24F" />
@@ -91,6 +92,7 @@
       </RigidBody>
 
       <!-- RF leg -->
+<!--      <FixedJoint id="RF_HIP_AA" qd="0" location="0.086 -0.0475 0.101" inboard-link-id="THORAX" outboard-link-id="RF_HIP" axis="1 0 0" />-->
       <RevoluteJoint id="RF_HIP_AA" qd="0" location="0.086 -0.0475 0.101" inboard-link-id="THORAX" outboard-link-id="RF_HIP" axis="1 0 0" />
       <RigidBody id="RF_HIP" position="0.11125 -0.0475 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="RX-24F">
         <CollisionGeometry primitive-id="RX-24F" />
@@ -116,6 +118,7 @@
       </RigidBody>
 
       <!-- LH leg -->
+<!--      <FixedJoint id="LH_HIP_AA" qd="0" location="-0.043 0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="LH_HIP" axis="1 0 0" />-->
       <RevoluteJoint id="LH_HIP_AA" qd="0" location="-0.043 0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="LH_HIP" axis="1 0 0" />
       <RigidBody id="LH_HIP" position="-0.0785 0.0475 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="MX-64R">
         <CollisionGeometry primitive-id="MX-64R" />
@@ -141,6 +144,7 @@
       </RigidBody>
 
       <!-- RH leg -->
+<!--      <FixedJoint id="RH_HIP_AA" qd="0" location="-0.043 -0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="RH_HIP" axis="1 0 0" />-->
       <RevoluteJoint id="RH_HIP_AA" qd="0" location="-0.043 -0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="RH_HIP" axis="1 0 0" />
       <RigidBody id="RH_HIP" position="-0.0785 -0.0475 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="MX-64R">
       <CollisionGeometry primitive-id="MX-64R" />

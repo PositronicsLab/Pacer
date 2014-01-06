@@ -7,7 +7,7 @@
 //    #define NDEBUG
 //    #define USE_DUMMY_CONTACTS
 //    #define FRICTION_EST
-    #define CONTROL_IDYN
+//    #define CONTROL_IDYN
 
     #define CONTROL_ZMP
     #define RENDER_CONTACT
@@ -47,7 +47,8 @@ static Mat workM_;
 
  unsigned NUM_EEFS,
           N_FIXED_JOINTS,
-          N_JOINTS,
+          NUM_JOINTS,
+          NUM_LINKS,
           NEULER = 7,// for generalized coords
           NSPATIAL = 6,
           NDOFS, // for generalized velocity, forces. accel
@@ -85,7 +86,7 @@ void control_PID(const map<string, double>& q_des,
                  double time,Mat& ufb)
 {
   // clear and set motor torques
-  for (unsigned m=0,i=0; m< N_JOINTS; m++)
+  for (unsigned m=0,i=0; m< NUM_JOINTS; m++)
   {
     // get the joint
     JointPtr j = joints_[m];
@@ -130,6 +131,8 @@ void post_event_callback_fn(const vector<Event>& e,
   // PROCESS CONTACTS
   contacts.clear();
   int nc = e.size();
+  Vec mobycf(4 + 4*NK);
+  mobycf.set_zero(4 + 4*NK);
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
@@ -157,13 +160,28 @@ void post_event_callback_fn(const vector<Event>& e,
 
       if(contact_used)
         continue;
-
       c.point = e[i].contact_point;
       c.name = sb1->id;
+
+//      std::cout << "Moby cf: " << i << std::endl << e[i].contact_impulse.get_linear() << std::endl;
+
+//      mobycf[contacts.size()] = e[i].contact_impulse[2];
+//      if(e[i].contact_impulse[0] > 0)
+//        mobycf[4 + contacts.size()*NK] = e[i].contact_impulse[0];
+//      else
+//        mobycf[4 + contacts.size()*NK + NK/2] = e[i].contact_impulse[0];
+
+//      if(e[i].contact_impulse[1] > 0)
+//        mobycf[4 + contacts.size()*NK + 1] = e[i].contact_impulse[1];
+//      else
+//        mobycf[4 + contacts.size()*NK + 1 + NK/2 ] = e[i].contact_impulse[1];
 
       contacts.push_back(c);
     }
   }
+
+//  OUTLOG(mobycf,"MOBY_contact_force");
+  //  Note compare contact force prediction to Moby contact force
 }
 #endif
 
@@ -171,7 +189,7 @@ void post_event_callback_fn(const vector<Event>& e,
 void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty){}
 
 void apply_simulation_forces(const Mat& u){
-    for(unsigned m=0,i=0;m< N_JOINTS;m++){
+    for(unsigned m=0,i=0;m< NUM_JOINTS;m++){
         if(joints_[m]->q.size() == 0) continue;
         // reset motor torque
         Vec row;
@@ -226,71 +244,66 @@ Vector3d& calc_com(Vector3d& weighted_com,Vector3d& com_acc){
   return weighted_com;
 }
 
-void get_trajectory(double time,double dt,
+void get_trajectory(double t,double dt,
                     map<string, double>& q_des,
-                    map<string, double>& qd_des){
-  double joint_vel = 0, joint_pos = 0;
+                    map<string, double>& qd_des,
+                    map<string, double>& qdd_des){
+  double hip_val = sin(t),
+         knee_val = sin(t);
 
-  double t = time;
+  q_des["LF_HIP_AA"] = 0;
+  q_des["LF_HIP_FE"] = hip_val;
+  q_des["LF_LEG_FE"] = knee_val;
 
-  if(0){
+  q_des["RF_HIP_AA"] = 0;
+  q_des["RF_HIP_FE"] = hip_val;
+  q_des["RF_LEG_FE"] = knee_val;
 
-  } else {
-    joint_pos = M_PI_8*sin(-t*3);
-    q_des["LF_HIP_FE"] =  q0["LF_HIP_FE"] + joint_pos;
-    joint_pos = M_PI_8*sin(-t*3-M_PI_2);
-    q_des["LF_LEG_FE"] =  q0["LF_LEG_FE"] + joint_pos;
+  q_des["LH_HIP_AA"] = 0;
+  q_des["LH_HIP_FE"] = hip_val;
+  q_des["LH_LEG_FE"] = knee_val;
 
-    joint_vel = -3*M_PI_8*cos(-t*3);
-    qd_des["LF_HIP_FE"] =  joint_vel;
-    joint_vel = -3*M_PI_8*cos(-t*3-M_PI_2);
-    qd_des["LF_LEG_FE"] =  joint_vel;
+  q_des["RH_HIP_AA"] = 0;
+  q_des["RH_HIP_FE"] = hip_val;
+  q_des["RH_LEG_FE"] = knee_val;
 
+  hip_val = cos(t);
+  knee_val = cos(t);
 
-    joint_pos = M_PI_8*sin(-t*3);
-    q_des["RF_HIP_FE"] =  q0["RF_HIP_FE"] + joint_pos;
-    joint_pos = M_PI_8*sin(-t*3-M_PI_2);
-    q_des["RF_LEG_FE"] =  q0["RF_LEG_FE"] + joint_pos;
+  qd_des["LF_HIP_AA"] = 0;
+  qd_des["LF_HIP_FE"] = hip_val;
+  qd_des["LF_LEG_FE"] = knee_val;
 
-    joint_vel = -3*M_PI_8*cos(-t*3);
-    qd_des["RF_HIP_FE"] =  joint_vel;
-    joint_vel = -3*M_PI_8*cos(-t*3-M_PI_2);
-    qd_des["RF_LEG_FE"] =  joint_vel;
+  qd_des["RF_HIP_AA"] = 0;
+  qd_des["RF_HIP_FE"] = hip_val;
+  qd_des["RF_LEG_FE"] = knee_val;
 
-    ///////////////
+  qd_des["LH_HIP_AA"] = 0;
+  qd_des["LH_HIP_FE"] = hip_val;
+  qd_des["LH_LEG_FE"] = knee_val;
 
-    joint_pos = M_PI_8*sin(t*3);
-    q_des["LH_HIP_FE"] =  q0["LH_HIP_FE"] + joint_pos;
-    joint_pos = M_PI_8*sin(t*3-M_PI_2);
-    q_des["LH_LEG_FE"] =  q0["LH_LEG_FE"] + joint_pos;
+  qd_des["RH_HIP_AA"] = 0;
+  qd_des["RH_HIP_FE"] = hip_val;
+  qd_des["RH_LEG_FE"] = knee_val;
 
-    joint_vel = 3*M_PI_8*cos(t*3);
-    qd_des["LH_HIP_FE"] =  joint_vel;
-    joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
-    qd_des["LH_LEG_FE"] =  joint_vel;
+  hip_val = -sin(t);
+  knee_val = -sin(t);
 
+  qdd_des["LF_HIP_AA"] = 0;
+  qdd_des["LF_HIP_FE"] = hip_val;
+  qdd_des["LF_LEG_FE"] = knee_val;
 
-    joint_pos = M_PI_8*sin(t*3);
-    q_des["RH_HIP_FE"] =  q0["RH_HIP_FE"] + joint_pos;
-    joint_pos = M_PI_8*sin(t*3-M_PI_2);
-    q_des["RH_LEG_FE"] =  q0["RH_LEG_FE"] + joint_pos;
+  qdd_des["RF_HIP_AA"] = 0;
+  qdd_des["RF_HIP_FE"] = hip_val;
+  qdd_des["RF_LEG_FE"] = knee_val;
 
-    joint_vel = 3*M_PI_8*cos(t*3);
-    qd_des["RH_HIP_FE"] =  joint_vel;
-    joint_vel = 3*M_PI_8*cos(t*3-M_PI_2);
-    qd_des["RH_LEG_FE"] =  joint_vel;
+  qdd_des["LH_HIP_AA"] = 0;
+  qdd_des["LH_HIP_FE"] = hip_val;
+  qdd_des["LH_LEG_FE"] = knee_val;
 
-    q_des["BODY_JOINT"] = 0;
-    q_des["LF_HIP_AA"] =  M_PI_8;
-    q_des["RF_HIP_AA"] = -M_PI_8;
-    q_des["LH_HIP_AA"] =  M_PI_8;
-    q_des["RH_HIP_AA"] = -M_PI_8;
-    qd_des["BODY_JOINT"] = 0;
-    qd_des["LF_HIP_AA"] = 0;
-    qd_des["RF_HIP_AA"] = 0;
-    qd_des["LH_HIP_AA"] = 0;
-    qd_des["RH_HIP_AA"] = 0;
-  }
+  qdd_des["RH_HIP_AA"] = 0;
+  qdd_des["RH_HIP_FE"] = hip_val;
+  qdd_des["RH_LEG_FE"] = knee_val;
 }
 
 /// The main control loop
@@ -299,25 +312,28 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 {
     static int ITER = 0;
     static double last_time = 0;
-    static Mat uff(N_JOINTS,1),
-        ufb(N_JOINTS,1),
-        u(N_JOINTS,1),
-        q(N_JOINTS,1),
-        qd(N_JOINTS,1);
+    static Mat uff(NUM_JOINTS,1),
+        ufb(NUM_JOINTS,1),
+        u(NUM_JOINTS,1),
+        q(NUM_JOINTS,1),
+        qd(NUM_JOINTS,1);
+    static Vec qdd = Vec::zero(NUM_JOINTS);
+
     double dt = t - last_time;
     if (dt == 0) return;
 
     /// setup a steady state
-    static map<string, double> q_des, qd_des;
+    static map<string, double> q_des, qd_des, qdd_des;
     if (q_des.empty())
-      for (unsigned m=0; m< N_JOINTS; m++)
+      for (unsigned m=0; m< NUM_JOINTS; m++)
       {
          q_des[joints_[m]->id] = q0[joints_[m]->id];
          qd_des[joints_[m]->id] = 0.0;
+         qdd_des[joints_[m]->id] = 0.0;
       }
 
 #ifdef FOOT_TRAJ
-    double step_duration = 0.5;
+    double step_duration = 0.05;
     static int NSTEPS = step_duration/dt;
 
     static std::vector<std::vector<Ravelin::Vector3d> > joint_trajectory(NSTEPS);
@@ -375,61 +391,26 @@ void controller(DynamicBodyPtr dbp, double t, void*)
         trajectoryIK(feet_trajectory,joint_trajectory);
     }
 
-    q_des["LF_HIP_AA"] = joint_trajectory[ITER%NSTEPS][0][0];
-    q_des["LF_HIP_FE"] = joint_trajectory[ITER%NSTEPS][0][1];
-    q_des["LF_LEG_FE"] = joint_trajectory[ITER%NSTEPS][0][2];
-
-    q_des["RF_HIP_AA"] = joint_trajectory[ITER%NSTEPS][1][0];
-    q_des["RF_HIP_FE"] = joint_trajectory[ITER%NSTEPS][1][1];
-    q_des["RF_LEG_FE"] = joint_trajectory[ITER%NSTEPS][1][2];
-
-    q_des["LH_HIP_AA"] = joint_trajectory[ITER%NSTEPS][2][0];
-    q_des["LH_HIP_FE"] = joint_trajectory[ITER%NSTEPS][2][1];
-    q_des["LH_LEG_FE"] = joint_trajectory[ITER%NSTEPS][2][2];
-
-    q_des["RH_HIP_AA"] = joint_trajectory[ITER%NSTEPS][3][0];
-    q_des["RH_HIP_FE"] = joint_trajectory[ITER%NSTEPS][3][1];
-    q_des["RH_LEG_FE"] = joint_trajectory[ITER%NSTEPS][3][2];
+    get_q_qd_qdd(joint_trajectory,ITER%NSTEPS,q_des,qd_des,qdd_des);
 
 #endif
-
-#ifndef NDEBUG
-    for(int f=0;f<links_.size();f++){
-      Ravelin::Pose3d link_pose = *links_[f]->get_inertial_pose();
-
-      // Transform to base (ABDOMEN) coords
-      link_pose.update_relative_pose(Moby::GLOBAL);
-      std::cout << links_[f]->id << " coords (wrt global): "
-                << link_pose.x << std::endl;
-    }
-    for(int f=0;f<N_JOINTS;f++){
-        Ravelin::Pose3d link_pose = *joints_[f]->get_pose();
-
-        // Transform to base (ABDOMEN) coords
-        link_pose.update_relative_pose(Moby::GLOBAL);
-        std::cout << joints_[f]->id << " coords (wrt global): "
-                  << link_pose.x << std::endl;
-    }
-
-    for(int f=0;f<NUM_EEFS;f++){
-        Ravelin::Pose3d link_pose = *eefs_[f]->get_pose();
-
-        // Transform to base (ABDOMEN) coords
-        link_pose.update_relative_pose(Moby::GLOBAL);
-        std::cout << eefs_[f]->id << " coords (wrt global): "
-                  << link_pose.x << std::endl;
-    }
+    /// Get next Traj step
+#ifdef FOLLOW_TRAJECTORY
+    get_trajectory(t,dt,q_des,qd_des,qdd_des);
+    for(int i=0;i<NUM_JOINTS; i++)
+      q_des[joints_[i]->id] += q0[joints_[i]->id];
 #endif
+
 #ifdef USE_DUMMY_CONTACTS
     contacts.clear();
     int nc = eefs_.size();
 
     for(unsigned i=0;i<nc;i++){
-      Ravelin::Pose3d pose = *eefs_[i]->get_gc_pose();
+      Ravelin::Pose3d pose = *eefs_[i]->get_pose();
       pose.update_relative_pose(Moby::GLOBAL);
       ContactData c;
       c.normal = Ravelin::Vector3d(0,0,1);
-      c.point = pose->x;
+      c.point = pose.x;
       c.name = eefs_[i]->id;
       contacts.push_back(c);
     }
@@ -451,17 +432,14 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      ufb.set_zero();
      u.set_zero();
 
-      /// Get next Traj step
-#ifdef FOLLOW_TRAJECTORY
-      get_trajectory(t,dt,q_des,qd_des);
-#endif
-
       ///  Record Robot State
-      for(unsigned m=0;m< N_JOINTS;m++){
+      for(unsigned m=0;m< NUM_JOINTS;m++){
           if(joints_[m]->q.size() == 0) continue;
           q.set_row(m,joints_[m]->q);
           qd.set_row(m,joints_[m]->qd);
       }
+
+      // Use CPG to determine next state
 
       /// Run friction estimation
       static Mat N,D,M(NDOFS,NDOFS),ST;
@@ -479,11 +457,11 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       dbrobot->get_generalized_coordinates(DynamicBody::eSpatial,gc);
 
 #if defined CONTROL_IDYN || defined FRICTION_EST
-      // NOTE: Very Heavy Computation
+      // NOTE: Heavy Computation
       determine_contact_jacobians(contacts,N,D,ST);
 #endif
       static Mat MU;
-      MU.set_zero(nc,1);
+      MU.set_zero(nc,NK/2);
 #ifdef FRICTION_EST
       static Vec cf;
       double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
@@ -491,7 +469,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       OUTLOG(cf,"contact_forces");
 #else
       for(int i=0;i<nc;i++)
-         MU(i,0) = 0.5;
+        for(int k=0;k<NK/2;k++)
+          MU(i,k) = 0.1;
 #endif
 
 #ifdef CONTROL_ZMP
@@ -511,10 +490,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       visualize_ray(ZmP,CoM_2D,sim);
 #endif
 #ifdef CONTROL_IDYN
-      static Vec qdd = Vec::zero(N_JOINTS);
-      static Vec ff(N_JOINTS);
-      if(nc > 0)
-        inverse_dynamics(vel,qdd,M,N,D,fext,0.1,MU,ff);
+      for(int i=0;i<NUM_JOINTS; i++)
+        qdd[i] = 0;// qdd_des[joints_[i]->id];
+      static Vec ff(NUM_JOINTS);
+      ff.set_zero();
+
+      inverse_dynamics(vel,qdd,M,N,D,fext,0.1,MU,ff);
+      uff.set_zero();
       uff.set_column(0,ff);
 #endif
       contacts.clear();
@@ -525,11 +507,11 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       // combine ufb and uff
       u = ufb;
       u += uff;
-      OUTLOG(ufb,"ufb");
-      OUTLOG(uff,"uff");
+//      OUTLOG(ufb,"ufb");
+//      OUTLOG(uff,"uff");
 
       /// Limit Torques
-//      for(unsigned m=0;m< N_JOINTS;m++){
+//      for(unsigned m=0;m< NUM_JOINTS;m++){
 //        if(u(m,0) > u_max[joints_[m]->id])
 //          u(m,0) = u_max[joints_[m]->id];
 //        else if(u(m,0) < -u_max[joints_[m]->id])
@@ -554,7 +536,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #ifndef NDEBUG
      std::cout << "JOINT\t: U\t| Q\t: des\t: err\t| "
                   "Qd\t: des\t: err\t| @ time = " << t << std::endl;
-     for(unsigned m=0;m< N_JOINTS;m++)
+     for(unsigned m=0;m< NUM_JOINTS;m++)
        std::cout << joints_[m]->id
                  << "\t " <<  std::setprecision(4) << u(m,0)
                  << "\t| " << joints_[m]->q[0]
@@ -571,7 +553,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      last_time = t;
 
 # ifdef CONTROL_KINEMATICS
-        for(unsigned m=0;m< N_JOINTS;m++){
+        for(unsigned m=0;m< NUM_JOINTS;m++){
             if(joints_[m]->q.size() == 0) continue;
             joints_[m]->q[0] = q_des[joints_[m]->id];
         }
@@ -579,8 +561,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
        Vec q_start(q0.size()+7), qd_start(q0.size()+6);
        qd_start.set_zero();
        q_start.set_zero();
-       q_start.set_sub_vec(N_JOINTS,BASE_ORIGIN);
-       for(int i=0;i<N_JOINTS;i++){
+       q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
+       for(int i=0;i<NUM_JOINTS;i++){
          q_start[i] = q_des[joints_[i]->id];
          qd_start[i] = 0;
        }
@@ -636,6 +618,7 @@ void init(void* separator,
   // Set up joint references
   std::vector<JointPtr> joints = abrobot->get_joints();
   joints_.resize(joints.size());
+
   N_FIXED_JOINTS = 0;
   for(unsigned i=0;i<joints.size();i++){
     if(joints[i]->q.rows() == 0){
@@ -649,7 +632,7 @@ void init(void* separator,
 
   // Set up link references
   links_ = abrobot->get_links();
-  for(unsigned i=0;i<links_.size();i++)
+  for(unsigned i=0;i<NUM_LINKS;i++)
     std::cout << i << " " << links_[i]->id << std::endl;
 
   // Set up end effectors
@@ -664,12 +647,13 @@ void init(void* separator,
              eefs_[j] = links_[i];
 
   NUM_EEFS = eefs_.size();
-  N_JOINTS = joints.size() - N_FIXED_JOINTS;
-  NDOFS = NSPATIAL + N_JOINTS; // for generalized velocity, forces. accel
+  NUM_JOINTS = joints_.size() - N_FIXED_JOINTS;
+  NUM_LINKS = links_.size();
+  NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
 
   std::cout << "NUM_EEFS: " << NUM_EEFS << std::endl;
   std::cout << "N_FIXED_JOINTS: " << N_FIXED_JOINTS << std::endl;
-  std::cout << "N_JOINTS: " << N_JOINTS << std::endl;
+  std::cout << "NUM_JOINTS: " << NUM_JOINTS << std::endl;
   std::cout << "NDOFS: " << NDOFS << std::endl;
   std::cout << "NSPATIAL: " << NSPATIAL << std::endl;
   std::cout << "NEULER: " << NEULER << std::endl;
@@ -679,6 +663,7 @@ void init(void* separator,
   // robot's initial (ZERO) configuration
   BASE_ORIGIN.set_zero();
   BASE_ORIGIN[2] = 0.1009;
+//  BASE_ORIGIN[2] = 0.2009;
   BASE_ORIGIN[6] = 1;
 
   q0["BODY_JOINT"] = 0;
@@ -717,7 +702,7 @@ void init(void* separator,
   u_max["RH_LEG_FE"] =  2.60;
 
   // Setup gains
-  for(unsigned i=0;i<N_JOINTS;i++){
+  for(unsigned i=0;i<NUM_JOINTS;i++){
     // pass gain values to respective joint
     gains[joints_[i]->id].kp = 0.1;
     gains[joints_[i]->id].kv = 0.02;
@@ -725,16 +710,27 @@ void init(void* separator,
   }
 
   // Set Initial State
-  Vec q_start(N_JOINTS+NEULER),qd_start(NDOFS);
+  Vec q_start(NUM_JOINTS+NEULER),qd_start(NDOFS);
 
   abrobot->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
-  q_start.set_sub_vec(N_JOINTS,BASE_ORIGIN);
+  q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
 
-  for(int i=0;i<N_JOINTS;i++){
+#ifdef FOLLOW_TRAJECTORY
+  static map<string, double> q_des, qd_des, qdd_des;
+  get_trajectory(0,0.001,q_des,qd_des,qdd_des);
+  for(int i=0;i<NUM_JOINTS; i++)
+    q_des[joints_[i]->id] += q0[joints_[i]->id];
+  for(int i=0;i<NUM_JOINTS;i++){
+    q_start[i] = q_des[joints_[i]->id];
+    qd_start[i] = qd_des[joints_[i]->id];
+  }
+#else
+  for(int i=0;i<NUM_JOINTS;i++){
     q_start[i] = q0[joints_[i]->id];
     qd_start[i] = 0;
   }
+#endif
 
   // Push initial state to robot
   abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);

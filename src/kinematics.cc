@@ -6,7 +6,7 @@ typedef Ravelin::VectorNd Vec;
 using namespace Ravelin;
 using namespace Moby;
 
-
+/*
 void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat& D, Mat& ST)
 {
   int nc = contacts.size();
@@ -32,8 +32,8 @@ void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat
     ContactData& c = contacts[i];
 
     // generate the contact tangents here...
-    Vector3d tan1, tan2;
-    Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
+    Vector3d tan1(1,0,0), tan2(0,1,0);
+//    Vector3d::determine_orthonormal_basis(c.normal, tan1, tan2);
     Vector3d torque;
     torque.set_zero();
 
@@ -72,7 +72,7 @@ void determine_contact_jacobians(std::vector<ContactData>& contacts, Mat& N, Mat
     }
   }
 }
-
+*/
 void get_q_qd_qdd(const std::vector<std::vector<Ravelin::Vector3d> >& joint_trajectory, unsigned TIME, map<string, double>& q_des,map<string, double>& qd_des,map<string, double>& qdd_des){
   static map<string, double> q;
   q_des["BASE_JOINT"] = 0;
@@ -96,6 +96,29 @@ void get_q_qd_qdd(const std::vector<std::vector<Ravelin::Vector3d> >& joint_traj
   q_des["RH_LEG_FE"] = joint_trajectory[TIME][3][2];
 }
 
+void get_q_qd_qdd(const std::vector<Ravelin::Vector3d>& joint_position, map<string, double>& q_des,map<string, double>& qd_des,map<string, double>& qdd_des){
+  q_des["BASE_JOINT"] = 0;
+  qd_des["BASE_JOINT"] = 0;
+  qdd_des["BASE_JOINT"] = 0;
+
+  q_des["LF_HIP_AA"] = joint_position[0][0];
+  q_des["LF_HIP_FE"] = joint_position[0][1];
+  q_des["LF_LEG_FE"] = joint_position[0][2];
+
+  q_des["RF_HIP_AA"] = joint_position[1][0];
+  q_des["RF_HIP_FE"] = joint_position[1][1];
+  q_des["RF_LEG_FE"] = joint_position[1][2];
+
+  q_des["LH_HIP_AA"] = joint_position[2][0];
+  q_des["LH_HIP_FE"] = joint_position[2][1];
+  q_des["LH_LEG_FE"] = joint_position[2][2];
+
+  q_des["RH_HIP_AA"] = joint_position[3][0];
+  q_des["RH_HIP_FE"] = joint_position[3][1];
+  q_des["RH_LEG_FE"] = joint_position[3][2];
+}
+
+/*
 void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
 {
   int nc = contacts.size();
@@ -196,7 +219,7 @@ void determine_N_ST(std::vector<ContactData>& contacts, Mat& N, Mat& ST)
     ST.set_column(i+nc,col);
   }
 }
-
+*/
 void lf(const double X[3],double th[3]);
 void rf(const double X[3],double th[3]);
 void lh(const double X[3],double th[3]);
@@ -204,7 +227,7 @@ void rh(const double X[3],double th[3]);
 
 // inverse kinematics solver conversion
 
-std::vector<Ravelin::Vector3d>& trajectoryIK(
+std::vector<std::vector<Ravelin::Vector3d> >& trajectoryIK(
         const std::vector<std::vector<Ravelin::Vector3d> >& feet_positions,
         std::vector<std::vector<Ravelin::Vector3d> >& joint_positions){
 
@@ -218,6 +241,19 @@ std::vector<Ravelin::Vector3d>& trajectoryIK(
         rh(feet_positions[3][i].data(),joint_positions[i][3].data());
     }
 
+}
+
+std::vector<Ravelin::Vector3d>& feetIK(
+        const std::vector<Ravelin::Vector3d>& feet_positions,
+        std::vector<Ravelin::Vector3d>& joint_positions){
+  int num_feet = feet_positions.size();
+      joint_positions.resize(num_feet);
+      lf(feet_positions[0].data(),joint_positions[0].data());
+      rf(feet_positions[1].data(),joint_positions[1].data());
+      lh(feet_positions[2].data(),joint_positions[2].data());
+      rh(feet_positions[3].data(),joint_positions[3].data());
+
+      return joint_positions;
 }
 
 

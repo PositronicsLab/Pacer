@@ -11,16 +11,19 @@
   <Box id="ground-primitive" xlen="1" ylen="1" zlen="0.02" />
 
   <!-- multiple servo rigid bodies -->
-  <Box id="abdomen" xlen="0.0860" ylen="0.101" zlen="0.0356" mass="0.201"/>
-  <Box id="thorax" xlen="0.0355" ylen="0.101" zlen="0.0356" mass="0.134"/>
+<!--  <Box id="abdomen" xlen="0.0860" ylen="0.101" zlen="0.0356" mass="0.201"/>-->
+  <Box id="abdomen" xlen="0.0860" ylen="0.101" zlen="0.0356" mass="0.301"/>
+<!--  <Box id="thorax" xlen="0.0355" ylen="0.101" zlen="0.0356" mass="0.134"/>-->
+  <Box id="thorax" xlen="0.0355" ylen="0.101" zlen="0.0356" mass="0.234"/>
 
   <!-- Leg Primitives -->
-<!--  <Box id="RX-24F" xlen="0.0505" ylen="0.0355" zlen="0.0356" mass="0.001"/>-->
-<!--  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.001"/>-->
-<!--  <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.001"/>-->
+<!--  <Box id="RX-24F" xlen="0.0505" ylen="0.0355" zlen="0.0356" mass="0.005"/>-->
+<!--  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.005"/>-->
+<!--  <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.005"/>-->
   <Box id="RX-24F" xlen="0.0505" ylen="0.0355" zlen="0.0356" mass="0.063"/>
-  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.126"/>
-  <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.063"/>
+<!--  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.126"/>-->
+  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.063"/>
+  <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.03"/>
   <Sphere id="foot" radius="0.005" mass="0.001"/>
 
     <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
@@ -42,7 +45,7 @@
       <DisabledPair object1-id="links" object2-id="links"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="simpleccd">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="simpleccd" max-event-time="0">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DynamicBody dynamic-body-id="links" />
@@ -145,7 +148,7 @@
 
       <!-- RH leg -->
 <!--      <FixedJoint id="RH_HIP_AA" qd="0" location="-0.043 -0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="RH_HIP" axis="1 0 0" />-->
-      <RevoluteJoint id="RH_HIP_AA" qd="0" location="-0.043 -0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="RH_HIP" axis="1 0 0" />
+      <RevoluteJoint id="RH_HIP_AA" qd="0" location="-0.043 -0.0475 0.101" inboard-link-id="ABDOMEN" outboard-link-id="RH_HIP" axis="1 0 0"/>
       <RigidBody id="RH_HIP" position="-0.0785 -0.0475 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="MX-64R">
       <CollisionGeometry primitive-id="MX-64R" />
         <InertiaFromPrimitive primitive-id="MX-64R" />

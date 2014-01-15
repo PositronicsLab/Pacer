@@ -14,7 +14,9 @@
 //    #define USE_ROBOT
 //    #define CONTROL_KINEMATICS
 //    #define FOLLOW_TRAJECTORY
-    #define FOOT_TRAJ
+//    #define FOOT_TRAJ
+//    #define TRUNK_STABILIZATION
+
     std::string LOG_TYPE("INFO");
 /// END USER DEFINITIONS
 
@@ -26,22 +28,28 @@
 #define grav 9.8 // M/s.s
 #define M_PI_16 0.19634954084
 #define M_PI_8 0.39269908169
-const double TORQUE_LIMIT = 3; //N.m
 Vec BASE_ORIGIN(7);
 
 using namespace Moby;
 using namespace Ravelin;
 
+// EEF names determines (permanently) the order of EEF data structure
 std::vector<std::string> eef_names_;
-std::vector<ContactData> contacts;
+
+// Contains eef and contact data
+std::vector<EndEffector> eefs_;
+
 static map<string, double> q0,u_max;
+static Ravelin::LinAlgd LA_;
 
 // simulator
 boost::shared_ptr<Moby::EventDrivenSimulator> sim;
- Moby::RCArticulatedBodyPtr abrobot;
- Moby::DynamicBodyPtr dbrobot;
- std::vector<Moby::JointPtr> joints_;
- std::vector<Moby::RigidBodyPtr> links_,eefs_;
+Moby::RCArticulatedBodyPtr abrobot;
+Moby::DynamicBodyPtr dbrobot;
+
+std::vector<Moby::JointPtr> joints_;
+std::vector<Moby::RigidBodyPtr> links_;
+
 static Vec workv_;
 static Mat workM_;
 
@@ -52,7 +60,8 @@ static Mat workM_;
           NEULER = 7,// for generalized coords
           NSPATIAL = 6,
           NDOFS, // for generalized velocity, forces. accel
-          NK = 4;
+          NK = 4,
+          NC = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// PID ///////////////////////////////////////
@@ -128,60 +137,47 @@ void calculate_dyn_properties(Mat& M, Vec& fext){
 void post_event_callback_fn(const vector<Event>& e,
                             boost::shared_ptr<void> empty)
 {
+
+  // Deactivate all contacts
+  NC = 0;
+  for(int i=0;i<eefs_.size();i++)
+    eefs_[i].active = false;
+
   // PROCESS CONTACTS
-  contacts.clear();
   int nc = e.size();
-  Vec mobycf(4 + 4*NK);
-  mobycf.set_zero(4 + 4*NK);
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
 #ifdef RENDER_CONTACT
         visualize_contact(e[i],sim);
 #endif
-      ContactData c;
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
-      if (sb1->id.compare("ground") == 0){
-          c.normal = -e[i].contact_normal;
-          std::swap(sb1,sb2);
-      } else
-          c.normal = e[i].contact_normal;
+      std::vector<std::string>::iterator iter =
+          std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
 
-      if (std::find(eef_names_.begin(), eef_names_.end(), sb1->id)
-          == eef_names_.end())
+      //if end effector doesnt exist
+      if(iter  == eef_names_.end())
         continue;
 
-      bool contact_used = false;
-      for(int j=0;j<contacts.size();j++)
-        if(contacts[j].name.compare(sb1->id) == 0)
-          contact_used = true;
+      size_t index = std::distance(eef_names_.begin(), iter);
 
-      if(contact_used)
+      if (eefs_[index].active)
         continue;
-      c.point = e[i].contact_point;
-      c.name = sb1->id;
 
-//      std::cout << "Moby cf: " << i << std::endl << e[i].contact_impulse.get_linear() << std::endl;
+      // Increment number of active contacts
+      NC++;
 
-//      mobycf[contacts.size()] = e[i].contact_impulse[2];
-//      if(e[i].contact_impulse[0] > 0)
-//        mobycf[4 + contacts.size()*NK] = e[i].contact_impulse[0];
-//      else
-//        mobycf[4 + contacts.size()*NK + NK/2] = e[i].contact_impulse[0];
-
-//      if(e[i].contact_impulse[1] > 0)
-//        mobycf[4 + contacts.size()*NK + 1] = e[i].contact_impulse[1];
-//      else
-//        mobycf[4 + contacts.size()*NK + 1 + NK/2 ] = e[i].contact_impulse[1];
-
-      contacts.push_back(c);
+      // Push Active contact info to EEF
+      eefs_[index].active = true;
+      eefs_[index].point = e[i].contact_point;
+      eefs_[index].normal = e[i].contact_normal;
+      eefs_[index].contacted_body = sb2;
     }
   }
 
-//  OUTLOG(mobycf,"MOBY_contact_force");
-  //  Note compare contact force prediction to Moby contact force
+  //  SRZ compare contact force prediction to Moby contact force
 }
 #endif
 
@@ -202,9 +198,8 @@ void apply_simulation_forces(const Mat& u){
 double calc_energy(Vec& v, Mat& M){
   // Potential Energy
   double PE = 0;
-  const std::vector<RigidBodyPtr>& links = abrobot->get_links();
-  for(int i=0;i<links.size();i++){
-     RigidBody& link = *links[i];
+  for(int i=0;i<links_.size();i++){
+     RigidBody& link = *links_[i];
      double m = link.get_mass();
      Ravelin::Pose3d link_com = *link.get_inertial_pose();
      link_com.update_relative_pose(Moby::GLOBAL);
@@ -244,66 +239,8 @@ Vector3d& calc_com(Vector3d& weighted_com,Vector3d& com_acc){
   return weighted_com;
 }
 
-void get_trajectory(double t,double dt,
-                    map<string, double>& q_des,
-                    map<string, double>& qd_des,
-                    map<string, double>& qdd_des){
-  double hip_val = sin(t),
-         knee_val = sin(t);
-
-  q_des["LF_HIP_AA"] = 0;
-  q_des["LF_HIP_FE"] = hip_val;
-  q_des["LF_LEG_FE"] = knee_val;
-
-  q_des["RF_HIP_AA"] = 0;
-  q_des["RF_HIP_FE"] = hip_val;
-  q_des["RF_LEG_FE"] = knee_val;
-
-  q_des["LH_HIP_AA"] = 0;
-  q_des["LH_HIP_FE"] = hip_val;
-  q_des["LH_LEG_FE"] = knee_val;
-
-  q_des["RH_HIP_AA"] = 0;
-  q_des["RH_HIP_FE"] = hip_val;
-  q_des["RH_LEG_FE"] = knee_val;
-
-  hip_val = cos(t);
-  knee_val = cos(t);
-
-  qd_des["LF_HIP_AA"] = 0;
-  qd_des["LF_HIP_FE"] = hip_val;
-  qd_des["LF_LEG_FE"] = knee_val;
-
-  qd_des["RF_HIP_AA"] = 0;
-  qd_des["RF_HIP_FE"] = hip_val;
-  qd_des["RF_LEG_FE"] = knee_val;
-
-  qd_des["LH_HIP_AA"] = 0;
-  qd_des["LH_HIP_FE"] = hip_val;
-  qd_des["LH_LEG_FE"] = knee_val;
-
-  qd_des["RH_HIP_AA"] = 0;
-  qd_des["RH_HIP_FE"] = hip_val;
-  qd_des["RH_LEG_FE"] = knee_val;
-
-  hip_val = -sin(t);
-  knee_val = -sin(t);
-
-  qdd_des["LF_HIP_AA"] = 0;
-  qdd_des["LF_HIP_FE"] = hip_val;
-  qdd_des["LF_LEG_FE"] = knee_val;
-
-  qdd_des["RF_HIP_AA"] = 0;
-  qdd_des["RF_HIP_FE"] = hip_val;
-  qdd_des["RF_LEG_FE"] = knee_val;
-
-  qdd_des["LH_HIP_AA"] = 0;
-  qdd_des["LH_HIP_FE"] = hip_val;
-  qdd_des["LH_LEG_FE"] = knee_val;
-
-  qdd_des["RH_HIP_AA"] = 0;
-  qdd_des["RH_HIP_FE"] = hip_val;
-  qdd_des["RH_LEG_FE"] = knee_val;
+void get_trajectory(double t,double dt, map<string, double>& q_des,
+                    map<string, double>& qd_des, map<string, double>& qdd_des){
 }
 
 /// The main control loop
@@ -319,8 +256,19 @@ void controller(DynamicBodyPtr dbp, double t, void*)
         qd(NUM_JOINTS,1);
     static Vec qdd = Vec::zero(NUM_JOINTS);
 
+    uff.set_zero();
+    ufb.set_zero();
+    u.set_zero();
+
     double dt = t - last_time;
     if (dt == 0) return;
+
+    ///  Record Robot State
+    for(unsigned m=0;m< NUM_JOINTS;m++){
+        if(joints_[m]->q.size() == 0) continue;
+        q.set_row(m,joints_[m]->q);
+        qd.set_row(m,joints_[m]->qd);
+    }
 
     /// setup a steady state
     static map<string, double> q_des, qd_des, qdd_des;
@@ -332,68 +280,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
          qdd_des[joints_[m]->id] = 0.0;
       }
 
-#ifdef FOOT_TRAJ
-    double step_duration = 0.05;
-    static int NSTEPS = step_duration/dt;
-
-    static std::vector<std::vector<Ravelin::Vector3d> > joint_trajectory(NSTEPS);
-    static int num_feet = eefs_.size();
-    static std::vector<std::vector<Ravelin::Vector3d> > feet_trajectory(num_feet);
-    if(feet_trajectory[0].size() == 0)
-      for(int i=0;i<num_feet;i++)
-        feet_trajectory[i].resize(NSTEPS);
-
-    if(ITER%NSTEPS == 0){
-        std::vector<Vector3d> foot_control_points(num_feet);
-        for(int f=0;f<num_feet;f++){
-          Ravelin::Pose3d link_pose = *eefs_[f]->get_pose();
-          // Transform to global (MOBY::GLOBAL) coords
-          link_pose.update_relative_pose(Moby::GLOBAL);
-          std::cout << eefs_[f]->id << " coords (wrt global): "
-                    << link_pose.x << std::endl;
-          // Transform to base (ABDOMEN) coords
-          link_pose.update_relative_pose(links_[0]->get_pose());
-          std::cout << eefs_[f]->id << " coords (wrt base): "
-                    << link_pose.x << std::endl;
-
-          Ravelin::Vector3d x0_foot;
-          switch(f){
-          case 0:
-            x0_foot = Ravelin::Vector3d(0.125, 0.0475, -0.101);
-            break;
-          case 1:
-            x0_foot = Ravelin::Vector3d(0.125, -0.0475, -0.101);
-            break;
-          case 2:
-            x0_foot = Ravelin::Vector3d(-0.0922, 0.0475, -0.101);
-            break;
-          case 3:
-            x0_foot = Ravelin::Vector3d(-0.0922, -0.0475, -0.101);
-            break;
-          default: break;
-          }
-
-          // Bezier Curve Strategy
-//          foot_control_points[0] = x0_foot;
-//          foot_control_points[1] = Ravelin::Vector3d(-0.06,0.0,0.06) + x0_foot;
-//          foot_control_points[2] = Ravelin::Vector3d(0.06,0.0,0.06) + x0_foot;
-//          foot_control_points[3] = x0_foot;
-//          stepTrajectory(foot_control_points,NSTEPS,feet_trajectory[f]);
-          // Sinusoidal trajectory
-          for(int t = 0;t<NSTEPS;t++){
-              double step_time = 2*M_PI*(double)t/(double)NSTEPS;
-              feet_trajectory[f][t] = x0_foot + Ravelin::Vector3d(0.03*sin(step_time),0,0);
-              feet_trajectory[f][t] = x0_foot + Ravelin::Vector3d(0,0,0.02*sin(step_time));
-//              std::cout << feet_trajectory[0][f] << std::endl;
-          }
-        }
-
-        trajectoryIK(feet_trajectory,joint_trajectory);
-    }
-
-    get_q_qd_qdd(joint_trajectory,ITER%NSTEPS,q_des,qd_des,qdd_des);
-
-#endif
     /// Get next Traj step
 #ifdef FOLLOW_TRAJECTORY
     get_trajectory(t,dt,q_des,qd_des,qdd_des);
@@ -402,29 +288,26 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #endif
 
 #ifdef USE_DUMMY_CONTACTS
-    contacts.clear();
-    int nc = eefs_.size();
+    NC = eefs_.size();
 
-    for(unsigned i=0;i<nc;i++){
-      Ravelin::Pose3d pose = *eefs_[i]->get_pose();
+    for(unsigned i=0;i<NC;i++){
+      eefs_[i].active = true;
+      Ravelin::Pose3d pose = *eefs_[i].link->get_pose();
       pose.update_relative_pose(Moby::GLOBAL);
-      ContactData c;
-      c.normal = Ravelin::Vector3d(0,0,1);
-      c.point = pose.x;
-      c.name = eefs_[i]->id;
-      contacts.push_back(c);
+      eefs_[i].normal = Ravelin::Vector3d(0,0,1);
+      eefs_[i].point = pose.x;
     }
-#else
-     unsigned nc = contacts.size();
 #endif
 
 #ifdef RENDER_CONTACT
-     Mat support_poly(3,nc);
-     for(int c=0;c<nc;c++)
-       for(int i=0;i<3;i++)
-         support_poly(i,c) = contacts[c].point[i];
+     Mat support_poly(3,NC);
+     for(int c=0,cc=0;c<NUM_EEFS;c++)
+       if(eefs_[c].active){
+          support_poly.set_column(cc,eefs_[c].point);
+         cc++;
+       }
 
-     if(nc > 0)
+     if(NC > 0)
       visualize_polygon(support_poly,sim);
 #endif
 
@@ -432,22 +315,9 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      ufb.set_zero();
      u.set_zero();
 
-      ///  Record Robot State
-      for(unsigned m=0;m< NUM_JOINTS;m++){
-          if(joints_[m]->q.size() == 0) continue;
-          q.set_row(m,joints_[m]->q);
-          qd.set_row(m,joints_[m]->qd);
-      }
-
-      // Use CPG to determine next state
-
       /// Run friction estimation
-      static Mat N,D,M(NDOFS,NDOFS),ST;
+      static Mat N(NDOFS,NUM_EEFS),D(NDOFS,NUM_EEFS*NK),M(NDOFS,NDOFS),ST(NDOFS,NUM_EEFS*2);
       static Vec fext(NDOFS);
-
-      // Get robot dynamics state
-      // NOTE: Very Heavy Computation
-      calculate_dyn_properties(M,fext);
 
       static Vec vel(NDOFS), gc(NDOFS+1), acc(NDOFS);
 
@@ -456,25 +326,277 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       dbrobot->get_generalized_velocity(DynamicBody::eSpatial,vel);
       dbrobot->get_generalized_coordinates(DynamicBody::eSpatial,gc);
 
+      // Get base frame
+      Ravelin::Pose3d base_frame = *links_[0]->get_pose();
+      base_frame.update_relative_pose(Moby::GLOBAL);
+
 #if defined CONTROL_IDYN || defined FRICTION_EST
-      // NOTE: Heavy Computation
-      determine_contact_jacobians(contacts,N,D,ST);
+      // Get robot dynamics state
+      // SRZ: Very Heavy Computation
+      calculate_dyn_properties(M,fext);
+      calc_energy(vel,M);
 #endif
+
+      N.set_zero(NDOFS,NC);
+      ST.set_zero(NDOFS,NC*2);
+      // Contact Jacobian [GLOBAL frame]
+      Mat J(3,NDOFS);
+      for(int i=0,ii=0;i<NUM_EEFS;i++){
+        if(!eefs_[i].active)
+          continue;
+
+        dbrobot->calc_jacobian(Moby::GLOBAL,eefs_[i].link,workM_);
+
+        workM_.get_sub_mat(0,3,0,NDOFS,J);
+
+        Vector3d tan1, tan2;
+        Vector3d::determine_orthonormal_basis(eefs_[i].normal, tan1, tan2);
+
+        J.transpose_mult(eefs_[i].normal,workv_);
+        N.set_column(ii,workv_);
+
+        J.transpose_mult(tan1,workv_);
+        ST.set_column(ii,workv_);
+
+        J.transpose_mult(tan2,workv_);
+        ST.set_column(NC+ii,workv_);
+
+        ii++;
+      }
+
+      Mat R(NDOFS, NC + (NC*2) );
+      R.set_sub_mat(0,0,N);
+      R.set_sub_mat(0,NC,ST);
+
+#ifdef FOOT_TRAJ
+
+    // create base Horizontal-frame
+    boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3d(base_frame));
+    // SRZ: convert to base-horizontal frame
+//    Ravelin::AAngled = base_frame.
+//    base_horizonal_frame.
+    // convert jacobian to base horizontal frame
+
+    {
+      std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS),foot_origins(NUM_EEFS),foot_poses(NUM_EEFS);
+      Vec Hs(NUM_EEFS);
+      Mat C(NUM_EEFS,NUM_EEFS);
+
+      // SRZ: this is the coupling matrix C
+      // see: Pattern generators with sensory feedback for the control of quadruped locomotion
+      C.set_zero();
+      unsigned gait_pattern = 4;
+      switch(gait_pattern){
+        case 0: // Trotting gait
+                       C(0,1) = -1; C(0,2) = -1; C(0,3) =  1;
+          C(1,0) = -1;              C(1,2) =  1; C(1,3) = -1;
+          C(2,0) = -1; C(2,1) =  1;              C(2,3) = -1;
+          C(3,0) =  1; C(3,1) = -1; C(3,2) = -1;
+          break;
+        case 1: // Pacing gait
+                       C(0,1) = -1; C(0,2) =  1; C(0,3) = -1;
+          C(1,0) = -1;              C(1,2) = -1; C(1,3) =  1;
+          C(2,0) =  1; C(2,1) = -1;              C(2,3) = -1;
+          C(3,0) = -1; C(3,1) =  1; C(3,2) = -1;
+        break;
+        case 2: // Bounding gait
+                       C(0,1) =  1; C(0,2) = -1; C(0,3) = -1;
+          C(1,0) =  1;              C(1,2) = -1; C(1,3) = -1;
+          C(2,0) = -1; C(2,1) = -1;              C(2,3) =  1;
+          C(3,0) = -1; C(3,1) = -1; C(3,2) =  1;
+        break;
+        case 3: // Walking gait
+                       C(0,1) = -1; C(0,2) =  1; C(0,3) = -1;
+          C(1,0) = -1;              C(1,2) = -1; C(1,3) =  1;
+          C(2,0) = -1; C(2,1) =  1;              C(2,3) = -1;
+          C(3,0) =  1; C(3,1) = -1; C(3,2) = -1;
+        break;
+        case 4: // squatting
+                       C(0,1) =  1; C(0,2) = -1; C(0,3) =  1;
+          C(1,0) =  1;              C(1,2) =  1; C(1,3) = -1;
+          C(2,0) = -1; C(2,1) =  1;              C(2,3) =  1;
+          C(3,0) =  1; C(3,1) = -1; C(3,2) =  1;
+        break;
+      }
+
+      double speed = 1;
+
+      // Additional Aprameters for CPG
+      double Ls = 0.02,
+             Df = 0.55, // where 50% –_–_–_ 100% ======  *Duty factor
+                        //           –_–_–_      ======
+             Vf = 0.02,
+             bp = 100;
+
+      for(int f=0;f<NUM_EEFS;f++){
+        // set height of gait (each foot)
+        Hs[f] = 0.01;
+
+        // set gait centers
+        Ravelin::Pose3d link_pose = *eefs_[f].link->get_pose();
+        link_pose.update_relative_pose(base_horizonal_frame);
+        foot_origins[f] = eefs_[f].origin;
+        foot_poses[f] = link_pose.x;
+        foot_vel[f].set_zero();
+      }
+
+      // retrieve oscilator value
+      foot_oscilator(foot_origins,foot_poses,C,Ls,Hs,Df,Vf,bp,foot_vel);
+
+      // Foot goal position
+      for(int f=0;f<NUM_EEFS;f++){
+//        foot_vel[f] = Ravelin::Vector3d(0,0,0);
+//        foot_poses[f] = foot_origins[f]+Ravelin::Vector3d(0,0,0.02*cos(t*2.0));//(foot_vel[f]*dt*speed);
+        foot_poses[f] += (foot_vel[f]*dt*speed);
+      }
+      std::vector<Ravelin::Vector3d> joint_positions(NUM_EEFS);
+      feetIK(foot_poses,joint_positions);
+
+      // Foot goal Velocity
+
+      if(false)
+      for(int f=0;f<NUM_EEFS;f++){
+        // Calc jacobian for AB at this EEF
+        dbrobot->calc_jacobian(boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame)),eefs_[f].link,workM_);
+
+        std::vector<unsigned>& joint_inds = eefs_[f].chain;
+
+        // Populate EEF jacobian J:(qd -> xd)
+        Mat iJ(3,3);
+        for(int i=0;i<joint_inds.size();i++)
+          for(int j=0;j<3;j++)
+            iJ(j,i) = workM_(j,joint_inds[i]);
+
+//        OUTLOG(iJ,"J");
+
+        // PseudoInverse
+        Ravelin::Vector3d foot_velocity = foot_vel[f];
+        // (JJ')J
+        // SOLVE [inverse] EEF jacobian iJ:(xd -> qd)
+        LA_.solve_fast(iJ,foot_vel[f]);
+
+        // Jacobian transpose method
+//        iJ.transpose_mult(foot_velocity,foot_vel[f]);
+
+        foot_vel[f] *= dt*speed;
+
+        // Write into qd desired
+        for(int i=0;i<joint_inds.size();i++){
+          q_des[joints_[joint_inds[i]]->id] = joints_[joint_inds[i]]->q[0] + foot_vel[f][i];
+          qd_des[joints_[joint_inds[i]]->id] = foot_vel[f][i];
+        }
+      }
+
+
+      // Use Positional (numerical velocity) Control
+      for(int i=0;i<NUM_EEFS;i++){
+        for(int j=0;j<eefs_[i].chain.size();j++){
+          qd_des[joints_[eefs_[i].chain[j]]->id] = (joint_positions[i][eefs_[i].chain.size()-j-1] - joints_[eefs_[i].chain[j]]->q[0])/dt;
+          q_des[joints_[eefs_[i].chain[j]]->id] = joint_positions[i][eefs_[i].chain.size()-j-1];
+        }
+      }
+      q_des["LF_HIP_AA"] = 0;
+      q_des["RF_HIP_AA"] = 0;
+      q_des["LH_HIP_AA"] = 0;
+      q_des["RH_HIP_AA"] = 0;
+      qd_des["LF_HIP_AA"] = 0;
+      qd_des["RF_HIP_AA"] = 0;
+      qd_des["LH_HIP_AA"] = 0;
+      qd_des["RH_HIP_AA"] = 0;
+    }
+#endif
+
+#ifdef TRUNK_STABILIZATION
+    if(NC>0){
+      std::cout << "NC = " << NC << std::endl;
+
+      OUTLOG(R,"R");
+      // Select active rows in Jacobian Matrix
+      // R -> Jh
+      static std::vector<int> active_dofs;
+      active_dofs.clear();
+      static Mat Jh;
+      for(int i=NUM_JOINTS;i<NDOFS;i++)
+        active_dofs.push_back(i);
+
+      for(int i=0;i<NUM_EEFS;i++)
+        if(eefs_[i].active)
+          for(int j=0;j<eefs_[i].chain.size();j++)
+            active_dofs.push_back(eefs_[i].chain[j]);
+
+      std::sort(active_dofs.begin(),active_dofs.end());
+      R.select_rows(active_dofs.begin(),active_dofs.end(),Jh);
+
+      OUTLOG(Jh,"Jh");
+
+      // Generate Jh Nullspace
+      Mat NULL_Jh = MatrixNd::identity(Jh.rows()),
+          Jh_plus;
+      workM_ = MatrixNd::identity(Jh.rows());
+      Jh.mult_transpose(Jh,Jh_plus);
+      try{
+        LA_.solve_fast(Jh_plus,workM_);
+        Jh.transpose_mult(workM_,Jh_plus);
+        OUTLOG(Jh_plus,"Jh' (Jh Jh')^-1");
+        NULL_Jh -= Jh.mult(Jh_plus,workM_);
+        if(NULL_Jh.norm_inf() > 1e8)
+          NULL_Jh.set_zero(Jh.rows(),Jh.rows());
+      } catch(Ravelin::SingularException e) {
+//        static std::vector<int> pivwork;
+//        workM_ = Jh_plus;
+//        Jh_plus = Jh;
+//        LA_.factor_LU(workM_,pivwork);
+//        LA_.solve_LU_fast(workM_,true,pivwork,Jh_plus);
+//        Jh_plus.transpose();
+//        OUTLOG(Jh_plus,"Jh' (Jh Jh')^-1 (LU decomp)");
+        NULL_Jh.set_zero(Jh.rows(),Jh.rows());
+      }
+
+
+
+
+      OUTLOG(NULL_Jh,"null(Jh)");
+
+      // Use NULL(Jh) to stabilize trunk w/o altering gait
+
+      // Trunk Stability gains
+      double Xp = 0, Xv = 0,
+             Yp = 0, Yv = 0,
+             Zp = 1e-2, Zv = 0,
+             Rp = 1e-2, Rv = 1e-4,
+             Pp = 1e-2, Pv = 1e-4;
+
+      static Vec Y,tY;
+      Y.set_zero(NC*3+6);
+
+      Y[NC*3+2] = /*(base_horizonal_frame->x[2]-BASE_ORIGIN[2])*Zp +*/ (vel[NUM_JOINTS+2]-0)*Zv;
+      Y[NC*3+3] =  (vel[NUM_JOINTS+3]-0)*Rv;
+      Y[NC*3+4] =  (vel[NUM_JOINTS+4]-0)*Pv;
+
+      NULL_Jh.mult(Y,tY);
+
+      // apply base stabilization forces
+      for(int i=0;i<NC*3;i++)
+        uff(active_dofs[i],0) += tY[i];
+
+    }
+#endif
+
+
       static Mat MU;
-      MU.set_zero(nc,NK/2);
+      MU.set_zero(NC,NK/2);
 #ifdef FRICTION_EST
       static Vec cf;
       double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
       OUTLOG(MU,"MU");
       OUTLOG(cf,"contact_forces");
 #else
-      for(int i=0;i<nc;i++)
+      for(int i=0;i<NC;i++)
         for(int k=0;k<NK/2;k++)
           MU(i,k) = 0.1;
 #endif
 
 #ifdef CONTROL_ZMP
-      calc_energy(vel,M);
       Vector3d CoM,acc_CoM;
       calc_com(CoM,acc_CoM);
 
@@ -499,29 +621,22 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       uff.set_zero();
       uff.set_column(0,ff);
 #endif
-      contacts.clear();
-
       ///  Determine FB forces
       control_PID(q_des, qd_des, gains,t,ufb);
 
       // combine ufb and uff
       u = ufb;
       u += uff;
-//      OUTLOG(ufb,"ufb");
-//      OUTLOG(uff,"uff");
 
-      /// Limit Torques
-//      for(unsigned m=0;m< NUM_JOINTS;m++){
-//        if(u(m,0) > u_max[joints_[m]->id])
-//          u(m,0) = u_max[joints_[m]->id];
-//        else if(u(m,0) < -u_max[joints_[m]->id])
-//          u(m,0) = -u_max[joints_[m]->id];
-//      }
-
-      // send torque commands to robot
-      apply_simulation_forces(u);
 
 #ifdef USE_ROBOT
+      /// Limit Torques
+      for(unsigned m=0;m< NUM_JOINTS;m++){
+        if(u(m,0) > u_max[joints_[m]->id])
+          u(m,0) = u_max[joints_[m]->id];
+        else if(u(m,0) < -u_max[joints_[m]->id])
+          u(m,0) = -u_max[joints_[m]->id];
+      }
 # ifdef CONTROL_KINEMATICS
       Vec qdat = q.column(0);
       Vec qddat = qd.column(0);
@@ -533,9 +648,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 # endif
 #endif
 
+      // send torque commands to robot
+      apply_simulation_forces(u);
+
 #ifndef NDEBUG
+      std::cout <<  "@ time = "<< t << std::endl;
      std::cout << "JOINT\t: U\t| Q\t: des\t: err\t| "
-                  "Qd\t: des\t: err\t| @ time = " << t << std::endl;
+                  "Qd\t: des\t: err\t|" << std::endl;
      for(unsigned m=0;m< NUM_JOINTS;m++)
        std::cout << joints_[m]->id
                  << "\t " <<  std::setprecision(4) << u(m,0)
@@ -553,22 +672,11 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      last_time = t;
 
 # ifdef CONTROL_KINEMATICS
-        for(unsigned m=0;m< NUM_JOINTS;m++){
-            if(joints_[m]->q.size() == 0) continue;
-            joints_[m]->q[0] = q_des[joints_[m]->id];
+        for(unsigned i=0;i< NUM_JOINTS;i++){
+            if(joints_[i]->q.size() == 0) continue;
+            joints_[i]->q[0] = q_des[joints_[i]->id];
         }
 
-       Vec q_start(q0.size()+7), qd_start(q0.size()+6);
-       qd_start.set_zero();
-       q_start.set_zero();
-       q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
-       for(int i=0;i<NUM_JOINTS;i++){
-         q_start[i] = q_des[joints_[i]->id];
-         qd_start[i] = 0;
-       }
-
-       abrobot->set_generalized_coordinates(DynamicBody::eEuler,q_start);
-       abrobot->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
        abrobot->update_link_poses();
        abrobot->update_link_velocities();
 #endif
@@ -640,16 +748,26 @@ void init(void* separator,
   eef_names_.push_back("RF_FOOT");
   eef_names_.push_back("LH_FOOT");
   eef_names_.push_back("RH_FOOT");
-  eefs_.resize(eef_names_.size());
-  for(unsigned i=0;i<links_.size();i++)
-      for(unsigned j=0;j<eef_names_.size();j++)
-          if(eef_names_[j].compare(links_[i]->id) == 0)
-             eefs_[j] = links_[i];
 
-  NUM_EEFS = eefs_.size();
+  // z = -0.1305
+
+  std::map<std::string, Ravelin::Vector3d> eef_origins_;
+  eef_origins_["LF_FOOT"] = Ravelin::Vector3d(0.11564, 0.0575, -0.0922774);
+  eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.11564, -0.0575, -0.0922774);
+  eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.0832403, 0.0575, -0.0922774);
+  eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.0832403, -0.0575, -0.0922774);
+
   NUM_JOINTS = joints_.size() - N_FIXED_JOINTS;
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
+
+  for(unsigned i=0;i<links_.size();i++)
+      for(unsigned j=0;j<eef_names_.size();j++)
+          if(eef_names_[j].compare(links_[i]->id) == 0){
+            eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id]));
+          }
+
+  NUM_EEFS = eefs_.size();
 
   std::cout << "NUM_EEFS: " << NUM_EEFS << std::endl;
   std::cout << "N_FIXED_JOINTS: " << N_FIXED_JOINTS << std::endl;
@@ -662,26 +780,26 @@ void init(void* separator,
   /// LOCALLY SET VALUES
   // robot's initial (ZERO) configuration
   BASE_ORIGIN.set_zero();
-  BASE_ORIGIN[2] = 0.1009;
-//  BASE_ORIGIN[2] = 0.2009;
+  BASE_ORIGIN[2] = 0.1059;
+//  BASE_ORIGIN[2] = 0.09;
   BASE_ORIGIN[6] = 1;
 
   q0["BODY_JOINT"] = 0;
   q0["LF_HIP_AA"] = 0;
-  q0["LF_HIP_FE"] = 0.8;
-  q0["LF_LEG_FE"] = 1.4;
+  q0["LF_HIP_FE"] = M_PI_4;
+  q0["LF_LEG_FE"] = M_PI_2;
 
   q0["RF_HIP_AA"] =  0;
-  q0["RF_HIP_FE"] =  0.8;
-  q0["RF_LEG_FE"] =  1.4;
+  q0["RF_HIP_FE"] =  M_PI_4;
+  q0["RF_LEG_FE"] =  M_PI_2;
 
   q0["LH_HIP_AA"] =  0;
-  q0["LH_HIP_FE"] =  0.8;
-  q0["LH_LEG_FE"] =  1.4;
+  q0["LH_HIP_FE"] =  M_PI_4;
+  q0["LH_LEG_FE"] =  M_PI_2;
 
   q0["RH_HIP_AA"] =  0;
-  q0["RH_HIP_FE"] =  0.8;
-  q0["RH_LEG_FE"] =  1.4;
+  q0["RH_HIP_FE"] =  M_PI_4;
+  q0["RH_LEG_FE"] =  M_PI_2;
 
   // Maximum torques
   u_max["BODY_JOINT"]=  2.60;
@@ -704,9 +822,9 @@ void init(void* separator,
   // Setup gains
   for(unsigned i=0;i<NUM_JOINTS;i++){
     // pass gain values to respective joint
-    gains[joints_[i]->id].kp = 0.1;
-    gains[joints_[i]->id].kv = 0.02;
-    gains[joints_[i]->id].ki = 0;
+    gains[joints_[i]->id].kp = 1e-1;
+    gains[joints_[i]->id].kv = 1e-2;
+    gains[joints_[i]->id].ki = 1e-3;
   }
 
   // Set Initial State
@@ -716,14 +834,23 @@ void init(void* separator,
   qd_start.set_zero();
   q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
 
-#ifdef FOLLOW_TRAJECTORY
-  static map<string, double> q_des, qd_des, qdd_des;
-  get_trajectory(0,0.001,q_des,qd_des,qdd_des);
-  for(int i=0;i<NUM_JOINTS; i++)
-    q_des[joints_[i]->id] += q0[joints_[i]->id];
-  for(int i=0;i<NUM_JOINTS;i++){
-    q_start[i] = q_des[joints_[i]->id];
-    qd_start[i] = qd_des[joints_[i]->id];
+#ifdef FOOT_TRAJ
+  std::map<std::string, Ravelin::Vector3d> eef_origin_offset;
+  eef_origin_offset["LF_FOOT"] = Ravelin::Vector3d( 0.0, 0.0, 0.0);
+  eef_origin_offset["RF_FOOT"] = Ravelin::Vector3d(-0.0, 0.0, 0.0);
+  eef_origin_offset["LH_FOOT"] = Ravelin::Vector3d(-0.0, 0.0, 0.0);
+  eef_origin_offset["RH_FOOT"] = Ravelin::Vector3d( 0.0, 0.0, 0.0);
+
+  std::vector<Ravelin::Vector3d> foot_origins(NUM_EEFS),joint_positions(NUM_EEFS);
+  for(int i=0;i<NUM_EEFS;i++)
+    foot_origins[i] = eef_origins_[eef_names_[i]] + eef_origin_offset[eef_names_[i]];
+  feetIK(foot_origins,joint_positions);
+
+  for(int i=0;i<NUM_EEFS;i++){
+    for(int j=0;j<eefs_[i].chain.size();j++){
+      q_start[eefs_[i].chain[j]] = joint_positions[i][eefs_[i].chain.size()-j-1];
+      qd_start[eefs_[i].chain[j]] = 0;
+    }
   }
 #else
   for(int i=0;i<NUM_JOINTS;i++){
@@ -744,3 +871,24 @@ void init(void* separator,
 
 } // end extern C
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void EndEffector::init(){
+  Moby::JointPtr joint_ptr = link->get_inner_joint_explicit();
+  Moby::RigidBodyPtr rb_ptr = link;
+  while (!rb_ptr->is_base() && rb_ptr->id.compare("THORAX") != 0){
+    rb_ptr = joint_ptr->get_inboard_link();
+    for(int j=0;j<NUM_JOINTS;j++){
+      if(joint_ptr->id.compare(joints_[j]->id) == 0){
+        chain.push_back(j);
+      }
+    }
+    joint_ptr = rb_ptr->get_inner_joint_explicit();
+  }
+
+  Ravelin::Pose3d pose = *link->get_pose();
+  normal = Ravelin::Vector3d(0,0,1);
+  point = pose.x;
+  active = false;
+}

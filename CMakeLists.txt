@@ -15,9 +15,14 @@ add_definitions(-DUSE_GLPK)
 set(BUILD_DIRECTORY bin)
 set(SOURCE_DIRECTORY src)
 
-include_directories(include /usr/include /usr/include/libxml2 /usr/local/include ${Boost_INCLUDE_DIR} /opt/local/include /opt/X11/include)
+include_directories(
+#/Users/samzapo/ThirdParty/Moby/include
+include /usr/include /usr/include/libxml2 /usr/local/include ${Boost_INCLUDE_DIR} /opt/local/include /opt/X11/include)
 
-link_directories(/usr/local/lib /opt/local/lib /opt/X11/lib)
+link_directories(
+#/Users/samzapo/ThirdParty/Moby/contact-reduce
+/usr/local/lib /opt/local/lib /opt/X11/lib
+)
 
 #set(box_srcs estimate_friction.cc object_control_moby.cc output.cc)
 #set(hyq_srcs estimate_friction.cc hyq_control_moby.cc output.cc)
@@ -30,6 +35,7 @@ set(links_srcs  src/control_moby.cc
                 src/inverse_kinematics.cc
                 src/kinematics.cc
                 src/solve_qp.cc
+                src/iit_cpg.cc
     )
 set(coldet_srcs src/LinksColdetPlugin.cpp)
 

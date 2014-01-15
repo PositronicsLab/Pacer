@@ -1,5 +1,6 @@
 include
 /usr/local/include
+/Users/samzapo/ThirdParty/Ravelin/include
 /usr/include
 /opt/include
 /opt/local/include

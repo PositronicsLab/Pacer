@@ -35,6 +35,10 @@ void OUTLOG(const Ravelin::VectorNd& M, std::string name);
 void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name);
 void OUTLOG(const Ravelin::MatrixNd& z, std::string name);
 
+const double grav = 9.8; // M/s.s
+const double M_PI_16 = 0.19634954084;
+const double M_PI_8 = 0.39269908169;
+
 #include <Log.h>
 
 #endif // PROJECT_COMMON_H

@@ -7,31 +7,28 @@
 Moby::LCP lcp_;
 //Opt::LCP lcp_;
 
-typedef Ravelin::MatrixNd Mat;
-typedef Ravelin::VectorNd Vec;
-
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 const double NEAR_INF = 1.0/NEAR_ZERO;
 
-bool isvalid(const Vec& v){
+bool isvalid(const Ravelin::VectorNd& v){
   if(v.norm() > NEAR_INF || !isfinite(v.norm()))
     return false;
   return true;
 }
 
-bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
+bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 {
      const int n = Q.rows();
      const int m = A.rows();
 
-     Mat MMM;
+     Ravelin::MatrixNd MMM;
      MMM.set_zero(n + m,n + m);
 
-     Vec zzz(n + m),qqq(n + m);
+     Ravelin::VectorNd zzz(n + m),qqq(n + m);
      qqq.set_zero();
      zzz.set_zero();
      // init and setup MMM
-     Mat nAT = A;
+     Ravelin::MatrixNd nAT = A;
      nAT.transpose();
      nAT.negate();
      MMM.set_sub_mat(0,0,Q);
@@ -40,7 +37,7 @@ bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x
 
   // setup qqq
   qqq.set_sub_vec(0,c);
-  Vec nb = b;
+  Ravelin::VectorNd nb = b;
   nb.negate();
   qqq.set_sub_vec(n,nb);
 
@@ -76,7 +73,7 @@ bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x
   return SOLVE_FLAG;
 }
 
-bool solve_qp_pos(const Mat& Q, const Vec& c, Vec& x)
+bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x)
 {
      const int n = Q.rows();
      const int m = 0;
@@ -106,7 +103,7 @@ bool solve_qp_pos(const Mat& Q, const Vec& c, Vec& x)
   return SOLVE_FLAG;
 }
 
-bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
+bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 {
   const int n = Q.rows();
   const int m = A.rows();
@@ -115,14 +112,14 @@ bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
   // MMM = |  Q -Q -A' |
   //       | -Q  Q  A' |
   //       |  A -A  0  |
-  Mat MMM,AT = A, nA = A, nQ = Q;
+  Ravelin::MatrixNd MMM,AT = A, nA = A, nQ = Q;
   MMM.set_zero(Q.rows()*2 + A.rows(), Q.rows()*2 + A.rows());
 
   nA.negate();
   AT.transpose();
   nQ.negate();
 
-  Vec zzz,qqq, nc=c, nb=b;
+  Ravelin::VectorNd zzz,qqq, nc=c, nb=b;
   qqq.set_zero(MMM.rows());
   zzz.set_zero(MMM.rows());
 

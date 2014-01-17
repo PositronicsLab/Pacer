@@ -28,6 +28,8 @@ link_directories(
 #set(hyq_srcs estimate_friction.cc hyq_control_moby.cc output.cc)
 set(links_srcs  src/control_moby.cc
                 src/output.cc
+                src/robot.cc
+                src/quadruped.cc
                 src/estimate_friction.cc
                 src/inverse_dynamics.cc
                 src/visualize_moby.cc

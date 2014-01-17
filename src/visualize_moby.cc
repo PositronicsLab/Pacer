@@ -207,9 +207,9 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
 
   // add the root to the transient data scene graph
   sim->add_transient_vdata( point_root );
-  
+
   // ----- LINE -------
-  
+
   osg::Group* vec_root = new osg::Group();
   osg::Geode* vec_geode = new osg::Geode();
   osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;

@@ -1,8 +1,8 @@
 #include <quadruped.h>
 
-std::vector<Ravelin::Vector3d>& foot_oscilator(
-  const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Mat& C,
-  double Ls,const Vec& Hs,double Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd){
+std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
+  const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Ravelin::MatrixNd& C,
+  double Ls,const Ravelin::VectorNd& Hs,double Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd){
 
   /* Tunable parameters
    * Ls    : length of step

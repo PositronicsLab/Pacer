@@ -31,18 +31,18 @@ using std::map;
 using std::pair;
 using std::vector;
 
-typedef Ravelin::MatrixNd Mat;
-typedef Ravelin::VectorNd Vec;
+typedef Ravelin::MatrixNd Ravelin::MatrixNd;
+typedef Ravelin::VectorNd Ravelin::VectorNd;
 
 RigidBodyPtr obj;
 DynamicBodyPtr body;
-Vec cf_moby;
-Mat MU_moby;
+Ravelin::VectorNd cf_moby;
+Ravelin::MatrixNd MU_moby;
 
-void OUTLOG(const Mat& M, std::string name);
-void OUTLOG(const Vec& z, std::string name);
-void OUTLOG2(const Vec& M, std::string name);
-void OUTLOG2(const Mat& z, std::string name);
+void OUTLOG(const Ravelin::MatrixNd& M, std::string name);
+void OUTLOG(const Ravelin::VectorNd& z, std::string name);
+void OUTLOG2(const Ravelin::VectorNd& M, std::string name);
+void OUTLOG2(const Ravelin::MatrixNd& z, std::string name);
 
 struct ContactData
 {
@@ -51,8 +51,8 @@ struct ContactData
   std::string name;
 };
 
-double friction_estimation(const Vec& v, const Vec& fext, double dt,
-                         const Mat& N,const Mat& ST, const Mat& M, bool post_event, Mat& MU, Vec& cf);
+double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext, double dt,
+                         const Ravelin::MatrixNd& N,const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M, bool post_event, Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
 const unsigned NSPATIAL = 6;
 std::vector<ContactData> contacts;
@@ -61,7 +61,7 @@ std::vector<ContactData> contacts;
 boost::shared_ptr<EventDrivenSimulator> sim;
 
 
-void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N, Mat& D)
+void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Ravelin::MatrixNd& N, Ravelin::MatrixNd& D)
 {
       int nc = contacts.size();
 
@@ -84,7 +84,7 @@ void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N,
           torque.set_zero();
           OUTLOG2(c.point,"point");
 
-          Vec col(NSPATIAL);
+          Ravelin::VectorNd col(NSPATIAL);
           AAngled aa(0,0,1,0);
           Origin3d o(c.point);
           boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
@@ -110,7 +110,7 @@ void determine_N_D( RigidBodyPtr obj,std::vector<ContactData>& contacts, Mat& N,
       }
 }
 
-void calculate_dyn_properties(Mat& M, Vec& fext){
+void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
     M.resize(NSPATIAL,NSPATIAL);
     fext.resize(NSPATIAL);
     obj->get_generalized_inertia(M);
@@ -125,7 +125,7 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
     double t = sim->current_time;
     double dt = t - last_time;
 
-    Vec q;
+    Ravelin::VectorNd q;
     body->get_generalized_coordinates(DynamicBody::eEuler,q);
     OUTLOG2(q,"G Coords");
 
@@ -181,7 +181,7 @@ void controller(DynamicBodyPtr body, double time, void*)
     static double test_frict_val = 0.2;
     static unsigned ITER = 1;
 
-    Vec uff;
+    Ravelin::VectorNd uff;
 
     /// Apply control torques
     // setup impulse
@@ -190,7 +190,7 @@ void controller(DynamicBodyPtr body, double time, void*)
     uff[5] = test_frict_val;
     body->add_generalized_force(uff);
     
-    Vec v(NSPATIAL);
+    Ravelin::VectorNd v(NSPATIAL);
     body->get_generalized_velocity(DynamicBody::eSpatial,v);
     std::cerr << "vel = " << v << std::endl;
 
@@ -205,17 +205,17 @@ void controller(DynamicBodyPtr body, double time, void*)
     std::cerr << "t = " << t << std::endl;
     std::cerr << "nc = " << nc << std::endl;
     // RUN OPTIMIZATION TO FIND CFs
-    Mat N,D,M;
-    Vec fext;
+    Ravelin::MatrixNd N,D,M;
+    Ravelin::VectorNd fext;
 
-    Mat MU;
+    Ravelin::MatrixNd MU;
     MU.set_zero(nc,1);
 
     calculate_dyn_properties(obj,M,fext);
     std::cerr << "fext = " << fext << std::endl;
 
     // estimated contact forces
-    Vec cf;
+    Ravelin::VectorNd cf;
     double err;
     ITER++;
     if (nc == 0){
@@ -268,19 +268,19 @@ void controller(DynamicBodyPtr body, double time, void*)
     contacts.clear(); 
     */
 
-  Mat N,D,M;
-  Vec fext;
+  Ravelin::MatrixNd N,D,M;
+  Ravelin::VectorNd fext;
 
   calculate_dyn_properties(M,fext);
 
   //floating robot
-  Vec resist_base_forces = fext;
+  Ravelin::VectorNd resist_base_forces = fext;
   resist_base_forces.negate();
   resist_base_forces[0] += 1;
   resist_base_forces[4] += 1;
   obj->add_generalized_force(resist_base_forces);
 
-  Vec q(NSPATIAL+1), qd(NSPATIAL);
+  Ravelin::VectorNd q(NSPATIAL+1), qd(NSPATIAL);
   body->get_generalized_coordinates(DynamicBody::eEuler,q);
   std::cerr << "q = " << q << std::endl;
 
@@ -306,7 +306,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
     if (!body)
       throw std::runtime_error("controller.cpp:init() - unable to cast obj to type DynamicBody");
 
-    Vec q_start(NSPATIAL+1),qd_start(NSPATIAL);
+    Ravelin::VectorNd q_start(NSPATIAL+1),qd_start(NSPATIAL);
     q_start.set_zero();
     qd_start.set_zero();
 
@@ -329,15 +329,15 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
  //   sim->event_callback_fn = pre_event_callback_fn;
 
     // RUN OPTIMIZATION TO FIND CFs
-//    Mat N,D,M;
-//    Vec fext;
-//    Vec v(NSPATIAL);
+//    Ravelin::MatrixNd N,D,M;
+//    Ravelin::VectorNd fext;
+//    Ravelin::VectorNd v(NSPATIAL);
 //    body->get_generalized_velocity(DynamicBody::eSpatial,v);
-//    Mat MU;
+//    Ravelin::MatrixNd MU;
 //    calculate_dyn_properties(obj,M,fext);
 
 //    // estimated contact forces
-//    Vec cf;
+//    Ravelin::VectorNd cf;
 //    friction_estimation(v,fext,0,N,D,M,false,MU,cf);
 }
 } // end extern C

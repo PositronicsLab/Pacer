@@ -19,8 +19,8 @@ boost::shared_ptr<EventDrivenSimulator> sim;
 // robot pointer
 RCArticulatedBodyPtr abrobot;
 DynamicBodyPtr dbrobot;
-Vec cf_moby;
-Mat MU_moby;
+Ravelin::VectorNd cf_moby;
+Ravelin::MatrixNd MU_moby;
 
 ///////////////////////// PID /////////////////////////////
 
@@ -47,7 +47,7 @@ const U& get(const map<T, U>& m, const T& key)
 }
 
 /// Controls the robot
-void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Mat& ufb)
+void control_PID(const map<string, double>& q_des, const map<string, double>& qd_des, const map<string, Gains>& gains, double time,Ravelin::MatrixNd& ufb)
 {
       const std::vector<JointPtr>& joints = abrobot->get_joints();
 
@@ -69,7 +69,7 @@ void control_PID(const map<string, double>& q_des, const map<string, double>& qd
             double ierr = perr_sum[j->id];
             double derr = get(qd_des,j->id) - j->qd[0];
 
-            Vec fb_torque(1);
+            Ravelin::VectorNd fb_torque(1);
             fb_torque[0] = perr*KP + derr*KV + ierr*KI;
             ufb.set_row(i,fb_torque);
             i++;
@@ -78,7 +78,7 @@ void control_PID(const map<string, double>& q_des, const map<string, double>& qd
 
 ///////////////////// Contact DATA ////////////////////////
 
-void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
+void determine_N_D(std::vector<ContactData>& contacts, Ravelin::MatrixNd& N, Ravelin::MatrixNd& D)
 {
     int nc = contacts.size();
     const std::vector<RigidBodyPtr>& links = abrobot->get_links();
@@ -89,8 +89,8 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
             if(contacts[j].name.compare(links[i]->id) == 0)
                 eefs[j] = links[i];
 
-    static Mat J, Jsub;
-    static Vec col;
+    static Ravelin::MatrixNd J, Jsub;
+    static Ravelin::VectorNd col;
 
       // resize temporary N and ST
       N.resize(NJOINT+6,nc);
@@ -112,7 +112,7 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
 
           RigidBodyPtr sbfoot = eefs[i];
  
-          Vec col(NSPATIAL);
+          Ravelin::VectorNd col(NSPATIAL);
           AAngled aa(0,0,1,0);
           Origin3d o(c.point);
           boost::shared_ptr<const Ravelin::Pose3d> pose(new Pose3d(aa,o));
@@ -138,7 +138,7 @@ void determine_N_D(std::vector<ContactData>& contacts, Mat& N, Mat& D)
      }
 }
 
-void calculate_dyn_properties(Mat& M, Vec& fext){
+void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
     M.resize(NDOFS,NDOFS);
     fext.resize(NDOFS);
     abrobot->get_generalized_inertia(M);
@@ -193,12 +193,12 @@ void post_event_callback_fn(const vector<Event>& e, boost::shared_ptr<void> empt
 /// Event callback function for setting friction vars pre-event
 void pre_event_callback_fn(vector<Event>& e, boost::shared_ptr<void> empty){}
 
-void apply_simulation_forces(const Mat& u){
+void apply_simulation_forces(const Ravelin::MatrixNd& u){
     const std::vector<JointPtr>& joints = abrobot->get_joints();
     for(unsigned m=0,i=0;m< joints.size();m++){
         if(joints[m]->q.size() == 0) continue;
         // reset motor torque
-        Vec row;
+        Ravelin::VectorNd row;
         joints[m]->reset_force();
         joints[m]->add_force(u.get_row(i,row));
         i++;
@@ -209,7 +209,7 @@ void apply_simulation_forces(const Mat& u){
 void controller(DynamicBodyPtr dbp, double t, void*)
 {
     static double test_frict_val = 0.1;
-     static Mat uff(NJOINT,1),ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
+     static Ravelin::MatrixNd uff(NJOINT,1),ufb(NJOINT,1),u(NJOINT,1), q(NJOINT,1), qd(NJOINT,1);
     double dt = t - last_time;
 
 #ifdef USE_DUMMY_CONTACTS
@@ -276,17 +276,17 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
 
         /// Run friction estimation
-        Mat N,D,M(NDOFS,NDOFS);
-        Vec fext(NDOFS);
+        Ravelin::MatrixNd N,D,M(NDOFS,NDOFS);
+        Ravelin::VectorNd fext(NDOFS);
 
-        Mat MU;
+        Ravelin::MatrixNd MU;
         MU.set_zero(nc,1);
         for(int i=0;i<nc;i++)
           MU(i,0) = 0.4;
 
         determine_N_D(contacts,N,D);
 
-        Mat ST;
+        Ravelin::MatrixNd ST;
         ST.resize(D.rows(),D.columns()/2);
         ST.set_zero();
         // remove negations from D to create ST
@@ -302,12 +302,12 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
         calculate_dyn_properties(M,fext);
 
-        Vec v(NDOFS);
+        Ravelin::VectorNd v(NDOFS);
         dbrobot->get_generalized_velocity(DynamicBody::eSpatial,v);
         // estimated contact forces
 
-        Vec qdd = Vec::zero(NJOINT);
-        Vec cf, ff = uff.column(0);
+        Ravelin::VectorNd qdd = Ravelin::VectorNd::zero(NJOINT);
+        Ravelin::VectorNd cf, ff = uff.column(0);
 //        idyn(v,qdd,M,N,D,fext,dt,MU,ff);
 //        uff.set_column(0,ff);
 
@@ -449,7 +449,7 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       gains[joint_name_[i]].ki = ki;
   }
 
-      Vec q_start(q_go0.size()+7),qd_start(q_go0.size()+6);
+      Ravelin::VectorNd q_start(q_go0.size()+7),qd_start(q_go0.size()+6);
       q_start.set_zero();
       qd_start.set_zero();
 
@@ -471,11 +471,11 @@ void init(void* separator, const std::map<std::string, BasePtr>& read_map, doubl
       }
 
     // RUN OPTIMIZATION TO FIND CFs
-    Mat N,D,M;
-    Vec fext;
-    Vec v(NSPATIAL);
+    Ravelin::MatrixNd N,D,M;
+    Ravelin::VectorNd fext;
+    Ravelin::VectorNd v(NSPATIAL);
     dbrobot->get_generalized_velocity(DynamicBody::eSpatial,v);
-    Mat MU;
+    Ravelin::MatrixNd MU;
     calculate_dyn_properties(M,fext);
 }
 

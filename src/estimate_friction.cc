@@ -1,23 +1,20 @@
 #include <project_common.h>
 
-typedef Ravelin::MatrixNd Mat;
-typedef Ravelin::VectorNd Vec;
-
 static Ravelin::LinAlgd LA_;
 
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 
-extern bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x);
+extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 
 //#define USE_D
 
 /// Friction Estimation
 /// Calculates Coulomb friction at end-effectors
-double friction_estimation(const Vec& v, const Vec& f, double dt,
-                         const Mat& N,const Mat& D, const Mat& M, Mat& MU, Vec& cf)
+double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& f, double dt,
+                         const Ravelin::MatrixNd& N,const Ravelin::MatrixNd& D, const Ravelin::MatrixNd& M, Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf)
 {
 //    std::cout << "entered friction_estimation()" << std::endl;
-    static Vec v_(6), f_(6);  // previous values
+    static Ravelin::VectorNd v_(6), f_(6);  // previous values
     static int ITER = 0;
     double norm_error = -1;
     int nc = N.columns();
@@ -40,12 +37,12 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
       cf.resize(nc + nc*(nk/2));
 
      // dv = v_{t} - v_{}
-      Vec dv =  v;
+      Ravelin::VectorNd dv =  v;
       dv -= v_;
 //      OUTLOG2(dv,"dv");
 
       // j_obs = M*dv
-      Vec jstar(M.rows());
+      Ravelin::VectorNd jstar(M.rows());
       M.mult(dv,jstar);
 //      OUTLOG2(jstar,"j_observed");
 
@@ -65,21 +62,21 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
      OUTLOG2(D,"D");
       int n = N.columns()+D.columns();
 
-      Mat R(ngc,n);
+      Ravelin::MatrixNd R(ngc,n);
       R.set_sub_mat(0,0,N);
       R.set_sub_mat(0,N.columns(),D);
 
       /////////// OBJECTIVE ////////////
       // M
-      Mat Q(R.columns(),R.columns());
+      Ravelin::MatrixNd Q(R.columns(),R.columns());
       R.transpose_mult(R,Q);
       // c
-      Vec c(R.columns());
+      Ravelin::VectorNd c(R.columns());
       R.transpose_mult(jstar,c);
       // Inequality constraint
       c.negate();
 
-      Vec z(n);
+      Ravelin::VectorNd z(n);
       z.set_zero();
       if (!lcp2_.lcp_lemke_regularized(Q,c,z)){
           std::cout << "friction estimation failed" << std::endl;
@@ -87,7 +84,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
       OUTLOG2(z,"z");
 
-      Vec err(ngc);
+      Ravelin::VectorNd err(ngc);
       R.mult(z,err);
       OUTLOG2(err,"gf");
       err -= jstar;
@@ -95,7 +92,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
       OUTLOG2(err,"err");
       std::cout << "norm err: " << err.norm() << std::endl;
 #else // use ST
-      Mat ST;
+      Ravelin::MatrixNd ST;
       ST.resize(D.rows(),D.columns()/2);
       ST.set_zero();
       // remove negations from D to create ST
@@ -108,14 +105,14 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 //     OUTLOG2(ST,"ST");
      int n = N.columns()+ST.columns();
 
-     Mat R(ngc,n);
+     Ravelin::MatrixNd R(ngc,n);
      R.set_sub_mat(0,0,N);
      R.set_sub_mat(0,N.columns(),ST);
 //     OUTLOG2(R,"R");
 
      // Some additional Printouts
-      Vec vprint = jstar,cvprint;
-      Mat iM = M;
+      Ravelin::VectorNd vprint = jstar,cvprint;
+      Ravelin::MatrixNd iM = M;
       LA_.factor_chol(iM);
       LA_.solve_chol_fast(iM,vprint);
       R.transpose_mult(vprint,cvprint);
@@ -123,23 +120,23 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 //      OUTLOG2(cvprint,"cv_error");
      /////////// OBJECTIVE ////////////
      // Q = R'R
-     Mat Q(R.columns(),R.columns());
+     Ravelin::MatrixNd Q(R.columns(),R.columns());
      R.transpose_mult(R,Q);
      // c = R' M (v_{t} - v_{t-1})
-     Vec c(R.columns());
+     Ravelin::VectorNd c(R.columns());
      R.transpose_mult(jstar,c);
      c.negate();
 
      ////////// CONSTRAINT ///////////
 
-     Mat A(nc,n);
+     Ravelin::MatrixNd A(nc,n);
      A.set_zero();
-     Vec b(nc);
+     Ravelin::VectorNd b(nc);
      b.set_zero();
      for(int i=0;i<nc;i++)
          A(i,i) = 1;
 
-     Vec z(n);
+     Ravelin::VectorNd z(n);
      z.set_zero(n);
 
      if (!solve_qp(Q,c,A,b,z)){
@@ -149,7 +146,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 //       OUTLOG2(z,"cf");
 //       OUTLOG2(cf_moby,"cf_MOBY");
 
-       Vec err(ngc);
+       Ravelin::VectorNd err(ngc);
        R.mult(z,err);
 //       OUTLOG2(err,"generalized force from cfs = [R*z]");
        err -= jstar;
@@ -165,11 +162,11 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
           // Q = R'R = RTR
           int m = 0;
-          Mat U,V;
-          Vec S;
+          Ravelin::MatrixNd U,V;
+          Ravelin::VectorNd S;
           LA_.svd(Q,U,S,V);
 
-          Mat P;
+          Ravelin::MatrixNd P;
           // SVD decomp to retrieve nullspace of R'R
           if(S.rows() != 0)
           {
@@ -192,15 +189,15 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
           {
 //            OUTLOG2(P,"P");
 
-            Vec cN(nc);
+            Ravelin::VectorNd cN(nc);
             z.get_sub_vec(0,nc,cN);
 
             /// Objective
-            Mat Q2(m,m);
-            Vec c2(m), w(m);
+            Ravelin::MatrixNd Q2(m,m);
+            Ravelin::VectorNd c2(m), w(m);
 
             /// min l2-norm(cN)
-            Mat P_nc(nc,m);
+            Ravelin::MatrixNd P_nc(nc,m);
             P.get_sub_mat(0,nc,0,m,P_nc);
 //                OUTLOG2(P_nc,"P_nc");
 //                P_nc.transpose_mult(P_nc,Q2);
@@ -213,13 +210,13 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             P.transpose_mult(z,c2);
 
             /// min l2-norm(cST)
-//                Mat P_tc = P.get_sub_mat(nc,P.rows(),0,m);
+//                Ravelin::MatrixNd P_tc = P.get_sub_mat(nc,P.rows(),0,m);
 //                P_tc.transpose_mult(P_tc,Q2);
             // c = P'z
 //                P_tc.transpose_mult(z.get_sub_vec(nc,z.rows()),c2);
 #ifdef USE_D
-            Mat A(nvars+1,m);
-            Vec  b(nvars+1);
+            Ravelin::MatrixNd A(nvars+1,m);
+            Ravelin::VectorNd  b(nvars+1);
             //      A     w        b
             //  | R'jP || w | <= |+0 |
             //  |   P  || : | >= |-z |
@@ -235,27 +232,27 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
 
             A.set_zero();
 
-            Vec cP(m);
+            Ravelin::VectorNd cP(m);
             //-R'jP
             P.transpose_mult(c,cP);
             A.set_row(0,cP);
 
             b[0] = 0;//c.dot(z);
             //  |   P  || : | >= |-z |
-            Mat nP = P;
+            Ravelin::MatrixNd nP = P;
             nP.negate();
             A.set_sub_mat(1,0,nP);
 
             // b = z
-            Vec cNST = z;
+            Ravelin::VectorNd cNST = z;
             cNST.negate();
             OUTLOG2(cNST,"cNST");
             OUTLOG2(z,"z");
 
             b.set_sub_vec(1,z);
 #else // USE_ST
-            Mat A(nc+1,m);
-            Vec  b(nc+1);
+            Ravelin::MatrixNd A(nc+1,m);
+            Ravelin::VectorNd  b(nc+1);
             A.set_zero();
             b.set_zero();
             //      A           w         b
@@ -267,7 +264,7 @@ double friction_estimation(const Vec& v, const Vec& f, double dt,
             //                  | . |
 
             //  |   -R'jP   |   | w |    | +0 |
-            Vec cP(m);
+            Ravelin::VectorNd cP(m);
             P.transpose_mult(c,cP);
       for(int i=0;i<m;i++)
 A(0,i) = cP[i];
@@ -285,7 +282,7 @@ A(0,i) = cP[i];
             } else {
 //              OUTLOG2(w,"w");
 
-              Vec z2(nvars);
+              Ravelin::VectorNd z2(nvars);
               P.mult(w,z2);
 
 //              OUTLOG2(z2," z2");

@@ -2,15 +2,12 @@
 
 static Ravelin::LinAlgd LA_;
 
-typedef Ravelin::MatrixNd Mat;
-typedef Ravelin::VectorNd Vec;
+extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
+extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 
-extern bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x);
-extern bool solve_qp_pos(const Mat& Q, const Vec& c, Vec& x);
-extern bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x);
-
-void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
-                         const Mat& ST, const Vec& fext, double h, const Mat& MU, Vec& uff){
+void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff){
 
 
   // get number of degrees of freedom and number of contact points
@@ -23,16 +20,16 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   std::cout << "n = " << n << ";" << std::endl;
   std::cout << "h = " << h << ";" << std::endl;
 
-  static Mat workM1,workM2;
-  static Vec workv1, workv2;
+  static Ravelin::MatrixNd workM1,workM2;
+  static Ravelin::VectorNd workv1, workv2;
 
-  static Vec vq(nq);
+  static Ravelin::VectorNd vq(nq);
   v.get_sub_vec(0,nq,vq);
 
-  static Vec vb(6);
+  static Ravelin::VectorNd vb(6);
   v.get_sub_vec(nq,n,vb);
 
-  static Vec vqstar;
+  static Ravelin::VectorNd vqstar;
   vqstar = qdd;
   vqstar *= h;
   vqstar += vq;
@@ -48,36 +45,36 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // compute A, B, and C
   // | C B'| = M
   // | B A |
-  static Mat C(nq,nq);
+  static Ravelin::MatrixNd C(nq,nq);
   M.get_sub_mat(0,nq,0,nq,C);
 
-  static Mat B(6,nq);
+  static Ravelin::MatrixNd B(6,nq);
   M.get_sub_mat(nq,n,0,nq,B);
 
-  static Mat A(6,6);
+  static Ravelin::MatrixNd A(6,6);
   M.get_sub_mat(nq,n,nq,n,A);
 
 
   // compute D, E, and F
-  static Mat iM_chol;
+  static Ravelin::MatrixNd iM_chol;
   iM_chol = M;
   LA_.factor_chol(iM_chol);
   OUTLOG(A,"A");
   OUTLOG(B,"B");
   OUTLOG(C,"C");
   std::cout << "M = [C B';B A];" << std::endl;
-  static Mat iM;
+  static Ravelin::MatrixNd iM;
   // | F E'|  =  inv(M)
   // | E D |
-  iM = Mat::identity(n);
+  iM = Ravelin::MatrixNd::identity(n);
   LA_.solve_chol_fast(iM_chol,iM);
-  static Mat D(6,6);
+  static Ravelin::MatrixNd D(6,6);
   iM.get_sub_mat(nq,n,nq,n,D);
-  static Mat E(6,nq);
+  static Ravelin::MatrixNd E(6,nq);
   iM.get_sub_mat(nq,n,0,nq,E);
-  static Mat F(nq,nq);
+  static Ravelin::MatrixNd F(nq,nq);
   iM.get_sub_mat(0,nq,0,nq,F);
-  static Mat iF;
+  static Ravelin::MatrixNd iF;
   iF = F;
   LA_.factor_chol(iF);
   OUTLOG(D,"D");
@@ -87,7 +84,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
   // determine vbstar, vqstar
 
-  static Vec fID;
+  static Ravelin::VectorNd fID;
   workv1.set_zero(nq);
   fID.set_zero(nq);
   // compute fID
@@ -110,26 +107,26 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   int nk = ST.columns()/nc;
   int nvars = nc + nc*(nk);
   // setup R
-  Mat R(n, nc + (nc*nk) );
+  Ravelin::MatrixNd R(n, nc + (nc*nk) );
   R.set_sub_mat(0,0,N);
   R.set_sub_mat(0,nc,ST);
   OUTLOG(R,"R");
 
   /// Stage 1 optimization energy minimization
-  Vec z(nvars),cf(nvars);
+  Ravelin::VectorNd z(nvars),cf(nvars);
 
-  static Vec zuff(n);
+  static Ravelin::VectorNd zuff(n);
   zuff.set_zero();
   zuff.set_sub_vec(0,fID);
   OUTLOG(zuff,"zuff");
 
   // compute j and k
   // [E,D]
-  Mat ED(E.rows(),E.columns()+D.columns());
+  Ravelin::MatrixNd ED(E.rows(),E.columns()+D.columns());
   ED.set_sub_mat(0,0,E);
   ED.set_sub_mat(0,E.columns(),D);
   // [F,E']
-  Mat FET(F.rows(),F.columns()+E.rows()),
+  Ravelin::MatrixNd FET(F.rows(),F.columns()+E.rows()),
       ET = E;
   ET.transpose();
   FET.set_sub_mat(0,0,F);
@@ -142,18 +139,18 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // HINT: workv1 = (fext + zuff)*h
 
   // j = [E,D](fext + zuff)h + vb
-  Vec j = vb;
+  Ravelin::VectorNd j = vb;
   ED.mult(workv1,j,1,1);
   OUTLOG(j,"j = [ %= [E,D](fext + zuff)h + vb");
 
   // k = [F,E'](fext + zuff)h  +  vq
-  Vec k = vq;
+  Ravelin::VectorNd k = vq;
   FET.mult(workv1,k,1,1);
   OUTLOG(k,"k = [ % = [F,E'](fext + zuff)h  +  vq");
 
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
-  Mat Z(ED.rows(), R.columns());
+  Ravelin::MatrixNd Z(ED.rows(), R.columns());
   workM1 = FET;
   LA_.solve_chol_fast(iF,workM1);
   E.mult(workM1,workM2);
@@ -163,7 +160,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   OUTLOG(Z,"Z = [ % = ( [E,D] - E inv(F) [F,E'] ) R");
 
   // p = j + E inv(F) (vq* - k)
-  Vec p = j;
+  Ravelin::VectorNd p = j;
   workv1 = vqstar;
   workv1 -= k;
   LA_.solve_chol_fast(iF,workv1);
@@ -171,7 +168,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   OUTLOG(p,"p = [ % = j + E inv(F) (vq* - k)");
 
   // H = Z'A Z
-  Mat H(Z.columns(),Z.columns());
+  Ravelin::MatrixNd H(Z.columns(),Z.columns());
   // compute objective function
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
@@ -184,10 +181,10 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // set Hessian:
   // qG = Z'A Z = [H]
   OUTLOG(H,"H = [ % = Z'A Z");
-  Mat qG = H;
+  Ravelin::MatrixNd qG = H;
   // set Gradient:
   // qc = Z'A p + Z'B vq*;
-  Vec qc(Z.columns());
+  Ravelin::VectorNd qc(Z.columns());
   // HINT: workM1 = Z'*A
 
   // qc = Z'A p
@@ -205,23 +202,23 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // N'[zeros(nq,:) ; Z] z + N'[vq* ; p] >= 0
 
   // [zeros(nq,:) ; Z]
-  Mat Z1(n,Z.columns());
+  Ravelin::MatrixNd Z1(n,Z.columns());
   Z1.set_zero();
   Z1.set_sub_mat(nq,0,Z);
 
   // constraint Jacobain 1:
   // qM1 = N'[zeros(nq,:) ; Z]
-  Mat qM1(N.columns(),Z1.columns());
+  Ravelin::MatrixNd qM1(N.columns(),Z1.columns());
   N.transpose_mult(Z1,qM1);
 
   // [vq* ; p]
-  Vec vqstar_p(n);
+  Ravelin::VectorNd vqstar_p(n);
   vqstar_p.set_sub_vec(0,vqstar);
   vqstar_p.set_sub_vec(nq,p);
 
   // constraint vector 1
   // qq1 = -N'[vq* ; p]
-  Vec qq1(N.columns());
+  Ravelin::VectorNd qq1(N.columns());
   N.transpose_mult(vqstar_p,qq1);
   qq1.negate();
 
@@ -229,8 +226,8 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // where : z = [{cN_i .. cN_nc}  {[cS -cS  cT -cT]_i .. [cS -cS  cT -cT]_nc}]'
   // mu_i cN_i - cS_i - cT_i >= 0
 
-  Mat qM2 = Mat::zero(nc, nvars);
-  Vec qq2(nc);
+  Ravelin::MatrixNd qM2 = Ravelin::MatrixNd::zero(nc, nvars);
+  Ravelin::VectorNd qq2(nc);
   // rhs ia zero
   qq2.set_zero();
 
@@ -249,8 +246,8 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
   // combine all linear inequality constraints
   assert(qM1.columns() == qM2.columns());
-  Mat qM(qM1.rows()+qM2.rows(),qM1.columns());
-  Vec qq(qq1.rows()+qq2.rows());
+  Ravelin::MatrixNd qM(qM1.rows()+qM2.rows(),qM1.columns());
+  Ravelin::VectorNd qq(qq1.rows()+qq2.rows());
   qM.set_sub_mat(0,0,qM1);
   qM.set_sub_mat(qM1.rows(),0,qM2);
   qq.set_sub_vec(0,qq1);
@@ -264,7 +261,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
   // measure feasibility of solution
   // qM z - qq >= 0
-  Vec feas = qq;
+  Ravelin::VectorNd feas = qq;
   qM.mult(z,feas,1,-1);
 
   OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
@@ -279,8 +276,8 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
   // H = Z'AZ
   unsigned size_null_space = 0;
-  Mat U,V,P;
-  Vec S;
+  Ravelin::MatrixNd U,V,P;
+  Ravelin::VectorNd S;
 
   // SVD decomp to retrieve nullspace of Z'AZ
   LA_.svd(H,U,S,V);
@@ -307,7 +304,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 //    OUTLOG(P,"Null Space(P)");
 
     // compute U = [F,E']*R
-    Mat U;
+    Ravelin::MatrixNd U;
     FET.mult(R,U);
 
     /////////////////////////////// OBJECTIVE //////////////////////////////////
@@ -358,7 +355,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
     // Non-Interpenetration:
     // SRZ: P = null( Z'*[PD]*Z ) --> P = null(Z) this means:
     //       noninterpenetration & linear energy constraints always = 0
-    Mat ZP(6+nq,size_null_space);
+    Ravelin::MatrixNd ZP(6+nq,size_null_space);
     ZP.set_zero();
     ZP.set_sub_mat(nq,0,Z.mult(P,workM1));
 
@@ -374,9 +371,9 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 
     // Coulomb Friction Polygon:
     nvars = P.columns();
-    Mat qM3(nc, nvars);
+    Ravelin::MatrixNd qM3(nc, nvars);
     qM3.set_zero();
-    Vec qq3(nc);
+    Ravelin::VectorNd qq3(nc);
     qq3.set_zero();
 
     for (int ii=0;ii < nc;ii++){
@@ -416,7 +413,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
 //    qq.set_sub_vec(qq1.rows()+qM2.rows(),qq3);
 
     // optimize system
-    Vec w(size_null_space);
+    Ravelin::VectorNd w(size_null_space);
     if(!solve_qp(qG,qc,qM,qq,w)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!" << std::endl;
 //      assert(false);

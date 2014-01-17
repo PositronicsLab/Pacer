@@ -1,8 +1,5 @@
 #include <quadruped.h>
 
-typedef Ravelin::MatrixNd Mat;
-typedef Ravelin::VectorNd Vec;
-
 using namespace Ravelin;
 using namespace Moby;
 

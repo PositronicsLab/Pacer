@@ -28,3 +28,7 @@ CMakeLists.txt
 include/project_common.h
 src/solve_qp.cc
 src/iit_cpg.cc
+include/robot.h
+include/pid.h
+src/robot.cc
+src/quadruped.cc

@@ -48,12 +48,12 @@ bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x
   bool SOLVE_FLAG = true;
 
 #ifndef NDEBUG
-  std::cout << " >> solve qp positive" << std::endl;
-  std::cout << "QP variables" << std::endl;
-  OUTLOG(Q,"G");
+  std::cout << "% >> solve qp positive" << std::endl;
+  std::cout << "%QP variables" << std::endl;
+  OUTLOG(Q,"Q");
   OUTLOG(c,"c");
-  OUTLOG(A,"A");
-  OUTLOG(b,"b");
+  OUTLOG(A,"AA");
+  OUTLOG(b,"bb");
 //  std::cout << "LCP variables" << std::endl;
 //  OUTLOG(MMM,"MM");
 //  OUTLOG(qqq,"qq");
@@ -68,10 +68,10 @@ bool solve_qp_pos(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x
   for(int i=0;i<n;i++)
       x[i] = zzz[i];
 #ifndef NDEBUG
-  std::cout << "Solutions" << std::endl;
+  std::cout << "%Solutions" << std::endl;
 //  OUTLOG(zzz,"zz");
-  OUTLOG(x,"x");
-  std::cout << " << solve qp positive" << std::endl;
+  OUTLOG(x,"xx");
+  std::cout << "% << solve qp positive" << std::endl;
 #endif
   return SOLVE_FLAG;
 }
@@ -148,12 +148,12 @@ bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
   qqq.set_sub_vec(2*n,nb);
 
 #ifndef NDEBUG
-  std::cout << " >> solve qp" << std::endl;
-  std::cout << "QP variables" << std::endl;
-  OUTLOG(Q,"G");
+  std::cout << "% >> solve qp" << std::endl;
+  std::cout << "%QP variables" << std::endl;
+  OUTLOG(Q,"Q");
   OUTLOG(c,"c");
-  OUTLOG(A,"A");
-  OUTLOG(b,"b");
+  OUTLOG(A,"AA");
+  OUTLOG(b,"bb");
 //  std::cout << "LCP variables" << std::endl;
 //  OUTLOG(MMM,"MM");
 //  OUTLOG(qqq,"qq");
@@ -173,10 +173,10 @@ bool solve_qp(const Mat& Q, const Vec& c, const Mat& A, const Vec& b, Vec& x)
     x[i] = zzz[i] - zzz[n+i];
 
 #ifndef NDEBUG
-  std::cout << "Solutions" << std::endl;
+  std::cout << "%Solutions" << std::endl;
 //  OUTLOG(zzz,"zz");
-  OUTLOG(x,"x");
-  std::cout << " << solve qp" << std::endl;
+  OUTLOG(x,"xx");
+  std::cout << "% << solve qp" << std::endl;
 #endif
   return SOLVE_FLAG;
 }

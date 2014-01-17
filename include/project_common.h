@@ -30,6 +30,7 @@
 #include <math.h>
 #include <numeric>
 
+//#define NDEBUG
 void OUTLOG(const Ravelin::VectorNd& M, std::string name);
 void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name);
 void OUTLOG(const Ravelin::MatrixNd& z, std::string name);

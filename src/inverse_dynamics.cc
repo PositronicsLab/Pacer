@@ -18,6 +18,11 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   int nq = n - 6;
   int nc = N.columns();
 
+  std::cout << "nc = " << nc << ";" << std::endl;
+  std::cout << "nq = " << nq << ";" << std::endl;
+  std::cout << "n = " << n << ";" << std::endl;
+  std::cout << "h = " << h << ";" << std::endl;
+
   static Mat workM1,workM2;
   static Vec workv1, workv2;
 
@@ -27,7 +32,6 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   static Vec vb(6);
   v.get_sub_vec(nq,n,vb);
 
-
   static Vec vqstar;
   vqstar = qdd;
   vqstar *= h;
@@ -36,6 +40,8 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // Log these function variables
   OUTLOG(M,"M");
   OUTLOG(v,"v");
+  OUTLOG(vq,"vq");
+  OUTLOG(vb,"vb");
   OUTLOG(vqstar,"vqstar");
   OUTLOG(fext,"fext");
 
@@ -56,7 +62,10 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   static Mat iM_chol;
   iM_chol = M;
   LA_.factor_chol(iM_chol);
-
+  OUTLOG(A,"A");
+  OUTLOG(B,"B");
+  OUTLOG(C,"C");
+  std::cout << "M = [C B';B A];" << std::endl;
   static Mat iM;
   // | F E'|  =  inv(M)
   // | E D |
@@ -71,6 +80,10 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   static Mat iF;
   iF = F;
   LA_.factor_chol(iF);
+  OUTLOG(D,"D");
+  OUTLOG(E,"E");
+  OUTLOG(F,"F");
+  std::cout << "iM = [F E';E D];" << std::endl;
 
   // determine vbstar, vqstar
 
@@ -108,6 +121,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   static Vec zuff(n);
   zuff.set_zero();
   zuff.set_sub_vec(0,fID);
+  OUTLOG(zuff,"zuff");
 
   // compute j and k
   // [E,D]
@@ -130,9 +144,12 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   // j = [E,D](fext + zuff)h + vb
   Vec j = vb;
   ED.mult(workv1,j,1,1);
+  OUTLOG(j,"j = [ %= [E,D](fext + zuff)h + vb");
+
   // k = [F,E'](fext + zuff)h  +  vq
   Vec k = vq;
   FET.mult(workv1,k,1,1);
+  OUTLOG(k,"k = [ % = [F,E'](fext + zuff)h  +  vq");
 
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
@@ -143,6 +160,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   workM2.negate();
   workM2 += ED;
   workM2.mult(R,Z);
+  OUTLOG(Z,"Z = [ % = ( [E,D] - E inv(F) [F,E'] ) R");
 
   // p = j + E inv(F) (vq* - k)
   Vec p = j;
@@ -150,6 +168,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   workv1 -= k;
   LA_.solve_chol_fast(iF,workv1);
   E.mult(workv1,p,1,1);
+  OUTLOG(p,"p = [ % = j + E inv(F) (vq* - k)");
 
   // H = Z'A Z
   Mat H(Z.columns(),Z.columns());
@@ -164,6 +183,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   /////////////////////////////// OBJECTIVE ///////////////////////////////////
   // set Hessian:
   // qG = Z'A Z = [H]
+  OUTLOG(H,"H = [ % = Z'A Z");
   Mat qG = H;
   // set Gradient:
   // qc = Z'A p + Z'B vq*;
@@ -195,14 +215,14 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   N.transpose_mult(Z1,qM1);
 
   // [vq* ; p]
-  Vec pvqstar(n);
-  pvqstar.set_sub_vec(0,vqstar);
-  pvqstar.set_sub_vec(nq,p);
+  Vec vqstar_p(n);
+  vqstar_p.set_sub_vec(0,vqstar);
+  vqstar_p.set_sub_vec(nq,p);
 
   // constraint vector 1
   // qq1 = -N'[vq* ; p]
   Vec qq1(N.columns());
-  N.transpose_mult(pvqstar,qq1);
+  N.transpose_mult(vqstar_p,qq1);
   qq1.negate();
 
   // setup linear inequality constraints -- coulomb friction
@@ -237,7 +257,7 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   qq.set_sub_vec(qq1.rows(),qq2);
 
   if(!solve_qp_pos(qG,qc,qM,qq,z)){
-    OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 1!" << std::endl;
+    OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!" << std::endl;
 //    assert(false);
     return;
   }
@@ -422,7 +442,14 @@ void inverse_dynamics(const Vec& v, const Vec& qdd, const Mat& M,const  Mat& N,
   OUTLOG(fID,"fID");
   OUTLOG(cf,"final_contact_force");
   //  Note compare contact force prediction to Moby contact force
-
+#ifndef NDEBUG
+  std::cout << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
+  for(int i=0;i<nc;i++)
+    std::cout << "%["<< cf[i] << " "
+              << cf[i*nk+nc]-cf[i*nk+nc+nk/2] << " "
+              << cf[i*nk+nc+1]-cf[i*nk+nc+nk/2+1] << "] "<< std::endl;
+  std::cout << std::endl;
+#endif
   // return the inverse dynamics forces
   // uff = fID + iF*(vqstar - k - FET*R*(cf))/h
   uff = vqstar;

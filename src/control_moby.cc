@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Controller for LINKS robot
  ****************************************************************************/
-#include <quadruped_control.h>
+#include <quadruped.h>
 
 /// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
 //    #define NDEBUG
@@ -12,10 +12,10 @@
     #define CONTROL_ZMP
     #define RENDER_CONTACT
 //    #define USE_ROBOT
-//    #define CONTROL_KINEMATICS
-//    #define FOLLOW_TRAJECTORY
 //    #define FOOT_TRAJ
 //    #define TRUNK_STABILIZATION
+//    #define CONTROL_KINEMATICS
+//    #define FIXED_BASE
 
     std::string LOG_TYPE("INFO");
 /// END USER DEFINITIONS
@@ -57,8 +57,13 @@ static Mat workM_;
           N_FIXED_JOINTS,
           NUM_JOINTS,
           NUM_LINKS,
+#ifdef FIXED_BASE
+         NEULER = 0,// for generalized coords
+         NSPATIAL = 0,
+#else
           NEULER = 7,// for generalized coords
           NSPATIAL = 6,
+#endif
           NDOFS, // for generalized velocity, forces. accel
           NK = 4,
           NC = 0;
@@ -138,11 +143,6 @@ void post_event_callback_fn(const vector<Event>& e,
                             boost::shared_ptr<void> empty)
 {
 
-  // Deactivate all contacts
-  NC = 0;
-  for(int i=0;i<eefs_.size();i++)
-    eefs_[i].active = false;
-
   // PROCESS CONTACTS
   int nc = e.size();
   for(unsigned i=0;i<e.size();i++){
@@ -163,6 +163,8 @@ void post_event_callback_fn(const vector<Event>& e,
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
+      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
+//      OUTLOG(e[i].contact_impulse.get_angular(),"angular");
       if (eefs_[index].active)
         continue;
 
@@ -173,6 +175,8 @@ void post_event_callback_fn(const vector<Event>& e,
       eefs_[index].active = true;
       eefs_[index].point = e[i].contact_point;
       eefs_[index].normal = e[i].contact_normal;
+      eefs_[index].impulse = e[i].contact_impulse.get_linear();
+
       eefs_[index].contacted_body = sb2;
     }
   }
@@ -280,13 +284,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
          qdd_des[joints_[m]->id] = 0.0;
       }
 
-    /// Get next Traj step
-#ifdef FOLLOW_TRAJECTORY
-    get_trajectory(t,dt,q_des,qd_des,qdd_des);
-    for(int i=0;i<NUM_JOINTS; i++)
-      q_des[joints_[i]->id] += q0[joints_[i]->id];
-#endif
-
 #ifdef USE_DUMMY_CONTACTS
     NC = eefs_.size();
 
@@ -339,27 +336,43 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
       N.set_zero(NDOFS,NC);
       ST.set_zero(NDOFS,NC*2);
+      D.set_zero(NDOFS,NC*NK);
       // Contact Jacobian [GLOBAL frame]
       Mat J(3,NDOFS);
       for(int i=0,ii=0;i<NUM_EEFS;i++){
         if(!eefs_[i].active)
           continue;
 
-        dbrobot->calc_jacobian(Moby::GLOBAL,eefs_[i].link,workM_);
+        shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
+        event_frame->q = Ravelin::Quatd::identity();
+        event_frame->x = eefs_[i].point;
+
+        dbrobot->calc_jacobian(event_frame,eefs_[i].link,workM_);
+ // THIS WAS THE WRONG WAY OF DOING IT:  dbrobot->calc_jacobian(Moby::GLOBAL,eefs_[i].link,workM_);
 
         workM_.get_sub_mat(0,3,0,NDOFS,J);
 
         Vector3d tan1, tan2;
         Vector3d::determine_orthonormal_basis(eefs_[i].normal, tan1, tan2);
 
+        // Normal direction
         J.transpose_mult(eefs_[i].normal,workv_);
         N.set_column(ii,workv_);
 
+        // 1st tangent
         J.transpose_mult(tan1,workv_);
         ST.set_column(ii,workv_);
 
+        D.set_column(ii,workv_);
+        workv_.negate();
+        D.set_column(NC*2+ii,workv_);
+
+        // 2nd tangent
         J.transpose_mult(tan2,workv_);
         ST.set_column(NC+ii,workv_);
+        D.set_column(NC+ii,workv_);
+        workv_.negate();
+        D.set_column(NC*3+ii,workv_);
 
         ii++;
       }
@@ -385,7 +398,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       // SRZ: this is the coupling matrix C
       // see: Pattern generators with sensory feedback for the control of quadruped locomotion
       C.set_zero();
-      unsigned gait_pattern = 4;
+      unsigned gait_pattern = 0;
       switch(gait_pattern){
         case 0: // Trotting gait
                        C(0,1) = -1; C(0,2) = -1; C(0,3) =  1;
@@ -508,7 +521,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
 #ifdef TRUNK_STABILIZATION
     if(NC>0){
-      std::cout << "NC = " << NC << std::endl;
+//      std::cout << "NC = " << NC << std::endl;
 
       OUTLOG(R,"R");
       // Select active rows in Jacobian Matrix
@@ -593,7 +606,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 #else
       for(int i=0;i<NC;i++)
         for(int k=0;k<NK/2;k++)
-          MU(i,k) = 0.1;
+          MU(i,k) = 0.5;
 #endif
 
 #ifdef CONTROL_ZMP
@@ -628,15 +641,15 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       u = ufb;
       u += uff;
 
-
-#ifdef USE_ROBOT
-      /// Limit Torques
+      // Limit Torques
       for(unsigned m=0;m< NUM_JOINTS;m++){
         if(u(m,0) > u_max[joints_[m]->id])
           u(m,0) = u_max[joints_[m]->id];
         else if(u(m,0) < -u_max[joints_[m]->id])
           u(m,0) = -u_max[joints_[m]->id];
       }
+
+#ifdef USE_ROBOT
 # ifdef CONTROL_KINEMATICS
       Vec qdat = q.column(0);
       Vec qddat = qd.column(0);
@@ -680,7 +693,41 @@ void controller(DynamicBodyPtr dbp, double t, void*)
        abrobot->update_link_poses();
        abrobot->update_link_velocities();
 #endif
+       // Deactivate all contacts
+       NC = 0;
+       for(int i=0;i<eefs_.size();i++)
+         eefs_[i].active = false;
        ITER++;
+}
+
+void PD_controller(DynamicBodyPtr dbp, double t, void*)
+{
+  static int ITER = 0;
+  static double last_time = 0;
+  static Mat u(NUM_JOINTS,1);
+  static Vec qdd = Vec::zero(NUM_JOINTS);
+
+  u.set_zero();
+
+  double dt = t - last_time;
+  static map<string, double> q_des, qd_des, qdd_des;
+  if (q_des.empty())
+    for (unsigned m=0; m< NUM_JOINTS; m++)
+    {
+       q_des[joints_[m]->id] = q0[joints_[m]->id];
+       qd_des[joints_[m]->id] = 0.0;
+       qdd_des[joints_[m]->id] = 0.0;
+    }
+  u.set_zero();
+
+  control_PID(q_des, qd_des, gains,t,u);
+
+  // send torque commands to robot
+  apply_simulation_forces(u);
+
+ last_time = t;
+
+ ITER++;
 }
 
 /// plugin must be "extern C"
@@ -780,8 +827,8 @@ void init(void* separator,
   /// LOCALLY SET VALUES
   // robot's initial (ZERO) configuration
   BASE_ORIGIN.set_zero();
-  BASE_ORIGIN[2] = 0.1059;
-//  BASE_ORIGIN[2] = 0.09;
+  BASE_ORIGIN[2] = 0.1009;
+//  BASE_ORIGIN[2] = 0.0922774;
   BASE_ORIGIN[6] = 1;
 
   q0["BODY_JOINT"] = 0;
@@ -822,9 +869,9 @@ void init(void* separator,
   // Setup gains
   for(unsigned i=0;i<NUM_JOINTS;i++){
     // pass gain values to respective joint
-    gains[joints_[i]->id].kp = 1e-1;
-    gains[joints_[i]->id].kv = 1e-2;
-    gains[joints_[i]->id].ki = 1e-3;
+    gains[joints_[i]->id].kp = 1e1;
+    gains[joints_[i]->id].kv = 5e-2;
+    gains[joints_[i]->id].ki = 0;//1e-3;
   }
 
   // Set Initial State
@@ -832,7 +879,9 @@ void init(void* separator,
 
   abrobot->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
+#ifndef FIXED_BASE
   q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
+#endif
 
 #ifdef FOOT_TRAJ
   std::map<std::string, Ravelin::Vector3d> eef_origin_offset;
@@ -855,7 +904,7 @@ void init(void* separator,
 #else
   for(int i=0;i<NUM_JOINTS;i++){
     q_start[i] = q0[joints_[i]->id];
-    qd_start[i] = 0;
+    qd_start[i] = 0.0;
   }
 #endif
 

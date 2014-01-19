@@ -5,13 +5,19 @@ using namespace Moby;
 
 static Ravelin::VectorNd workv_;
 static Ravelin::MatrixNd workM_;
+static Ravelin::LinAlgd LA_;
 
-Ravelin::VectorNd& Quadruped::control(const Ravelin::VectorNd& q,
+//    #define FOOT_TRAJ
+//    #define TRUNK_STABILIZATION
+
+Ravelin::VectorNd& Quadruped::control(double dt,
+                                      const Ravelin::VectorNd& q,
                                       const Ravelin::VectorNd& qd,
                                       Ravelin::VectorNd& q_des,
                                       Ravelin::VectorNd& qd_des,
                                       Ravelin::VectorNd& u){
-
+  static double t = 0;
+  t += dt;
   unsigned NC = 0;
   for (unsigned i=0; i< NUM_EEFS;i++)
     if(eefs_[i].active)
@@ -25,10 +31,10 @@ Ravelin::VectorNd& Quadruped::control(const Ravelin::VectorNd& q,
 
   static Ravelin::VectorNd qdd(NUM_JOINTS);
 
-  for (unsigned m=0,i=0; m< NUM_JOINTS; m++)
+  for (unsigned m=0,i=0; i< NUM_JOINTS; m++)
   {
      if(joints_[m]->q.size() == 0) continue;
-     q_des[i] = q0_[joints_[i]->id];
+     q_des[i] = q0_[joints_[m]->id];
      qd_des[i] = 0.0;
      i++;
   }
@@ -153,7 +159,7 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
     break;
   }
 
-  double speed = 1;
+  double speed = 80;
 
   // Additional Aprameters for CPG
   double Ls = 0.02,
@@ -179,9 +185,9 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
 
   // Foot goal position
   for(int f=0;f<NUM_EEFS;f++){
-//        foot_vel[f] = Ravelin::Vector3d(0,0,0);
-//        foot_poses[f] = foot_origins[f]+Ravelin::Vector3d(0,0,0.02*cos(t*2.0));//(foot_vel[f]*dt*speed);
-    foot_poses[f] += (foot_vel[f]*dt*speed);
+        foot_vel[f] = Ravelin::Vector3d(0,0,0);
+        foot_poses[f] = foot_origins[f]+Ravelin::Vector3d(0,0,0.02*cos(t*speed));
+//    foot_poses[f] += (foot_vel[f]*dt*speed);
   }
   std::vector<Ravelin::Vector3d> joint_positions(NUM_EEFS);
   feetIK(foot_poses,joint_positions);
@@ -191,7 +197,7 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
   if(false)
   for(int f=0;f<NUM_EEFS;f++){
     // Calc jacobian for AB at this EEF
-    dbrobot->calc_jacobian(boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame)),eefs_[f].link,workM_);
+    dbrobot_->calc_jacobian(boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame)),eefs_[f].link,workM_);
 
     std::vector<unsigned>& joint_inds = eefs_[f].chain;
 
@@ -216,8 +222,8 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
 
     // Write into qd desired
     for(int i=0;i<joint_inds.size();i++){
-      q_des[joints_[joint_inds[i]]->id] = joints_[joint_inds[i]]->q[0] + foot_vel[f][i];
-      qd_des[joints_[joint_inds[i]]->id] = foot_vel[f][i];
+      q_des[joint_inds[i]] = joints_[joint_inds[i]]->q[0] + foot_vel[f][i];
+      qd_des[joint_inds[i]] = foot_vel[f][i];
     }
   }
 
@@ -225,18 +231,12 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
   // Use Positional (numerical velocity) Control
   for(int i=0;i<NUM_EEFS;i++){
     for(int j=0;j<eefs_[i].chain.size();j++){
-      qd_des[joints_[eefs_[i].chain[j]]->id] = (joint_positions[i][eefs_[i].chain.size()-j-1] - joints_[eefs_[i].chain[j]]->q[0])/dt;
-      q_des[joints_[eefs_[i].chain[j]]->id] = joint_positions[i][eefs_[i].chain.size()-j-1];
+      qd_des[eefs_[i].chain[j]] = 0;//(joint_positions[i][eefs_[i].chain.size()-j-1] - joints_[eefs_[i].chain[j]]->q[0])/dt;
+      q_des[eefs_[i].chain[j]] = joint_positions[i][eefs_[i].chain.size()-j-1];
     }
   }
-  q_des["LF_HIP_AA"] = 0;
-  q_des["RF_HIP_AA"] = 0;
-  q_des["LH_HIP_AA"] = 0;
-  q_des["RH_HIP_AA"] = 0;
-  qd_des["LF_HIP_AA"] = 0;
-  qd_des["RF_HIP_AA"] = 0;
-  qd_des["LH_HIP_AA"] = 0;
-  qd_des["RH_HIP_AA"] = 0;
+
+  OUTLOG(q_des,"q_des");
 }
 #endif
 
@@ -370,18 +370,6 @@ if(NC>0){
       u[m] = -torque_limits_[joints_[m]->id];
   }
 
-#ifdef USE_ROBOT
-# ifdef CONTROL_KINEMATICS
-  Ravelin::VectorNd qdat = q.column(0);
-  Ravelin::VectorNd qddat = qd.column(0);
-//      dxl_->set_state(qdat.data(),qddat.data());
-  dxl_->set_position(qdat.data());
-# else
-  Ravelin::VectorNd udat = u.column(0);
-  dxl_->set_torque(udat.data());
-# endif
-#endif
-
 #ifdef OUTPUT
       std::cout <<  "@ time = "<< t << std::endl;
      std::cout << "JOINT\t: U\t| Q\t: des\t: err\t| "
@@ -406,6 +394,8 @@ if(NC>0){
      for(int i=0;i<eefs_.size();i++)
        eefs_[i].active = false;
 }
+
+
 
 void Quadruped::init(){
   // Set up joint references
@@ -432,14 +422,14 @@ void Quadruped::init(){
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
 
-  EndEffector::joint_names_ = joint_names_;
   for(unsigned i=0;i<links_.size();i++)
       for(unsigned j=0;j<eef_names_.size();j++)
           if(eef_names_[j].compare(links_[i]->id) == 0){
-            eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id]));
+            eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id],joint_names_));
           }
 
   NUM_EEFS = eefs_.size();
+  NK = 4;
 
   std::cout << "NUM_EEFS: " << NUM_EEFS << std::endl;
   std::cout << "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS << std::endl;
@@ -496,13 +486,18 @@ void Quadruped::init(){
   // Setup gains
   for(unsigned i=0;i<NUM_JOINTS;i++){
     // pass gain values to respective joint
-    gains[joints_[i]->id].kp = 1e1;
-    gains[joints_[i]->id].kv = 5e-2;
-    gains[joints_[i]->id].ki = 0;//1e-3;
+    gains_[joints_[i]->id].kp = 1e-1;
+    gains_[joints_[i]->id].kv = 5e-3;
+    gains_[joints_[i]->id].ki = 0;//1e-3;
+
+    // init perr_sum
+    gains_[joints_[i]->id].perr_sum = 0;
+
   }
 
   // Set Initial State
-  Ravelin::VectorNd q_start(NUM_JOINTS+NEULER),qd_start(NDOFS);
+  Ravelin::VectorNd q_start(NUM_JOINTS+NEULER),
+                    qd_start(NDOFS);
 
   abrobot_->get_generalized_coordinates(DynamicBody::eEuler,q_start);
   qd_start.set_zero();
@@ -538,5 +533,6 @@ if(BASE_DOFS != 0)
   // Push initial state to robot
   abrobot_->set_generalized_coordinates(DynamicBody::eEuler,q_start);
   abrobot_->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
+
 }
 

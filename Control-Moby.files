@@ -1,6 +1,7 @@
 include/LinksColdetPlugin.h
 include/Log.h
 include/quadruped.h
+include/robot.h
 regress/XMLs/links-crb-global.xml
 regress/XMLs/links-crb-joint.xml
 regress/XMLs/links-crb-link.xml

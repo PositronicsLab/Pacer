@@ -55,6 +55,7 @@ void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fe
 }
 
 void Robot::compile(){
+  dbrobot_ = boost::dynamic_pointer_cast<DynamicBody>(abrobot_);
   std::vector<JointPtr> joints = abrobot_->get_joints();
   joints_.resize(joints.size());
 
@@ -67,6 +68,13 @@ void Robot::compile(){
     joints_[joints[i]->get_coord_index()] = joints[i];
      std::cout << joints[i]->get_coord_index() << " "
                << joints_[joints[i]->get_coord_index()]->id << std::endl;
+  }
+
+  for(unsigned i=0;i<joints_.size()-NUM_FIXED_JOINTS;i++){
+    if(joints_[i]->q.rows() == 0){
+      continue;
+    }
+    joint_names_.push_back(joints_[i]->id);
   }
 
   // Set up link references

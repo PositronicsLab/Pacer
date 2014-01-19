@@ -10,11 +10,13 @@ public:
     abrobot_ = abrobot;
     init();
   }
-  Ravelin::VectorNd& control(const Ravelin::VectorNd& q,
-                                         const Ravelin::VectorNd& qd,
-                                         Ravelin::VectorNd& q_des,
-                                         Ravelin::VectorNd& qd_des,
-                                         Ravelin::VectorNd& u);
+  Ravelin::VectorNd& control(double dt,
+                             const Ravelin::VectorNd& q,
+                             const Ravelin::VectorNd& qd,
+                             Ravelin::VectorNd& q_des,
+                             Ravelin::VectorNd& qd_des,
+                             Ravelin::VectorNd& u);
+
 
 double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext,
                            double dt, const Ravelin::MatrixNd& N,

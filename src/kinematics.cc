@@ -26,7 +26,7 @@ std::vector<std::vector<Ravelin::Vector3d> >& trajectoryIK(
 
 }
 
-std::vector<Ravelin::Vector3d>& feetIK(
+std::vector<Ravelin::Vector3d>& Quadruped::feetIK(
         const std::vector<Ravelin::Vector3d>& feet_positions,
         std::vector<Ravelin::Vector3d>& joint_positions){
   int num_feet = feet_positions.size();

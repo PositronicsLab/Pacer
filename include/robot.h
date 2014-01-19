@@ -6,15 +6,15 @@
 
 class EndEffector{
 public:
-  static std::vector<std::string> joint_names_;
 
     EndEffector(){
       init();
     }
-    EndEffector(Moby::RigidBodyPtr l,Ravelin::Vector3d o){
+    EndEffector(Moby::RigidBodyPtr l,Ravelin::Vector3d& o,std::vector<std::string>& jn){
       link = l;
       id = link->id;
       origin = o;
+      joint_names_ = jn;
       init();
     }
 
@@ -33,14 +33,16 @@ public:
     bool                  active;
 
   private:
+    std::vector<std::string> joint_names_;
     void init();
 };
 
 class Robot {
   public:
-    Robot();
+    Robot(){}
     // This is the Simplest Controller (policy is determined within fn)
-    virtual Ravelin::VectorNd& control(const Ravelin::VectorNd& q,
+    virtual Ravelin::VectorNd& control(double dt,
+                                       const Ravelin::VectorNd& q,
                                        const Ravelin::VectorNd& qd,
                                        Ravelin::VectorNd& q_des,
                                        Ravelin::VectorNd& qd_des,
@@ -52,6 +54,7 @@ class Robot {
   std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
   std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
   std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
+  std::vector<std::string>& get_joint_names()  { return joint_names_; }
   Moby::RCArticulatedBodyPtr& get_articulated_body()  { return abrobot_; }
   Moby::DynamicBodyPtr& get_dynamic_body()  { return dbrobot_; }
 

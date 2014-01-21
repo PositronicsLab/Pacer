@@ -16,11 +16,11 @@ set(BUILD_DIRECTORY bin)
 set(SOURCE_DIRECTORY src)
 
 include_directories(
-#/Users/samzapo/ThirdParty/Moby/include
+/Users/samzapo/ThirdParty/Moby/include
 include /usr/include /usr/include/libxml2 /usr/local/include ${Boost_INCLUDE_DIR} /opt/local/include /opt/X11/include)
 
 link_directories(
-#/Users/samzapo/ThirdParty/Moby/contact-reduce
+/Users/samzapo/ThirdParty/Moby/contact-reduce
 /usr/local/lib /opt/local/lib /opt/X11/lib
 )
 

@@ -81,6 +81,8 @@ class Robot {
     unsigned                          NEULER;
     unsigned                          NK;
 
+    Ravelin::VectorNd BASE_ORIGIN;
+
   // PHYSICAL ROBOT LIMITS AND VARIABLES
     std::map<std::string, double>     q0_;
     std::map<std::string, double>     torque_limits_;

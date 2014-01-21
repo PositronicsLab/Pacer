@@ -6,16 +6,13 @@
 /// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
 //    #define NDEBUG
 //    #define USE_DUMMY_CONTACTS
-//    #define FRICTION_EST
-//    #define CONTROL_IDYN
 
-//    #define CONTROL_ZMP
-//    #define RENDER_CONTACT
+    #define RENDER_CONTACT
 //    #define USE_ROBOT
 //    #define CONTROL_KINEMATICS
-//    #define FIXED_BASE
 
-    std::string LOG_TYPE("INFO");
+std::string LOG_TYPE("INFO");
+//std::string LOG_TYPE("ERROR");
 /// END USER DEFINITIONS
 
     std::vector<std::string> joint_names_;
@@ -78,8 +75,8 @@ void post_event_callback_fn(const std::vector<Event>& e,
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
-//      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
-      OUTLOG(e[i].contact_point,sb1->id);
+      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
+//      OUTLOG(e[i].contact_point,sb1->id);
       if (eefs_[index].active)
         continue;
 
@@ -136,7 +133,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
   std::vector<EndEffector>& eefs_ = Lynx_ptr->get_end_effectors();
   std::vector<Moby::JointPtr>& joints_ = Lynx_ptr->get_joints();
   joint_names_ = Lynx_ptr->get_joint_names();
-  Moby::RCArticulatedBodyPtr& abrobot = Lynx_ptr->get_articulated_body();
+  Moby::RCArticulatedBodyPtr abrobot = Lynx_ptr->get_articulated_body();
   unsigned num_joints = joint_names_.size();
 
     static int ITER = 0;
@@ -151,6 +148,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
                      qd(num_joints,1);
     ///  Record Robot State
 #ifdef USE_ROBOT
+    // Query state of robot from R. Links
+
     Ravelin::VectorNd q_robot(Dynamixel::N_JOINTS),
                      qd_robot(Dynamixel::N_JOINTS);
     q_robot.set_zero();
@@ -230,6 +229,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       // Push initial state to robot
       abrobot->set_generalized_coordinates(DynamicBody::eEuler,des_coordinates);
       abrobot->update_link_poses();
+      abrobot->update_link_velocities();
     }
 #else
     apply_simulation_forces(u,joints_);

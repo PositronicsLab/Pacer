@@ -17,21 +17,16 @@
   <Box id="thorax" xlen="0.0355" ylen="0.101" zlen="0.0356" mass="0.234"/>
 
   <!-- Leg Primitives -->
-<!--  <Box id="RX-24F" xlen="0.0505" ylen="0.0355" zlen="0.0356" mass="0.005"/>-->
-<!--  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.005"/>-->
-<!--  <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.005"/>-->
   <Box id="RX-24F" xlen="0.0505" ylen="0.0355" zlen="0.0356" mass="0.063"/>
-<!--  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.126"/>-->
-  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.063"/>
+  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.126"/>
   <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.03"/>
-<!--  <Sphere id="foot" radius="0.005" mass="0.001"/>-->
   <Cylinder id="foot" radius="0.005" height="0.01" mass="0.001"/>
 
-    <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
-    <EulerIntegrator id="euler" />
-    <RungeKuttaIntegrator id="rk4" />
+  <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+  <EulerIntegrator id="euler" />
+  <RungeKuttaIntegrator id="rk4" />
 
-    <GravityForce id="gravity" accel="0 0 -9.81" />
+  <GravityForce id="gravity" accel="0 0 -9.81" />
 <!--    <StokesDragForce id="drag" drag-b=".001" drag-b-ang=".001" />-->
 
    <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
@@ -46,7 +41,7 @@
       <DisabledPair object1-id="links" object2-id="links"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="simpleccd" max-event-time="inf">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd" max-event-time="0">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DynamicBody dynamic-body-id="links" />

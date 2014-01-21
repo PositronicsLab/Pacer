@@ -1,14 +1,18 @@
 #include <quadruped.h>
 
 using namespace Ravelin;
-using namespace Moby;
+//using namespace Moby;
 
 static Ravelin::VectorNd workv_;
 static Ravelin::MatrixNd workM_;
 static Ravelin::LinAlgd LA_;
 
-//    #define FOOT_TRAJ
-//    #define TRUNK_STABILIZATION
+    #define FOOT_TRAJ
+    #define TRUNK_STABILIZATION
+    #define CONTROL_IDYN
+//    #define FRICTION_EST
+//    #define CONTROL_ZMP
+//    #define FIXED_BASE
 
 Ravelin::VectorNd& Quadruped::control(double dt,
                                       const Ravelin::VectorNd& q,
@@ -47,8 +51,8 @@ Ravelin::VectorNd& Quadruped::control(double dt,
 
   // et robot state vectors
   dbrobot_->get_generalized_acceleration(acc);
-  dbrobot_->get_generalized_velocity(DynamicBody::eSpatial,vel);
-  dbrobot_->get_generalized_coordinates(DynamicBody::eSpatial,gc);
+  dbrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,vel);
+  dbrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,gc);
 
   // Get base frame
   Ravelin::Pose3d base_frame = *links_[0]->get_pose();
@@ -125,7 +129,7 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
   // SRZ: this is the coupling matrix C
   // see: Pattern generators with sensory feedback for the control of quadruped locomotion
   C.set_zero();
-  unsigned gait_pattern = 0;
+  unsigned gait_pattern = 4;
   switch(gait_pattern){
     case 0: // Trotting gait
                    C(0,1) = -1; C(0,2) = -1; C(0,3) =  1;
@@ -159,18 +163,18 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
     break;
   }
 
-  double speed = 80;
+  double speed = 40;
 
   // Additional Aprameters for CPG
-  double Ls = 0.02,
+  double Ls = 0.04,
          Df = 0.55, // where 50% –_–_–_ 100% ======  *Duty factor
                     //           –_–_–_      ======
-         Vf = 0.02,
+         Vf = 0.12,
          bp = 100;
 
   for(int f=0;f<NUM_EEFS;f++){
     // set height of gait (each foot)
-    Hs[f] = 0.01;
+    Hs[f] = 0.02;
 
     // set gait centers
     Ravelin::Pose3d link_pose = *eefs_[f].link->get_pose();
@@ -185,16 +189,19 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
 
   // Foot goal position
   for(int f=0;f<NUM_EEFS;f++){
-        foot_vel[f] = Ravelin::Vector3d(0,0,0);
-        foot_poses[f] = foot_origins[f]+Ravelin::Vector3d(0,0,0.02*cos(t*speed));
+    if(f==0 || f ==3) {
+      foot_poses[f] = foot_origins[f]+Ravelin::Vector3d(0,0,0.005*cos(M_PI_2+t*speed));
+      foot_vel[f] = Ravelin::Vector3d(0,0, speed*0.005*sin(M_PI_2+t*speed));
+    } else {
+      foot_poses[f] = foot_origins[f]+Ravelin::Vector3d(0,0,0.005*cos(M_PI_2+t*-speed));
+      foot_vel[f] = Ravelin::Vector3d(0,0,-speed*0.005*sin(M_PI_2+t*-speed));
+    }
 //    foot_poses[f] += (foot_vel[f]*dt*speed);
   }
   std::vector<Ravelin::Vector3d> joint_positions(NUM_EEFS);
   feetIK(foot_poses,joint_positions);
 
   // Foot goal Velocity
-
-  if(false)
   for(int f=0;f<NUM_EEFS;f++){
     // Calc jacobian for AB at this EEF
     dbrobot_->calc_jacobian(boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame)),eefs_[f].link,workM_);
@@ -207,36 +214,20 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
       for(int j=0;j<3;j++)
         iJ(j,i) = workM_(j,joint_inds[i]);
 
-//        OUTLOG(iJ,"J");
-
-    // PseudoInverse
-    Ravelin::Vector3d foot_velocity = foot_vel[f];
-    // (JJ')J
     // SOLVE [inverse] EEF jacobian iJ:(xd -> qd)
     LA_.solve_fast(iJ,foot_vel[f]);
-
-    // Jacobian transpose method
-//        iJ.transpose_mult(foot_velocity,foot_vel[f]);
-
-    foot_vel[f] *= dt*speed;
-
-    // Write into qd desired
-    for(int i=0;i<joint_inds.size();i++){
-      q_des[joint_inds[i]] = joints_[joint_inds[i]]->q[0] + foot_vel[f][i];
-      qd_des[joint_inds[i]] = foot_vel[f][i];
-    }
   }
-
 
   // Use Positional (numerical velocity) Control
   for(int i=0;i<NUM_EEFS;i++){
     for(int j=0;j<eefs_[i].chain.size();j++){
-      qd_des[eefs_[i].chain[j]] = 0;//(joint_positions[i][eefs_[i].chain.size()-j-1] - joints_[eefs_[i].chain[j]]->q[0])/dt;
+      qd_des[eefs_[i].chain[j]] = foot_vel[i][eefs_[i].chain.size()-j-1];
       q_des[eefs_[i].chain[j]] = joint_positions[i][eefs_[i].chain.size()-j-1];
     }
   }
 
   OUTLOG(q_des,"q_des");
+  OUTLOG(qd_des,"qd_des");
 }
 #endif
 
@@ -276,13 +267,7 @@ if(NC>0){
     if(NULL_Jh.norm_inf() > 1e8)
       NULL_Jh.set_zero(Jh.rows(),Jh.rows());
   } catch(Ravelin::SingularException e) {
-//        static std::vector<int> pivwork;
-//        workM_ = Jh_plus;
-//        Jh_plus = Jh;
-//        LA_.factor_LU(workM_,pivwork);
-//        LA_.solve_LU_fast(workM_,true,pivwork,Jh_plus);
-//        Jh_plus.transpose();
-//        OUTLOG(Jh_plus,"Jh' (Jh Jh')^-1 (LU decomp)");
+    OUT_LOG(logERROR) << "No trunk Stabilization" << std::endl;
     NULL_Jh.set_zero(Jh.rows(),Jh.rows());
   }
 
@@ -296,14 +281,14 @@ if(NC>0){
   // Trunk Stability gains
   double Xp = 0, Xv = 0,
          Yp = 0, Yv = 0,
-         Zp = 1e-2, Zv = 0,
-         Rp = 1e-2, Rv = 1e-4,
-         Pp = 1e-2, Pv = 1e-4;
+         Zp = 0, Zv = 1e-2,
+         Rp = 1e-2, Rv = 1e-2,
+         Pp = 1e-2, Pv = 1e-2;
 
   static Ravelin::VectorNd Y,tY;
   Y.set_zero(NC*3+6);
 
-  Y[NC*3+2] = /*(base_horizonal_frame->x[2]-BASE_ORIGIN[2])*Zp +*/ (vel[NUM_JOINTS+2]-0)*Zv;
+  Y[NC*3+2] = (base_horizonal_frame->x[2]-BASE_ORIGIN[2])*Zp + (vel[NUM_JOINTS+2]-0)*Zv;
   Y[NC*3+3] =  (vel[NUM_JOINTS+3]-0)*Rv;
   Y[NC*3+4] =  (vel[NUM_JOINTS+4]-0)*Pv;
 
@@ -311,7 +296,7 @@ if(NC>0){
 
   // apply base stabilization forces
   for(int i=0;i<NC*3;i++)
-    uff(active_dofs[i],0) += tY[i];
+    uff[active_dofs[i]] += tY[i];
 
 }
 #endif
@@ -327,7 +312,7 @@ if(NC>0){
 #else
   for(int i=0;i<NC;i++)
     for(int k=0;k<NK/2;k++)
-      MU(i,k) = 0.5;
+      MU(i,k) = 0.1;
 #endif
 
 #ifdef CONTROL_ZMP
@@ -348,12 +333,12 @@ if(NC>0){
 #ifdef CONTROL_IDYN
   for(int i=0;i<NUM_JOINTS; i++)
     qdd[i] = 0;// qdd_des[joints_[i]->id];
-  static Ravelin::VectorNd ff(NUM_JOINTS);
-  ff.set_zero();
-
-  inverse_dynamics(vel,qdd,M,N,D,fext,0.1,MU,ff);
+//  static Ravelin::VectorNd ff(NUM_JOINTS);
   uff.set_zero();
-  uff.set_column(0,ff);
+
+  inverse_dynamics(vel,qdd,M,N,D,fext,0.01,MU,uff);
+//  uff.set_zero();
+//  uff.set_column(0,ff);
 #endif
   ///  Determine FB forces
   control_PID(q_des, qd_des,q,qd,joint_names_, gains_,0,ufb);
@@ -395,13 +380,15 @@ if(NC>0){
        eefs_[i].active = false;
 }
 
-
-
 void Quadruped::init(){
   // Set up joint references
+#ifdef FIXED_BASE
+  NSPATIAL = 0;
+  NEULER = 0;
+#else
   NSPATIAL = 6;
   NEULER = 7;
-  unsigned BASE_DOFS  = 6;
+#endif
   compile();
 
   // Set up end effectors
@@ -413,10 +400,10 @@ void Quadruped::init(){
   // z = -0.1305
 
   std::map<std::string, Ravelin::Vector3d> eef_origins_;
-  eef_origins_["LF_FOOT"] = Ravelin::Vector3d(0.11564, 0.0575, -0.0922774);
-  eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.11564, -0.0575, -0.0922774);
-  eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.0832403, 0.0575, -0.0922774);
-  eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.0832403, -0.0575, -0.0922774);
+  eef_origins_["LF_FOOT"] = Ravelin::Vector3d(0.11564, 0.0475, -0.0922774);
+  eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.11564, -0.0475, -0.0922774);
+  eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.0832403, 0.0475, -0.0922774);
+  eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.0832403, -0.0475, -0.0922774);
 
   NUM_JOINTS = joints_.size() - NUM_FIXED_JOINTS;
   NUM_LINKS = links_.size();
@@ -439,13 +426,12 @@ void Quadruped::init(){
   std::cout << "NEULER: " << NEULER << std::endl;
   std::cout << "NK: " << NK << std::endl;
 
-  Ravelin::VectorNd BASE_ORIGIN(7);
+  BASE_ORIGIN.set_zero(NEULER);
 
   /// LOCALLY SET VALUES
   // robot's initial (ZERO) configuration
-  BASE_ORIGIN.set_zero();
-//  BASE_ORIGIN[2] = 0.1009;
-  BASE_ORIGIN[2] = 0.0922774;
+  BASE_ORIGIN[2] = 0.098;
+//  BASE_ORIGIN[2] = 0.0922774;
   BASE_ORIGIN[6] = 1;
 
   q0_["BODY_JOINT"] = 0;
@@ -486,8 +472,8 @@ void Quadruped::init(){
   // Setup gains
   for(unsigned i=0;i<NUM_JOINTS;i++){
     // pass gain values to respective joint
-    gains_[joints_[i]->id].kp = 1e-1;
-    gains_[joints_[i]->id].kv = 5e-3;
+    gains_[joints_[i]->id].kp = 1e1;
+    gains_[joints_[i]->id].kv = 1e-2;
     gains_[joints_[i]->id].ki = 0;//1e-3;
 
     // init perr_sum
@@ -497,11 +483,11 @@ void Quadruped::init(){
 
   // Set Initial State
   Ravelin::VectorNd q_start(NUM_JOINTS+NEULER),
-                    qd_start(NDOFS);
+                    qd_start(NUM_JOINTS+NSPATIAL);
 
-  abrobot_->get_generalized_coordinates(DynamicBody::eEuler,q_start);
+  abrobot_->get_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
   qd_start.set_zero();
-if(BASE_DOFS != 0)
+if(NEULER != 0)
   q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
 
 
@@ -531,8 +517,8 @@ if(BASE_DOFS != 0)
 #endif
 
   // Push initial state to robot
-  abrobot_->set_generalized_coordinates(DynamicBody::eEuler,q_start);
-  abrobot_->set_generalized_velocity(DynamicBody::eSpatial,qd_start);
+  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
+  abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,qd_start);
 
 }
 

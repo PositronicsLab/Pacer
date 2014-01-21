@@ -21,7 +21,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
   // depth of step phase where touchdown occurs (fraction of Hs)
   double ztd = 0.1;
   // speed at which behavior changes (arbitrary scale)
-  double bf = 100;
+  double bf = 800;
 
   std::vector<Ravelin::Vector3d> xb(NUM_EEFS);
   for(int i=0;i<NUM_EEFS;i++)
@@ -52,7 +52,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
     double Sf1 = 1.0/(exp(-bf*(xbar[2] - ztd*Hs[i])) + 1.0);
     double Sf2 = 1.0/(exp( bf*(xbar[2] - ztd*Hs[i])) + 1.0);
 
-//    xd[i] = (xd[i])*Sf1 - Ravelin::Vector3d(Vf,0,0)*Sf2;
+    xd[i] = (xd[i])*Sf1 - Ravelin::Vector3d(Vf,0,0)*Sf2;
 
   }
 

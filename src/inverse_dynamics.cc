@@ -1,4 +1,4 @@
-#include <project_common.h>
+#include <quadruped.h>
 
 static Ravelin::LinAlgd LA_;
 
@@ -6,7 +6,7 @@ extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c,
 extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
 extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 
-void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff){
 
 
@@ -15,10 +15,10 @@ void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   int nq = n - 6;
   int nc = N.columns();
 
-  std::cout << "nc = " << nc << ";" << std::endl;
-  std::cout << "nq = " << nq << ";" << std::endl;
-  std::cout << "n = " << n << ";" << std::endl;
-  std::cout << "h = " << h << ";" << std::endl;
+  OUT_LOG(logINFO)  << "nc = " << nc << ";" << std::endl;
+  OUT_LOG(logINFO)  << "nq = " << nq << ";" << std::endl;
+  OUT_LOG(logINFO)  << "n = " << n << ";" << std::endl;
+  OUT_LOG(logINFO)  << "h = " << h << ";" << std::endl;
 
   static Ravelin::MatrixNd workM1,workM2;
   static Ravelin::VectorNd workv1, workv2;
@@ -62,7 +62,7 @@ void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   OUTLOG(A,"A");
   OUTLOG(B,"B");
   OUTLOG(C,"C");
-  std::cout << "M = [C B';B A];" << std::endl;
+  OUT_LOG(logINFO)  << "M = [C B';B A];" << std::endl;
   static Ravelin::MatrixNd iM;
   // | F E'|  =  inv(M)
   // | E D |
@@ -80,7 +80,7 @@ void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   OUTLOG(D,"D");
   OUTLOG(E,"E");
   OUTLOG(F,"F");
-  std::cout << "iM = [F E';E D];" << std::endl;
+  OUT_LOG(logINFO)  << "iM = [F E';E D];" << std::endl;
 
   // determine vbstar, vqstar
 
@@ -440,12 +440,12 @@ void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   OUTLOG(cf,"final_contact_force");
   //  Note compare contact force prediction to Moby contact force
 #ifndef NDEBUG
-  std::cout << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
+  OUT_LOG(logINFO)  << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
   for(int i=0;i<nc;i++)
-    std::cout << "%["<< cf[i] << " "
+    OUT_LOG(logINFO)  << "%["<< cf[i] << " "
               << cf[i*nk+nc]-cf[i*nk+nc+nk/2] << " "
               << cf[i*nk+nc+1]-cf[i*nk+nc+nk/2+1] << "] "<< std::endl;
-  std::cout << std::endl;
+  OUT_LOG(logINFO)  << std::endl;
 #endif
   // return the inverse dynamics forces
   // uff = fID + iF*(vqstar - k - FET*R*(cf))/h

@@ -11,8 +11,8 @@
 //    #define USE_ROBOT
 //    #define CONTROL_KINEMATICS
 
-std::string LOG_TYPE("INFO");
-//std::string LOG_TYPE("ERROR");
+//std::string LOG_TYPE("INFO");
+std::string LOG_TYPE("ERROR");
 /// END USER DEFINITIONS
 
     std::vector<std::string> joint_names_;
@@ -136,18 +136,18 @@ void controller(DynamicBodyPtr dbp, double t, void*)
   Moby::RCArticulatedBodyPtr abrobot = Lynx_ptr->get_articulated_body();
   unsigned num_joints = joint_names_.size();
 
-    static int ITER = 0;
-    static double last_time = 0;
+  static int ITER = 0;
+  static double last_time = 0;
 
-    Ravelin::MatrixNd u(num_joints,1);
+  Ravelin::MatrixNd u(num_joints,1);
 
-    double dt = t - last_time;
-    if (dt == 0) return;
+  double dt = t - last_time;
+  if (dt == 0) return;
 
-    Ravelin::MatrixNd q(num_joints,1),
-                     qd(num_joints,1);
-    ///  Record Robot State
-#ifdef USE_ROBOT
+  Ravelin::MatrixNd q(num_joints,1),
+                   qd(num_joints,1);
+  ///  Record Robot State
+#ifdef USE_ROBOT2
     // Query state of robot from R. Links
 
     Ravelin::VectorNd q_robot(Dynamixel::N_JOINTS),
@@ -232,6 +232,12 @@ void controller(DynamicBodyPtr dbp, double t, void*)
       abrobot->update_link_velocities();
     }
 #else
+    Ravelin::VectorNd coordinates, velocity;
+    abrobot->get_generalized_coordinates(DynamicBody::eEuler,coordinates);
+    abrobot->get_generalized_velocity(DynamicBody::eSpatial,velocity);
+    std::cout << "q" << coordinates << std::endl;
+    std::cout << "qd" << velocity << std::endl;
+
     apply_simulation_forces(u,joints_);
 #endif
 
@@ -249,7 +255,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
        for(Dynamixel::Joints j=Dynamixel::BODY_JOINT;j<Dynamixel::N_JOINTS;j++)
          if(joints_[m]->id.compare(dxl_->JointName(j)) == 0){
            qdat[j] = q_des[i];
-           qddat[j] = qd_des[i];
+           qddat[j] = 0;//qd_des[i];
          }
        i++;
      }
@@ -257,13 +263,33 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      OUTLOG(qdat,"qdat");
      OUTLOG(qddat,"qddat");
 
-//     dxl_->set_position(qdat.data());
+     dxl_->set_position(qdat.data());
 //     dxl_->set_state(qdat.data(),qddat.data());
 # else
   Ravelin::VectorNd udat = u.column(0);
   dxl_->set_torque(udat.data());
 # endif
 #endif
+}
+
+boost::shared_ptr<ContactParameters> cp_callback(CollisionGeometryPtr g1, CollisionGeometryPtr g2)
+{
+  boost::shared_ptr<ContactParameters> cp(new ContactParameters);
+  const unsigned UINF = std::numeric_limits<unsigned>::max();
+
+  // setup zero restitution and viscous friction
+  cp->epsilon = 0.0;
+  cp->mu_viscous = 0.0;
+
+  // setup a random coefficient of friction
+  cp->mu_coulomb = 0.0 + ((double) rand() / RAND_MAX)/2;
+
+  // setup NK
+//  cp->NK = UINF;
+  cp->NK = 8;
+  std::cout << "MU = " << cp->mu_coulomb << std::endl;
+
+  return cp;
 }
 
 void init_cpp(){
@@ -304,6 +330,9 @@ Moby::RCArticulatedBodyPtr abrobot;
 #ifdef CONTROL_KINEMATICS
   abrobot->set_kinematic(true);
 #endif
+
+  // Set a random friction value in Moby for each contact made
+  sim->get_contact_parameters_callback_fn = cp_callback;
 
   // If using dummy contact ignore impact callback function
 #ifndef USE_DUMMY_CONTACTS

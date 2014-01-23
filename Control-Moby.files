@@ -33,3 +33,5 @@ include/robot.h
 include/pid.h
 src/robot.cc
 src/quadruped.cc
+src/utilities.cc
+include/utilities.h

@@ -14,8 +14,7 @@ struct Gains
 static void control_PID(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd& qd_des,
                  const Ravelin::VectorNd& q,    const Ravelin::VectorNd& qd,
                  const std::vector<std::string> joint_names,
-                 std::map<std::string, Gains> gains,
-                 double time, Ravelin::VectorNd& ufb)
+                 std::map<std::string, Gains> gains, Ravelin::VectorNd& ufb)
 {
   unsigned num_joints = joint_names.size();
   // clear and set motor torques

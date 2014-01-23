@@ -66,8 +66,6 @@ void Robot::compile(){
       continue;
     }
     joints_[joints[i]->get_coord_index()] = joints[i];
-     std::cout << joints[i]->get_coord_index() << " "
-               << joints_[joints[i]->get_coord_index()]->id << std::endl;
   }
 
   for(unsigned i=0;i<joints_.size()-NUM_FIXED_JOINTS;i++){
@@ -75,6 +73,8 @@ void Robot::compile(){
       continue;
     }
     joint_names_.push_back(joints_[i]->id);
+    std::cout << joints_[i]->get_coord_index() << " "
+              << joints_[i]->id << std::endl;
   }
 
   // Set up link references
@@ -84,10 +84,12 @@ void Robot::compile(){
 void EndEffector::init(){
   Moby::JointPtr joint_ptr = link->get_inner_joint_explicit();
   Moby::RigidBodyPtr rb_ptr = link;
+  std::cout << id << std::endl;
   while (!rb_ptr->is_base() && rb_ptr->id.compare("THORAX") != 0){
     rb_ptr = joint_ptr->get_inboard_link();
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j]) == 0){
+        std::cout << j <<  " "<< joint_ptr->id << std::endl;
         chain.push_back(j);
       }
     }

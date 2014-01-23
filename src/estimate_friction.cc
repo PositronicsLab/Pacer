@@ -1,4 +1,4 @@
-#include <project_common.h>
+#include <quadruped.h>
 
 static Ravelin::LinAlgd LA_;
 
@@ -10,26 +10,26 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 /// Friction Estimation
 /// Calculates Coulomb friction at end-effectors
-double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& f, double dt,
+double Quadruped::friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& f, double dt,
                          const Ravelin::MatrixNd& N,const Ravelin::MatrixNd& D, const Ravelin::MatrixNd& M, Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf)
 {
-//    std::cout << "entered friction_estimation()" << std::endl;
+    std::cout << "entered friction_estimation()" << std::endl;
     static Ravelin::VectorNd v_(6), f_(6);  // previous values
     static int ITER = 0;
     double norm_error = -1;
     int nc = N.columns();
 
     if(nc > 0 && N.rows() == f_.rows()){
-//      std::cout << "started friction_estimation()" << std::endl;
+      std::cout << "started friction_estimation()" << std::endl;
       ITER++;
-//      std::cout << "************** Friction Estimation **************" << std::endl;
-//      std::cout << "ITER: " << ITER << std::endl;
-//      std::cout << "dt = " << dt << std::endl;
-//      OUTLOG2(N,"N");
-//      OUTLOG2(M,"M");
-//      OUTLOG2(v,"post-event-vel");
-//      OUTLOG2(v_,"pre-event-vel");
-//      OUTLOG2(f_,"f_external");
+      std::cout << "************** Friction Estimation **************" << std::endl;
+      std::cout << "ITER: " << ITER << std::endl;
+      std::cout << "dt = " << dt << std::endl;
+      OUTLOG(N,"N");
+      OUTLOG(M,"M");
+      OUTLOG(v,"post-event-vel");
+      OUTLOG(v_,"pre-event-vel");
+      OUTLOG(f_,"f_external");
 
       int ngc = f_.rows();
       int nq = ngc - 6, nk = D.columns()/nc;
@@ -39,27 +39,27 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
      // dv = v_{t} - v_{}
       Ravelin::VectorNd dv =  v;
       dv -= v_;
-//      OUTLOG2(dv,"dv");
+//      OUTLOG(dv,"dv");
 
       // j_obs = M*dv
       Ravelin::VectorNd jstar(M.rows());
       M.mult(dv,jstar);
-//      OUTLOG2(jstar,"j_observed");
+//      OUTLOG(jstar,"j_observed");
 
       // j_exp = f_{t-1}*dt
       f_ *= dt;
 
-//      OUTLOG2(f_,"j_expected");
+//      OUTLOG(f_,"j_expected");
 
       // j* = (j_obs - j_exp) = j_err
       jstar -= f_;
-//      OUTLOG2(jstar,"j_error");
+//      OUTLOG(jstar,"j_error");
 
 
       /// //////////////////////////////
       /// STAGE I
 #ifdef USE_D
-     OUTLOG2(D,"D");
+     OUTLOG(D,"D");
       int n = N.columns()+D.columns();
 
       Ravelin::MatrixNd R(ngc,n);
@@ -82,14 +82,14 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
           std::cout << "friction estimation failed" << std::endl;
       } else {
 
-      OUTLOG2(z,"z");
+      OUTLOG(z,"z");
 
       Ravelin::VectorNd err(ngc);
       R.mult(z,err);
-      OUTLOG2(err,"gf");
+      OUTLOG(err,"gf");
       err -= jstar;
 
-      OUTLOG2(err,"err");
+      OUTLOG(err,"err");
       std::cout << "norm err: " << err.norm() << std::endl;
 #else // use ST
       Ravelin::MatrixNd ST;
@@ -102,13 +102,13 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
         ST.set_column(i,D.column(i*nk));
         ST.set_column(nc+i,D.column(i*nk+1));
       }
-//     OUTLOG2(ST,"ST");
+//     OUTLOG(ST,"ST");
      int n = N.columns()+ST.columns();
 
      Ravelin::MatrixNd R(ngc,n);
      R.set_sub_mat(0,0,N);
      R.set_sub_mat(0,N.columns(),ST);
-//     OUTLOG2(R,"R");
+//     OUTLOG(R,"R");
 
      // Some additional Printouts
       Ravelin::VectorNd vprint = jstar,cvprint;
@@ -116,8 +116,8 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
       LA_.factor_chol(iM);
       LA_.solve_chol_fast(iM,vprint);
       R.transpose_mult(vprint,cvprint);
-//      OUTLOG2(vprint,"v_error");
-//      OUTLOG2(cvprint,"cv_error");
+//      OUTLOG(vprint,"v_error");
+//      OUTLOG(cvprint,"cv_error");
      /////////// OBJECTIVE ////////////
      // Q = R'R
      Ravelin::MatrixNd Q(R.columns(),R.columns());
@@ -143,16 +143,16 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
          std::cout << "friction estimation failed" << std::endl;
      }
      else {
-//       OUTLOG2(z,"cf");
-//       OUTLOG2(cf_moby,"cf_MOBY");
+//       OUTLOG(z,"cf");
+//       OUTLOG(cf_moby,"cf_MOBY");
 
        Ravelin::VectorNd err(ngc);
        R.mult(z,err);
-//       OUTLOG2(err,"generalized force from cfs = [R*z]");
+//       OUTLOG(err,"generalized force from cfs = [R*z]");
        err -= jstar;
        norm_error =  err.norm();
 
-//       OUTLOG2(err,"err = [R*z - j_error]");
+//       OUTLOG(err,"err = [R*z - j_error]");
 //       std::cout << "norm err: " << err.norm() << std::endl;
 
 #endif
@@ -187,7 +187,7 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
           // NOTE:: stage 2 is inactive
           if(m != 0 && false)
           {
-//            OUTLOG2(P,"P");
+//            OUTLOG(P,"P");
 
             Ravelin::VectorNd cN(nc);
             z.get_sub_vec(0,nc,cN);
@@ -199,7 +199,7 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
             /// min l2-norm(cN)
             Ravelin::MatrixNd P_nc(nc,m);
             P.get_sub_mat(0,nc,0,m,P_nc);
-//                OUTLOG2(P_nc,"P_nc");
+//                OUTLOG(P_nc,"P_nc");
 //                P_nc.transpose_mult(P_nc,Q2);
             // c = P'cN
 //                P_nc.transpose_mult(cN,c2);
@@ -246,8 +246,8 @@ double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& 
             // b = z
             Ravelin::VectorNd cNST = z;
             cNST.negate();
-            OUTLOG2(cNST,"cNST");
-            OUTLOG2(z,"z");
+            OUTLOG(cNST,"cNST");
+            OUTLOG(z,"z");
 
             b.set_sub_vec(1,z);
 #else // USE_ST
@@ -280,21 +280,21 @@ A(0,i) = cP[i];
             if(!solve_qp(Q2,c2,A,b,w)) {
                 std::cout << "friction estimation 2 failed" << std::endl;
             } else {
-//              OUTLOG2(w,"w");
+//              OUTLOG(w,"w");
 
               Ravelin::VectorNd z2(nvars);
               P.mult(w,z2);
 
-//              OUTLOG2(z2," z2");
+//              OUTLOG(z2," z2");
               z += z2;
-//              OUTLOG2(z,"z+z2");
+//              OUTLOG(z,"z+z2");
 
               err.set_zero(ngc);
               R.mult(z,err);
-//              OUTLOG2(err,"generalized force from cfs = [R*(z+z2)]");
+//              OUTLOG(err,"generalized force from cfs = [R*(z+z2)]");
 //              err -= jstar;
 
-//              OUTLOG2(err,"err = [R*(z+z2) - j_error]");
+//              OUTLOG(err,"err = [R*(z+z2) - j_error]");
 //              norm_error =  err.norm();
 
 //              std::cout << "norm err2: " << err.norm() << std::endl;
@@ -302,10 +302,10 @@ A(0,i) = cP[i];
 //              // Print Moby Error
 //err.set_zero(ngc);
 ////                        R.mult(cf_moby,err);
-//              OUTLOG2(err,"MOBY generalized force from cfs = [R*(z+z2)]");
+//              OUTLOG(err,"MOBY generalized force from cfs = [R*(z+z2)]");
 //              err -= jstar;
 
-//              OUTLOG2(err,"MOBY err = [R*(z+z2) - j_error]");
+//              OUTLOG(err,"MOBY err = [R*(z+z2) - j_error]");
 //              norm_error =  err.norm();
 
 //              std::cout << "MOBY norm err: " << err.norm() << std::endl;
@@ -328,8 +328,8 @@ A(0,i) = cP[i];
           else
               MU(i,0) = sqrt(-1);
 
-//          std::cout << "cf Estimate = [" << cf[i+nc] << " " << cf[i+nc*2] << " " << cf[i] << "]" << std::endl;
-//          std::cout << "MU_Estimate : " << MU(i,0) << std::endl;
+          std::cout << "cf Estimate = [" << cf[i+nc] << " " << cf[i+nc*2] << " " << cf[i] << "]" << std::endl;
+          std::cout << "MU_Estimate : " << MU(i,0) << std::endl;
       }
     }
 

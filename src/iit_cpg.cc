@@ -19,7 +19,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
 
   // Stepping Filter params
   // depth of step phase where touchdown occurs (fraction of Hs)
-  double ztd = 0.1;
+  double ztd = 0.0;
   // speed at which behavior changes (arbitrary scale)
   double bf = 800;
 

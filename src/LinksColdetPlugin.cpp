@@ -6,6 +6,9 @@ using std::pair;
 using namespace Ravelin;
 using namespace Moby;
 
+unsigned CONTACTS_PER_FOOT = 10;
+double FOOT_RADIUS = 0.025;
+
 bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, VectorNd> >& q0, const vector<pair<DynamicBodyPtr, VectorNd> >& q1, vector<Event>& contacts)
 {
   // set bodies to all q0 coordinates
@@ -33,16 +36,25 @@ bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, 
     // check whether com is below ground plane 0.0
     if (com[2] <= 0.0)
     {
-      // setup the contact event
-      Event e;
-      e.t = 0.0;
-      e.event_type = Event::eContact;
-      e.contact_geom1 = link->geometries.front();
-      e.contact_geom2 = _ground_cg;
-      e.contact_normal = Vector3d(0,0,1,GLOBAL);
-      e.contact_point = com;
-      e.contact_point[2] = 0.0;  // make sure it contacts on the plane
-      contacts.push_back(e);
+      // use polar coordinates
+      for (unsigned j=0; j< CONTACTS_PER_FOOT; j++)
+      {
+        double theta = (j+1.0)/CONTACTS_PER_FOOT*M_PI*2.0; 
+        Point3d pt = com;
+        pt[0] += FOOT_RADIUS*std::cos(theta);
+        pt[1] += FOOT_RADIUS*std::sin(theta);
+
+        // setup the contact event
+        Event e;
+        e.t = 0.0;
+        e.event_type = Event::eContact;
+        e.contact_geom1 = link->geometries.front();
+        e.contact_geom2 = _ground_cg;
+        e.contact_normal = Vector3d(0,0,1,GLOBAL);
+        e.contact_point = pt;
+        e.contact_point[2] = 0.0;  // make sure it contacts on the plane
+        contacts.push_back(e);
+      }
     }
   }
 

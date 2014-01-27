@@ -8,7 +8,7 @@
   </DRIVER>
 
   <MOBY>
-  <Box id="ground-primitive" xlen="1" ylen="1" zlen="0.02" />
+  <Box id="ground-primitive" xlen="300" ylen="1" zlen="0.02" />
 
   <!-- multiple servo rigid bodies -->
 
@@ -16,12 +16,14 @@
   <Box id="thorax" xlen="0.0355" ylen="0.124" zlen="0.0356" mass="0.134"/>
   <!-- Leg Primitives -->
   <Box id="RX-24F" xlen="0.0505" ylen="0.0355" zlen="0.0356" mass="0.063"/>
-  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.126"/>
+  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.063"/>
+<!--  <Box id="MX-64R" xlen="0.0611" ylen="0.0402" zlen="0.041" mass="0.126"/>-->
   <Box id="lleg" xlen="0.08" ylen="0.01" zlen="0.01" mass="0.03"/>
-<!--  <Cylinder id="foot" radius="0.005" height="0.02" mass="0.001"/>-->
-  <Cylinder id="foot" radius="0.005" height="0.02" mass="0.001" num-circle-points="4" num-rings="5" />
-<!--  <Sphere id="foot" radius="0.01" mass="0.001"/>-->
-<!--  <Box id="foot" xlen="0.02" ylen="0.02" zlen="0.02" mass="0.001"/>-->
+<!--  <Box id="foot" xlen="0.015" ylen="0.015" zlen="0.015" mass="0.001"/>-->
+<!--  <Cylinder id="foot-vis" radius="0.005" height="0.03" mass="0.001"/>-->
+  <Cylinder id="foot" radius="0.0075" height="0.03" mass="0.001" num-circle-points="16" num-rings="3" />
+<!--  <Sphere id="foot" radius="0.01" mass="0.001" num-points="1000"/>-->
+<!--<Cylinder id="foot" radius="0.005" height="0.15"  mass="0.001" num-circle-points="4" num-rings="3"/>-->
 
 
   <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
@@ -31,7 +33,7 @@
   <GravityForce id="gravity" accel="0 0 -9.81" />
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
-   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
+   <GeneralizedCCD id="ccd" eps-tolerance="1e-6" >
       <Body body-id="links" />
       <Body body-id="ground" />
       <DisabledPair object1-id="links" object2-id="links"/>
@@ -43,16 +45,17 @@
       <DisabledPair object1-id="links" object2-id="links"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd" max-event-time="0">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="simpleccd" max-event-time="inf">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.2" mu-viscous="0" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.75" mu-viscous="0" />
   </EventDrivenSimulator>
 
     <!-- the articulated body -->
-    <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb" fdyn-algorithm-frame="global">
+    <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
+      fdyn-algorithm-frame="link" translate="-0.5 0 0.001">
 
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="0 0 0.101" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen">
@@ -173,12 +176,12 @@
 
   <!-- setup the robot articulated rigid body -->
   <!-- RCArticulatedBody id="links" urdf="links.urdf"
-            fdyn-algorithm="crb" fdyn-algorithm-frame="link"
+            fdyn-algorithm="crb" fdyn-algorithm-frame="link"  translate="-0.5 0 0.001"
             floating-base="true" translate="0 0 0.101"/ -->
 
   <!-- setup the platform rigid body; it is not active -->
   <RigidBody id="ground" enabled="false"
-    position="0 0 -0.01" visualization-id="ground-primitive">
+    position="0 0 -0.0175" visualization-id="ground-primitive">
     <CollisionGeometry primitive-id="ground-primitive" />
   </RigidBody>
 

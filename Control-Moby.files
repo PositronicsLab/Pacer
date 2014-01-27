@@ -35,3 +35,14 @@ src/robot.cc
 src/quadruped.cc
 src/utilities.cc
 include/utilities.h
+src/lynxIK.nb
+src/Bezier.nb
+data/visualize.sh
+data/inf/links.xml
+data/automate.sh
+data/1/links.xml
+data/0.0001/links.xml
+data/0.001/links.xml
+data/0.01/links.xml
+data/0.1/links.xml
+data/0/links.xml

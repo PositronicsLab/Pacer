@@ -15,7 +15,7 @@
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
 
-   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
+   <GeneralizedCCD id="ccd" eps-tolerance="1e-6" >
       <Body body-id="links" />
       <Body body-id="ground" />
       <DisabledPair object1-id="links" object2-id="links"/>
@@ -30,7 +30,7 @@
 
   <!-- setup the robot articulated rigid body -->
   <RCArticulatedBody id="links" urdf="../../links.urdf"
-            fdyn-algorithm="fsab" fdyn-algorithm-frame="link"
+            fdyn-algorithm="fsab" fdyn-algorithm-frame="link"  translate="-0.5 0 0.001"
             floating-base="true" translate="0 0 0.2"/>
 
   <!-- setup the platform rigid body; it is not active -->

@@ -11,8 +11,8 @@
 //    #define USE_ROBOT
 //    #define CONTROL_KINEMATICS
 
-//std::string LOG_TYPE("INFO");
-std::string LOG_TYPE("ERROR");
+std::string LOG_TYPE("INFO");
+//std::string LOG_TYPE("ERROR");
 /// END USER DEFINITIONS
 
     std::vector<std::string> joint_names_;
@@ -63,6 +63,9 @@ void post_event_callback_fn(const std::vector<Event>& e,
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
+#ifdef RENDER_CONTACT
+        visualize_contact(e[i],sim);
+#endif
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
@@ -75,14 +78,10 @@ void post_event_callback_fn(const std::vector<Event>& e,
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
-      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
+//      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
 //      OUTLOG(e[i].contact_point,sb1->id);
       if (eefs_[index].active)
         continue;
-
-#ifdef RENDER_CONTACT
-        visualize_contact(e[i],sim);
-#endif
 
       // Increment number of active contacts
       NC++;
@@ -99,7 +98,9 @@ void post_event_callback_fn(const std::vector<Event>& e,
        Ravelin::MatrixNd support_poly(3,NC);
        for(int c=0,cc=0;c<eefs_.size();c++)
          if(eefs_[c].active){
-            support_poly.set_column(cc,eefs_[c].point);
+            Ravelin::Pose3d foot_pose = *eefs_[c].link->get_pose();
+            foot_pose.update_relative_pose(Moby::GLOBAL);
+            support_poly.set_column(cc,foot_pose.x);
            cc++;
          }
       visualize_polygon(support_poly,sim);
@@ -134,6 +135,13 @@ void controller(DynamicBodyPtr dbp, double t, void*)
   std::vector<Moby::JointPtr>& joints_ = Lynx_ptr->get_joints();
   joint_names_ = Lynx_ptr->get_joint_names();
   Moby::RCArticulatedBodyPtr abrobot = Lynx_ptr->get_articulated_body();
+
+
+  for(int i=0;i<eefs_.size();i++){
+    Ravelin::Pose3d base_frame = *eefs_[i].link->get_pose();
+    base_frame.update_relative_pose(Moby::GLOBAL);
+    std::cout << eefs_[i].id << base_frame.x << std::endl;
+  }
   unsigned num_joints = joint_names_.size();
 
   static int ITER = 0;
@@ -213,7 +221,9 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
     Lynx_ptr->control(dt,q.column(0),qd.column(0),q_des,qd_des,u_vec);
     u.set_column(0,u_vec);
-
+    Ravelin::VectorNd stb(num_joints+6);
+//    stb[num_joints+3] =
+//    adrobot->add_generalized_force(Moby::DynamicBody::eSpatial,stb);
 
       // send torque commands to robot
 # ifdef CONTROL_KINEMATICS

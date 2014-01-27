@@ -15,7 +15,7 @@
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
 
-   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
+   <GeneralizedCCD id="ccd" eps-tolerance="1e-6" >
       <Body body-id="links" />
       <Body body-id="ground" />
       <DisabledPair object1-id="links" object2-id="links"/>

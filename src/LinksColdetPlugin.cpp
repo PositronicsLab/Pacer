@@ -6,8 +6,8 @@ using std::pair;
 using namespace Ravelin;
 using namespace Moby;
 
-unsigned CONTACTS_PER_FOOT = 10;
-double FOOT_RADIUS = 0.025;
+unsigned CONTACTS_PER_FOOT = 4;
+double FOOT_RADIUS = 0.035;
 
 bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, VectorNd> >& q0, const vector<pair<DynamicBodyPtr, VectorNd> >& q1, vector<Event>& contacts)
 {
@@ -39,7 +39,7 @@ bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, 
       // use polar coordinates
       for (unsigned j=0; j< CONTACTS_PER_FOOT; j++)
       {
-        double theta = (j+1.0)/CONTACTS_PER_FOOT*M_PI*2.0; 
+        double theta = (j+1.0)/CONTACTS_PER_FOOT*M_PI*2.0;
         Point3d pt = com;
         pt[0] += FOOT_RADIUS*std::cos(theta);
         pt[1] += FOOT_RADIUS*std::sin(theta);
@@ -59,7 +59,7 @@ bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, 
   }
 
   return (!contacts.empty());
-} 
+}
 
 bool LinksColdetPlugin::is_collision(double epsilon)
 {
@@ -79,7 +79,7 @@ bool LinksColdetPlugin::is_collision(double epsilon)
 
     // check whether com is below ground plane 0.0
     if (com[2] <= 0.0)
-      return true; 
+      return true;
   }
 }
 

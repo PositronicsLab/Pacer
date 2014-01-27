@@ -190,7 +190,7 @@ boost::shared_ptr<const Ravelin::Pose3d> base_horizonal_frame(new Ravelin::Pose3
 
   for(int f=0;f<NUM_EEFS;f++){
     // set height of gait (each foot)
-    Hs[f] = 0.005;
+    Hs[f] = 0.01;
 
     // set gait centers
     Ravelin::Pose3d link_pose = *eefs_[f].link->get_pose();
@@ -280,27 +280,28 @@ if(NC>0){
   std::sort(active_dofs.begin(),active_dofs.end());
   R.select_rows(active_dofs.begin(),active_dofs.end(),Jh);
 
+  Jh.transpose();
   OUTLOG(Jh,"Jh");
 
   // Generate Jh Nullspace
-  Ravelin::MatrixNd NULL_Jh = MatrixNd::identity(Jh.rows()),
+  Ravelin::MatrixNd NULL_Jh = MatrixNd::identity(Jh.columns()),
       Jh_plus;
   workM_ = MatrixNd::identity(Jh.rows());
   Jh.mult_transpose(Jh,Jh_plus);
+  OUTLOG(Jh_plus,"(Jh Jh')");
+
   try{
     LA_.solve_fast(Jh_plus,workM_);
     Jh.transpose_mult(workM_,Jh_plus);
     OUTLOG(Jh_plus,"Jh' (Jh Jh')^-1");
-    NULL_Jh -= Jh.mult(Jh_plus,workM_);
+    OUTLOG(Jh,"Jh");
+    NULL_Jh -= Jh.transpose_mult_transpose(Jh_plus,workM_);
     if(NULL_Jh.norm_inf() > 1e8)
       NULL_Jh.set_zero(Jh.rows(),Jh.rows());
   } catch(Ravelin::SingularException e) {
     OUT_LOG(logERROR) << "No trunk Stabilization" << std::endl;
     NULL_Jh.set_zero(Jh.rows(),Jh.rows());
   }
-
-
-
 
   OUTLOG(NULL_Jh,"null(Jh)");
 
@@ -313,9 +314,9 @@ if(NC>0){
   bool use_rpy =  R2rpy(R,rpy);
   double Xp = 0, Xv = 0,
          Yp = 0, Yv = 0,
-         Zp = 0, Zv = 1e-3,
-         Rp = 1e-2, Rv = 1e-3,
-         Pp = 1e-2, Pv = 1e-3;
+         Zp = 0, Zv = 0,
+         Rp = 0, Rv = 1e-2,
+         Pp = 0, Pv = 1e-2;
 
   static Ravelin::VectorNd Y,tY;
   Y.set_zero(NC*3+6);
@@ -325,7 +326,7 @@ if(NC>0){
   Y[NC*3+4] = ((use_rpy)? (rpy[1]-0) : 0) +  (vel[NUM_JOINTS+4]-0)*Pv;
 
   NULL_Jh.mult(Y,tY);
-
+  std::cout << "tS" << tY << std::endl;
   // apply base stabilization forces
   for(int i=0;i<NC*3;i++)
     uff[active_dofs[i]] += tY[i];
@@ -344,7 +345,7 @@ if(NC>0){
 #else
   for(int i=0;i<NC;i++)
     for(int k=0;k<NK/2;k++)
-      MU(i,k) = 0.5;
+      MU(i,k) = 0.1;
 #endif
 
 #ifdef CONTROL_ZMP
@@ -363,9 +364,9 @@ if(NC>0){
 #ifdef CONTROL_IDYN
   for(int i=0;i<NUM_JOINTS; i++)
     qdd[i] = 0;//(qd_des[i] - qd[i])/dt;
-  uff.set_zero();
-
-  inverse_dynamics(vel,qdd,M,N,D,fext,0.01,MU,uff);
+  Ravelin::VectorNd id(NUM_JOINTS);
+  inverse_dynamics(vel,qdd,M,N,D,fext,0.01,MU,id);
+  uff += id;
 #endif
   ///  Determine FB forces
   control_PID(q_des, qd_des,q,qd,joint_names_, gains_,ufb);
@@ -456,16 +457,6 @@ void Quadruped::init(){
   std::cout << "NEULER: " << NEULER << std::endl;
   std::cout << "NK: " << NK << std::endl;
 
-  BASE_ORIGIN.set_zero(NEULER);
-
-  /// LOCALLY SET VALUES
-  // robot's initial (ZERO) configuration
-  // foot radius="0.005"
-//  BASE_ORIGIN[2] = 0.11;
-  //  BASE_ORIGIN[2] = 0.0922774;
-    BASE_ORIGIN[2] = 0.0972774;
-  BASE_ORIGIN[6] = 1;
-
   q0_["BODY_JOINT"] = 0;
   q0_["LF_HIP_AA"] = 0;
   q0_["LF_HIP_FE"] = M_PI_4;
@@ -504,8 +495,8 @@ void Quadruped::init(){
   // Setup gains
   for(unsigned i=0;i<NUM_JOINTS;i++){
     // pass gain values to respective joint
-    gains_[joints_[i]->id].kp = 1e1;
-    gains_[joints_[i]->id].kv = 1e-2;
+    gains_[joints_[i]->id].kp = 1e-1;
+    gains_[joints_[i]->id].kv = 3e-2;
     gains_[joints_[i]->id].ki = 0;//1e-3;
 
     // init perr_sum
@@ -519,8 +510,6 @@ void Quadruped::init(){
 
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
   qd_start.set_zero();
-if(NEULER != 0)
-  q_start.set_sub_vec(NUM_JOINTS,BASE_ORIGIN);
 
 std::vector<Ravelin::Vector3d> foot_origins(NUM_EEFS),joint_positions(NUM_EEFS);
 #ifdef FOOT_TRAJ

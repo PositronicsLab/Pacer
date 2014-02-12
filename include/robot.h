@@ -37,7 +37,7 @@ public:
     void init();
 };
 
-class Robot {
+class Robot : public Moby::RCArticulatedBody{
   public:
     Robot(){}
     // This is the Simplest Controller (policy is determined within fn)

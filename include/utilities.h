@@ -3,7 +3,7 @@
 
 #include <project_common.h>
 
-bool R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
+static bool R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
   if(R(0,0) == 0 || R(2,2) == 0)
     return false;
 

@@ -24,8 +24,6 @@ std::string LOG_TYPE("INFO");
 using namespace Moby;
 using namespace Ravelin;
 
-static Ravelin::LinAlgd LA_;
-
 // simulator
 boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 boost::shared_ptr<Quadruped> Lynx_ptr;
@@ -83,12 +81,15 @@ void post_event_callback_fn(const std::vector<Event>& e,
       if (eefs_[index].active)
         continue;
 
+      Ravelin::Pose3d foot_pose = *eefs_[index].link->get_pose();
+      foot_pose.update_relative_pose(Moby::GLOBAL);
+
       // Increment number of active contacts
       NC++;
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
-      eefs_[index].point = e[i].contact_point;
+      eefs_[index].point = foot_pose.x;//e[i].contact_point;
       eefs_[index].normal = e[i].contact_normal;
       eefs_[index].impulse = e[i].contact_impulse.get_linear();
     }
@@ -98,9 +99,7 @@ void post_event_callback_fn(const std::vector<Event>& e,
        Ravelin::MatrixNd support_poly(3,NC);
        for(int c=0,cc=0;c<eefs_.size();c++)
          if(eefs_[c].active){
-            Ravelin::Pose3d foot_pose = *eefs_[c].link->get_pose();
-            foot_pose.update_relative_pose(Moby::GLOBAL);
-            support_poly.set_column(cc,foot_pose.x);
+            support_poly.set_column(cc,eefs_[c].point);
            cc++;
          }
       visualize_polygon(support_poly,sim);
@@ -135,13 +134,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
   std::vector<Moby::JointPtr>& joints_ = Lynx_ptr->get_joints();
   joint_names_ = Lynx_ptr->get_joint_names();
   Moby::RCArticulatedBodyPtr abrobot = Lynx_ptr->get_articulated_body();
-
-
-  for(int i=0;i<eefs_.size();i++){
-    Ravelin::Pose3d base_frame = *eefs_[i].link->get_pose();
-    base_frame.update_relative_pose(Moby::GLOBAL);
-    std::cout << eefs_[i].id << base_frame.x << std::endl;
-  }
   unsigned num_joints = joint_names_.size();
 
   static int ITER = 0;
@@ -304,8 +296,8 @@ boost::shared_ptr<ContactParameters> cp_callback(CollisionGeometryPtr g1, Collis
 
 void init_cpp(){
 #ifdef USE_ROBOT
-  dxl_ = new Dynamixel();
-  dxl_->relaxed(true);
+  dxl_ = new Dynamixel("/dev/tty.usbserial-A9YL9ZZV",1000000);
+  dxl_->relaxed(false);
 #endif
 }
 
@@ -316,6 +308,9 @@ void init(void* separator,
           const std::map<std::string, BasePtr>& read_map,
           double time)
 {
+  // If use robot is active also init dynamixel controllers
+  init_cpp();
+
   std::cout << LOG_TYPE << std::endl;
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
@@ -342,7 +337,7 @@ Moby::RCArticulatedBodyPtr abrobot;
 #endif
 
   // Set a random friction value in Moby for each contact made
-  sim->get_contact_parameters_callback_fn = cp_callback;
+//  sim->get_contact_parameters_callback_fn = cp_callback;
 
   // If using dummy contact ignore impact callback function
 #ifndef USE_DUMMY_CONTACTS
@@ -351,9 +346,6 @@ Moby::RCArticulatedBodyPtr abrobot;
 
   // setup the controller
   abrobot->controller = &controller;
-
-  // If use robot is active also init dynamixel controllers
-  init_cpp();
 }
 } // end extern C
 

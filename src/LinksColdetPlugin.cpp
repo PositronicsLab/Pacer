@@ -6,7 +6,7 @@ using std::pair;
 using namespace Ravelin;
 using namespace Moby;
 
-unsigned CONTACTS_PER_FOOT = 4;
+unsigned CONTACTS_PER_FOOT = 3;
 double FOOT_RADIUS = 0.035;
 
 bool LinksColdetPlugin::is_contact(double dt, const vector<pair<DynamicBodyPtr, VectorNd> >& q0, const vector<pair<DynamicBodyPtr, VectorNd> >& q1, vector<Event>& contacts)

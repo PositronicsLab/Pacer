@@ -39,5 +39,7 @@ const double grav = 9.8; // M/s.s
 const double M_PI_16 = 0.19634954084;
 const double M_PI_8 = 0.39269908169;
 
+static Ravelin::LinAlgd LA_;
+
 #include <Log.h>
 #endif // PROJECT_COMMON_H

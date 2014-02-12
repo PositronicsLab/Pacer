@@ -16,11 +16,11 @@ set(BUILD_DIRECTORY bin)
 set(SOURCE_DIRECTORY src)
 
 include_directories(
-/Users/samzapo/ThirdParty/Moby/include
+#/Users/samzapo/ThirdParty/Moby/include
 include /usr/include /usr/include/libxml2 /usr/local/include ${Boost_INCLUDE_DIR} /opt/local/include /opt/X11/include)
 
 link_directories(
-/Users/samzapo/ThirdParty/Moby/contact-reduce
+#/Users/samzapo/ThirdParty/Moby/contact-reduce
 /usr/local/lib /opt/local/lib /opt/X11/lib
 )
 
@@ -36,7 +36,10 @@ set(links_srcs  src/control_moby.cc
                 src/bezier_solver.cc
                 src/inverse_kinematics.cc
                 src/kinematics.cc
+                src/stabilization.cc
+                src/locomotion.cc
                 src/solve_qp.cc
+                src/Solvers.cpp
                 src/iit_cpg.cc
     )
 set(coldet_srcs src/LinksColdetPlugin.cpp)

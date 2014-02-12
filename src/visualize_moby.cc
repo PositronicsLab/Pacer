@@ -310,7 +310,6 @@ void visualize_polygon( const Ravelin::MatrixNd& verts, boost::shared_ptr<EventD
         break;
       case 2:
         vertexData->push_back(osg::Vec3d(verts(0,1),verts(1,1),verts(2,1)));
-        break;
       case 1:
         vertexData->push_back(osg::Vec3d(verts(0,0),verts(1,0),verts(2,0)));
       }

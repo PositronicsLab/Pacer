@@ -12,6 +12,20 @@ void OUTLOG(const Ravelin::MatrixNd& M, std::string name){
 #endif
 }
 
+void OUTLOG(const Ravelin::Pose3d& P, std::string name){
+#ifndef NDEBUG
+  static Ravelin::Matrix3d R;
+  R = Ravelin::Matrix3d(P.q);
+  std::ostringstream str;
+    str << std::setprecision(9)
+        << R(0,0) << " "<< R(0,1) << " "<< R(0,2) << " "<< P.x[0] << ";" << std::endl
+        << R(1,0) << " "<< R(1,1) << " "<< R(1,2) << " "<< P.x[1] << ";" << std::endl
+        << R(2,0) << " "<< R(2,1) << " "<< R(2,2) << " "<< P.x[2] << ";" << std::endl
+        << 0  << " "<< 0 << " "<< 0 << " "<< 1 << std::endl;
+    OUT_LOG(logINFO) << name << " = [ %"  << 4 << "x" << 4 << "\n" << str.str() << "];" << std::endl;
+#endif
+}
+
 void OUTLOG(const Ravelin::VectorNd& z, std::string name){
 #ifndef NDEBUG
     std::ostringstream str;

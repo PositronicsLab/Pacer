@@ -3,7 +3,7 @@
 
 <XML>
   <DRIVER>
-    <camera position="-0.3 1.5 1" target="-0.55 0 0" up="0 0 1" />
+    <camera position="-0.3 1.5 1" target="0 0 0" up="0 0 1" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 
@@ -19,7 +19,7 @@
    <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
       <Body body-id="links" />
       <Body body-id="ground" />
-      <Body body-id="seesaw" />
+<!--      <Body body-id="seesaw" />-->
       <DisabledPair object1-id="links" object2-id="links"/>
     </GeneralizedCCD>
 
@@ -30,30 +30,35 @@
       <DisabledPair object1-id="links" object2-id="links"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="ccd" max-event-time="0">
+  <EventDrivenSimulator integrator-id="rk4" collision-detector-id="simpleccd" max-event-time="0">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
-    <DynamicBody dynamic-body-id="seesaw" />
+<!--    <DynamicBody dynamic-body-id="seesaw" />-->
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
-    <ContactParameters object1-id="seesaw" object2-id="ground" mu-coulomb="0.0" mu-viscous="0"  epsilon="0.25"/>
-    <ContactParameters object1-id="links" object2-id="seesaw" mu-coulomb="0.55" mu-viscous="0" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="seesaw" object2-id="ground" mu-coulomb="0.0" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="links" object2-id="seesaw" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>
   </EventDrivenSimulator>
 
     <!-- THE SEESAW -->
-    <Box id="fulcrum" xlen="0.1" ylen="0.1" zlen="0.05" mass="0.1"/>
+    <Box id="fulcrum" xlen="0.1" ylen="0.1" zlen="0.05" mass="0.01"/>
     <Box id="board" xlen="1.0" ylen="0.9" zlen="0.01" mass="0.5"/>
 
     <RCArticulatedBody id="seesaw" floating-base="false" fdyn-algorithm="crb"
     fdyn-algorithm-frame="link" translate="0.3 0 0">
 
-      <RigidBody id="FULCRUM" position="0.0 0 0.05" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="fulcrum">
+      <RigidBody id="FULCRUM1" position="0.0 0 0.015" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="fulcrum">
         <CollisionGeometry primitive-id="fulcrum" />
         <InertiaFromPrimitive primitive-id="fulcrum" />
       </RigidBody>
-      <RevoluteJoint id="PIVOT" q="-0.15" qd="0" location="0 0 0.1" inboard-link-id="FULCRUM" outboard-link-id="BOARD" axis="0 1 0" />
-      <RigidBody id="BOARD" position="-0.10 0 0.1" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="board">
+      <RevoluteJoint id="PIVOT1" q="0" qd="0" location="0 0 0.1" inboard-link-id="FULCRUM1" outboard-link-id="FULCRUM2" axis="0 1 0" />
+      <RigidBody id="FULCRUM2" position="0.0 0 0.05" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="fulcrum">
+        <CollisionGeometry primitive-id="fulcrum" />
+        <InertiaFromPrimitive primitive-id="fulcrum" />
+      </RigidBody>
+      <RevoluteJoint id="PIVOT2" q="0" qd="0" location="0 0 0.1" inboard-link-id="FULCRUM2" outboard-link-id="BOARD" axis="1 0 0" />
+      <RigidBody id="BOARD" position="0 0 0.1" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="board">
         <CollisionGeometry primitive-id="board" />
         <InertiaFromPrimitive primitive-id="board" />
       </RigidBody>
@@ -68,14 +73,14 @@
     <Box id="arm" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.11763"/>
     <Box id="uleg" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.13266"/>
     <Box id="lleg" xlen="0.134" ylen="0.01" zlen="0.01" mass="0.04"/>
-<!--    <Sphere id="foot" radius="0.01" mass="0.01" num-points="100"/>-->
-    <Cylinder id="foot" radius="0.01" height="0.07" mass="0.01"/>
+    <Sphere id="foot" radius="0.01" mass="0.01" num-points="100"/>
+<!--    <Cylinder id="foot" radius="0.01" height="0.05" mass="0.01"/>-->
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" translate="-0.55 0 0.141">
+      fdyn-algorithm-frame="link" translate="0.3 0.2 0.145">
 
       <!-- the body -->
-      <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen">
+      <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
         <CollisionGeometry primitive-id="abdomen" />
         <InertiaFromPrimitive primitive-id="abdomen" />
       </RigidBody>
@@ -192,7 +197,7 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-  <Box id="ground-primitive" xlen="300" ylen="1" zlen="0.02" />
+  <Box id="ground-primitive" xlen="3" ylen="1" zlen="0.02" />
 
   <RigidBody id="ground" enabled="false"
     position="0 0 -0.01" visualization-id="ground-primitive">

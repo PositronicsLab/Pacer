@@ -34,6 +34,7 @@ class Quadruped : public Robot{
     void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Ravelin::VectorNd& uff);
 
     void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+    void calc_eef_jacobians(Ravelin::MatrixNd& R);
 
     std::vector<Ravelin::Vector3d>& foot_oscilator(
       const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Ravelin::MatrixNd& C,
@@ -55,12 +56,16 @@ class Quadruped : public Robot{
     void init();
 
     std::map<std::string, Ravelin::Vector3d> eef_origins_;
+    void fk_stance_adjustment(double dt);
 
   private:
     // Useful Stored Data
     boost::shared_ptr<Ravelin::Pose3d>   base_horizonal_frame;
     boost::shared_ptr<Ravelin::Pose3d>   base_frame;
     unsigned          NC;
+    EndEffector       center_of_contact;
+    Ravelin::Vector3d center_of_mass,zero_moment_point;
+    Ravelin::Vector3d roll_pitch_yaw;
     Ravelin::VectorNd uff, ufb;
     Ravelin::VectorNd qdd;
     Ravelin::MatrixNd N,D,M,ST,R;

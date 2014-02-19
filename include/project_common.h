@@ -4,6 +4,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include <Ravelin/MatrixNd.h>
+#include <Ravelin/Transform3d.h>
 #include <Ravelin/VectorNd.h>
 #include <Ravelin/Vector3d.h>
 #include <Ravelin/Vector2d.h>
@@ -34,12 +35,21 @@
 void OUTLOG(const Ravelin::VectorNd& M, std::string name);
 void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name);
 void OUTLOG(const Ravelin::MatrixNd& z, std::string name);
-
+void OUTLOG(const Ravelin::Pose3d& P, std::string name);
 const double grav = 9.8; // M/s.s
 const double M_PI_16 = 0.19634954084;
 const double M_PI_8 = 0.39269908169;
 
 static Ravelin::LinAlgd LA_;
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// VIZ DATA //////////////////////////////////
+
+extern boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
+
+///////////////////////////////////////////////////////////////////////////////
+
 
 #include <Log.h>
 #endif // PROJECT_COMMON_H

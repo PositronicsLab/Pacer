@@ -1,4 +1,5 @@
 #include <quadruped.h>
+#include <utilities.h>
 
 //#define COLLECT_DATA
   static int N_SYSTEMS = 1;
@@ -90,7 +91,8 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   F.mult(workv1,fID,1,-1);
 
   // in case of optimization error, this fn will return ID forces
-  uff = fID;
+//  uff = fID;
+//  OUTLOG(fID,"fID");
 
   // if in mid-air only return ID forces solution
   if(nc == 0) return;
@@ -172,12 +174,12 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   // j = [E,D](fext + zuff)h + vb
   Ravelin::VectorNd j = vb;
   ED.mult(workv1,j,1,1);
-  OUTLOG(j,"j = [ %= [E,D](fext + zuff)h + vb");
+//  OUTLOG(j,"j = [ %= [E,D](fext + zuff)h + vb");
 
   // k = [F,E'](fext + zuff)h  +  vq
   Ravelin::VectorNd k = vq;
   FET.mult(workv1,k,1,1);
-  OUTLOG(k,"k = [ % = [F,E'](fext + zuff)h  +  vq");
+//  OUTLOG(k,"k = [ % = [F,E'](fext + zuff)h  +  vq");
 
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
@@ -188,7 +190,7 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   workM2.negate();
   workM2 += ED;
   workM2.mult(R,Z);
-  OUTLOG(Z,"Z = [ % = ( [E,D] - E inv(F) [F,E'] ) R");
+//  OUTLOG(Z,"Z = [ % = ( [E,D] - E inv(F) [F,E'] ) R");
 
   // p = j + E inv(F) (vq* - k)
   Ravelin::VectorNd p = j;
@@ -196,7 +198,7 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   workv1 -= k;
   LA_.solve_chol_fast(iF,workv1);
   E.mult(workv1,p,1,1);
-  OUTLOG(p,"p = [ % = j + E inv(F) (vq* - k)");
+//  OUTLOG(p,"p = [ % = j + E inv(F) (vq* - k)");
 
   // H = Z'A Z
   Ravelin::MatrixNd H(Z.columns(),Z.columns());
@@ -211,7 +213,7 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   /////////////////////////////// OBJECTIVE ///////////////////////////////////
   // set Hessian:
   // qG = Z'A Z = [H]
-  OUTLOG(H,"H = [ % = Z'A Z");
+//  OUTLOG(H,"H = [ % = Z'A Z");
   Ravelin::MatrixNd qG = H;
   // set Gradient:
   // qc = Z'A p + Z'B vq*;
@@ -294,8 +296,8 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   Ravelin::VectorNd feas = qq;
   qM.mult(z,feas,1,-1);
 
-  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
-  OUTLOG(z,"Z_OP1");
+//  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
+//  OUTLOG(z,"Z_OP1");
 
   // push z into output vector
   cf = z;
@@ -319,33 +321,15 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   /////////////////////////////////////////////////////////////////////////////
 
   // H = Z'AZ
-  unsigned size_null_space = 0;
-  Ravelin::MatrixNd U,V,P;
-  Ravelin::VectorNd S;
-
-  // SVD decomp to retrieve nullspace of Z'AZ
-  LA_.svd(H,U,S,V);
-
-  if(S.rows() != 0){
-    // Calculate the tolerance for ruling that a singular value is supposed to be zero
-    double ZERO_TOL = std::numeric_limits<double>::epsilon() * H.rows() * S[0];
-    // Count Zero singular values
-    for(int i = S.rows()-1;i>=0;i--,size_null_space++)
-      if(S[i] > ZERO_TOL)
-        break;
-
-    // get the nullspace
-    P.set_zero(nvars,size_null_space);
-    V.get_sub_mat(0,V.rows(),V.columns()-size_null_space,V.columns(),P);
-  }
-
+  Ravelin::MatrixNd P;
+  unsigned size_null_space = kernal(H,P);
   if(size_null_space != 0)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
 
 //    OUTLOG(S,"Singular Values");
-    OUTLOG(P,"Null Space(P)");
+//    OUTLOG(P,"Null Space(P)");
 
     // compute U = [F,E']*R
     Ravelin::MatrixNd U;
@@ -467,14 +451,14 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
       return;
       // then skip to calculating uff from stage 1 solution
     } else {
-      OUTLOG(w,"W_OP2");
+//      OUTLOG(w,"W_OP2");
 
       // measure feasibility of solution
       // qM w - qq >= 0
       feas = qq;
       qM.mult(w,feas,1,-1);
 
-      OUTLOG(feas,"feas_OP2 =[ % (A*w - b >= 0)");
+//      OUTLOG(feas,"feas_OP2 =[ % (A*w - b >= 0)");
 
       // return the solution (contact forces)
       // cf = z + P*w;
@@ -497,16 +481,15 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
     }
   }
 
-  OUTLOG(fID,"fID");
   OUTLOG(cf,"final_contact_force");
   //  Note compare contact force prediction to Moby contact force
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
-  for(int i=0;i<nc;i++)
-    OUT_LOG(logINFO)  << "%["<< cf[i] << " "
-              << cf[i*nk+nc]-cf[i*nk+nc+nk/2] << " "
-              << cf[i*nk+nc+1]-cf[i*nk+nc+nk/2+1] << "] "<< std::endl;
-  OUT_LOG(logINFO)  << std::endl;
+//  OUT_LOG(logINFO)  << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
+//  for(int i=0;i<nc;i++)
+//    OUT_LOG(logINFO)  << "%["<< cf[i] << " "
+//              << cf[i*nk+nc]-cf[i*nk+nc+nk/2] << " "
+//              << cf[i*nk+nc+1]-cf[i*nk+nc+nk/2+1] << "] "<< std::endl;
+//  OUT_LOG(logINFO)  << std::endl;
 #endif
   // return the inverse dynamics forces
   // uff = fID + iF*(vqstar - k - FET*R*(cf))/h
@@ -517,6 +500,6 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   LA_.solve_chol_fast(iF,uff);
   uff /= h;
   uff += fID;
-  OUTLOG(uff,"final_joint_torque");
+//  OUTLOG(uff,"final_joint_torque");
 
 }

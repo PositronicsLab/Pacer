@@ -3,7 +3,7 @@
 
 //#define SPLITTING_METHOD
 
-//#define NDEBUG
+#define NDEBUG
 
 extern bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
 Moby::LCP lcp_;

@@ -108,3 +108,39 @@ void Quadruped::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& S
   R.set_sub_mat(0,0,N);
   R.set_sub_mat(0,NC,ST);
 }
+
+void Quadruped::calc_eef_jacobians(Ravelin::MatrixNd& R){
+  static Ravelin::VectorNd workv_;
+  static Ravelin::MatrixNd workM_;
+
+  R.set_zero(NDOFS,NUM_EEFS*3);
+  // Contact Jacobian [GLOBAL frame]
+  Ravelin::MatrixNd J(3,NDOFS);
+  for(int i=0;i<NUM_EEFS;i++){
+    boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
+
+    boost::shared_ptr<Ravelin::Pose3d> foot_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*eefs_[i].link->get_pose())) ;
+    foot_frame->update_relative_pose(Moby::GLOBAL);
+
+    event_frame->q = Ravelin::Quatd::identity();
+    event_frame->x = foot_frame->x;
+
+    dbrobot_->calc_jacobian(event_frame,eefs_[i].link,workM_);
+
+    workM_.get_sub_mat(0,3,0,NDOFS,J);
+
+    Ravelin::Vector3d normal = Ravelin::Vector3d(0,0,1),
+                      tan1 = Ravelin::Vector3d(1,0,0),
+                      tan2 = Ravelin::Vector3d(0,1,0);
+
+    // Normal direction
+    J.transpose_mult(normal,workv_);
+    R.set_column(i,workv_);
+    // 1st tangent
+    J.transpose_mult(tan1,workv_);
+    R.set_column(NUM_EEFS+i,workv_);
+    // 2nd tangent
+    J.transpose_mult(tan2,workv_);
+    R.set_column(NUM_EEFS*2+i,workv_);
+  }
+}

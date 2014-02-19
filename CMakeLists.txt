@@ -40,7 +40,7 @@ set(links_srcs  src/control_moby.cc
                 src/locomotion.cc
                 src/solve_qp.cc
                 src/Solvers.cpp
-                src/iit_cpg.cc
+                src/wcpg.cc
     )
 set(coldet_srcs src/LinksColdetPlugin.cpp)
 

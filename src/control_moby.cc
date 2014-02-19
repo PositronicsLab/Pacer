@@ -7,7 +7,6 @@
 //    #define NDEBUG
 //    #define USE_DUMMY_CONTACTS
 
-    #define RENDER_CONTACT
 //    #define USE_ROBOT
 //    #define CONTROL_KINEMATICS
 
@@ -31,18 +30,6 @@ boost::shared_ptr<Quadruped> Lynx_ptr;
 static Ravelin::VectorNd workv_;
 static Ravelin::MatrixNd workM_;
 
-
-///////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// Contact DATA //////////////////////////////////
-
-void visualize_contact( const Moby::Event& e,
-                        boost::shared_ptr<Moby::EventDrivenSimulator> sim );
-
-void visualize_polygon( const Ravelin::MatrixNd& verts,
-                        boost::shared_ptr<Moby::EventDrivenSimulator> sim );
-
-void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Controllers //////////////////////////////////
 
@@ -55,15 +42,14 @@ void post_event_callback_fn(const std::vector<Event>& e,
   std::vector<EndEffector>& eefs_ = Lynx_ptr->get_end_effectors();
   std::vector<std::string>& eef_names_ = Lynx_ptr->get_end_effector_names();
 
-  for(int i=0;i<eefs_.size();i++)
+  for(int i=0;i<eefs_.size();i++){
     eefs_[i].active = false;
+    eefs_[i].contacts.clear();
+  }
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
-#ifdef RENDER_CONTACT
-        visualize_contact(e[i],sim);
-#endif
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
@@ -76,8 +62,7 @@ void post_event_callback_fn(const std::vector<Event>& e,
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
-//      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
-//      OUTLOG(e[i].contact_point,sb1->id);
+      eefs_[index].contacts.push_back(e[i].contact_point);
       if (eefs_[index].active)
         continue;
 
@@ -94,19 +79,6 @@ void post_event_callback_fn(const std::vector<Event>& e,
       eefs_[index].impulse = e[i].contact_impulse.get_linear();
     }
   }
-#ifdef RENDER_CONTACT
-     if(NC > 0){
-       Ravelin::MatrixNd support_poly(3,NC);
-       for(int c=0,cc=0;c<eefs_.size();c++)
-         if(eefs_[c].active){
-            support_poly.set_column(cc,eefs_[c].point);
-           cc++;
-         }
-      visualize_polygon(support_poly,sim);
-     }
-#endif
-
-  //  SRZ compare contact force prediction to Moby contact force
 }
 #endif
 

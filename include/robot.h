@@ -7,9 +7,7 @@
 class EndEffector{
 public:
 
-    EndEffector(){
-      init();
-    }
+    EndEffector(){    }
     EndEffector(Moby::RigidBodyPtr l,Ravelin::Vector3d& o,std::vector<std::string>& jn){
       link = l;
       id = link->id;
@@ -30,6 +28,8 @@ public:
     Ravelin::Vector3d     point;
     Ravelin::Vector3d     normal; //(pointing away from the ground)
     Ravelin::Vector3d     impulse;
+    std::vector<Ravelin::Vector3d> contacts;
+
     bool                  active;
 
   private:

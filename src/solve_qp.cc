@@ -11,7 +11,7 @@ const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 const double NEAR_INF = 1.0/NEAR_ZERO;
 
 bool isvalid(const Ravelin::VectorNd& v){
-  if(v.norm() > NEAR_INF || !isfinite(v.norm()))
+  if(v.norm() > NEAR_INF || !std::isfinite(v.norm()))
     return false;
   return true;
 }

@@ -20,6 +20,15 @@ using namespace Ravelin;
 
 const double VIBRANCY = 1;
 
+void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ){
+  Ravelin::Pose3d pose(p);
+  pose.update_relative_pose(Moby::GLOBAL);
+  Ravelin::Matrix3d Rot(pose.q);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(1,0,0),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,1,0),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,0,1),sim);
+}
+
 /// Draws a ray directed from a contact point along the contact normal
 void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
 
@@ -33,10 +42,10 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   const double point_scale = 0.01;
 
   // the osg node this event visualization will attach to
-  osg::Group* point_root = new osg::Group();
+  osg::Group* group_root = new osg::Group();
 
   // turn off lighting for this node
-  osg::StateSet *point_state = point_root->getOrCreateStateSet();
+  osg::StateSet *point_state = group_root->getOrCreateStateSet();
   point_state->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
 
   // a geode for the visualization geometry
@@ -62,14 +71,14 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   point_transform->addChild( point_geode );
 
   // add the transform to the root
-  point_root->addChild( point_transform );
+  group_root->addChild( point_transform );
 
   // add the root to the transient data scene graph
-  sim->add_transient_vdata( point_root );
+  sim->add_transient_vdata( group_root );
 
   // ----- LINE -------
 
-  osg::Group* vec_root = new osg::Group();
+//  osg::Group* vec_root = new osg::Group();
   osg::Geode* vec_geode = new osg::Geode();
   osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
   osg::ref_ptr<osg::DrawArrays> drawArrayLines =
@@ -100,8 +109,8 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   vec_transform->addChild( vec_geode );
 
   // add the transform to the root
-  vec_root->addChild( vec_transform );
+  group_root->addChild( vec_transform );
 
   // add the root to the transient data scene graph
-  sim->add_transient_vdata( vec_root );
+  sim->add_transient_vdata( group_root );
 }

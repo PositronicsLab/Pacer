@@ -2,7 +2,6 @@ include/LinksColdetPlugin.h
 include/Log.h
 include/quadruped.h
 include/robot.h
-src/bezier_solver.cc
 src/control_moby.cc
 src/estimate_friction.cc
 src/inverse_dynamics.cc
@@ -29,3 +28,4 @@ src/Bezier.nb
 src/Solvers.cpp
 src/locomotion.cc
 src/stabilization.cc
+src/forward_kinematics.cc

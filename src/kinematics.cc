@@ -26,7 +26,7 @@ std::vector<std::vector<Ravelin::Vector3d> >& trajectoryIK(
 
 }
 
-std::vector<Ravelin::Vector3d>& Quadruped::feetIK(
+void Quadruped::feetIK(
         const std::vector<Ravelin::Vector3d>& feet_positions,
         std::vector<Ravelin::Vector3d>& joint_positions){
   int num_feet = feet_positions.size();
@@ -35,10 +35,78 @@ std::vector<Ravelin::Vector3d>& Quadruped::feetIK(
       rf(feet_positions[1].data(),joint_positions[1].data());
       lh(feet_positions[2].data(),joint_positions[2].data());
       rh(feet_positions[3].data(),joint_positions[3].data());
-
-      return joint_positions;
 }
 
+void Quadruped::footIK(int foot,
+        Ravelin::Vector3d& feet_positions,
+        Ravelin::Vector3d& joint_positions){
+      switch (foot){
+      case 0:
+      lf(feet_positions.data(),joint_positions.data());
+        break;
+      case 1:
+      rf(feet_positions.data(),joint_positions.data());
+        break;
+      case 2:
+      lh(feet_positions.data(),joint_positions.data());
+        break;
+      case 3:
+      rh(feet_positions.data(),joint_positions.data());
+        break;
+      default:  break;
+      }
+}
+
+/// Resolved Rate Motion Control
+void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
+  for(int i=0;i<NUM_JOINTS;i++)                // Return robot to original config
+     joints_[i]->q[0] = q_des[i];
+  abrobot_->update_link_poses();
+
+  double alpha = 1e0, err = 1, last_err = 2;
+  Ravelin::Vector3d pos;
+  goal.pose = base_frame;
+  pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+  boost::shared_ptr<Ravelin::Pose3d> jacobian_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+  std::cerr << "goal" << goal << std::endl;
+  std::cerr << "pos" << pos << std::endl;
+  err = (workv3_ = Ravelin::Origin3d(goal) - Ravelin::Origin3d(pos)).norm();
+
+  while(err > 1e-3  && err < last_err){
+    // update error
+    last_err = err;
+    std::cerr << "pos" << pos << std::endl;
+    std::cerr << "err" << err << std::endl;
+
+    // set jacobian in base_frame orientation, centered at foot
+    jacobian_frame->x = pos;
+    jacobian_frame->q = base_frame->q;
+    jacobian_frame->update_relative_pose(Moby::GLOBAL);
+    abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);// J: qd -> xd
+
+    Ravelin::Matrix3d iJ;
+
+    for(int j=0;j<3;j++)                                      // x,y,z
+      for(int k=0;k<foot.chain.size();k++)                // actuated joints
+        iJ(j,k) = workM_(j,foot.chain[k]);
+    // vel
+    LA_.solve_fast(iJ,workv3_);
+
+    for(int k=0;k<foot.chain.size();k++)                // actuated joints
+      joints_[foot.chain[k]]->q[0] += alpha*workv3_[k];
+    abrobot_->update_link_poses();
+
+    // get foot pos
+    pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+    err = (workv3_ = Ravelin::Origin3d(goal) - Ravelin::Origin3d(pos)).norm();
+
+    }
+  for(int k=0;k<foot.chain.size();k++){
+    q_des[foot.chain[k]] = joints_[foot.chain[k]]->q[0];
+    joints_[foot.chain[k]]->q[0] = q[foot.chain[k]];
+  }
+  abrobot_->update_link_poses();
+}
 
 /* Use this to convert from MATHEMATICA
 :%s/List(/   /g
@@ -54,7 +122,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::feetIK(
 :%s/y/X[1]/g
 :%s/z/X[2]/g
 */
-void Quadruped::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
+void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
   unsigned NC = 0;
@@ -109,7 +177,7 @@ void Quadruped::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& S
   R.set_sub_mat(0,NC,ST);
 }
 
-void Quadruped::calc_eef_jacobians(Ravelin::MatrixNd& R){
+void Robot::calc_eef_jacobians(Ravelin::MatrixNd& R){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
 
@@ -118,11 +186,8 @@ void Quadruped::calc_eef_jacobians(Ravelin::MatrixNd& R){
   Ravelin::MatrixNd J(3,NDOFS);
   for(int i=0;i<NUM_EEFS;i++){
     boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
-
     boost::shared_ptr<Ravelin::Pose3d> foot_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*eefs_[i].link->get_pose())) ;
     foot_frame->update_relative_pose(Moby::GLOBAL);
-
-    event_frame->q = Ravelin::Quatd::identity();
     event_frame->x = foot_frame->x;
 
     dbrobot_->calc_jacobian(event_frame,eefs_[i].link,workM_);
@@ -144,3 +209,12 @@ void Quadruped::calc_eef_jacobians(Ravelin::MatrixNd& R){
     R.set_column(NUM_EEFS*2+i,workv_);
   }
 }
+/*
+:%s/Sin\[/sin(/g
+:%s/Cos\[/cos(/g
+:%s/\]/)/g
+:%s/th1/th\[0\]/g
+:%s/th2/th\[1\]/g
+:%s/th3/th\[2\]/g
+:%s//th\[2\]/g
+ */

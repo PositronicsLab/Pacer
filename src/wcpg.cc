@@ -60,7 +60,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
     double Sf2 = 1.0/(exp( bf*(dist_plane)) + 1.0);
 //    double Sf1 = 1.0/(exp(-bf*(xbar[2] - ground_plane(x[i]))) + 1.0);
 //    double Sf2 = 1.0/(exp( bf*(xbar[2] - ground_plane(x[i]))) + 1.0);
-//    xd[i] = (xd[i])*Sf1 - Ravelin::Vector3d(Vf,0,0)*Sf2;
+    xd[i] = (xd[i])*Sf1 - Ravelin::Vector3d(Vf,0,0)*Sf2;
   }
 
   return xd;
@@ -119,20 +119,27 @@ void Quadruped::cpg_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Rave
   double Ls = 0.03,
          Df = 0.45, // where 50% –_–_–_ 100% ======  *Duty factor
                     //           –_–_–_      ======
-         Vf = 0.2,
-         bp = 1000;
+         Vf = 0.15,
+         bp = 5000;
 
   for(int f=0;f<NUM_EEFS;f++){
     // set height of gait (each foot)
     Hs[f] = 0.015;
 
+    // SET EEF ORIGINS TO the ground below that EEF SHOULDER
+    Ravelin::Pose3d joint_pose = *joints_[eefs_[f].chain[2]]->get_pose();
+    joint_pose.update_relative_pose(Moby::GLOBAL);
+    joint_pose.x[2] = Hs[f]*0.75;
+    joint_pose.update_relative_pose(base_horizontal_frame);
+    eefs_[f].origin = joint_pose.x;
+
     // set gait centers
     Ravelin::Pose3d link_pose = *eefs_[f].link->get_pose();
-    link_pose.update_relative_pose(base_horizonal_frame);
+    link_pose.update_relative_pose(base_horizontal_frame);
     foot_origins[f] = eefs_[f].origin;
-    foot_origins[f].pose = base_horizonal_frame;
+    foot_origins[f].pose = base_horizontal_frame;
     foot_poses[f] = link_pose.x;
-    foot_poses[f].pose = base_horizonal_frame;
+    foot_poses[f].pose = base_horizontal_frame;
     if(link_pose.x.norm() < 1e-3) return;
     foot_vel[f].set_zero();
   }

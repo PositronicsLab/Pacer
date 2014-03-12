@@ -10,8 +10,8 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
-void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
-                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff){
+void Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final){
 #ifdef COLLECT_DATA   // record all input vars
 
   { // TODO: REMOVE THIS, FOR IROS PAPER
@@ -484,13 +484,14 @@ void Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vect
   OUTLOG(cf,"final_contact_force");
   //  Note compare contact force prediction to Moby contact force
 #ifndef NDEBUG
-//  OUT_LOG(logINFO)  << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
-//  for(int i=0;i<nc;i++)
-//    OUT_LOG(logINFO)  << "%["<< cf[i] << " "
-//              << cf[i*nk+nc]-cf[i*nk+nc+nk/2] << " "
-//              << cf[i*nk+nc+1]-cf[i*nk+nc+nk/2+1] << "] "<< std::endl;
-//  OUT_LOG(logINFO)  << std::endl;
+  OUT_LOG(logINFO)  << "%cf = [cN cS cT] -> [z x y]"<< std::endl;
+  for(int i=0;i<nc;i++)
+    OUT_LOG(logINFO)  << "%["<< cf[i] << " "
+              << cf[i*nk+nc]-cf[i*nk+nc+nk/2] << " "
+              << cf[i*nk+nc+1]-cf[i*nk+nc+nk/2+1] << "] "<< std::endl;
+  OUT_LOG(logINFO)  << std::endl;
 #endif
+  cf_final = cf;
   // return the inverse dynamics forces
   // uff = fID + iF*(vqstar - k - FET*R*(cf))/h
   uff = vqstar;

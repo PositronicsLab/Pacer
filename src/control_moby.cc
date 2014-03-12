@@ -27,9 +27,6 @@ using namespace Ravelin;
 boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 boost::shared_ptr<Quadruped> Lynx_ptr;
 
-static Ravelin::VectorNd workv_;
-static Ravelin::MatrixNd workM_;
-
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Controllers //////////////////////////////////
 
@@ -74,7 +71,7 @@ void post_event_callback_fn(const std::vector<Event>& e,
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
-      eefs_[index].point = foot_pose.x;//e[i].contact_point;
+      eefs_[index].point = e[i].contact_point;//foot_pose.x;//
       eefs_[index].normal = e[i].contact_normal;
       eefs_[index].impulse = e[i].contact_impulse.get_linear();
     }
@@ -209,8 +206,6 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     Ravelin::VectorNd coordinates, velocity;
     abrobot->get_generalized_coordinates(DynamicBody::eEuler,coordinates);
     abrobot->get_generalized_velocity(DynamicBody::eSpatial,velocity);
-    std::cout << "q" << coordinates << std::endl;
-    std::cout << "qd" << velocity << std::endl;
 
     apply_simulation_forces(u,joints_);
 #endif

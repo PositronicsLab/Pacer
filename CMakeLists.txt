@@ -5,6 +5,7 @@ project(Links)
 find_package(Boost REQUIRED)
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
+option(USE_DXL "Use Dynamixel?" OFF)
 
 # you may have to add additional includes in here...
 add_definitions(-DBUILD_DOUBLE)
@@ -33,11 +34,12 @@ set(links_srcs  src/control_moby.cc
                 src/estimate_friction.cc
                 src/inverse_dynamics.cc
                 src/visualize_moby.cc
-                src/bezier_solver.cc
                 src/inverse_kinematics.cc
+                src/forward_kinematics.cc
                 src/kinematics.cc
                 src/stabilization.cc
                 src/locomotion.cc
+                src/utilities.cc
                 src/solve_qp.cc
                 src/Solvers.cpp
                 src/wcpg.cc

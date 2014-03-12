@@ -57,7 +57,22 @@ class Robot : public Moby::RCArticulatedBody{
   std::vector<std::string>& get_joint_names()  { return joint_names_; }
   Moby::RCArticulatedBodyPtr& get_articulated_body()  { return abrobot_; }
   Moby::DynamicBodyPtr& get_dynamic_body()  { return dbrobot_; }
+  double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext,
+                             double dt, const Ravelin::MatrixNd& N,
+                             const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
+                             Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
+
+  void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
+                        const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
+                        double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
+  void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+  void calc_eef_jacobians(Ravelin::MatrixNd& R);
+  void RRMC(const EndEffector& foot,const Ravelin::VectorNd& q, Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+
+  void eef_stiffness_fb(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd&  qd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
+
+  void update();
   protected:
     // Robot Dynamics Datastructures
     Moby::RCArticulatedBodyPtr        abrobot_;
@@ -75,6 +90,22 @@ class Robot : public Moby::RCArticulatedBody{
     unsigned                          NUM_EEFS;
     unsigned                          NUM_JOINTS;
     unsigned                          NUM_LINKS;
+
+    // wrt: base_frame
+    std::map<std::string, Ravelin::Vector3d> eef_origins_;
+    // Useful Stored Data
+    boost::shared_ptr<Ravelin::Pose3d>   base_horizontal_frame,
+                                         base_frame,
+                                         base_frame_global;
+    unsigned          NC;
+    EndEffector       center_of_contact;
+    Ravelin::Vector3d center_of_mass,zero_moment_point;
+    Ravelin::Vector3d roll_pitch_yaw;
+    Ravelin::VectorNd uff, ufb;
+    Ravelin::VectorNd qdd;
+    Ravelin::MatrixNd N,D,M,ST,R,J;
+    Ravelin::VectorNd fext;
+    Ravelin::VectorNd vel, gc, acc;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;

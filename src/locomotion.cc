@@ -220,19 +220,21 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const Ravelin::Vec
   }
 
   // EEF VELOCITY
-  boost::shared_ptr<Ravelin::Pose3d> event_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
   for(int i=0;i<NUM_EEFS;i++){
+    EndEffector& foot = eefs_[i];
     // Calc jacobian for AB at this EEF
-    event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    dbrobot_->calc_jacobian(event_frame,eefs_[i].link,workM_);
+    Ravelin::MatrixNd J;
+    Ravelin::VectorNd x(foot.chain.size());
+    for(int k=0;k<foot.chain.size();k++)                // actuated joints
+      x[k] = q[foot.chain[k]];
+    foot_kinematics(x,foot,workv3_,workv3_,J);
 
-    Ravelin::Matrix3d iJ;
-    for(int j=0;j<3;j++)                                      // x,y,z
-      for(int k=0;k<eefs_[i].chain.size();k++)                // actuated joints
-        iJ(j,k) = workM_(j,eefs_[i].chain[k]);
-
-    LA_.solve_fast(iJ,foot_vel[i]);
-    LA_.solve_fast(iJ,foot_acc[i]);
+    foot_vel[i].pose = base_frame;
+    foot_vel[i] = Ravelin::Pose3d::transform_point(foot.link->get_pose(),foot_vel[i]);
+    LA_.solve_fast(J,foot_vel[i]);
+    foot_acc[i].pose = base_frame;
+    foot_acc[i] = Ravelin::Pose3d::transform_point(foot.link->get_pose(),foot_acc[i]);
+    LA_.solve_fast(J,foot_acc[i]);
 
     for(int j=0;j<eefs_[i].chain.size();j++){
       qdd[eefs_[i].chain[j]] = foot_acc[i][j];

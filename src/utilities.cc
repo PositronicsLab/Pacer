@@ -340,3 +340,5 @@ void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t
     Xdd[i]  =   6*t*coefs[k*4] +   2*coefs[k*4+1] ;
   }
 }
+
+

@@ -7,10 +7,10 @@ using namespace Ravelin;
 const bool FOOT_TRAJ = false,
            WALK = true,
            TRUNK_STABILIZATION = false,
-           CONTROL_IDYN = false,
+           CONTROL_IDYN = true,
            FRICTION_EST = false,
            CONTROL_ZMP = false,
-           PARALLEL_STIFFNESS = true;
+           PARALLEL_STIFFNESS = false;
 //    #define FIXED_BASE
 //#define VISUALIZE_MOBY
 #define OUTPUT
@@ -106,6 +106,16 @@ Ravelin::VectorNd& Quadruped::control(double dt,
         MU(i,k) = 1;
 
 
+  //  Determine FB forces
+  if(PARALLEL_STIFFNESS){
+    // Determine accuracy of IDYN
+
+    // Apply eef Compliance
+    eef_stiffness_fb(q_des, qd_des,q,qd,ufb);
+  } else
+    control_PID(q_des, qd_des,q,qd,joint_names_, gains_,ufb);
+
+
   if(CONTROL_IDYN){
     double alpha = 1;
     Ravelin::VectorNd cf;
@@ -117,17 +127,11 @@ Ravelin::VectorNd& Quadruped::control(double dt,
     uff += (id*=alpha);
   }
 
-///  Determine FB forces
-if(PARALLEL_STIFFNESS)
-  eef_stiffness_fb(q_des, qd_des,q,qd,ufb);
-else
-  control_PID(q_des, qd_des,q,qd,joint_names_, gains_,ufb);
-
   check_finite(uff);
   check_finite(ufb);
   // combine ufb and uff
   u = ufb;
-  u += uff;
+  u = uff;
 
   // Limit Torques
 //  for(unsigned i=0;i< NUM_JOINTS;i++){
@@ -138,7 +142,17 @@ else
 //  }
 
 #ifdef OUTPUT
-      std::cout << "NC = " << NC << " @ time = "<< t << std::endl;
+     std::cout << "NC = " << NC << " @ time = "<< t << std::endl;
+     for(unsigned i=0;i< NUM_EEFS;i++){
+       if(!eefs_[i].active) continue;
+       Ravelin::Origin3d impulse(0,0,0);
+       for(unsigned j=0;j< eefs_[i].contacts.size();j++)
+         impulse += Ravelin::Origin3d(eefs_[i].contact_impulses[j]);
+       std::cout << eefs_[i].id << "\t " <<  std::setprecision(5) << impulse
+                 << "  @  " << eefs_[i].point
+                 << ",  n =" << eefs_[i].normal << std::endl;;
+     }
+     assert(NC!=4);
      std::cout << "JOINT\t: U\t| Q\t: des\t: err\t| "
                   "Qd\t: des\t: err\t|" << std::endl;
      for(unsigned i=0;i< NUM_JOINTS;i++)
@@ -151,7 +165,6 @@ else
                  << "\t " << qd_des[i]
                  << "\t " <<  qd[i] - qd_des[i]
                  << "\t| " << std::endl;
-     std::cout <<"CoM : "<< center_of_mass << std::endl;
      std::cout <<"ZmP : "<< zero_moment_point << std::endl;
      OUTLOG(roll_pitch_yaw,"roll_pitch_yaw");
      std::cout << std::endl;
@@ -160,6 +173,7 @@ else
      OUTLOG(qdd,"qdd_des");
      OUTLOG(acc.get_sub_vec(0,NUM_JOINTS,workv_),"qdd");
 #endif
+     std::cout <<"CoM : "<< center_of_mass << std::endl;
 
 #ifdef VISUALIZE_MOBY
        // CONTACTS
@@ -293,19 +307,19 @@ void Quadruped::init(){
   std::cout << "NK: " << NK << std::endl;
 
   q0_["BODY_JOINT"] = 0;
-  q0_["LF_HIP_AA"] = 1e-3;
+  q0_["LF_HIP_AA"] = M_PI_8;
   q0_["LF_HIP_FE"] = M_PI_4;
   q0_["LF_LEG_FE"] = M_PI_2;
 
-  q0_["RF_HIP_AA"] =  -1e-3;
+  q0_["RF_HIP_AA"] =  -M_PI_8;
   q0_["RF_HIP_FE"] =  -M_PI_4;
   q0_["RF_LEG_FE"] =  -M_PI_2;
 
-  q0_["LH_HIP_AA"] =  -1e-3;
+  q0_["LH_HIP_AA"] =  -M_PI_8;
   q0_["LH_HIP_FE"] =  -M_PI_4;
   q0_["LH_LEG_FE"] =  -M_PI_2;
 
-  q0_["RH_HIP_AA"] =  1e-3;
+  q0_["RH_HIP_AA"] =  M_PI_8;
   q0_["RH_HIP_FE"] =  M_PI_4;
   q0_["RH_LEG_FE"] =  M_PI_2;
 
@@ -330,9 +344,9 @@ void Quadruped::init(){
   // Setup gains
   for(int i=0;i<NUM_JOINTS;i++){
     gains_[joints_[i]->id].perr_sum = 0;
-//    gains_[joints_[i]->id].kp = 2e1;
-    gains_[joints_[i]->id].kp = 0.81e1;
-    gains_[joints_[i]->id].kv = 2e-1;
+    gains_[joints_[i]->id].kp = 1e1;
+//    gains_[joints_[i]->id].kp = 0.81e1;
+    gains_[joints_[i]->id].kv = 1e-1;
     gains_[joints_[i]->id].ki = 0;
   }
 
@@ -348,6 +362,7 @@ void Quadruped::init(){
     q_start[i] = (joints_[i]->q[0]  = q0_[joints_[i]->id]);
   abrobot_->update_link_poses();
   update();
+
   for(int i=0;i<NUM_EEFS;i++){
     RRMC(eefs_[i],Ravelin::VectorNd(q_start),eefs_[i].origin,q_start);
     for(int j=0;j<eefs_[i].chain.size();j++){
@@ -357,6 +372,13 @@ void Quadruped::init(){
   }
   abrobot_->update_link_poses();
 
+//  for(int i=0;i<NUM_EEFS;i++){
+//    Ravelin::VectorNd x(eefs_[i].chain.size());
+//    for(unsigned k=0;k< eefs_[i].chain.size();k++)
+//      x[k] = joints_[eefs_[i].chain[k]]->q[0];
+//    foot_kinematics(x,eefs_[i],eefs_[i].origin,workv3_,workM_);
+//    OUTLOG(workM_,"J_"+eefs_[i].id);
+//  }
 }
   // Push initial state to robot
 

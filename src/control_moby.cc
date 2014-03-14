@@ -50,16 +50,23 @@ void post_event_callback_fn(const std::vector<Event>& e,
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
+
+
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
-
-      //if end effector doesnt exist
-      if(iter  == eef_names_.end())
-        continue;
+      //if end effector doesnt exist, check other SB
+      if(iter  == eef_names_.end()){
+        iter = std::find(eef_names_.begin(), eef_names_.end(), sb2->id);
+        if(iter  == eef_names_.end())
+          continue;
+        else
+          std::swap(sb1,sb2);
+      }
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
       eefs_[index].contacts.push_back(e[i].contact_point);
+      eefs_[index].contact_impulses.push_back(e[i].contact_impulse.get_linear());
       if (eefs_[index].active)
         continue;
 

@@ -77,8 +77,7 @@
 <!--    <Cylinder id="foot" radius="0.01" height="0.05" mass="0.01"/>-->
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" translate="0 0 0.155" rotate="0 0 1.57" >
-
+      fdyn-algorithm-frame="link" translate="0,0,0.155" rotate="0 0 0" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
         <CollisionGeometry primitive-id="abdomen" />

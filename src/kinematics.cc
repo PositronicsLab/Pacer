@@ -57,55 +57,90 @@ void Quadruped::footIK(int foot,
       }
 }
 
-/// Resolved Rate Motion Control
-void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
-  for(int i=0;i<NUM_JOINTS;i++)                // Return robot to original config
-     joints_[i]->q[0] = q_des[i];
+Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk){
+  for(int i=0;i<foot.chain.size();i++)
+    joints_[foot.chain[i]]->q[0] = x[i];
   abrobot_->update_link_poses();
 
-  double alpha = 1e0, err = 1, last_err = 2;
-  Ravelin::Vector3d pos;
-  goal.pose = base_frame;
-  pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+  gk.set_zero(3,foot.chain.size());
+  fk = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
   boost::shared_ptr<Ravelin::Pose3d> jacobian_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
-  std::cerr << "goal" << goal << std::endl;
-  std::cerr << "pos" << pos << std::endl;
-  err = (workv3_ = Ravelin::Origin3d(goal) - Ravelin::Origin3d(pos)).norm();
+  jacobian_frame->x = fk;
+
+  abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);
+  for(int j=0;j<3;j++)                                      // x,y,z
+    for(int k=0;k<foot.chain.size();k++)                // actuated joints
+      gk(j,k) = workM_(j,foot.chain[k]);
+  return fk;
+}
+
+
+/// Working kinematics function [y] = f(x,foot,pt,y,J)
+/// evaluated in foot link frame
+Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk){
+  for(int i=0;i<foot.chain.size();i++)
+    joints_[foot.chain[i]]->q[0] = x[i];
+  abrobot_->update_link_poses();
+
+  gk.resize(3,foot.chain.size());
+  abrobot_->calc_jacobian(foot.link->get_pose(),foot.link,workM_);
+  for(int j=0;j<3;j++)                                      // x,y,z
+    for(int k=0;k<foot.chain.size();k++)                // actuated joints
+      gk(j,k) = workM_(j,foot.chain[k]);
+
+  fk = Ravelin::Pose3d::transform_point(foot.link->get_pose(),goal);
+  return fk;
+}
+
+/// Resolved Rate Motion Control
+void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
+  Ravelin::MatrixNd J;
+  Ravelin::VectorNd x(foot.chain.size());
+  Ravelin::Vector3d step;
+
+  double alpha = 1, err = 1, last_err = 2;
+  goal.pose = base_frame;
+  for(int k=0;k<foot.chain.size();k++)                // actuated joints
+    x[k] = q[foot.chain[k]];
+
+  foot_kinematics(x,foot,goal,step,J);
+
+  err = step.norm();
 
   while(err > 1e-3  && err < last_err){
     // update error
     last_err = err;
-    std::cerr << "pos" << pos << std::endl;
-    std::cerr << "err" << err << std::endl;
 
-    // set jacobian in base_frame orientation, centered at foot
-    jacobian_frame->x = pos;
-    jacobian_frame->q = base_frame->q;
-    jacobian_frame->update_relative_pose(Moby::GLOBAL);
-    abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);// J: qd -> xd
+    LA_.solve_fast(J,step);
 
-    Ravelin::Matrix3d iJ;
+    // Line Search
+    alpha = 1;
+    {
+      /// TODO: never activates (could be fine)
+      double beta = 0.5; // (0,1)
+      Ravelin::Vector3d fk1;
+      Ravelin::VectorNd xx = x;
+      // distance to goal is greater with alpha*step than beta*alpha*step?
+      // alpha = beta*alpha;
+      while (foot_kinematics((x = xx) += alpha*step,foot,goal,fk1,workM_).norm() >
+             foot_kinematics((x = xx) += alpha*beta*step,foot,goal,fk1,workM_).norm())
+        alpha = alpha*beta;
+      x = xx;
+    }
 
-    for(int j=0;j<3;j++)                                      // x,y,z
-      for(int k=0;k<foot.chain.size();k++)                // actuated joints
-        iJ(j,k) = workM_(j,foot.chain[k]);
-    // vel
-    LA_.solve_fast(iJ,workv3_);
-
-    for(int k=0;k<foot.chain.size();k++)                // actuated joints
-      joints_[foot.chain[k]]->q[0] += alpha*workv3_[k];
-    abrobot_->update_link_poses();
+    x += alpha*step;
 
     // get foot pos
-    pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
-    err = (workv3_ = Ravelin::Origin3d(goal) - Ravelin::Origin3d(pos)).norm();
+    foot_kinematics(x,foot,goal,step,J);
 
-    }
-  for(int k=0;k<foot.chain.size();k++){
-    q_des[foot.chain[k]] = joints_[foot.chain[k]]->q[0];
-    joints_[foot.chain[k]]->q[0] = q[foot.chain[k]];
+    err = step.norm();
+
+    // if error increases, backstep then return
+    if(err > last_err)
+      x -= alpha*step;
   }
-  abrobot_->update_link_poses();
+  for(int k=0;k<foot.chain.size();k++)
+    q_des[foot.chain[k]] = x[k];
 }
 
 /* Use this to convert from MATHEMATICA

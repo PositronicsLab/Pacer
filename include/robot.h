@@ -29,6 +29,7 @@ public:
     Ravelin::Vector3d     normal; //(pointing away from the ground)
     Ravelin::Vector3d     impulse;
     std::vector<Ravelin::Vector3d> contacts;
+    std::vector<Ravelin::Vector3d> contact_impulses;
 
     bool                  active;
 
@@ -71,7 +72,9 @@ class Robot : public Moby::RCArticulatedBody{
   void RRMC(const EndEffector& foot,const Ravelin::VectorNd& q, Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
   void eef_stiffness_fb(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd&  qd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
-
+//  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+  Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+  Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
   void update();
   protected:
     // Robot Dynamics Datastructures

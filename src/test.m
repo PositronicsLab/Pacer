@@ -60,24 +60,24 @@ for ij = 1:276
 
 
       
-    options = optimoptions(@quadprog,'Algorithm','trust-region-reflective','Display','off');
-
-    tic()
-    z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
-    stage1_tr = [stage1_tr;toc()];
-    
-    options = optimoptions(@quadprog,'Algorithm','active-set','Display','off');
-
-    tic()
-    z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
-    stage1_as = [stage1_as;toc()];
-    
-    options = optimoptions(@quadprog,'Algorithm','interior-point-convex','Display','off');
-
-    tic()
-    z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
-    stage1_ip = [stage1_ip;toc()];
-    
+%     options = optimoptions(@quadprog,'Algorithm','trust-region-reflective','Display','off');
+% 
+%     tic()
+%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
+%     stage1_tr = [stage1_tr;toc()];
+%     
+%     options = optimoptions(@quadprog,'Algorithm','active-set','Display','off');
+% 
+%     tic()
+%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
+%     stage1_as = [stage1_as;toc()];
+%     
+%     options = optimoptions(@quadprog,'Algorithm','interior-point-convex','Display','off');
+% 
+%     tic()
+%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
+%     stage1_ip = [stage1_ip;toc()];
+%     
     O = zeros(size(qA1,1),size(qA1,1));
     MM = [qG1,-qA1';
           qA1,  O ];
@@ -89,62 +89,62 @@ for ij = 1:276
     feas = qA1*z - qb1
 
     %% % STAGE 2 % %% QUADRATIC CONSTRAINT
-    options = optimoptions(@fmincon,'Algorithm','interior-point'...
-                                   ,'GradConstr','on'...
-                                   ,'GradObj','on'...
-                                   ,'Display','off');
+%     options = optimoptions(@fmincon,'Algorithm','interior-point'...
+%                                    ,'GradConstr','on'...
+%                                    ,'GradObj','on'...
+%                                    ,'Display','off');
 
-    tic()
-    [z2,fval,exitflag] = fmincon(@myfun,z,-qA1,-qb1,zeros(0,size(z,1)),[],zeros(size(z)),[],@(x) mycon(x,qG1,qc1,z),options);
-%     feas = qA1*z2 - qb1
-%     if exitflag >= 0
-        stage2_ip = [stage2_ip;toc()];
-%     else
-%         stage2_ip = [stage2_ip;nan];
-%     end
-z2
-    feas = qA1*z2 - qb1
-    if min(feas) < -NEAR_ZERO
-        stage2_ip(end) = nan;
-    end
-    
-        options = optimoptions(@fmincon,'Algorithm','active-set'...
-                                   ,'GradConstr','on'...
-                                   ,'GradObj','on'...
-                                   ,'Display','off');
-    
-    tic()
+%     tic()
 %     [z2,fval,exitflag] = fmincon(@myfun,z,-qA1,-qb1,zeros(0,size(z,1)),[],zeros(size(z)),[],@(x) mycon(x,qG1,qc1,z),options);
 %     feas = qA1*z2 - qb1
 %     if exitflag >= 0
-        stage2_as = [stage2_as;toc()];
+%         stage2_ip = [stage2_ip;toc()];
 %     else
-%         stage2_as = [stage2_as;nan];    
+%         stage2_ip = [stage2_ip;nan];
 %     end
-z2
-    feas = qA1*z2 - qb1
-    if min(feas) < -NEAR_ZERO
-        stage2_as(end) = nan;
-    end
-            options = optimoptions(@fmincon,'Algorithm','SQP'...
-                                   ,'GradConstr','on'...
-                                   ,'GradObj','on'...
-                                   ,'Display','final-detailed');
-
-    tic()
-    [z2,fval,exitflag] = fmincon(@myfun,z,-qA1,-qb1,zeros(0,size(z,1)),[],zeros(size(z)),[],@(x) mycon(x,qG1,qc1,z),options);
+% z2
 %     feas = qA1*z2 - qb1
-%     if exitflag >= 0
-    stage2_sqp = [stage2_sqp;toc()];
-%     else
-%         stage2_sqp = [stage2_sqp;nan];
+%     if min(feas) < -NEAR_ZERO
+%         stage2_ip(end) = nan;
 %     end
-    z2
-    feas = qA1*z2 - qb1
-    if min(feas) < -NEAR_ZERO
-        stage2_sqp(end) = nan;
-    end
-    %}
+%     
+%         options = optimoptions(@fmincon,'Algorithm','active-set'...
+%                                    ,'GradConstr','on'...
+%                                    ,'GradObj','on'...
+%                                    ,'Display','off');
+%     
+%     tic()
+% %     [z2,fval,exitflag] = fmincon(@myfun,z,-qA1,-qb1,zeros(0,size(z,1)),[],zeros(size(z)),[],@(x) mycon(x,qG1,qc1,z),options);
+% %     feas = qA1*z2 - qb1
+% %     if exitflag >= 0
+%         stage2_as = [stage2_as;toc()];
+% %     else
+% %         stage2_as = [stage2_as;nan];    
+% %     end
+% z2
+%     feas = qA1*z2 - qb1
+%     if min(feas) < -NEAR_ZERO
+%         stage2_as(end) = nan;
+%     end
+%             options = optimoptions(@fmincon,'Algorithm','SQP'...
+%                                    ,'GradConstr','on'...
+%                                    ,'GradObj','on'...
+%                                    ,'Display','final-detailed');
+% 
+%     tic()
+%     [z2,fval,exitflag] = fmincon(@myfun,z,-qA1,-qb1,zeros(0,size(z,1)),[],zeros(size(z)),[],@(x) mycon(x,qG1,qc1,z),options);
+% %     feas = qA1*z2 - qb1
+% %     if exitflag >= 0
+%     stage2_sqp = [stage2_sqp;toc()];
+% %     else
+% %         stage2_sqp = [stage2_sqp;nan];
+% %     end
+%     z2
+%     feas = qA1*z2 - qb1
+%     if min(feas) < -NEAR_ZERO
+%         stage2_sqp(end) = nan;
+%     end
+%     %}
     %% % STAGE 2 % %% NULLSPACE
     tic();
 %     P = null(qG1)

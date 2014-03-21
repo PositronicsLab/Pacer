@@ -42,15 +42,16 @@ void post_event_callback_fn(const std::vector<Event>& e,
   for(int i=0;i<eefs_.size();i++){
     eefs_[i].active = false;
     eefs_[i].contacts.clear();
+    eefs_[i].contact_impulses.clear();
   }
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
+      bool MIRROR_FLAG = false;
+
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
-
-
 
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
@@ -59,14 +60,26 @@ void post_event_callback_fn(const std::vector<Event>& e,
         iter = std::find(eef_names_.begin(), eef_names_.end(), sb2->id);
         if(iter  == eef_names_.end())
           continue;
-        else
+        else{
+          MIRROR_FLAG = true;
           std::swap(sb1,sb2);
+        }
       }
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
       eefs_[index].contacts.push_back(e[i].contact_point);
-      eefs_[index].contact_impulses.push_back(e[i].contact_impulse.get_linear());
+      if(MIRROR_FLAG){
+        eefs_[index].contact_impulses.push_back(-e[i].contact_impulse.get_linear());
+      } else {
+        eefs_[index].contact_impulses.push_back(e[i].contact_impulse.get_linear());
+      }
+//      std::cout << sb1->id << std::endl;
+//      std::cout <<"\t"<< e[i].contact_impulse << std::endl;
+//      std::cout <<"\t"<< e[i].contact_impulse.get_linear() << std::endl;
+//      std::cout <<"\t"<< e[i].contact_impulse.get_angular() << std::endl;
+//      std::cout <<"\t"<< e[i].contact_point << std::endl;
+
       if (eefs_[index].active)
         continue;
 
@@ -78,11 +91,32 @@ void post_event_callback_fn(const std::vector<Event>& e,
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
-      eefs_[index].point = e[i].contact_point;//foot_pose.x;//
-      eefs_[index].normal = e[i].contact_normal;
-      eefs_[index].impulse = e[i].contact_impulse.get_linear();
+      eefs_[index].point = e[i].contact_point;
+      if(MIRROR_FLAG){
+        eefs_[index].normal = -e[i].contact_normal;
+        eefs_[index].tan1 = -e[i].contact_tan1;
+        eefs_[index].tan2 = -e[i].contact_tan2;
+
+      } else {
+        eefs_[index].normal = e[i].contact_normal;
+        eefs_[index].tan1 = e[i].contact_tan1;
+        eefs_[index].tan2 = e[i].contact_tan2;
+      }
+      eefs_[index].event = boost::shared_ptr<const Moby::Event>(new Event(e[i]));
     }
   }
+  for(unsigned i=0;i< eefs_.size();i++){
+    if(!eefs_[i].active) continue;
+    Ravelin::Origin3d impulse(0,0,0),contact(0,0,0);
+    for(unsigned j=0;j< eefs_[i].contacts.size();j++){
+      impulse += Ravelin::Origin3d(eefs_[i].contact_impulses[j]);
+      contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].contacts[j]))/eefs_[i].contacts.size();
+    }
+    std::cout << eefs_[i].id << "(" << eefs_[i].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
+              << "\t@  " << contact
+              << ",\tn =" << eefs_[i].normal << std::endl;
+  }
+
 }
 #endif
 
@@ -228,7 +262,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
      for(unsigned m=0,i=0;i< num_joints;m++){
        if(joints_[m]->q.size() == 0) continue;
-       for(Dynamixel::Joints j=Dynamixel::BODY_JOINT;j<Dynamixel::N_JOINTS;j++)
+       for(int j=0;j<Dynamixel::N_JOINTS;j++)
          if(joints_[m]->id.compare(dxl_->JointName(j)) == 0){
            qdat[j] = q_des[i];
            qddat[j] = 0;//qd_des[i];
@@ -239,8 +273,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      OUTLOG(qdat,"qdat");
      OUTLOG(qddat,"qddat");
 
-     dxl_->set_position(qdat.data());
-//     dxl_->set_state(qdat.data(),qddat.data());
+//     dxl_->set_position(qdat.data());
+     dxl_->set_state(qdat.data(),qddat.data());
 # else
   Ravelin::VectorNd udat = u.column(0);
   dxl_->set_torque(udat.data());

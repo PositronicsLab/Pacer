@@ -17,16 +17,15 @@ set(BUILD_DIRECTORY bin)
 set(SOURCE_DIRECTORY src)
 
 include_directories(
-#/Users/samzapo/ThirdParty/Moby/include
+/Users/samzapo/ThirdParty/NewCCD/include
 include /usr/include /usr/include/libxml2 /usr/local/include ${Boost_INCLUDE_DIR} /opt/local/include /opt/X11/include)
 
 link_directories(
-#/Users/samzapo/ThirdParty/Moby/contact-reduce
+/Users/samzapo/ThirdParty/NewCCD/build
 /usr/local/lib /opt/local/lib /opt/X11/lib
 )
 
 #set(box_srcs estimate_friction.cc object_control_moby.cc output.cc)
-#set(hyq_srcs estimate_friction.cc hyq_control_moby.cc output.cc)
 set(links_srcs  src/control_moby.cc
                 src/output.cc
                 src/robot.cc
@@ -47,11 +46,9 @@ set(links_srcs  src/control_moby.cc
 set(coldet_srcs src/LinksColdetPlugin.cpp)
 
 #add_library(OBJ MODULE ${box_srcs})
-#add_library(HYQ MODULE ${hyq_srcs})
 add_library(LINKS MODULE ${links_srcs})
-add_library(LinksColdetPlugin MODULE ${coldet_srcs})
+#add_library(LinksColdetPlugin MODULE ${coldet_srcs})
 
 #target_link_libraries(BOX Moby Ravelin Opt)
-#target_link_libraries(HYQ Moby Ravelin Opt)
 target_link_libraries(LINKS Moby Ravelin  glut GLU osg osgDB OpenThreads dxl)
-target_link_libraries(LinksColdetPlugin Moby Ravelin  glut GLU)
+#target_link_libraries(LinksColdetPlugin Moby Ravelin  glut GLU)

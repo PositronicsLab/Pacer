@@ -1,5 +1,6 @@
 #ifndef CONTROL_H
 #define CONTROL_H
+#define COLLECT_DATA
 
 #include <robot.h>
 

@@ -25,9 +25,8 @@ public:
     std::vector<unsigned> chain;
     // Contact Data
 
-    Ravelin::Vector3d     point;
-    Ravelin::Vector3d     normal; //(pointing away from the ground)
-    Ravelin::Vector3d     impulse;
+    boost::shared_ptr<const Moby::Event> event;
+    Ravelin::Vector3d     point,normal,tan1,tan2;
     std::vector<Ravelin::Vector3d> contacts;
     std::vector<Ravelin::Vector3d> contact_impulses;
 
@@ -64,7 +63,7 @@ class Robot : public Moby::RCArticulatedBody{
                              Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
 
-  void inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
+  bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                         double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
   void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);

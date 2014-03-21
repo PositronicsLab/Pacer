@@ -117,13 +117,14 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,Ravelin::Vec
     alpha = 1;
     {
       /// TODO: never activates (could be fine)
-      double beta = 0.5; // (0,1)
+      double beta = 0.5, rho = 0.5; // (0,1)
       Ravelin::Vector3d fk1;
       Ravelin::VectorNd xx = x;
       // distance to goal is greater with alpha*step than beta*alpha*step?
       // alpha = beta*alpha;
       while (foot_kinematics((x = xx) += alpha*step,foot,goal,fk1,workM_).norm() >
-             foot_kinematics((x = xx) += alpha*beta*step,foot,goal,fk1,workM_).norm())
+//             foot_kinematics((x = xx) += alpha*beta*step,foot,goal,fk1,workM_).norm())
+             (Ravelin::Origin3d(foot_kinematics(xx,foot,goal,fk1,workM_)) - Ravelin::Origin3d(rho*alpha*J.transpose_mult(step,workv3_))).norm())
         alpha = alpha*beta;
       x = xx;
     }
@@ -168,26 +169,27 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ra
   N.set_zero(NDOFS,NC);
   ST.set_zero(NDOFS,NC*2);
   D.set_zero(NDOFS,NC*NK);
-  R.set_zero(NDOFS,NC*3);
+  R.set_zero(NDOFS,NC*5);
   // Contact Jacobian [GLOBAL frame]
   Ravelin::MatrixNd J(3,NDOFS);
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
+
   for(int i=0,ii=0;i<NUM_EEFS;i++){
-    if(!eefs_[i].active)
+    EndEffector& foot = eefs_[i];
+    if(!foot.active)
       continue;
 
-    boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
-    event_frame->q = Ravelin::Quatd::identity();
-    event_frame->x = eefs_[i].point;
-
-    dbrobot_->calc_jacobian(event_frame,eefs_[i].link,workM_);
-
+    event_frame->x = foot.point;
+    dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
     workM_.get_sub_mat(0,3,0,NDOFS,J);
 
-    Vector3d tan1, tan2;
-    Vector3d::determine_orthonormal_basis(eefs_[i].normal, tan1, tan2);
+    Vector3d
+      normal  = foot.normal,
+      tan1    = foot.tan1,
+      tan2    = foot.tan2;
 
     // Normal direction
-    J.transpose_mult(eefs_[i].normal,workv_);
+    J.transpose_mult(normal,workv_);
     N.set_column(ii,workv_);
 
     // 1st tangent
@@ -209,7 +211,7 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ra
   }
 
   R.set_sub_mat(0,0,N);
-  R.set_sub_mat(0,NC,ST);
+  R.set_sub_mat(0,NC,D);
 }
 
 void Robot::calc_eef_jacobians(Ravelin::MatrixNd& R){
@@ -235,13 +237,13 @@ void Robot::calc_eef_jacobians(Ravelin::MatrixNd& R){
 
     // Normal direction
     J.transpose_mult(normal,workv_);
-    R.set_column(i,workv_);
+    this->J.set_column(i,workv_);
     // 1st tangent
     J.transpose_mult(tan1,workv_);
-    R.set_column(NUM_EEFS+i,workv_);
+    this->J.set_column(NUM_EEFS+i,workv_);
     // 2nd tangent
     J.transpose_mult(tan2,workv_);
-    R.set_column(NUM_EEFS*2+i,workv_);
+    this->J.set_column(NUM_EEFS*2+i,workv_);
   }
 }
 /*

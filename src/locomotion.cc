@@ -1,8 +1,7 @@
 #include<quadruped.h>
 #include<utilities.h>
 using namespace Ravelin;
-#define VISUALIZE_MOBY
-
+//#define VISUALIZE_MOBY
 
 void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
@@ -82,11 +81,7 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
   last_q_des = qd_des;
 }
 
-enum Mode{
-  SWING = 0,
-  STANCE = 1,
-  N_MODES = 2
-};
+
 
 /// Walks while trying to match COM velocity "command" in base_frame
 void Quadruped::walk_toward(const Ravelin::SVector6d& command,const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
@@ -96,7 +91,11 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const Ravelin::Vec
   static Ravelin::VectorNd last_q_des = q_des,
                           last_qd_des = Ravelin::VectorNd::zero(NUM_JOINTS);
 
-  static Mode MODE = SWING;
+  static enum Mode{
+    SWING = 0,
+    STANCE = 1,
+    N_MODES = 2
+  } MODE = STANCE;
   static int SWING_LEG = 0;
   t += dt;
 
@@ -104,7 +103,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const Ravelin::Vec
   /////////////// PARAMETERS ////////////////
   double swing_time = 0.1,
          stance_time = 0.0,
-         step_height = 0.01;
+         step_height = 0.02;
   double phase_time = (swing_time + stance_time)*4;
   int num_segments = (swing_time/dt) + 1;
   ///////////////////////////////////////////

@@ -111,6 +111,8 @@ void Robot::update(){
   dbrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,vel);
   dbrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,gc);
   calc_contact_jacobians(N,ST,D,R);
+  // Cn * M * v = iM * fext
+  //      M * v = iM * fext * h
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   calculate_dyn_properties(M,fext);

@@ -29,3 +29,6 @@ src/Solvers.cpp
 src/locomotion.cc
 src/stabilization.cc
 src/forward_kinematics.cc
+err.log
+out.log
+clean_data.sh

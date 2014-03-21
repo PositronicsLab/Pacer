@@ -3,7 +3,7 @@
 
 //#define SPLITTING_METHOD
 
-#define NDEBUG
+//#define NDEBUG
 
 extern bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
 Moby::LCP lcp_;
@@ -50,17 +50,19 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 #ifndef NDEBUG
   OUT_LOG(logINFO)  << "% >> solve qp positive" << std::endl;
   OUT_LOG(logINFO)  << "%QP variables" << std::endl;
-  OUTLOG(Q,"Q");
-  OUTLOG(c,"c");
-  OUTLOG(A,"AA");
-  OUTLOG(b,"bb");
+  OUTLOG(Q,"qp_Q");
+  OUTLOG(c,"qp_c");
+  OUTLOG(A,"qp_A");
+  OUTLOG(b,"qp_b");
 //  OUT_LOG(logINFO)  << "LCP variables" << std::endl;
 //  OUTLOG(MMM,"MM");
 //  OUTLOG(qqq,"qq");
 #endif
 
 #ifndef SPLITTING_METHOD
-  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
+  double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+//  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
     SOLVE_FLAG = isvalid(zzz);

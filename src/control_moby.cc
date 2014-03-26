@@ -140,6 +140,8 @@ void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointP
 
 void controller(DynamicBodyPtr dbp, double t, void*)
 {
+  std::cerr << " -- controller() entered" << std::endl;
+
   std::vector<EndEffector>& eefs_ = Lynx_ptr->get_end_effectors();
   std::vector<Moby::JointPtr>& joints_ = Lynx_ptr->get_joints();
   joint_names_ = Lynx_ptr->get_joint_names();
@@ -149,10 +151,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
   static int ITER = 0;
   static double last_time = 0;
 
-  Ravelin::MatrixNd u(num_joints,1);
-
-  double dt = t - last_time;
-  if (dt == 0) return;
+  static Ravelin::MatrixNd U(num_joints,1);
 
   Ravelin::MatrixNd q(num_joints,1),
                    qd(num_joints,1);
@@ -221,11 +220,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     Ravelin::VectorNd u_vec(num_joints);
 
 
-    Lynx_ptr->control(dt,q.column(0),qd.column(0),q_des,qd_des,u_vec);
-    u.set_column(0,u_vec);
-    Ravelin::VectorNd stb(num_joints+6);
-//    stb[num_joints+3] =
-//    adrobot->add_generalized_force(Moby::DynamicBody::eSpatial,stb);
+    Lynx_ptr->control(t,q.column(0),qd.column(0),q_des,qd_des,u_vec);
+    U.set_column(0,u_vec);
 
       // send torque commands to robot
 # ifdef CONTROL_KINEMATICS
@@ -248,7 +244,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     abrobot->get_generalized_coordinates(DynamicBody::eEuler,coordinates);
     abrobot->get_generalized_velocity(DynamicBody::eSpatial,velocity);
 
-    apply_simulation_forces(u,joints_);
+    apply_simulation_forces(U,joints_);
 #endif
 
      last_time = t;
@@ -280,6 +276,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
   dxl_->set_torque(udat.data());
 # endif
 #endif
+  std::cerr << " -- controller() exited" << std::endl;
+
 }
 
 boost::shared_ptr<ContactParameters> cp_callback(CollisionGeometryPtr g1, CollisionGeometryPtr g2)

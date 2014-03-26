@@ -88,12 +88,14 @@ void EndEffector::init(){
   Moby::JointPtr joint_ptr = link->get_inner_joint_explicit();
   Moby::RigidBodyPtr rb_ptr = link;
   std::cout << id << std::endl;
+  chain_bool.resize(joint_names_.size());
   while (rb_ptr->id.compare("ABDOMEN") != 0 && rb_ptr->id.compare("THORAX") != 0){
     rb_ptr = joint_ptr->get_inboard_link();
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j]) == 0){
         std::cout << j <<  " "<< joint_ptr->id << std::endl;
         chain.push_back(j);
+        chain_bool[j] = true;
       }
     }
     joint_ptr = rb_ptr->get_inner_joint_explicit();

@@ -568,10 +568,10 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     OUTLOG(workM1,"N' * inv(M) * N");
 
     workM2.mult(S,workM1);
-    OUTLOG(workM1,"N' * inv(M) * N");
+    OUTLOG(workM1,"N' * inv(M) * S");
 
     workM2.mult(T,workM1);
-    OUTLOG(workM1,"N' * inv(M) * N");
+    OUTLOG(workM1,"N' * inv(M) * T");
 
     S.transpose_mult(iM,workM2);
     workM2.mult(S,workM1);

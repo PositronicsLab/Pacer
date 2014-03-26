@@ -23,6 +23,7 @@ public:
     Moby::RigidBodyPtr    link;
     // kinematic chain indexing data
     std::vector<unsigned> chain;
+    std::vector<bool> chain_bool;
     // Contact Data
 
     boost::shared_ptr<const Moby::Event> event;
@@ -74,6 +75,7 @@ class Robot : public Moby::RCArticulatedBody{
 //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
   Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
   Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+  Ravelin::MatrixNd& foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot, Ravelin::MatrixNd& gk);
   void update();
   protected:
     // Robot Dynamics Datastructures

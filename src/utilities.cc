@@ -341,4 +341,26 @@ void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t
   }
 }
 
+bool eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
+                       double& X, double& Xd, double& Xdd){
+
+
+
+  int j=0,k=0;
+  while(t >= t_limits[j][k+1]){
+    k++;
+    if(k == t_limits[j].rows()-1){
+      j++;
+      k=0;
+      if(j == t_limits.size())
+        return false;
+    }
+  }
+  X    = t*t*t*coefs[j][k*4] + t*t*coefs[j][k*4+1] + t*coefs[j][k*4+2] + coefs[j][k*4+3];
+  Xd   = 3*t*t*coefs[j][k*4] + 2*t*coefs[j][k*4+1] +   coefs[j][k*4+2];
+  Xdd  =   6*t*coefs[j][k*4] +   2*coefs[j][k*4+1] ;
+
+  return true;
+}
+
 

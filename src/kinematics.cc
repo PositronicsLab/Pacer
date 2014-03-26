@@ -80,6 +80,7 @@ Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEf
 Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk){
   for(int i=0;i<foot.chain.size();i++)
     joints_[foot.chain[i]]->q[0] = x[i];
+
   abrobot_->update_link_poses();
 
   gk.resize(3,foot.chain.size());
@@ -90,6 +91,24 @@ Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEf
 
   fk = Ravelin::Pose3d::transform_point(foot.link->get_pose(),goal);
   return fk;
+}
+
+Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot, Ravelin::MatrixNd& gk){
+  for(int i=0;i<foot.chain.size();i++)
+    joints_[foot.chain[i]]->q[0] = x[i];
+
+  abrobot_->update_link_poses();
+
+  gk.resize(3,foot.chain.size());
+  boost::shared_ptr<Ravelin::Pose3d> jacobian_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+  jacobian_frame->x = x;
+
+  abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);
+  for(int j=0;j<3;j++)                                      // x,y,z
+    for(int k=0;k<foot.chain.size();k++)                // actuated joints
+      gk(j,k) = workM_(j,foot.chain[k]);
+
+  return gk;
 }
 
 /// Resolved Rate Motion Control

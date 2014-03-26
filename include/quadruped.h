@@ -41,7 +41,7 @@ class Quadruped : public Robot{
 
     void fk_stance_adjustment(double dt);
 
-    void walk_toward(const Ravelin::SVector6d& command,const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt);
+    void walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<int> >& gait,double dt,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd);
 };
 
 #endif // CONTROL_H

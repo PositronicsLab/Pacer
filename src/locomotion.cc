@@ -1,7 +1,7 @@
 #include<quadruped.h>
 #include<utilities.h>
 using namespace Ravelin;
-//#define VISUALIZE_MOBY
+#define VISUALIZE_MOBY
 
 void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
@@ -84,138 +84,135 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
 
 
 /// Walks while trying to match COM velocity "command" in base_frame
-void Quadruped::walk_toward(const Ravelin::SVector6d& command,const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
-  static double t = 0;
-  static int trajectory_segment = 0;
-  static std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS),foot_acc(NUM_EEFS);
-  static Ravelin::VectorNd last_q_des = q_des,
-                          last_qd_des = Ravelin::VectorNd::zero(NUM_JOINTS);
+void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<int> >& gait,double t,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
+  static bool inited = false, phase_change = true;
+  static int spline_plan_length = 2;
+  // Vector holding spline coefs
+  static std::vector< std::vector< std::vector<Ravelin::VectorNd> > > spline_coef(NUM_EEFS);
+  // Vector holding time delimitations to each spline
+  static std::vector< std::vector<Ravelin::VectorNd> > spline_t(NUM_EEFS);
+  assert(gait[0].size() == NUM_EEFS);
 
-  static enum Mode{
-    SWING = 0,
-    STANCE = 1,
-    N_MODES = 2
-  } MODE = STANCE;
-  static int SWING_LEG = 0;
-  t += dt;
+  static int PHASE = 0, N_PHASES = gait.size();
 
+  static Ravelin::VectorNd duty_factor = Ravelin::VectorNd::zero(NUM_EEFS);
+
+  if(!inited){
+    for(int i=0;i<NUM_EEFS;i++){
+      for(int j = 0; j<  N_PHASES;j++)
+        duty_factor[i] += (gait[j][i] > 0)? 1.0 : 0.0;
+      duty_factor[i] /= (double)N_PHASES;
+
+
+      spline_coef[i].resize(3);
+      for(int d=0; d<3;d++){
+        spline_coef[i][d].resize(spline_plan_length);
+        for(int j = 0; j<  spline_plan_length;j++)
+          spline_coef[i][d][j] = Ravelin::VectorNd::zero(2);
+      }
+      spline_t[i].resize(spline_plan_length);
+      for(int j = 0; j<  spline_plan_length;j++)
+        spline_t[i][j] = Ravelin::VectorNd::zero(2);
+    }
+  }
+
+  static std::vector<Ravelin::Vector3d> foot_pos(NUM_EEFS),
+                                        foot_vel(NUM_EEFS),
+                                        foot_acc(NUM_EEFS);
+
+  Ravelin::VectorNd q = q_des,
+                    qd = qd_des,
+                    qdd = qdd_des;
   ///////////////////////////////////////////
   /////////////// PARAMETERS ////////////////
-  double swing_time = 0.1,
-         stance_time = 0.0,
-         step_height = 0.02;
-  double phase_time = (swing_time + stance_time)*4;
-  int num_segments = (swing_time/dt) + 1;
+  const double phase_time =  0.15,
+               step_height = 0.01,
+      // ratio between gait time (phase_time*N_PHASES) and base differential time (1s)
+               gait_ratio =  1.0/(phase_time * (double)N_PHASES);
   ///////////////////////////////////////////
-  // Progress state
-  if((MODE == SWING && trajectory_segment>=num_segments-1) ||
-     (MODE == STANCE && t>=stance_time) ){
-    // SWITCH MODE
-    MODE = Mode( (MODE+STANCE) % N_MODES);
-    if(MODE == SWING)
-      SWING_LEG = (SWING_LEG+1)%NUM_EEFS;
-    t=0;
-    trajectory_segment = 0;
-  }
+  PHASE = (int)(t/phase_time) % N_PHASES;
 
-  std::cout << "Stepping with : " << eefs_[SWING_LEG].id << std::endl;
-  std::cout << "Controller Mode : " << MODE << std::endl;
+    for(int i=0;i<NUM_EEFS;i++){
+      std::vector< Ravelin::VectorNd >& t_limits = spline_t[i];
 
-  for(int i=0;i<NUM_EEFS;i++){
-    if(MODE == SWING || true){ // TODO add stance phase code (move into support)
-      if(i == SWING_LEG && MODE == SWING)
-        continue;
-      Ravelin::Vector3d foot_goal,
-                        to_com = Ravelin::Vector3d(eefs_[i].origin[0],eefs_[i].origin[1],0),
-                        arc_step = Ravelin::Vector3d::cross(to_com,Ravelin::Vector3d(0,0,1));
-      arc_step.pose = base_frame;
+      // Check if Spline must be reevaluated
+      bool replan_path = false;
+      if(inited)
+      for(int d=0; d<3;d++){
+        replan_path = !eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
+        if(replan_path) break;
+      }
+      if(replan_path || !inited ){
+        inited = true;
 
-      foot_goal = Ravelin::Vector3d(command[0],command[1],command[2],base_frame) + arc_step*command[5];
+        // creat new spline at top of history
+        // take time at end of spline_t history
+        double t0 = 0;
 
-      // move feet back at COM goal vel in DT increment
-      // scaled up by ammount of time spent on swing phase
-      foot_vel[i] = -foot_goal/(1 - swing_time/phase_time);
-      foot_acc[i].set_zero();
-      eefs_[i].origin += dt*foot_vel[i];
+        Ravelin::Origin3d x,xd,xdd;
+        if(t == 0){ // first iteration
+          // Get Current Foot pos, Velocities & Accelerations
+          x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+          foot_jacobian(x,eefs_[i],workM_);
+          workM_.transpose_mult(qd.select(eefs_[i].chain_bool,workv_),xd);
+          workM_.transpose_mult(qdd.select(eefs_[i].chain_bool,workv_),xdd);
+        } else {
+          t0 = *(spline_t[i].back().end()-1) - Moby::NEAR_ZERO;
 
-#ifdef VISUALIZE_MOBY
-      Ravelin::Vector3d workv3_ = base_frame->transform_vector(-foot_goal);
-      Ravelin::Vector3d foot_origin = base_frame->transform_point(eefs_[i].origin);
-      visualize_ray(workv3_+foot_origin,foot_origin,Ravelin::Vector3d(0,1,0),sim);
-#endif
-    }
-  }
-
-  static std::vector<Ravelin::Vector3d> swing_trajectory,d_swing_trajectory,dd_swing_trajectory;
-
-  if(MODE == SWING){
-    if(trajectory_segment==0){
-      Ravelin::Vector3d foot_goal, to_com, arc_step;
-      to_com = Ravelin::Vector3d(eefs_[SWING_LEG].origin[0],eefs_[SWING_LEG].origin[1],0);
-      arc_step = Ravelin::Vector3d::cross(to_com,Ravelin::Vector3d(0,0,1));
-      arc_step.pose = base_frame;
-
-      foot_goal = Ravelin::Vector3d(command[0],command[1],command[2],base_frame) + arc_step*command[5];
-
-      std::vector<Ravelin::Origin3d> control_points;
-      // for x:
-      control_points.push_back(Ravelin::Origin3d(eefs_[SWING_LEG].origin));
-      control_points.push_back(Ravelin::Origin3d(eefs_[SWING_LEG].origin) + Ravelin::Origin3d(0,0,step_height));
-      control_points.push_back(Ravelin::Origin3d(eefs_[SWING_LEG].origin) + Ravelin::Origin3d(foot_goal)*phase_time + Ravelin::Origin3d(0,0,step_height));
-      control_points.push_back(Ravelin::Origin3d(eefs_[SWING_LEG].origin) + Ravelin::Origin3d(foot_goal)*phase_time);
-
-      // Handle Swing phase leg
-//#define BEZIER_CURVE
-#ifdef BEZIER_CURVE
-      bezierCurve(control_points,num_segments,swing_trajectory,d_swing_trajectory,dd_swing_trajectory);
-#else
-      for(int i=0;i<3;i++){
-        int n = control_points.size();
-        Ravelin::VectorNd T(n),B,X(n),x,xd,xdd;
-        for(int j=0;j<n;j++){
-          T[j] = (swing_time/(n-1)) * (double)(j) ;
-          X[j] = control_points[j][i];
+          for(int d=0; d<3;d++){
+            bool pass = eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x[d],xd[d],xdd[d]);
+            assert(pass);
+          }
         }
-        calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(-foot_goal[i],-foot_goal[i]),Ravelin::Vector2d(0,0),B);
-        eval_cubic_spline(B,T,num_segments,x,xd,xdd);
 
-        swing_trajectory.resize(num_segments);
-        d_swing_trajectory.resize(num_segments);
-        dd_swing_trajectory.resize(num_segments);
-        for(int t=0;t<num_segments;t++){
-          swing_trajectory[t][i] = x[t];
-          d_swing_trajectory[t][i] = xd[t];
-          dd_swing_trajectory[t][i] = xdd[t];
+        Ravelin::Origin3d to_com(x[0],x[1],0),
+                          arc_step = Ravelin::Origin3d::cross(to_com,Ravelin::Origin3d(0,0,1)),
+                          foot_goal = Ravelin::Origin3d(command[0],command[1],command[2]) + arc_step*command[5];
+
+        std::vector<Ravelin::Origin3d> control_points;
+        // TODO: Legs fall behind -- gate timing needs to be adjusted slightly
+        if(gait[PHASE][i] > 0){        // swing phase
+          // for x:
+          control_points.push_back(x);
+          control_points.push_back(x + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(x + Ravelin::Origin3d(foot_goal)*phase_time * (double)gait[PHASE][i] * gait_ratio * (1.0-duty_factor[i]) + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(x + Ravelin::Origin3d(foot_goal)*phase_time * (double)gait[PHASE][i] * gait_ratio * (1.0-duty_factor[i]));
+        } else if(gait[PHASE][i] < 0){ // swing phase
+          control_points.push_back(x);
+          control_points.push_back(x - Ravelin::Origin3d(foot_goal)*phase_time * -(double)gait[PHASE][i] * gait_ratio * duty_factor[i]);
+        }
+
+        // create new spline!!
+        // copy last spline to history erasing oldest spline
+        for(int j=0;j<spline_plan_length-1;j++){
+          for(int d=0; d<3;d++)
+            spline_coef[i][d][j] = spline_coef[i][d][j+1];
+          spline_t[i][j] = spline_t[i][j+1];
+        }
+
+        // create spline using set of control points, place at back of history
+        for(int d=0;d<3;d++){
+          int n = control_points.size();
+          Ravelin::VectorNd X(n);
+          Ravelin::VectorNd &T = *(spline_t[i].rbegin()),
+                            &coefs = *(spline_coef[i][d].rbegin());
+
+          T.set_zero(n);
+          for(int j=0;j<n;j++){
+            T[j] = t0 + (phase_time * fabs(gait[PHASE][i]) / (n-1)) * (double)j ;
+            X[j] = control_points[j][d];
+          }
+
+          calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(-foot_goal[d],-foot_goal[d]),Ravelin::Vector2d(0,0),coefs);
+
+          eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
         }
       }
-#endif
     }
-
-    if(!swing_trajectory.empty()){
-#ifdef VISUALIZE_MOBY
-      for(int i=0;i<swing_trajectory.size()-2;i+=num_segments/10){
-        swing_trajectory[i].pose = base_frame;
-        Ravelin::Vector3d p = base_frame->transform_point(swing_trajectory[i]);
-        visualize_ray(p,p,Ravelin::Vector3d(0,1,0),sim);
-//        Ravelin::Vector3d v = base_frame->transform_point(d_swing_trajectory[i]);
-//        visualize_ray(p+v*0.1,p,Ravelin::Vector3d(0,0,1),sim);
-//        Ravelin::Vector3d a = base_frame->transform_point(dd_swing_trajectory[i]);
-//        visualize_ray(p+v*0.1+a*0.1*0.1,p+v*0.1,Ravelin::Vector3d(1,0,1),sim);
-      }
-#endif
-
-      eefs_[SWING_LEG].origin = swing_trajectory[trajectory_segment];
-      foot_vel[SWING_LEG] = d_swing_trajectory[trajectory_segment];
-      foot_acc[SWING_LEG] = dd_swing_trajectory[trajectory_segment];
-      trajectory_segment += 1;
-    }
-  }
 
   // EEF POSITION
-  std::vector<Ravelin::Vector3d> joint_positions(NUM_EEFS);
   for(int i=0;i<NUM_EEFS;i++){
-//    footIK(i,eefs_[i].origin,joint_positions[i]);
-    RRMC(eefs_[i],q,eefs_[i].origin,q_des);
+    RRMC(eefs_[i],q,foot_pos[i],q_des);
   }
 
   // EEF VELOCITY
@@ -223,21 +220,51 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const Ravelin::Vec
     EndEffector& foot = eefs_[i];
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J;
-    Ravelin::VectorNd x(foot.chain.size());
+    Ravelin::Origin3d x;
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
       x[k] = q[foot.chain[k]];
-    foot_kinematics(x,foot,workv3_,workv3_,J);
+    foot_jacobian(x,foot,J);
 
     foot_vel[i].pose = base_frame;
-    foot_vel[i] = Ravelin::Pose3d::transform_point(foot.link->get_pose(),foot_vel[i]);
+    foot_vel[i] = Ravelin::Pose3d::transform_vector(foot.link->get_pose(),foot_vel[i]);
     LA_.solve_fast(J,foot_vel[i]);
     foot_acc[i].pose = base_frame;
-    foot_acc[i] = Ravelin::Pose3d::transform_point(foot.link->get_pose(),foot_acc[i]);
+    foot_acc[i] = Ravelin::Pose3d::transform_vector(foot.link->get_pose(),foot_acc[i]);
     LA_.solve_fast(J,foot_acc[i]);
 
     for(int j=0;j<eefs_[i].chain.size();j++){
-      qdd[eefs_[i].chain[j]] = foot_acc[i][j];
-      qd_des[eefs_[i].chain[j]] = foot_vel[i][j];
+      qdd_des[eefs_[i].chain[j]] = 0;//foot_acc[i][j];
+      qd_des[eefs_[i].chain[j]] = 0;//foot_vel[i][j];
     }
   }
+
+#ifdef VISUALIZE_MOBY
+  for(int i=0;i<NUM_EEFS;i++){
+    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+
+    Ravelin::VectorNd &T = *(spline_t[i].rbegin());
+
+    for(double t=T[0];t<=T[T.rows()-1];t += (phase_time/10.0)){
+      Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
+      for(int d=0;d<3;d++){
+        eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+      }
+      Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
+      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/10/10;
+      visualize_ray( p, pos, Ravelin::Vector3d(0,0,0), sim);
+      visualize_ray(v+p, p, Ravelin::Vector3d(1,0,0), sim);
+      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
+    }
+
+    Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
+    for(int d=0;d<3;d++){
+      eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+    }
+    Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
+    visualize_ray( p, pos, Ravelin::Vector3d(0,1,0), sim);
+
+  }
+
+#endif
 }

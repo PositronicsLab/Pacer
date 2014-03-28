@@ -5,11 +5,11 @@
 
 class Quadruped : public Robot{
   public:
-    Quadruped();
-    Quadruped(Moby::RCArticulatedBodyPtr abrobot){
-      abrobot_ = abrobot;
-      init();
-    }
+  Quadruped(){}
+  Quadruped(Moby::RCArticulatedBodyPtr abrobot){
+    abrobot_ = abrobot;
+    init();
+  }
     Ravelin::VectorNd& control(double dt,
                                const Ravelin::VectorNd& q,
                                const Ravelin::VectorNd& qd,
@@ -25,17 +25,6 @@ class Quadruped : public Robot{
       const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Ravelin::MatrixNd& C,
       double Ls,const Ravelin::VectorNd& Hs,double Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd);
 
-    /// 4 foot (body-fixed) state-space traj to joint-space traj
-    std::vector<std::vector<Ravelin::Vector3d> > &trajectoryIK(
-            const std::vector<std::vector<Ravelin::Vector3d> >& feet_positions,
-            std::vector<std::vector<Ravelin::Vector3d> >& joint_positions);
-
-    void feetIK(
-            const std::vector<Ravelin::Vector3d>& feet_positions,
-            std::vector<Ravelin::Vector3d>& joint_positions);
-    void footIK(int foot,
-            Ravelin::Vector3d& feet_positions,
-            Ravelin::Vector3d& joint_positions);
     void init();
 
     void fk_stance_adjustment(double dt);

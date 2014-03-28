@@ -1,61 +1,7 @@
-#include <quadruped.h>
+#include <robot.h>
 
 using namespace Ravelin;
 using namespace Moby;
-
-void lf(const double X[3],double th[3]);
-void rf(const double X[3],double th[3]);
-void lh(const double X[3],double th[3]);
-void rh(const double X[3],double th[3]);
-
-// inverse kinematics solver conversion
-
-std::vector<std::vector<Ravelin::Vector3d> >& trajectoryIK(
-        const std::vector<std::vector<Ravelin::Vector3d> >& feet_positions,
-        std::vector<std::vector<Ravelin::Vector3d> >& joint_positions){
-
-  int num_steps = joint_positions.size();
-  int num_feet = feet_positions.size();
-    for(int i=0;i<num_steps;i++){
-        joint_positions[i].resize(num_feet);
-        lf(feet_positions[0][i].data(),joint_positions[i][0].data());
-        rf(feet_positions[1][i].data(),joint_positions[i][1].data());
-        lh(feet_positions[2][i].data(),joint_positions[i][2].data());
-        rh(feet_positions[3][i].data(),joint_positions[i][3].data());
-    }
-
-}
-
-void Quadruped::feetIK(
-        const std::vector<Ravelin::Vector3d>& feet_positions,
-        std::vector<Ravelin::Vector3d>& joint_positions){
-  int num_feet = feet_positions.size();
-      joint_positions.resize(num_feet);
-      lf(feet_positions[0].data(),joint_positions[0].data());
-      rf(feet_positions[1].data(),joint_positions[1].data());
-      lh(feet_positions[2].data(),joint_positions[2].data());
-      rh(feet_positions[3].data(),joint_positions[3].data());
-}
-
-void Quadruped::footIK(int foot,
-        Ravelin::Vector3d& feet_positions,
-        Ravelin::Vector3d& joint_positions){
-      switch (foot){
-      case 0:
-      lf(feet_positions.data(),joint_positions.data());
-        break;
-      case 1:
-      rf(feet_positions.data(),joint_positions.data());
-        break;
-      case 2:
-      lh(feet_positions.data(),joint_positions.data());
-        break;
-      case 3:
-      rh(feet_positions.data(),joint_positions.data());
-        break;
-      default:  break;
-      }
-}
 
 Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk){
   for(int i=0;i<foot.chain.size();i++)

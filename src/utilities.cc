@@ -1,8 +1,9 @@
 #include <project_common.h>
 #include <utilities.h>
+#include <pid.h>
 
 
-Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
+Ravelin::Vector3d& Utility::R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
   if(R(0,0) == 0 || R(2,2) == 0)
     return (rpy = Ravelin::Vector3d::zero());
 
@@ -12,35 +13,35 @@ Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
   return rpy;
 }
 
-Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy){
+Ravelin::Vector3d& Utility::quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy){
   rpy[0] = atan2(2.0*(q[0]*q[1] + q[2]*q[3]),1.0 - 2.0*(q[1]*q[1] + q[2]*q[2]));
   rpy[1] = asin(2.0*(q[0]*q[2] - q[3]*q[1]));
   rpy[2] = atan2(2.0*(q[0]*q[3] + q[1]*q[2]),1.0 - 2.0*(q[2]*q[2] + q[3]*q[3]));
   return rpy;
 }
 
-Ravelin::Quatd& aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q){
+Ravelin::Quatd& Utility::aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q){
   q[0] = cos(aa[3]*0.5);
   q[1] = sin(aa[3]*0.5)*cos(aa[0]);
   q[2] = sin(aa[3]*0.5)*cos(aa[1]);
   q[3] = sin(aa[3]*0.5)*cos(aa[2]);
   return q;
 }
-Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R){
+Ravelin::Matrix3d& Utility::Rz(double x,Ravelin::Matrix3d& R){
   R = Ravelin::Matrix3d( cos(x), sin(x), 0,
                         -sin(x), cos(x), 0,
                               0,      0, 1);
   return R;
 }
 
-Ravelin::Matrix3d& Ry(double x,Ravelin::Matrix3d& R){
+Ravelin::Matrix3d& Utility::Ry(double x,Ravelin::Matrix3d& R){
   R = Ravelin::Matrix3d( cos(x), 0,-sin(x),
                               0, 1,      0,
                          sin(x), 0, cos(x));
   return R;
 }
 
-Ravelin::Matrix3d& Rx(double x,Ravelin::Matrix3d& R){
+Ravelin::Matrix3d& Utility::Rx(double x,Ravelin::Matrix3d& R){
   R = Ravelin::Matrix3d(1,      0,      0,
                         0, cos(x), sin(x),
                         0,-sin(x), cos(x));
@@ -49,7 +50,7 @@ Ravelin::Matrix3d& Rx(double x,Ravelin::Matrix3d& R){
 
 /// Calculates The null pace for matrix M and places it in Vk
 /// returns the number of columns in Vk
-unsigned kernal( Ravelin::MatrixNd& M,Ravelin::MatrixNd& Vk){
+unsigned Utility::kernal( Ravelin::MatrixNd& M,Ravelin::MatrixNd& Vk){
   unsigned size_null_space = 0;
   Ravelin::MatrixNd U,V;
   Ravelin::VectorNd S;
@@ -70,13 +71,13 @@ unsigned kernal( Ravelin::MatrixNd& M,Ravelin::MatrixNd& Vk){
   return size_null_space;
 }
 
-void check_finite(Ravelin::VectorNd& v){
+void Utility::check_finite(Ravelin::VectorNd& v){
   for(int i=0;i<v.rows();i++)
     if(!isfinite(v[i]))
       v[i] = 0;
 }
 
-double distance_from_plane(const Ravelin::Vector3d& normal,const Ravelin::Vector3d& point, const Ravelin::Vector3d& x){
+double Utility::distance_from_plane(const Ravelin::Vector3d& normal,const Ravelin::Vector3d& point, const Ravelin::Vector3d& x){
   Ravelin::Vector3d v;
   v = x - point;
   return normal.dot(v);
@@ -96,7 +97,7 @@ double distance_from_plane(const Ravelin::Vector3d& normal,const Ravelin::Vector
 
 /// 4 Control Point Bezier curve EEF calculation
 // Calculate the next bezier point.
-void evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P,Ravelin::Vector3d& dP,Ravelin::Vector3d& ddP) {
+void Utility::evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P,Ravelin::Vector3d& dP,Ravelin::Vector3d& ddP) {
 
   // Position
     P[0] =A[0]- 3*A[0]*t + 3*A[0]*t*t -A[0]*t*t*t + 3*B[0]*t - 6*B[0]*t*t + 3*B[0]*t*t*t + 3*C[0]*t*t - 3*C[0]*t*t*t + t*t*t*D[0];
@@ -114,7 +115,7 @@ void evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const
     ddP[2] =-6*(-C[2]+B[2]*(2-3*t)+A[2]*(-1+t)+3*C[2]*t-D[2]*t);
 }
 
-void evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P) {
+void Utility::evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P) {
 
   // Position
     P[0] =A[0]- 3*A[0]*t + 3*A[0]*t*t -A[0]*t*t*t + 3*B[0]*t - 6*B[0]*t*t + 3*B[0]*t*t*t + 3*C[0]*t*t - 3*C[0]*t*t*t + t*t*t*D[0];
@@ -122,7 +123,7 @@ void evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const
     P[2] =A[2]- 3*A[2]*t + 3*A[2]*t*t -A[2]*t*t*t + 3*B[2]*t - 6*B[2]*t*t + 3*B[2]*t*t*t + 3*C[2]*t*t - 3*C[2]*t*t*t + t*t*t*D[2];
 }
 
-Ravelin::Vector3d logistic(double x,double a, double b){
+Ravelin::Vector3d Utility::logistic(double x,double a, double b){
   return Ravelin::Vector3d( 1/(1+exp(-a*(x-b))),
                            (a*exp(a*(b+x)))/((exp(a*b)+exp(a*x))*(exp(a*b)+exp(a*x))),
                            (a*a*exp(a*(b+x))*(exp(a*b)-exp(a*x)))/((exp(a*b)+exp(a*x))*(exp(a*b)+exp(a*x))*(exp(a*b)+exp(a*x)))
@@ -135,7 +136,7 @@ Ravelin::Vector3d logistic(double x,double a, double b){
 //                            );
 }
 
-void bezierCurve(const std::vector<Ravelin::Vector3d>& control_points, int num_segments,
+void Utility::bezierCurve(const std::vector<Ravelin::Vector3d>& control_points, int num_segments,
                  std::vector<Ravelin::Vector3d>& trajectory,
                  std::vector<Ravelin::Vector3d> & dtrajectory,
                  std::vector<Ravelin::Vector3d> & ddtrajectory){
@@ -159,7 +160,7 @@ void bezierCurve(const std::vector<Ravelin::Vector3d>& control_points, int num_s
   }
 }
 
-Ravelin::Vector3d slerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t){
+Ravelin::Vector3d Utility::slerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t){
   double a = v0.dot(v1);
   return (v0*sin((1-t)*a)/sin(a) + v1*sin(t*a)/sin(a));
 }
@@ -171,11 +172,11 @@ Ravelin::Vector3d slerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1
 //  return q0.normalize();
 //}
 
-Ravelin::Vector3d lerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t){
+Ravelin::Vector3d Utility::lerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t){
   return (v0*(1-t) + v1*t);
 }
 
-void calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd& X,
+void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd& X,
                                            const Ravelin::Vector2d& Xd,const Ravelin::Vector2d& Xdd,
                                            Ravelin::VectorNd& B){
   static Ravelin::MatrixNd A;
@@ -319,7 +320,7 @@ void calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd&
   workv_.get_sub_vec(4,workv_.size()-4,B);
 }
 
-void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
+void Utility::eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
                        Ravelin::VectorNd& X, Ravelin::VectorNd& Xd, Ravelin::VectorNd& Xdd){
     X.set_zero(num_segments);
    Xd.set_zero(num_segments);
@@ -340,7 +341,7 @@ void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t
   }
 }
 
-bool eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
+bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                        double& X, double& Xd, double& Xdd){
 
 
@@ -362,4 +363,26 @@ bool eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::ve
   return true;
 }
 
+void PID::control(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd& qd_des,
+                 const Ravelin::VectorNd& q,    const Ravelin::VectorNd& qd,
+                 const std::vector<std::string> joint_names,
+                 std::map<std::string, Gains> gains, Ravelin::VectorNd& ufb){
+  unsigned num_joints = joint_names.size();
+  // clear and set motor torques
+  for (unsigned i=0; i< num_joints; i++)
+  {
+    // get the two gains
+    std::string joint_name = joint_names[i];
+    const double KP = gains[joint_name].kp;
+    const double KV = gains[joint_name].kv;
+    const double KI = gains[joint_name].ki;
 
+    // add feedback torque to joints
+    double perr = q_des[i] - q[i];
+    gains[joint_name].perr_sum += perr;
+    double ierr = gains[joint_name].perr_sum;
+    double derr = qd_des[i] - qd[i];
+
+    ufb[i] = perr*KP + derr*KV + ierr*KI;
+  }
+}

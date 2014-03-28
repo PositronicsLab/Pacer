@@ -32,50 +32,33 @@
 #include <math.h>
 #include <numeric>
 
-const double grav = 9.8; // M/s.s
-const double M_PI_16 = 0.19634954084;
-const double M_PI_8 = 0.39269908169;
+const double grav     = 9.8; // M/s.s
+const double M_PI_8   = 0.39269908169;
+const double M_PI_16  = 0.19634954084;
 
-static Ravelin::LinAlgd LA_;
-
-///////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// VIZ DATA //////////////////////////////////
-
+#ifdef VISUALIZE_MOBY
 extern boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim );
-///////////////////////////////////////////////////////////////////////////////
+#endif
 
+#include <Log.h>
+ void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
+
+extern std::string LOG_TYPE;
+
+// STATIC declarations to be used in each src file
 
 static Ravelin::VectorNd workv_;
 static Ravelin::Vector3d workv3_;
 static Ravelin::MatrixNd workM_;
-
-#include <Log.h>
-
-void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
-
-
-
-/// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
-//    #define USE_ROBOT
-//    #define CONTROL_KINEMATICS
-//#define VISUALIZE_MOBY
-//#define COLLECT_DATA
-
-static
-  //std::string LOG_TYPE("ERROR");  // Only major failures from the system
-  std::string LOG_TYPE("INFO");     // Normal print out
-  //std::string LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
-  //std::string LOG_TYPE("DEBUG1"); // all function parameters and results
-
-
+static Ravelin::LinAlgd LA_;
 
 #endif // PROJECT_COMMON_H

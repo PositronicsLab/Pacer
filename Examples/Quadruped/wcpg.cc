@@ -53,7 +53,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
 
     // Stepping Terrain Filter
     // Eqns: 7, 8, 9
-    double dist_plane = distance_from_plane(center_of_contact.normal,
+    double dist_plane = Utility::distance_from_plane(center_of_contact.normal,
                                             center_of_contact.point,x[i]);
     std::cout << eefs_[i].id << " " << dist_plane << std::endl;
     double Sf1 = 1.0/(exp(-bf*(dist_plane)) + 1.0);

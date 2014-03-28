@@ -20,15 +20,6 @@ using namespace Ravelin;
 
 const double VIBRANCY = 1;
 
-void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ){
-  Ravelin::Pose3d pose(p);
-  pose.update_relative_pose(Moby::GLOBAL);
-  Ravelin::Matrix3d Rot(pose.q);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(1,0,0),sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,1,0),sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,0,1),sim);
-}
-
 /// Draws a ray directed from a contact point along the contact normal
 void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
 
@@ -113,4 +104,13 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
 
   // add the root to the transient data scene graph
   sim->add_transient_vdata( group_root );
+}
+
+void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ){
+  Ravelin::Pose3d pose(p);
+  pose.update_relative_pose(Moby::GLOBAL);
+  Ravelin::Matrix3d Rot(pose.q);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(1,0,0),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,1,0),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,0,1),sim);
 }

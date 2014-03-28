@@ -1,4 +1,4 @@
-#include <quadruped.h>
+#include <robot.h>
 
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 

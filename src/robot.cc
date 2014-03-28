@@ -1,9 +1,6 @@
 #include <robot.h>
 #include <utilities.h>
 
-using namespace Ravelin;
-using namespace Moby;
-
 double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   // Potential Energy
   double PE = 0;
@@ -26,11 +23,11 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
 
 void Robot::calc_com(Ravelin::Vector3d& weighted_com,Ravelin::Vector3d& com_acc){
   weighted_com.set_zero();
-  const SAcceld& base_acc = links_[0]->get_accel();
+  const Ravelin::SAcceld& base_acc = links_[0]->get_accel();
   double total_mass=0;
   for(int i=0;i<links_.size();i++){
 
-     RigidBody& link = *links_[i];
+     Moby::RigidBody& link = *links_[i];
      double m = link.get_mass();
      total_mass += m;
      Ravelin::Pose3d link_com = *link.get_inertial_pose();
@@ -41,7 +38,7 @@ void Robot::calc_com(Ravelin::Vector3d& weighted_com,Ravelin::Vector3d& com_acc)
 
   boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d());
   base_com_w->x = Ravelin::Origin3d(weighted_com);
-  SAcceld com_xdd = Ravelin::Pose3d::transform(base_com_w, base_acc);
+  Ravelin::SAcceld com_xdd = Ravelin::Pose3d::transform(base_com_w, base_acc);
   com_acc = com_xdd.get_linear();
 
   zero_moment_point =
@@ -58,8 +55,8 @@ void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fe
 }
 
 void Robot::compile(){
-  dbrobot_ = boost::dynamic_pointer_cast<DynamicBody>(abrobot_);
-  std::vector<JointPtr> joints = abrobot_->get_joints();
+  dbrobot_ = boost::dynamic_pointer_cast<Moby::DynamicBody>(abrobot_);
+  std::vector<Moby::JointPtr> joints = abrobot_->get_joints();
   joints_.resize(joints.size());
 
   NUM_FIXED_JOINTS = 0;
@@ -87,19 +84,24 @@ void Robot::compile(){
 void EndEffector::init(){
   Moby::JointPtr joint_ptr = link->get_inner_joint_explicit();
   Moby::RigidBodyPtr rb_ptr = link;
-  std::cout << id << std::endl;
+  OUT_LOG(logDEBUG) << id ;
   chain_bool.resize(joint_names_.size());
-  while (rb_ptr->id.compare("ABDOMEN") != 0 && rb_ptr->id.compare("THORAX") != 0){
-    rb_ptr = joint_ptr->get_inboard_link();
+  rb_ptr = joint_ptr->get_inboard_link();
+  while (rb_ptr->id.compare("ABDOMEN") != 0 && rb_ptr->id.compare("THORAX") != 0 && rb_ptr->id.compare("BASE") != 0){
+    OUT_LOG(logDEBUG) << rb_ptr->id ;
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j]) == 0){
-        std::cout << j <<  " "<< joint_ptr->id << std::endl;
+        OUT_LOG(logDEBUG) << "  " << j <<  " "<< joint_ptr->id;
         chain.push_back(j);
         chain_bool[j] = true;
       }
     }
+    OUT_LOG(logDEBUG) ;
+    rb_ptr = joint_ptr->get_inboard_link();
     joint_ptr = rb_ptr->get_inner_joint_explicit();
   }
+  OUT_LOG(logDEBUG) ;
+  OUT_LOG(logDEBUG) ;
 
   Ravelin::Pose3d pose = *link->get_pose();
   normal = Ravelin::Vector3d(0,0,1);
@@ -130,10 +132,10 @@ void Robot::update(){
   base_horizontal_frame->update_relative_pose(Moby::GLOBAL);
   base_horizontal_frame->x = base_frame->x;
   Ravelin::Matrix3d Rot(base_frame->q);
-  R2rpy(Rot,roll_pitch_yaw);
+  Utility::R2rpy(Rot,roll_pitch_yaw);
 //  OUTLOG(roll_pitch_yaw,"roll_pitch_yaw");
   // remove roll and pitch -- preserve yaw
-  Rz(roll_pitch_yaw[2],Rot);
+  Utility::Rz(roll_pitch_yaw[2],Rot);
   base_horizontal_frame->x = base_frame->x;
   base_horizontal_frame->q = base_frame->q;//Quatd(Rot);
   for(int i=0;i<NUM_EEFS;i++)

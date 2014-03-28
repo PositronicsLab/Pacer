@@ -38,16 +38,16 @@ public:
     void init();
 };
 
-class Robot : public Moby::RCArticulatedBody{
+class Robot {
   public:
     Robot(){}
     // This is the Simplest Controller (policy is determined within fn)
     virtual Ravelin::VectorNd& control(double dt,
-                                       const Ravelin::VectorNd& q,
-                                       const Ravelin::VectorNd& qd,
-                                       Ravelin::VectorNd& q_des,
-                                       Ravelin::VectorNd& qd_des,
-                                       Ravelin::VectorNd& u) = 0;
+                               const Ravelin::VectorNd& q,
+                               const Ravelin::VectorNd& qd,
+                               Ravelin::VectorNd& q_des,
+                               Ravelin::VectorNd& qd_des,
+                               Ravelin::VectorNd& u) = 0;
   void compile();
   void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext);
   double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
@@ -63,6 +63,7 @@ class Robot : public Moby::RCArticulatedBody{
                              const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
                              Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
+void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Ravelin::VectorNd& uff);
 
   bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
@@ -126,5 +127,8 @@ class Robot : public Moby::RCArticulatedBody{
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that
 };
+
+extern boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+extern boost::shared_ptr<Robot> robot_ptr;
 
 #endif // ROBOT_H

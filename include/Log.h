@@ -40,9 +40,11 @@ inline std::ostringstream& Log::Get(TLogLevel level)
 
 inline Log::~Log()
 {
+#ifndef NDEBUG
     os << std::endl;
     fprintf(stdout, "%s", os.str().c_str());
     fflush(stdout);
+#endif
 }
 
 inline TLogLevel& Log::ReportingLevel()

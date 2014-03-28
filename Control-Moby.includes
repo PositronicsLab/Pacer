@@ -1,4 +1,6 @@
 include
+Examples/Quadruped
+Examples/Monopod
 /usr/local/include
 /Users/samzapo/ThirdParty/Ravelin/include
 /usr/include

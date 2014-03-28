@@ -1,4 +1,4 @@
-#include <quadruped.h>
+#include <robot.h>
 #include <utilities.h>
 
 int N_SYSTEMS = 0;
@@ -317,14 +317,13 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // H = Z'AZ
   Ravelin::MatrixNd P;
-  unsigned size_null_space = kernal(H,P);
+  unsigned size_null_space = Utility::kernal(H,P);
   if(size_null_space != 0)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
 
-//    OUTLOG(S,"Singular Values");
-//    OUTLOG(P,"Null Space(P)");
+    OUTLOG(P,"Null Space(P)",logDEBUG1);
 
     // compute U = [F,E']*R
     Ravelin::MatrixNd U;

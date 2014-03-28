@@ -80,8 +80,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 
+#ifdef VISUALIZE_MOBY
   draw_pose(*base_frame,sim);
   draw_pose(Moby::GLOBAL,sim);
+#endif
 
   q_des = q;
   qd_des.set_zero();// = qd;
@@ -155,9 +157,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
     // Apply eef Compliance
     eef_stiffness_fb(q_des, qd_des,q,qd,ufb);
   } else
-    control_PID(q_des, qd_des,q,qd,joint_names_, gains_,ufb);
+    PID::control(q_des, qd_des,q,qd,joint_names_, gains_,ufb);
 
-  check_finite(ufb);
+  Utility::check_finite(ufb);
 
   if(CONTROL_IDYN){
     double dt = STEP_SIZE;
@@ -225,7 +227,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     uff += (id*=alpha);
   }
 
-  check_finite(uff);
+  Utility::check_finite(uff);
   // combine ufb and uff
   u = ufb;
   u += uff;
@@ -240,7 +242,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   OUT_LOG(logINFO)<< "NC = " << NC << " @ time = "<< t << std::endl;
      ((workv_ = qd)-=qd_last)/=STEP_SIZE;
-     std::cout<<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
+     OUT_LOG(logINFO) <<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
      for(unsigned i=0;i< NUM_JOINTS;i++)
        OUT_LOG(logINFO)<< joints_[i]->id
                  << "\t " <<  std::setprecision(4) << u[i]
@@ -378,26 +380,32 @@ void Quadruped::init(){
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
 
-  for(unsigned j=0;j<eef_names_.size();j++)
-    for(unsigned i=0;i<links_.size();i++)
-      if(eef_names_[j].compare(links_[i]->id) == 0)
+  OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
+  for(unsigned j=0;j<eef_names_.size();j++){
+    for(unsigned i=0;i<links_.size();i++){
+      if(eef_names_[j].compare(links_[i]->id) == 0){
+        OUT_LOG(logINFO)<< eef_names_[j] << " FOUND!";
         eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id],joint_names_));
+        break;
+      }
+    }
+  }
 
   NUM_EEFS = eefs_.size();
-  OUT_LOG(logINFO)<< NUM_EEFS << " end effectors:" << std::endl;
+  OUT_LOG(logINFO)<< NUM_EEFS << " end effectors:" ;
   for(unsigned j=0;j<NUM_EEFS;j++){
-    OUT_LOG(logINFO)<< eefs_[j].id << std::endl;
+    OUT_LOG(logINFO)<< eefs_[j].id ;
   }
 
   NK = 4;
 
-  OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS << std::endl;
-  OUT_LOG(logINFO)<< "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS << std::endl;
-  OUT_LOG(logINFO)<< "NUM_JOINTS: " << NUM_JOINTS << std::endl;
-  OUT_LOG(logINFO)<< "NDOFS: " << NDOFS << std::endl;
-  OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL << std::endl;
-  OUT_LOG(logINFO)<< "NEULER: " << NEULER << std::endl;
-  OUT_LOG(logINFO)<< "NK: " << NK << std::endl;
+  OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS ;
+  OUT_LOG(logINFO)<< "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS ;
+  OUT_LOG(logINFO)<< "NUM_JOINTS: " << NUM_JOINTS ;
+  OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
+  OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
+  OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
+  OUT_LOG(logINFO)<< "NK: " << NK ;
 
   q0_["BODY_JOINT"] = 0;
   q0_["LF_HIP_AA"] = M_PI_8;
@@ -567,7 +575,7 @@ void Quadruped::init(){
   for(int i=0;i<trot.size();i++){
     for(int j=0;j<trot[i].size();j++)
       OUT_LOG(logINFO)<< trot[i][j] << " ";
-  OUT_LOG(logINFO)<< std::endl;
+  OUT_LOG(logINFO);
 
   }
 }

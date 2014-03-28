@@ -1,13 +1,12 @@
 #include<quadruped.h>
 #include<utilities.h>
 using namespace Ravelin;
-#define VISUALIZE_MOBY
 
 void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
   if(dt==0)
     t = 0;
-  static Ravelin::VectorNd workv_,last_q_des = VectorNd::zero(NUM_JOINTS);
+  static Ravelin::VectorNd workv_,last_qd_des = VectorNd::zero(NUM_JOINTS);
   static Ravelin::MatrixNd workM_;
   t += dt;
 
@@ -47,9 +46,12 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
     }
   }
 
-  std::vector<Ravelin::Vector3d> joint_positions(NUM_EEFS);
-  feetIK(foot_poses,joint_positions);
-
+  // EEF POSITION
+  for(int i=0;i<NUM_EEFS;i++){
+    OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_x =" << foot_poses[i];
+    RRMC(eefs_[i],q_des,foot_poses[i],q_des);
+    OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_q =" << foot_poses[i];
+  }
   // Foot goal Velocity
   if(dt!= 0)
   for(int f=0;f<NUM_EEFS;f++){
@@ -71,14 +73,12 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
   for(int i=0;i<NUM_EEFS;i++){
     for(int j=0;j<eefs_[i].chain.size();j++){
       qd_des[eefs_[i].chain[j]] = foot_vel[i][j];
-//       q_des[eefs_[i].chain[j]] = joints_[eefs_[i].chain[j]]->q[0] + foot_vel[i][j]*dt;
-       q_des[eefs_[i].chain[j]] = joint_positions[i][j];
     }
   }
   for(int i=0;i<NUM_JOINTS;i++)
-    qdd[i] = (qd_des[i] - last_q_des[i])/dt;
+    qdd[i] = (qd_des[i] - last_qd_des[i])/dt;
 
-  last_q_des = qd_des;
+  last_qd_des = qd_des;
 }
 
 
@@ -150,7 +150,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       bool replan_path = false;
       if(inited)
       for(int d=0; d<3;d++){
-        replan_path = !eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
+        replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
         if(replan_path) break;
       }
 
@@ -171,7 +171,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
           t0 = *(spline_t[i].back().end()-1) - Moby::NEAR_ZERO;
 
           for(int d=0; d<3;d++){
-            bool pass = eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x[d],xd[d],xdd[d]);
+            bool pass = Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x[d],xd[d],xdd[d]);
             assert(pass);
           }
         }
@@ -219,9 +219,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
             X[j] = control_points[j][d];
           }
 
-          calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(-foot_goal[d],-foot_goal[d]),Ravelin::Vector2d(0,0),coefs);
+          Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(-foot_goal[d],-foot_goal[d]),Ravelin::Vector2d(0,0),coefs);
 
-          eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
+          Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
         }
       }
     }

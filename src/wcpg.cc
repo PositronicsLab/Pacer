@@ -187,7 +187,5 @@ void Quadruped::cpg_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Rave
   for(int i=0;i<NUM_JOINTS;i++)
     qdd[i] = (qd_des[i] - last_q_des[i])/dt;
 
-  OUTLOG(qdd,"qdd");
-
   last_q_des = qd_des;
 }

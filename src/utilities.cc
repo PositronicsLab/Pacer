@@ -311,8 +311,7 @@ void calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd&
     A(5 + 4*i + 4,3 + 4*(i+1) + 3) = T[i+1];
     A(5 + 4*i + 4,3 + 4*(i+1) + 4) = 1;
   }
-  OUTLOG(A,"A");
-  OUTLOG(B,"B");
+
   workv_ = B;
   LA_.solve_fast(A,workv_);
 

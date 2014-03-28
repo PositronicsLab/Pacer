@@ -17,8 +17,8 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   M.mult(v, workv_);
   double KE = workv_.dot(v)*0.5;
 #ifndef NDEBUG
-  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
-  std::cout << "Total Energy = " << (KE + PE) << std::endl;
+//  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
+//  std::cout << "Total Energy = " << (KE + PE) << std::endl;
 #endif
   return (KE + PE);
   // Kinetic Energy
@@ -131,7 +131,7 @@ void Robot::update(){
   base_horizontal_frame->x = base_frame->x;
   Ravelin::Matrix3d Rot(base_frame->q);
   R2rpy(Rot,roll_pitch_yaw);
-  OUTLOG(roll_pitch_yaw,"roll_pitch_yaw");
+//  OUTLOG(roll_pitch_yaw,"roll_pitch_yaw");
   // remove roll and pitch -- preserve yaw
   Rz(roll_pitch_yaw[2],Rot);
   base_horizontal_frame->x = base_frame->x;

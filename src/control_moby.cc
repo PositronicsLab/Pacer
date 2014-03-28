@@ -3,17 +3,6 @@
  ****************************************************************************/
 #include <quadruped.h>
 
-/// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
-//    #define NDEBUG
-//    #define USE_DUMMY_CONTACTS
-
-//    #define USE_ROBOT
-//    #define CONTROL_KINEMATICS
-
-std::string LOG_TYPE("INFO");
-//std::string LOG_TYPE("ERROR");
-/// END USER DEFINITIONS
-
     std::vector<std::string> joint_names_;
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
@@ -74,11 +63,6 @@ void post_event_callback_fn(const std::vector<Event>& e,
       } else {
         eefs_[index].contact_impulses.push_back(e[i].contact_impulse.get_linear());
       }
-//      std::cout << sb1->id << std::endl;
-//      std::cout <<"\t"<< e[i].contact_impulse << std::endl;
-//      std::cout <<"\t"<< e[i].contact_impulse.get_linear() << std::endl;
-//      std::cout <<"\t"<< e[i].contact_impulse.get_angular() << std::endl;
-//      std::cout <<"\t"<< e[i].contact_point << std::endl;
 
       if (eefs_[index].active)
         continue;
@@ -105,17 +89,17 @@ void post_event_callback_fn(const std::vector<Event>& e,
       eefs_[index].event = boost::shared_ptr<const Moby::Event>(new Event(e[i]));
     }
   }
-  for(unsigned i=0;i< eefs_.size();i++){
-    if(!eefs_[i].active) continue;
-    Ravelin::Origin3d impulse(0,0,0),contact(0,0,0);
-    for(unsigned j=0;j< eefs_[i].contacts.size();j++){
-      impulse += Ravelin::Origin3d(eefs_[i].contact_impulses[j]);
-      contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].contacts[j]))/eefs_[i].contacts.size();
-    }
-    std::cout << eefs_[i].id << "(" << eefs_[i].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
-              << "\t@  " << contact
-              << ",\tn =" << eefs_[i].normal << std::endl;
-  }
+//  for(unsigned i=0;i< eefs_.size();i++){
+//    if(!eefs_[i].active) continue;
+//    Ravelin::Origin3d impulse(0,0,0),contact(0,0,0);
+//    for(unsigned j=0;j< eefs_[i].contacts.size();j++){
+//      impulse += Ravelin::Origin3d(eefs_[i].contact_impulses[j]);
+//      contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].contacts[j]))/eefs_[i].contacts.size();
+//    }
+//    std::cout << eefs_[i].id << "(" << eefs_[i].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
+//              << "\t@  " << contact
+//              << ",\tn =" << eefs_[i].normal << std::endl;
+//  }
 
 }
 #endif

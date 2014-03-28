@@ -16,7 +16,7 @@ void Quadruped::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Rav
         active_dofs.push_back(eefs_[i].chain[j]);
 
   if(active_dofs.size() == 0) return;
-  OUTLOG(R,"R");
+  OUTLOG(R,"R",logDEBUG1);
   // Select active rows in Jacobian Matrix
   // R -> Jh
   static Ravelin::MatrixNd Jh;
@@ -27,7 +27,7 @@ void Quadruped::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Rav
   R.select_rows(active_dofs.begin(),active_dofs.end(),Jh);
 
 //  Jh.transpose();
-  OUTLOG(Jh,"Jh");
+  OUTLOG(Jh,"Jh",logDEBUG1);
 
   // Generate Jh Nullspace
   Ravelin::MatrixNd NULL_Jh = MatrixNd::identity(Jh.columns()),
@@ -36,17 +36,17 @@ void Quadruped::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Rav
 //  OUTLOG(Jh_plus,"(Jh Jh')");
   LA_.pseudo_invert(Jh);
   Jh_plus = Jh;
-  OUTLOG(Jh,"Jh' (Jh Jh')^-1 == Jh+");
+  OUTLOG(Jh,"Jh' (Jh Jh')^-1 == Jh+",logDEBUG1);
 
   LA_.nullspace(Jh,NULL_Jh);
 
-  OUTLOG(NULL_Jh,"null(Jh)");
+  OUTLOG(NULL_Jh,"null(Jh)",logDEBUG1);
   // Use NULL(Jh) to stabilize trunk w/o altering gait
 
   // Trunk Stability gains
   Ravelin::Vector3d& rpy = roll_pitch_yaw;
 
-  OUTLOG(rpy,"Roll, Pitch, Yaw");
+  OUTLOG(rpy,"Roll, Pitch, Yaw",logDEBUG1);
   double Xp = 0, Xv = 0,
          Yp = 0, Yv = 0,
          Zp = 0, Zv = 0,
@@ -61,10 +61,10 @@ void Quadruped::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Rav
   Y[NC*3+3] = -rpy[0]*Rp + -vel[NUM_JOINTS+3]*Rv;
   Y[NC*3+4] = -rpy[1]*Pp + -vel[NUM_JOINTS+4]*Pv;
   Y.negate();
-  OUTLOG(Y,"g_stabilization");
+  OUTLOG(Y,"g_stabilization",logDEBUG1);
 //  NULL_Jh.transpose_mult(Y,tY);
   Jh_plus.mult(Y,tY);
-  OUTLOG(tY,"stabilization");
+  OUTLOG(tY,"stabilization",logDEBUG1);
   // apply base stabilization forces
   for(int i=0;i<NC*3;i++)
     uff[active_dofs[i]] += tY[i];
@@ -88,10 +88,10 @@ void Quadruped::fk_stance_adjustment(double dt){
   qd_base.set_sub_vec(NUM_JOINTS,CoM_CoC_goal);
   qd_base.set_sub_vec(NUM_JOINTS+3,Ravelin::Vector3d(-roll_pitch_yaw[0],-roll_pitch_yaw[1],0));
 
-  OUTLOG(qd_base,"BASE_GOAL");
-  OUTLOG(CoM_CoC_goal,"GOAL_COM");
-  OUTLOG(center_of_mass,"center_of_mass");
-  OUTLOG(center_of_contact.point,"center_of_contact");
+  OUTLOG(qd_base,"BASE_GOAL",logDEBUG);
+  OUTLOG(CoM_CoC_goal,"GOAL_COM",logDEBUG);
+  OUTLOG(center_of_mass,"center_of_mass",logDEBUG);
+  OUTLOG(center_of_contact.point,"center_of_contact",logDEBUG);
 
   for(int f=0;f<NUM_EEFS;f++){
     if(!eefs_[f].active)
@@ -116,7 +116,7 @@ void Quadruped::fk_stance_adjustment(double dt){
     }
     }
 
-    OUTLOG(workv3_,eefs_[f].id);
+    OUTLOG(workv3_,eefs_[f].id,logDEBUG1);
 
   }
 }
@@ -183,19 +183,19 @@ void Robot::eef_stiffness_fb(const Ravelin::VectorNd& q_des, const Ravelin::Vect
                              x_des.get_lower() - x.get_lower()),
                       xd_err(xd_des.get_upper() - xd.get_upper(),
                              xd_des.get_lower() - xd.get_lower());
-    OUTLOG(x_err,"x_err");
-    OUTLOG(xd_err,"xd_err");
+    OUTLOG(x_err,"x_err",logDEBUG1);
+    OUTLOG(xd_err,"xd_err",logDEBUG1);
 
     Ravelin::SVector6d ffb(Kp[i]*x_err.get_upper() + Kv[i]*xd_err.get_upper(),
                            Ka[i]*x_err.get_lower() + Kw[i]*xd_err.get_lower());
 
-    OUTLOG(ffb,"ffb");
+    OUTLOG(ffb,"ffb",logDEBUG1);
 
     // workspace -> configuration space
     ufb += workM_.get_sub_mat(0,6,0,NUM_JOINTS,workM2_).transpose_mult(ffb,workv_);
   }
 
-  OUTLOG(ufb,"ufb");
+  OUTLOG(ufb,"ufb",logDEBUG1);
   // Return robot to initial config
   for(int i=0;i<NUM_JOINTS;i++)
     joints_[i]->q[0] = q[i];

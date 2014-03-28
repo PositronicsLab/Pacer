@@ -1,6 +1,5 @@
 #ifndef CONTROL_H
 #define CONTROL_H
-#define COLLECT_DATA
 
 #include <robot.h>
 
@@ -41,7 +40,7 @@ class Quadruped : public Robot{
 
     void fk_stance_adjustment(double dt);
 
-    void walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<int> >& gait,double dt,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd);
+    void walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<int> >& gait,double phase_time,double step_height,double t,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd);
 };
 
 #endif // CONTROL_H

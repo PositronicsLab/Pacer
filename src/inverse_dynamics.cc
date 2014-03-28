@@ -136,20 +136,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     out  << "CtT_invM_Ct = T'*iM*T" << std::endl;
     out.close();
 #endif
-//    std::cout  <<  "N = [" <<N << "]"<< std::endl;
-//    std::cout  << "ST = [" <<ST<< "]" << std::endl;
-//    std::cout  <<  "A = [" <<A << "]"<< std::endl;
-//    std::cout  <<  "B = [" <<B << "]"<< std::endl;
-//    std::cout  <<  "C = [" <<C << "]"<< std::endl;
-//    std::cout  << "M = [C B';B A];" << std::endl;
-//    std::cout  <<  "D = [" <<D << "]"<< std::endl;
-//    std::cout  <<  "E = [" <<E << "]"<< std::endl;
-//    std::cout  <<  "F = [" <<F << "]"<< std::endl;
-//    std::cout  << "iM = [F E';E D];" << std::endl;
-//    std::cout  << "v =" << v << std::endl;
-//    std::cout  << "a =" << qdd << std::endl;
-//    std::cout  << "h =" << h << std::endl;
-//    std::cout  << "fext =" << fext << std::endl;
   // compute j and k
   // [E,D]
   Ravelin::MatrixNd ED(E.rows(),E.columns()+D.columns());
@@ -162,31 +148,31 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   FET.set_sub_mat(0,0,F);
   FET.set_sub_mat(0,F.columns(),ET);
 
-  OUTLOG( ED,"[E D]");
-  OUTLOG(FET,"[F E']");
+//  OUTLOG( ED,"[E D]");
+//  OUTLOG(FET,"[F E']");
   // j and k
 
   // j = [E,D]*fext*h + vb
   Ravelin::VectorNd j;
   ED.mult(fext,(j = vb),h,1);
 
-  OUTLOG(j,"j = [ %= [E,D]*fext*h + vb");
+//  OUTLOG(j,"j = [ %= [E,D]*fext*h + vb");
 
   // k = [F,E']*fext*h  +  vq
   Ravelin::VectorNd k;
   FET.mult(fext,(k = vq),h,1);
-  OUTLOG(k,"k = [ % = [F,E']*fext*h  +  vq");
+//  OUTLOG(k,"k = [ % = [F,E']*fext*h  +  vq");
 
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
   Ravelin::MatrixNd Z(ED.rows(), R.columns());
   workM1 = FET;
-  OUTLOG(workM1,"workM1");
+//  OUTLOG(workM1,"workM1");
   LA_.solve_chol_fast(iF,workM1);
   E.mult(workM1,workM2);
   workM2 -= ED;
   workM2.mult(R,Z,-1,0);
-  OUTLOG(Z,"Z = [ % = ( [E,D] - E inv(F) [F,E'] ) R");
+//  OUTLOG(Z,"Z = [ % = ( [E,D] - E inv(F) [F,E'] ) R");
 
   // p = j + E inv(F) (vq* - k)
   Ravelin::VectorNd p = j;
@@ -194,7 +180,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   workv1 -= k;
   LA_.solve_chol_fast(iF,workv1);
   E.mult(workv1,p,1,1);
-  OUTLOG(p,"p = [ % = j + E inv(F) (vq* - k)");
+//  OUTLOG(p,"p = [ % = j + E inv(F) (vq* - k)");
 
   // H = Z'A Z
   Ravelin::MatrixNd H(Z.columns(),Z.columns());
@@ -209,7 +195,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   /////////////////////////////// OBJECTIVE ///////////////////////////////////
   // set Hessian:
   // qG = Z'A Z = [H]
-  OUTLOG(H,"H = [ % = Z'A Z");
+//  OUTLOG(H,"H = [ % = Z'A Z");
   Ravelin::MatrixNd qG = H;
   // set Gradient:
   // qc = Z'A p + Z'B vq*;
@@ -237,7 +223,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // qM1 = N'[zeros(nq,:) ; Z]
   Ravelin::MatrixNd qM1(N.columns(),Z.columns());
   N.transpose_mult(workM1,qM1);
-  OUTLOG(qM1,"IP");
+//  OUTLOG(qM1,"IP");
   // [vq* ; p]
   Ravelin::VectorNd vqstar_p(n);
   vqstar_p.set_sub_vec(0,vqstar);
@@ -285,7 +271,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
       }
     }
   }
-  OUTLOG(qM2,"CF");
+//  OUTLOG(qM2,"CF");
 
   // combine all linear inequality constraints
   assert(qM1.columns() == qM2.columns());
@@ -301,13 +287,13 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     return false;
   }
 
-  OUTLOG(z,"Z_OP1");
+//  OUTLOG(z,"Z_OP1");
   // measure feasibility of solution
   // qM z - qq >= 0
   Ravelin::VectorNd feas;
   qM.mult(z,feas) -= qq;
 
-  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
+//  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
 
   // push z into output vector
   cf = z;
@@ -481,14 +467,14 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
       feas = qq;
       qM.mult(w,feas,1,-1);
 
-      OUTLOG(feas,"feas_OP2 =[ % (A*w - b >= 0)");
+//      OUTLOG(feas,"feas_OP2 =[ % (A*w - b >= 0)");
 
       // return the solution (contact forces)
       // cf = z + P*w;
 
       P.mult(w,cf,1,1);
 
-      OUTLOG(cf,"z_OP2 =[ % (P*w + z)");
+//      OUTLOG(cf,"z_OP2 =[ % (P*w + z)");
 
 #ifdef COLLECT_DATA   // record all input vars
       { // TODO: REMOVE THIS, FOR IROS PAPER
@@ -519,6 +505,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   x /= h;
 
   // Some debugging dialogue
+#ifdef OUTPUT
   {
     // Zz + p == v + inv(M)(fext*h + R*z)
     Z.mult(z,workv1);
@@ -584,6 +571,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     workM2.mult(T,workM1);
     OUTLOG(workM1,"T' * inv(M) * T");
   }
-//  OUTLOG(x,"final_joint_torque");
+#endif
   return true;
 }

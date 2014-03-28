@@ -101,7 +101,7 @@ Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::Origin3d& x,const EndEffe
 
   gk.resize(3,foot.chain.size());
   boost::shared_ptr<Ravelin::Pose3d> jacobian_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
-  jacobian_frame->x = x;
+  jacobian_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
 
   abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);
   for(int j=0;j<3;j++)                                      // x,y,z

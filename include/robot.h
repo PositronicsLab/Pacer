@@ -106,7 +106,7 @@ class Robot : public Moby::RCArticulatedBody{
     Ravelin::Vector3d center_of_mass,zero_moment_point;
     Ravelin::Vector3d roll_pitch_yaw;
     Ravelin::VectorNd uff, ufb;
-    Ravelin::VectorNd qdd;
+    Ravelin::VectorNd qdd_des, qdd;
     Ravelin::MatrixNd N,D,M,ST,R,J;
     Ravelin::VectorNd fext;
     Ravelin::VectorNd vel, gc, acc;

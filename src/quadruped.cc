@@ -7,13 +7,10 @@ using namespace Ravelin;
 const bool FOOT_TRAJ = false,
            WALK = true,
            TRUNK_STABILIZATION = false,
-           CONTROL_IDYN = false,
+           CONTROL_IDYN = true,
            FRICTION_EST = false,
            CONTROL_ZMP = false,
            PARALLEL_STIFFNESS = false;
-//    #define FIXED_BASE
-#define VISUALIZE_MOBY
-#define OUTPUT
 
 extern Ravelin::VectorNd STAGE1, STAGE2;
 extern int N_SYSTEMS;
@@ -31,12 +28,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                       Ravelin::VectorNd& u){
   static Ravelin::VectorNd qd_last = qd;
   std::cerr << " -- Quadruped::control(.) entered" << std::endl;
-  std::cout << "NC = " << NC << " @ time = "<< t << std::endl;
   NC = 0;
   for (unsigned i=0; i< NUM_EEFS;i++)
     if(eefs_[i].active)
       NC++;
 
+  ((qdd = qd)-=qd_last)/=STEP_SIZE;
 #ifdef COLLECT_DATA   // record all input vars
   {
     // generate a unique filename
@@ -70,7 +67,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   ufb.set_zero(NUM_JOINTS);
   u.set_zero(NUM_JOINTS);
 
-  qdd.set_zero(NUM_JOINTS);
+  qdd_des.set_zero(NUM_JOINTS);
   qd_des.set_zero(NUM_JOINTS);
   q_des.set_zero(NUM_JOINTS);
 
@@ -113,8 +110,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   if(WALK){
     std::vector<std::vector<int> > gait = trot;
-    Ravelin::SVector6d go_to(0.1,0,0,0,0,0,base_horizontal_frame);
-    walk_toward(go_to,gait,t,q_des,qd_des,qdd);
+    Ravelin::SVector6d go_to(0.20,0,0,0,0,0,base_horizontal_frame);
+    double phase_time = 0.25, step_height = 0.01;
+    walk_toward(go_to,gait,phase_time,step_height,t,q_des,qd_des,qdd_des);
   }
 
   if(CONTROL_ZMP){
@@ -131,7 +129,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     Ravelin::VectorNd id(NUM_JOINTS);
     id.set_zero();
     contact_jacobian_null_stabilizer(R,id);
-    OUTLOG(id,"STABILIZATION_FORCES");
+    OUTLOG(id,"STABILIZATION_FORCES",logDEBUG);
     uff += id;
   }
 
@@ -141,9 +139,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
   if(FRICTION_EST){
     Ravelin::VectorNd cf;
     double err = friction_estimation(vel,fext,STEP_SIZE,N,D,M,MU,cf);
-    std::cout << "err (friction estimation): " << err << std::endl;
-    OUTLOG(MU,"MU");
-    OUTLOG(cf,"contact_forces");
+    OUT_LOG(logINFO)<< "err (friction estimation): " << err << std::endl;
+    OUTLOG(MU,"MU",logDEBUG);
+    OUTLOG(cf,"contact_forces",logDEBUG);
   } else
     for(int i=0;i<NC;i++)
       for(int k=0;k<NK/2;k++)
@@ -163,14 +161,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   if(CONTROL_IDYN){
     double dt = STEP_SIZE;
-    double alpha = 1;
+    double alpha = 1.0;
     Ravelin::VectorNd cf;
     Ravelin::VectorNd id(NUM_JOINTS);
     id.set_zero();
-//    qdd.set_zero();
-    if(inverse_dynamics(vel,qdd,M,N,D,fext,dt,MU,id,cf)){
+    if(inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf)){
     // Parallel stiffness controller
-#ifdef OUTPUT
+
       OUT_LOG(logINFO)  << "%foot\tcf = [cN cS cT]\t|| cf = [x y z],\t@\tpt = [x y z]";
       for(int i=0,ii=0;i<NC;i++,ii++){
         while(!eefs_[ii].active) ii++;
@@ -189,8 +186,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
 //      LA_.solve_fast(M,workv_);
 //      OUTLOG(workv_,"qdd == inv(M)(fext*h + R*z + [x; 0]*h)) IDYN");
 
-      OUTLOG(STAGE1,"STAGE1");
-      OUTLOG(STAGE2,"STAGE2");
+      OUTLOG(STAGE1,"STAGE1",logDEBUG1);
+      OUTLOG(STAGE2,"STAGE2",logDEBUG1);
 #ifdef COLLECT_DATA   // record all input vars
     {
       // generate a unique filename
@@ -224,8 +221,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
       out.close();
     }
 #endif
-
-#endif
     }
     uff += (id*=alpha);
   }
@@ -242,10 +237,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
-#ifdef OUTPUT
-     std::cout<<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err"<<std::endl;
+
+  OUT_LOG(logINFO)<< "NC = " << NC << " @ time = "<< t << std::endl;
+     ((workv_ = qd)-=qd_last)/=STEP_SIZE;
+     std::cout<<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
      for(unsigned i=0;i< NUM_JOINTS;i++)
-       std::cout << joints_[i]->id
+       OUT_LOG(logINFO)<< joints_[i]->id
                  << "\t " <<  std::setprecision(4) << u[i]
                  << "\t| " << joints_[i]->q[0]
                  << "\t " << q_des[i]
@@ -253,21 +250,19 @@ Ravelin::VectorNd& Quadruped::control(double t,
                  << "\t| " << joints_[i]->qd[0]
                  << "\t " << qd_des[i]
                  << "\t " <<  qd[i] - qd_des[i]
-                 << "\t| " << std::endl;
-     std::cout <<"ZmP : "<< zero_moment_point << std::endl;
-     OUTLOG(roll_pitch_yaw,"roll_pitch_yaw");
-     std::cout << std::endl;
-     std::cout << "qd_des" << qd_des << std::endl;
-     std::cout << "q_des"<< q_des<< std::endl;
-     OUTLOG(qdd,"qdd_des");
-     OUTLOG(((workv_ = qd)-=qd_last)/=STEP_SIZE,"qdd");
+                 << "\t| " << qdd[i]
+                 << "\t " << qdd_des[i]
+                 << "\t " <<  (qdd[i] - qdd_des[i]);
+     OUTLOG(roll_pitch_yaw,"roll_pitch_yaw",logINFO);
+     OUTLOG(zero_moment_point,"ZmP",logINFO);
+     OUTLOG(center_of_mass,"CoM",logINFO);
+     OUTLOG(q_des,"q_des",logDEBUG);
+     OUTLOG(qd_des,"qd_des",logDEBUG);
+     OUTLOG(qdd_des,"qdd_des",logDEBUG);
+     OUTLOG(qdd,"qdd",logDEBUG);
 
-
-     OUTLOG(uff,"uff");
-     OUTLOG(ufb,"ufb");
-
-#endif
-     std::cout <<"CoM : "<< center_of_mass << std::endl;
+     OUTLOG(uff,"uff",logDEBUG);
+     OUTLOG(ufb,"ufb",logDEBUG);
 
 #ifdef VISUALIZE_MOBY
        // CONTACTS
@@ -357,10 +352,10 @@ void Quadruped::init(){
 //      eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.12, -0.056278, -0.13);
 //      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.08, 0.0495, -0.13);
 //      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.08, -0.0495, -0.13);
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.135, 0.096278, -0.13);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.135,-0.096278, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.055, 0.096278, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.055,-0.096278, -0.13);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.11, 0.096278, -0.13);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.11,-0.096278, -0.13);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.08, 0.096278, -0.13);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.08,-0.096278, -0.13);
     break;
     case 3:
       // NOTE THIS IS A STABLE 3-leg stance
@@ -389,20 +384,20 @@ void Quadruped::init(){
         eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id],joint_names_));
 
   NUM_EEFS = eefs_.size();
-  std::cout << NUM_EEFS << " end effectors:" << std::endl;
+  OUT_LOG(logINFO)<< NUM_EEFS << " end effectors:" << std::endl;
   for(unsigned j=0;j<NUM_EEFS;j++){
-    std::cout << eefs_[j].id << std::endl;
+    OUT_LOG(logINFO)<< eefs_[j].id << std::endl;
   }
 
   NK = 4;
 
-  std::cout << "NUM_EEFS: " << NUM_EEFS << std::endl;
-  std::cout << "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS << std::endl;
-  std::cout << "NUM_JOINTS: " << NUM_JOINTS << std::endl;
-  std::cout << "NDOFS: " << NDOFS << std::endl;
-  std::cout << "NSPATIAL: " << NSPATIAL << std::endl;
-  std::cout << "NEULER: " << NEULER << std::endl;
-  std::cout << "NK: " << NK << std::endl;
+  OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS << std::endl;
+  OUT_LOG(logINFO)<< "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS << std::endl;
+  OUT_LOG(logINFO)<< "NUM_JOINTS: " << NUM_JOINTS << std::endl;
+  OUT_LOG(logINFO)<< "NDOFS: " << NDOFS << std::endl;
+  OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL << std::endl;
+  OUT_LOG(logINFO)<< "NEULER: " << NEULER << std::endl;
+  OUT_LOG(logINFO)<< "NK: " << NK << std::endl;
 
   q0_["BODY_JOINT"] = 0;
   q0_["LF_HIP_AA"] = M_PI_8;
@@ -444,6 +439,8 @@ void Quadruped::init(){
     gains_[joints_[i]->id].perr_sum = 0;
     gains_[joints_[i]->id].kp = 2e1;
     gains_[joints_[i]->id].kv = 2e-1;
+//    gains_[joints_[i]->id].kp = 2e0;
+//    gains_[joints_[i]->id].kv = 2e-2;
 //    gains_[joints_[i]->id].kp = 1e5;
 //    gains_[joints_[i]->id].kv = 1e3;
     gains_[joints_[i]->id].ki = 0;
@@ -569,8 +566,8 @@ void Quadruped::init(){
   }
   for(int i=0;i<trot.size();i++){
     for(int j=0;j<trot[i].size();j++)
-      std::cout << trot[i][j] << " ";
-  std::cout << std::endl;
+      OUT_LOG(logINFO)<< trot[i][j] << " ";
+  OUT_LOG(logINFO)<< std::endl;
 
   }
 }

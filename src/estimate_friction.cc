@@ -23,11 +23,11 @@ double Robot::friction_estimation(const Ravelin::VectorNd& v, const Ravelin::Vec
       std::cout << "************** Friction Estimation **************" << std::endl;
       std::cout << "ITER: " << ITER << std::endl;
       std::cout << "dt = " << dt << std::endl;
-      OUTLOG(N,"N");
-      OUTLOG(M,"M");
-      OUTLOG(v,"post-event-vel");
-      OUTLOG(v_,"pre-event-vel");
-      OUTLOG(f_,"f_external");
+      OUTLOG(N,"N",logDEBUG1);
+      OUTLOG(M,"M",logDEBUG1);
+      OUTLOG(v,"post-event-vel",logDEBUG1);
+      OUTLOG(v_,"pre-event-vel",logDEBUG1);
+      OUTLOG(f_,"f_external",logDEBUG1);
 
       int ngc = f_.rows();
       int nq = ngc - 6, nk = D.columns()/nc;

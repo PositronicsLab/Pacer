@@ -1,12 +1,15 @@
 #include <project_common.h>
 //#include <Opt/LCP.h>
 
+//#define SPLITTING_METHOD
 
-//#define NDEBUG
+#define NDEBUG
 
+extern bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
 Moby::LCP lcp_;
 //Opt::LCP lcp_;
 
+const int MAX_ITER = 100;
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 const double NEAR_INF = 1.0/NEAR_ZERO;
 
@@ -47,19 +50,25 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 #ifndef NDEBUG
   OUT_LOG(logINFO)  << "% >> solve qp positive" << std::endl;
   OUT_LOG(logINFO)  << "%QP variables" << std::endl;
-  OUTLOG(Q,"Q");
-  OUTLOG(c,"c");
-  OUTLOG(A,"AA");
-  OUTLOG(b,"bb");
+  OUTLOG(Q,"qp_Q");
+  OUTLOG(c,"qp_c");
+  OUTLOG(A,"qp_A");
+  OUTLOG(b,"qp_b");
 //  OUT_LOG(logINFO)  << "LCP variables" << std::endl;
 //  OUTLOG(MMM,"MM");
 //  OUTLOG(qqq,"qq");
 #endif
 
-  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
+#ifndef SPLITTING_METHOD
+  double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+//  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
     SOLVE_FLAG = isvalid(zzz);
+#else
+  lcp_symm_iter(MMM, qqq, zzz, 0.5, 1.0, MAX_ITER);
+#endif
 
   // extract x
   for(int i=0;i<n;i++)
@@ -89,11 +98,11 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Raveli
 //  OUTLOG(c,"qq");
 #endif
 
-  if(!lcp_.lcp_lemke_regularized(Q,c,x))
-//    if(!lcp_.lcp_lemke(Q,c,x))
-      SOLVE_FLAG = false;
-  else
-    SOLVE_FLAG = isvalid(x);
+//  if(!lcp_.lcp_lemke_regularized(Q,c,x))
+////    if(!lcp_.lcp_lemke(Q,c,x))
+//      SOLVE_FLAG = false;
+//  else
+//    SOLVE_FLAG = isvalid(x);
 
 #ifndef NDEBUG
   OUT_LOG(logINFO)  << "Solutions" << std::endl;
@@ -139,7 +148,7 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   MMM.set_sub_mat(n*2,0,A);
   MMM.set_sub_mat(n*2,n,nA);
 
-  // setup LCP vector
+  // setup LCP vector qqq = [c;-c;-b]
   qqq.set_sub_vec(0,c);
   qqq.set_sub_vec(n,nc);
   qqq.set_sub_vec(2*n,nb);
@@ -158,12 +167,16 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
 
   // solve the LCP
   bool SOLVE_FLAG = true;
+#ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
   if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
 //  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
     SOLVE_FLAG = isvalid(zzz);
+#else
+  lcp_symm_iter(MMM, qqq, zzz, 0.5, 1.0, MAX_ITER);
+#endif
 
   // extract x
   for(int i=0;i<n;i++)

@@ -15,43 +15,35 @@ stage2_sqp = [];
 stage2_as = [];
 stage2_ip = [];
 stage2_lemke = [];
-for ij = 1:276
+for ij = 1:2
     eval(['idyn_system',num2str(ij)]);
     nvars = nc*5
     nk = 4
 
-%     S = ST(:,1:4:end) ;
-%     T = ST(:,2:4:end) ;
-
-%     Cn_v = (N'*v)'
-%     Cs_v = (S'*v)'
-%     Ct_v = (T'*v)'
-
     vb = v(nq+1:end);
     vq = v(1:nq);
-    vqstar = v(1:nq);
-    j = [E,D]*(fext + zuff)*h + vb;
-    Z = ( [E,D] - E*(F\[F,E']) )*R ;
-    K = [F,E']*(fext + zuff)*h  +  vq ;
+    vqstar = v(1:nq) + a(1:nq);
+    Z = ([E,D] - E*(F\[F,E']) )*R;
+    j = [E,D]*(fext)*h + vb;
+    K = [F,E']*(fext)*h  +  vq ;
     p = j + E*(F\(vqstar - K));
+        
     qG1 = Z'*A*Z;
     qc1 = Z'*A*p + Z'*B*vqstar;
 
     % qA*z - qb >= 0
     CF = [zeros(nc,nvars)];
-    polygon_rad = cos(pi/nk);
     for i = 1:nc
-        CF(i,i) = 1;
+        CF(i,i) = MU(i,1);
         for k = 1:nc
-            friction = MU(i,1+mod(k,2))*polygon_rad;
-            CF(i,nc+(i-1)*nk + k) = -1.0/friction;
+            CF(i,nc+i*nc) = -1.0;
         end
     end
-    qA1 = [ N'*[Z;zeros(nq,size(Z,2))]; % interpenetration
+    qA1 = [ N'*[zeros(nq,size(Z,2)),Z]; % interpenetration
 %             eye(nc),zeros(nc,nvars-nc); % COMPRESSIVE FORCE --encompassed by Coulomb Friction constraint
                         CF            ; % coulomb friction
           ];
-    qb1 = [ -N'*[vqstar;p] ;
+    qb1 = [ N'*[vqstar;p] ;
 %           zeros(nc,1)   ;
             zeros(nc,1)   ;
           ];
@@ -69,13 +61,13 @@ for ij = 1:276
 %     options = optimoptions(@quadprog,'Algorithm','active-set','Display','off');
 % 
 %     tic()
-%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
+%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options)
 %     stage1_as = [stage1_as;toc()];
-%     
+    
 %     options = optimoptions(@quadprog,'Algorithm','interior-point-convex','Display','off');
 % 
 %     tic()
-%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options);
+%     z = quadprog(qG1,qc1,-qA1,-qb1,[],[],zeros(size(qc1)),[],[],options)
 %     stage1_ip = [stage1_ip;toc()];
 %     
     O = zeros(size(qA1,1),size(qA1,1));
@@ -87,7 +79,9 @@ for ij = 1:276
     stage1_lemke = [stage1_lemke;toc()];
     z = zz(1:nvars)
     feas = qA1*z - qb1
-
+    
+%     uff1 = F\(-[F E']*R*z + (vqstar-k))/h + fID
+1
     %% % STAGE 2 % %% QUADRATIC CONSTRAINT
 %     options = optimoptions(@fmincon,'Algorithm','interior-point'...
 %                                    ,'GradConstr','on'...
@@ -170,13 +164,9 @@ for ij = 1:276
       cf2(ii) = -z(ii);
 
       % tangent directions
-      % kk indexes matrix, k refers to contact direction
-      k=0;
-      for kk=nc+nk*(ii-1)+1:nc+nk*(ii-1)+nk
-        friction = MU(ii,mod(k,nk/2)+1)*polygon_rad;
-        CF2(ii,:) = CF2(ii,:) - (P(kk,:) ./ friction);
-        cf2(ii)   = cf2(ii)   + (z(kk)   ./ friction);
-        k = k+1;
+      for kk=nc*ii+1:nc:nc*nk+nc
+        CF2(ii,:) = (CF2(ii,:) - (P(kk,:)))/MU(ii,1);
+        cf2(ii)   = (cf2(ii)   + (z(kk)))/MU(ii,1);
       end
     end
 
@@ -219,17 +209,17 @@ for ij = 1:276
 
 end
 
-sum(isnan(stage1_as))
+% sum(isnan(stage1_as))
 % data = [
 %         nanmin(stage1_as),nanmin(stage1_ip),nanmin(stage1_tr),nanmin(stage1_lemke),nanmin(stage2_sqp),nanmin(stage2_as),nanmin(stage2_ip),nanmin(svd_time),nanmin(stage2_lemke);
 %         nanmean(stage1_as),nanmean(stage1_ip),nanmean(stage1_tr),nanmean(stage1_lemke),nanmean(stage2_sqp),nanmean(stage2_as),nanmean(stage2_ip),nanmean(svd_time),nanmean(stage2_lemke);
 %         nanmax(stage1_as),nanmax(stage1_ip),nanmax(stage1_tr),nanmax(stage1_lemke),nanmax(stage2_sqp),nanmax(stage2_as),nanmax(stage2_ip),nanmax(svd_time),nanmax(stage2_lemke);
 %         ]
-    
-    data = [
-        sum(isnan(stage1_as)),sum(isnan(stage1_ip)),sum(isnan(stage1_tr)),sum(isnan(stage1_lemke)),sum(isnan(stage2_sqp)),sum(isnan(stage2_as)),sum(isnan(stage2_ip)),sum(isnan(svd_time)),sum(isnan(stage2_lemke));
-        nanmin(stage1_as),nanmin(stage1_ip),nanmin(stage1_tr),nanmin(stage1_lemke),nanmin(stage2_sqp),nanmin(stage2_as),nanmin(stage2_ip),nanmin(svd_time),nanmin(stage2_lemke);
-        nanmean(stage1_as),nanmean(stage1_ip),nanmean(stage1_tr),nanmean(stage1_lemke),nanmean(stage2_sqp),nanmean(stage2_as),nanmean(stage2_ip),nanmean(svd_time),nanmean(stage2_lemke);
-        nanmax(stage1_as),nanmax(stage1_ip),nanmax(stage1_tr),nanmax(stage1_lemke),nanmax(stage2_sqp),nanmax(stage2_as),nanmax(stage2_ip),nanmax(svd_time),nanmax(stage2_lemke);
-        ]
+%     
+%     data = [
+%         sum(isnan(stage1_as)),sum(isnan(stage1_ip)),sum(isnan(stage1_tr)),sum(isnan(stage1_lemke)),sum(isnan(stage2_sqp)),sum(isnan(stage2_as)),sum(isnan(stage2_ip)),sum(isnan(svd_time)),sum(isnan(stage2_lemke));
+%         nanmin(stage1_as),nanmin(stage1_ip),nanmin(stage1_tr),nanmin(stage1_lemke),nanmin(stage2_sqp),nanmin(stage2_as),nanmin(stage2_ip),nanmin(svd_time),nanmin(stage2_lemke);
+%         nanmean(stage1_as),nanmean(stage1_ip),nanmean(stage1_tr),nanmean(stage1_lemke),nanmean(stage2_sqp),nanmean(stage2_as),nanmean(stage2_ip),nanmean(svd_time),nanmean(stage2_lemke);
+%         nanmax(stage1_as),nanmax(stage1_ip),nanmax(stage1_tr),nanmax(stage1_lemke),nanmax(stage2_sqp),nanmax(stage2_as),nanmax(stage2_ip),nanmax(svd_time),nanmax(stage2_lemke);
+%         ]
 

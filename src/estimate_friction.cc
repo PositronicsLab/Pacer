@@ -1,7 +1,5 @@
 #include <quadruped.h>
 
-static Ravelin::LinAlgd LA_;
-
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 
 extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
@@ -10,7 +8,7 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 /// Friction Estimation
 /// Calculates Coulomb friction at end-effectors
-double Quadruped::friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& f, double dt,
+double Robot::friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& f, double dt,
                          const Ravelin::MatrixNd& N,const Ravelin::MatrixNd& D, const Ravelin::MatrixNd& M, Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf)
 {
     std::cout << "entered friction_estimation()" << std::endl;
@@ -25,11 +23,11 @@ double Quadruped::friction_estimation(const Ravelin::VectorNd& v, const Ravelin:
       std::cout << "************** Friction Estimation **************" << std::endl;
       std::cout << "ITER: " << ITER << std::endl;
       std::cout << "dt = " << dt << std::endl;
-      OUTLOG(N,"N");
-      OUTLOG(M,"M");
-      OUTLOG(v,"post-event-vel");
-      OUTLOG(v_,"pre-event-vel");
-      OUTLOG(f_,"f_external");
+      OUTLOG(N,"N",logDEBUG1);
+      OUTLOG(M,"M",logDEBUG1);
+      OUTLOG(v,"post-event-vel",logDEBUG1);
+      OUTLOG(v_,"pre-event-vel",logDEBUG1);
+      OUTLOG(f_,"f_external",logDEBUG1);
 
       int ngc = f_.rows();
       int nq = ngc - 6, nk = D.columns()/nc;
@@ -323,10 +321,11 @@ A(0,i) = cP[i];
       cf = z;
 #endif
       for(int i = 0;i < nc;i++){
-          if(cf[i] > 0)
-              MU(i,0) = sqrt(cf[nc+i]*cf[nc+i] + cf[nc*2+i]*cf[nc*2+i]) / cf[i];
-          else
-              MU(i,0) = sqrt(-1);
+          if(cf[i] > 0){
+            MU(i,1) = (MU(i,0) = sqrt(cf[nc+i]*cf[nc+i] + cf[nc*2+i]*cf[nc*2+i]) / cf[i]);
+          } else {
+            MU(i,0) = (MU(i,1) = sqrt(-1));
+          }
 
           std::cout << "cf Estimate = [" << cf[i+nc] << " " << cf[i+nc*2] << " " << cf[i] << "]" << std::endl;
           std::cout << "MU_Estimate : " << MU(i,0) << std::endl;

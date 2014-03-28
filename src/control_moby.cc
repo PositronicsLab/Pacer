@@ -3,18 +3,6 @@
  ****************************************************************************/
 #include <quadruped.h>
 
-/// THESE DEFINES DETERMINE WHAT TYPE OF CONTROLLER THIS CODE USES
-//    #define NDEBUG
-//    #define USE_DUMMY_CONTACTS
-
-    #define RENDER_CONTACT
-//    #define USE_ROBOT
-//    #define CONTROL_KINEMATICS
-
-std::string LOG_TYPE("INFO");
-//std::string LOG_TYPE("ERROR");
-/// END USER DEFINITIONS
-
     std::vector<std::string> joint_names_;
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
@@ -24,26 +12,9 @@ std::string LOG_TYPE("INFO");
 using namespace Moby;
 using namespace Ravelin;
 
-static Ravelin::LinAlgd LA_;
-
 // simulator
 boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 boost::shared_ptr<Quadruped> Lynx_ptr;
-
-static Ravelin::VectorNd workv_;
-static Ravelin::MatrixNd workM_;
-
-
-///////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// Contact DATA //////////////////////////////////
-
-void visualize_contact( const Moby::Event& e,
-                        boost::shared_ptr<Moby::EventDrivenSimulator> sim );
-
-void visualize_polygon( const Ravelin::MatrixNd& verts,
-                        boost::shared_ptr<Moby::EventDrivenSimulator> sim );
-
-void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Controllers //////////////////////////////////
@@ -57,31 +28,47 @@ void post_event_callback_fn(const std::vector<Event>& e,
   std::vector<EndEffector>& eefs_ = Lynx_ptr->get_end_effectors();
   std::vector<std::string>& eef_names_ = Lynx_ptr->get_end_effector_names();
 
-  for(int i=0;i<eefs_.size();i++)
+  for(int i=0;i<eefs_.size();i++){
     eefs_[i].active = false;
+    eefs_[i].contacts.clear();
+    eefs_[i].contact_impulses.clear();
+  }
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Event::eContact)
     {
-#ifdef RENDER_CONTACT
-        visualize_contact(e[i],sim);
-#endif
+      bool MIRROR_FLAG = false;
+
       SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
-
-      //if end effector doesnt exist
-      if(iter  == eef_names_.end())
-        continue;
+      //if end effector doesnt exist, check other SB
+      if(iter  == eef_names_.end()){
+        iter = std::find(eef_names_.begin(), eef_names_.end(), sb2->id);
+        if(iter  == eef_names_.end())
+          continue;
+        else{
+          MIRROR_FLAG = true;
+          std::swap(sb1,sb2);
+        }
+      }
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
-//      OUTLOG(e[i].contact_impulse.get_linear(),sb1->id);
-//      OUTLOG(e[i].contact_point,sb1->id);
+      eefs_[index].contacts.push_back(e[i].contact_point);
+      if(MIRROR_FLAG){
+        eefs_[index].contact_impulses.push_back(-e[i].contact_impulse.get_linear());
+      } else {
+        eefs_[index].contact_impulses.push_back(e[i].contact_impulse.get_linear());
+      }
+
       if (eefs_[index].active)
         continue;
+
+      Ravelin::Pose3d foot_pose = *eefs_[index].link->get_pose();
+      foot_pose.update_relative_pose(Moby::GLOBAL);
 
       // Increment number of active contacts
       NC++;
@@ -89,25 +76,31 @@ void post_event_callback_fn(const std::vector<Event>& e,
       // Push Active contact info to EEF
       eefs_[index].active = true;
       eefs_[index].point = e[i].contact_point;
-      eefs_[index].normal = e[i].contact_normal;
-      eefs_[index].impulse = e[i].contact_impulse.get_linear();
+      if(MIRROR_FLAG){
+        eefs_[index].normal = -e[i].contact_normal;
+        eefs_[index].tan1 = -e[i].contact_tan1;
+        eefs_[index].tan2 = -e[i].contact_tan2;
+
+      } else {
+        eefs_[index].normal = e[i].contact_normal;
+        eefs_[index].tan1 = e[i].contact_tan1;
+        eefs_[index].tan2 = e[i].contact_tan2;
+      }
+      eefs_[index].event = boost::shared_ptr<const Moby::Event>(new Event(e[i]));
     }
   }
-#ifdef RENDER_CONTACT
-     if(NC > 0){
-       Ravelin::MatrixNd support_poly(3,NC);
-       for(int c=0,cc=0;c<eefs_.size();c++)
-         if(eefs_[c].active){
-            Ravelin::Pose3d foot_pose = *eefs_[c].link->get_pose();
-            foot_pose.update_relative_pose(Moby::GLOBAL);
-            support_poly.set_column(cc,foot_pose.x);
-           cc++;
-         }
-      visualize_polygon(support_poly,sim);
-     }
-#endif
+//  for(unsigned i=0;i< eefs_.size();i++){
+//    if(!eefs_[i].active) continue;
+//    Ravelin::Origin3d impulse(0,0,0),contact(0,0,0);
+//    for(unsigned j=0;j< eefs_[i].contacts.size();j++){
+//      impulse += Ravelin::Origin3d(eefs_[i].contact_impulses[j]);
+//      contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].contacts[j]))/eefs_[i].contacts.size();
+//    }
+//    std::cout << eefs_[i].id << "(" << eefs_[i].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
+//              << "\t@  " << contact
+//              << ",\tn =" << eefs_[i].normal << std::endl;
+//  }
 
-  //  SRZ compare contact force prediction to Moby contact force
 }
 #endif
 
@@ -131,26 +124,18 @@ void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointP
 
 void controller(DynamicBodyPtr dbp, double t, void*)
 {
+  std::cerr << " -- controller() entered" << std::endl;
+
   std::vector<EndEffector>& eefs_ = Lynx_ptr->get_end_effectors();
   std::vector<Moby::JointPtr>& joints_ = Lynx_ptr->get_joints();
   joint_names_ = Lynx_ptr->get_joint_names();
   Moby::RCArticulatedBodyPtr abrobot = Lynx_ptr->get_articulated_body();
-
-
-  for(int i=0;i<eefs_.size();i++){
-    Ravelin::Pose3d base_frame = *eefs_[i].link->get_pose();
-    base_frame.update_relative_pose(Moby::GLOBAL);
-    std::cout << eefs_[i].id << base_frame.x << std::endl;
-  }
   unsigned num_joints = joint_names_.size();
 
   static int ITER = 0;
   static double last_time = 0;
 
-  Ravelin::MatrixNd u(num_joints,1);
-
-  double dt = t - last_time;
-  if (dt == 0) return;
+  static Ravelin::MatrixNd U(num_joints,1);
 
   Ravelin::MatrixNd q(num_joints,1),
                    qd(num_joints,1);
@@ -219,11 +204,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     Ravelin::VectorNd u_vec(num_joints);
 
 
-    Lynx_ptr->control(dt,q.column(0),qd.column(0),q_des,qd_des,u_vec);
-    u.set_column(0,u_vec);
-    Ravelin::VectorNd stb(num_joints+6);
-//    stb[num_joints+3] =
-//    adrobot->add_generalized_force(Moby::DynamicBody::eSpatial,stb);
+    Lynx_ptr->control(t,q.column(0),qd.column(0),q_des,qd_des,u_vec);
+    U.set_column(0,u_vec);
 
       // send torque commands to robot
 # ifdef CONTROL_KINEMATICS
@@ -245,10 +227,8 @@ void controller(DynamicBodyPtr dbp, double t, void*)
     Ravelin::VectorNd coordinates, velocity;
     abrobot->get_generalized_coordinates(DynamicBody::eEuler,coordinates);
     abrobot->get_generalized_velocity(DynamicBody::eSpatial,velocity);
-    std::cout << "q" << coordinates << std::endl;
-    std::cout << "qd" << velocity << std::endl;
 
-    apply_simulation_forces(u,joints_);
+    apply_simulation_forces(U,joints_);
 #endif
 
      last_time = t;
@@ -262,7 +242,7 @@ void controller(DynamicBodyPtr dbp, double t, void*)
 
      for(unsigned m=0,i=0;i< num_joints;m++){
        if(joints_[m]->q.size() == 0) continue;
-       for(Dynamixel::Joints j=Dynamixel::BODY_JOINT;j<Dynamixel::N_JOINTS;j++)
+       for(int j=0;j<Dynamixel::N_JOINTS;j++)
          if(joints_[m]->id.compare(dxl_->JointName(j)) == 0){
            qdat[j] = q_des[i];
            qddat[j] = 0;//qd_des[i];
@@ -273,13 +253,15 @@ void controller(DynamicBodyPtr dbp, double t, void*)
      OUTLOG(qdat,"qdat");
      OUTLOG(qddat,"qddat");
 
-     dxl_->set_position(qdat.data());
-//     dxl_->set_state(qdat.data(),qddat.data());
+//     dxl_->set_position(qdat.data());
+     dxl_->set_state(qdat.data(),qddat.data());
 # else
   Ravelin::VectorNd udat = u.column(0);
   dxl_->set_torque(udat.data());
 # endif
 #endif
+  std::cerr << " -- controller() exited" << std::endl;
+
 }
 
 boost::shared_ptr<ContactParameters> cp_callback(CollisionGeometryPtr g1, CollisionGeometryPtr g2)
@@ -304,8 +286,8 @@ boost::shared_ptr<ContactParameters> cp_callback(CollisionGeometryPtr g1, Collis
 
 void init_cpp(){
 #ifdef USE_ROBOT
-  dxl_ = new Dynamixel();
-  dxl_->relaxed(true);
+  dxl_ = new Dynamixel("/dev/tty.usbserial-A9YL9ZZV",1000000);
+  dxl_->relaxed(false);
 #endif
 }
 
@@ -316,6 +298,9 @@ void init(void* separator,
           const std::map<std::string, BasePtr>& read_map,
           double time)
 {
+  // If use robot is active also init dynamixel controllers
+  init_cpp();
+
   std::cout << LOG_TYPE << std::endl;
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
@@ -342,7 +327,7 @@ Moby::RCArticulatedBodyPtr abrobot;
 #endif
 
   // Set a random friction value in Moby for each contact made
-  sim->get_contact_parameters_callback_fn = cp_callback;
+//  sim->get_contact_parameters_callback_fn = cp_callback;
 
   // If using dummy contact ignore impact callback function
 #ifndef USE_DUMMY_CONTACTS
@@ -351,9 +336,6 @@ Moby::RCArticulatedBodyPtr abrobot;
 
   // setup the controller
   abrobot->controller = &controller;
-
-  // If use robot is active also init dynamixel controllers
-  init_cpp();
 }
 } // end extern C
 

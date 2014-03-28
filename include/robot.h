@@ -7,9 +7,7 @@
 class EndEffector{
 public:
 
-    EndEffector(){
-      init();
-    }
+    EndEffector(){    }
     EndEffector(Moby::RigidBodyPtr l,Ravelin::Vector3d& o,std::vector<std::string>& jn){
       link = l;
       id = link->id;
@@ -25,11 +23,14 @@ public:
     Moby::RigidBodyPtr    link;
     // kinematic chain indexing data
     std::vector<unsigned> chain;
+    std::vector<bool> chain_bool;
     // Contact Data
 
-    Ravelin::Vector3d     point;
-    Ravelin::Vector3d     normal; //(pointing away from the ground)
-    Ravelin::Vector3d     impulse;
+    boost::shared_ptr<const Moby::Event> event;
+    Ravelin::Vector3d     point,normal,tan1,tan2;
+    std::vector<Ravelin::Vector3d> contacts;
+    std::vector<Ravelin::Vector3d> contact_impulses;
+
     bool                  active;
 
   private:
@@ -37,7 +38,7 @@ public:
     void init();
 };
 
-class Robot {
+class Robot : public Moby::RCArticulatedBody{
   public:
     Robot(){}
     // This is the Simplest Controller (policy is determined within fn)
@@ -57,7 +58,25 @@ class Robot {
   std::vector<std::string>& get_joint_names()  { return joint_names_; }
   Moby::RCArticulatedBodyPtr& get_articulated_body()  { return abrobot_; }
   Moby::DynamicBodyPtr& get_dynamic_body()  { return dbrobot_; }
+  double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext,
+                             double dt, const Ravelin::MatrixNd& N,
+                             const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
+                             Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
+
+  bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
+                        const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
+                        double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
+  void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+  void calc_eef_jacobians(Ravelin::MatrixNd& R);
+  void RRMC(const EndEffector& foot,const Ravelin::VectorNd& q, Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+
+  void eef_stiffness_fb(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd&  qd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
+//  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+  Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+  Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+  Ravelin::MatrixNd& foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot, Ravelin::MatrixNd& gk);
+  void update();
   protected:
     // Robot Dynamics Datastructures
     Moby::RCArticulatedBodyPtr        abrobot_;
@@ -75,6 +94,22 @@ class Robot {
     unsigned                          NUM_EEFS;
     unsigned                          NUM_JOINTS;
     unsigned                          NUM_LINKS;
+
+    // wrt: base_frame
+    std::map<std::string, Ravelin::Vector3d> eef_origins_;
+    // Useful Stored Data
+    boost::shared_ptr<Ravelin::Pose3d>   base_horizontal_frame,
+                                         base_frame,
+                                         base_frame_global;
+    unsigned          NC;
+    EndEffector       center_of_contact;
+    Ravelin::Vector3d center_of_mass,zero_moment_point;
+    Ravelin::Vector3d roll_pitch_yaw;
+    Ravelin::VectorNd uff, ufb;
+    Ravelin::VectorNd qdd_des, qdd;
+    Ravelin::MatrixNd N,D,M,ST,R,J;
+    Ravelin::VectorNd fext;
+    Ravelin::VectorNd vel, gc, acc;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;

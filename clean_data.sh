@@ -1,5 +1,5 @@
-rm $1/*.osg
-rm $1/pivot.steps
+rm $1*.osg
+rm $1pivot.steps
 for i in $1lemke.Mq.*; do rm $i; done
 for i in $1*.osg; do rm $i; done
 for i in $1idyn_system*; do rm $i; done

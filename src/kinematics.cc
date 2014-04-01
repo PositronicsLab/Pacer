@@ -186,11 +186,9 @@ void Robot::calc_eef_jacobians(Ravelin::MatrixNd& R){
   R.set_zero(NDOFS,NUM_EEFS*3);
   // Contact Jacobian [GLOBAL frame]
   Ravelin::MatrixNd J(3,NDOFS);
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(*base_frame));
   for(int i=0;i<NUM_EEFS;i++){
-    boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
-    boost::shared_ptr<Ravelin::Pose3d> foot_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*eefs_[i].link->get_pose())) ;
-    foot_frame->update_relative_pose(Moby::GLOBAL);
-    event_frame->x = foot_frame->x;
+    event_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
 
     dbrobot_->calc_jacobian(event_frame,eefs_[i].link,workM_);
 

@@ -1,6 +1,8 @@
 #include <robot.h>
 #include <utilities.h>
 
+extern bool new_sim_step;
+
 double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   // Potential Energy
   double PE = 0;
@@ -21,36 +23,11 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   // Kinetic Energy
 }
 
-void Robot::calc_com(Ravelin::Vector3d& weighted_com,Ravelin::Vector3d& com_acc){
-  weighted_com.set_zero();
-  const Ravelin::SAcceld& base_acc = links_[0]->get_accel();
-  double total_mass=0;
-  for(int i=0;i<links_.size();i++){
-
-     Moby::RigidBody& link = *links_[i];
-     double m = link.get_mass();
-     total_mass += m;
-     Ravelin::Pose3d link_com = *link.get_inertial_pose();
-     link_com.update_relative_pose(Moby::GLOBAL);
-     weighted_com += (link_com.x *= m);
-  }
-  weighted_com /= total_mass;
-
-  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d());
-  base_com_w->x = Ravelin::Origin3d(weighted_com);
-  Ravelin::SAcceld com_xdd = Ravelin::Pose3d::transform(base_com_w, base_acc);
-  com_acc = com_xdd.get_linear();
-
-  zero_moment_point =
-      Ravelin::Vector3d(center_of_mass[0] - (center_of_mass[2]*com_acc[0])/(com_acc[2]-grav),
-                        center_of_mass[1] - (center_of_mass[2]*com_acc[1])/(com_acc[2]-grav),
-                        0);
-}
-
 void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
    M.resize(NDOFS,NDOFS);
    fext.resize(NDOFS);
-   abrobot_->get_generalized_inertia(M);
+   if(new_sim_step)
+    abrobot_->get_generalized_inertia(M);
    abrobot_->get_generalized_forces(fext);
 }
 
@@ -110,6 +87,12 @@ void EndEffector::init(){
 }
 
 void Robot::update(){
+
+  NC = 0;
+  for (unsigned i=0; i< NUM_EEFS;i++)
+    if(eefs_[i].active)
+      NC++;
+
   // fetch robot state vectors
   dbrobot_->get_generalized_acceleration(acc);
   dbrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,vel);
@@ -120,13 +103,12 @@ void Robot::update(){
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   calculate_dyn_properties(M,fext);
-  calc_energy(vel,M);
-  calc_com(center_of_mass,workv3_);
+//  calc_energy(vel,M);
+  calc_com();
 
   // Get base frame
   base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(*links_[0]->get_pose()));
   base_frame->update_relative_pose(Moby::GLOBAL);
-
 
   base_horizontal_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));
   base_horizontal_frame->update_relative_pose(Moby::GLOBAL);
@@ -146,5 +128,57 @@ void Robot::update(){
   base_frame_global->x = base_frame->x;
   base_frame_global->q.set_identity();
 
+
+#ifdef VISUALIZE_MOBY
+  draw_pose(*base_frame,sim);
+  draw_pose(Moby::GLOBAL,sim);
+#endif
+
   calc_eef_jacobians(J);
+
+  if(NC != 0) {
+    center_of_contact.point.set_zero();
+    center_of_contact.point.pose = Moby::GLOBAL;
+    center_of_contact.normal.pose = Moby::GLOBAL;
+    for(int f=0;f<NUM_EEFS;f++){
+      // set gait centers
+      if(eefs_[f].active){
+        center_of_contact.point += eefs_[f].point/NC;
+        center_of_contact.normal = eefs_[f].normal;
+      }
+    }
+  }
+
+#ifdef VISUALIZE_MOBY
+       // CONTACTS
+       if(NC != 0){
+         std::vector<EndEffector> active_eefs;
+         if(eefs_[0].active)
+           active_eefs.push_back(eefs_[0]);
+         if(eefs_[1].active)
+           active_eefs.push_back(eefs_[1]);
+         if(eefs_[3].active)
+           active_eefs.push_back(eefs_[3]);
+         if(eefs_[2].active)
+           active_eefs.push_back(eefs_[2]);
+
+         for(int i=0;i<NC;i++){
+           visualize_ray(active_eefs[i].point,
+                         active_eefs[(i+1)%NC].point,
+                         Ravelin::Vector3d(1,1,1),
+                         sim);
+         }
+         for(int i=0;i<NC;i++)
+           for(int j=0;j<active_eefs[i].contacts.size();j++)
+             visualize_ray(active_eefs[i].contacts[j],
+                           active_eefs[i].point,
+                           Ravelin::Vector3d(1,1,1),
+                           sim);
+       }
+
+       visualize_ray(center_of_contact.point,
+                  center_of_contact.normal + center_of_contact.point,
+                  Ravelin::Vector3d(1,1,0),
+                  sim);
+#endif
 }

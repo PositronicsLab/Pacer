@@ -11,14 +11,14 @@ void Quadruped::fk_stance_adjustment(double dt){
   qd_base.set_zero();
 
   Ravelin::Vector3d CoM_CoC_goal(0,0,0.13);
-  (workv3_ = center_of_mass) -= center_of_contact.point;
+  (workv3_ = center_of_mass_x) -= center_of_contact.point;
   CoM_CoC_goal -= workv3_;
   qd_base.set_sub_vec(NUM_JOINTS,CoM_CoC_goal);
   qd_base.set_sub_vec(NUM_JOINTS+3,Ravelin::Vector3d(-roll_pitch_yaw[0],-roll_pitch_yaw[1],0));
 
   OUTLOG(qd_base,"BASE_GOAL",logDEBUG);
   OUTLOG(CoM_CoC_goal,"GOAL_COM",logDEBUG);
-  OUTLOG(center_of_mass,"center_of_mass",logDEBUG);
+  OUTLOG(center_of_mass_x,"center_of_mass",logDEBUG);
   OUTLOG(center_of_contact.point,"center_of_contact",logDEBUG);
 
   for(int f=0;f<NUM_EEFS;f++){

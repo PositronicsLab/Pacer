@@ -283,7 +283,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   qq.set_sub_vec(qq1.rows(),qq2);
 
   if(!solve_qp_pos(qG,qc,qM,qq,z)){
-    OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!" << std::endl;
+    OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!";
     return false;
   }
 
@@ -455,7 +455,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     // optimize system
     Ravelin::VectorNd w(size_null_space);
     if(!solve_qp(qG,qc,qM,qq,w)){
-      OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!" << std::endl;
+      OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!";
       return false;
       // then skip to calculating x from stage 1 solution
     } else {

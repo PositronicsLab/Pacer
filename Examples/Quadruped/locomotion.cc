@@ -133,7 +133,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       // ratio between gait time (phase_time*N_PHASES) and base differential time (1s)
 
   ///////////////////////////////////////////
-  PHASE = (int)(t/phase_time) % N_PHASES;
+  PHASE = (int)(t/phase_time + Moby::NEAR_ZERO) % N_PHASES;
 
   OUT_LOG(logDEBUG) << " Phase: " << PHASE << "/" << N_PHASES;
 
@@ -264,6 +264,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
 #ifdef VISUALIZE_MOBY
   for(int i=0;i<NUM_EEFS;i++){
+
     for(int i=0;i<eefs_[i].chain.size();i++)
       joints_[eefs_[i].chain[i]]->q[0] = q[eefs_[i].chain[i]];
     abrobot_->update_link_poses();
@@ -272,15 +273,16 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
     Ravelin::VectorNd &T1 = *(spline_t[i].begin()),
                       &T2 = *(spline_t[i].rbegin());
+    OUT_LOG(logDEBUG) << T1[0] <<" : " << t << " : "<< T2[T2.rows()-1] << " -- " << spline_t[i].size();
 
     for(double t=T1[0]+Moby::NEAR_ZERO ; t<=T2[T2.rows()-1] ; t += (phase_time/10.0) / (double)spline_t[i].size()){
       Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
       for(int d=0;d<3;d++){
-        eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
       }
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
 //      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-//      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/10/10;
+//      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
       visualize_ray( p, pos, Ravelin::Vector3d(0,0,0), sim);
 //      visualize_ray(v+p, p, Ravelin::Vector3d(1,0,0), sim);
 //      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
@@ -288,11 +290,14 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
     Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
     for(int d=0;d<3;d++){
-      eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+      Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
     }
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-    visualize_ray( p, pos, Ravelin::Vector3d(0,1,0), sim);
-
+    Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+    Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+    visualize_ray( p, pos, Ravelin::Vector3d(0,0,0), sim);
+    visualize_ray(v+p, p, Ravelin::Vector3d(1,0,0), sim);
+    visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
   }
 
 #endif

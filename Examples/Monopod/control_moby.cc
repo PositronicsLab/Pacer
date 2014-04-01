@@ -26,7 +26,7 @@ void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointP
 
 void controller(Moby::DynamicBodyPtr dbp, double t, void*)
 {
-  std::cerr << " -- controller() entered" << std::endl;
+//  std::cerr << " -- controller() entered" << std::endl;
 
   std::vector<EndEffector>& eefs_ = robot_ptr->get_end_effectors();
   std::vector<Moby::JointPtr>& joints_ = robot_ptr->get_joints();
@@ -88,8 +88,8 @@ void controller(Moby::DynamicBodyPtr dbp, double t, void*)
      last_time = t;
 
      new_sim_step = false;
-  std::cerr << "u_joints = " << U << std::endl;
-  std::cerr << " -- controller() exited" << std::endl;
+//  std::cerr << "u_joints = " << U << std::endl;
+//  std::cerr << " -- controller() exited" << std::endl;
   return;
 
 }
@@ -106,6 +106,7 @@ boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPt
 Moby::RigidBodyPtr create_terrain(unsigned nsph, double width_ext, double height_ext, double max_radius, double min_radius);
 void set_terrain_robot_contact_parameters(Moby::DynamicBodyPtr terrain, Moby::DynamicBodyPtr robot, boost::shared_ptr<Moby::EventDrivenSimulator> sim);
 void create_terrain_visualization(Moby::RigidBodyPtr terrain, boost::shared_ptr<Moby::EventDrivenSimulator> sim);
+void post_step_callback_fn(Moby::Simulator* s);
 
 extern "C" {
 void init(void* separator,
@@ -136,21 +137,22 @@ void init(void* separator,
 #endif
 
   // Set a random friction value in Moby for each contact made
-  //  sim->get_contact_parameters_callback_fn = cp_callback;
-
+#ifdef CONTACT_CALLBACK
+    sim->get_contact_parameters_callback_fn = cp_callback;
+#endif
   // If using dummy contact ignore impact callback function
-  sim->event_post_impulse_callback_fn = &post_event_callback_fn;
-
+    sim->event_post_impulse_callback_fn = &post_event_callback_fn;
+    sim->post_step_callback_fn = &post_step_callback_fn;
   // setup the controller
   abrobot->controller = &controller;
 
 #ifdef USE_TERRAIN
-  unsigned num_spheres = 0;
+  unsigned num_spheres = 60;
   double width_ext = 1,
         height_ext = 0.00,
         max_radius = 0.2,
         min_radius =  0.2;
-  RigidBodyPtr terrain = create_terrain(num_spheres,  width_ext,  height_ext,  max_radius,min_radius);
+  Moby::RigidBodyPtr terrain = create_terrain(num_spheres,  width_ext,  height_ext,  max_radius,min_radius);
   set_terrain_robot_contact_parameters(terrain, abrobot,sim);
   create_terrain_visualization(terrain,sim);
   sim->add_dynamic_body(terrain);

@@ -59,3 +59,4 @@ Examples/Monopod/MATHEMATICA/hopperIK.nb
 Examples/Monopod/monopod.cc
 Examples/Monopod/monopod.h
 src/moby_callback.cc
+src/terrain.cc

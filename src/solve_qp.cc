@@ -44,12 +44,12 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
   bool SOLVE_FLAG = true;
 
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << "% >> solve qp positive" << std::endl;
-  OUT_LOG(logINFO)  << "%QP variables" << std::endl;
-  OUTLOG(Q,"qp_Q");
-  OUTLOG(c,"qp_c");
-  OUTLOG(A,"qp_A");
-  OUTLOG(b,"qp_b");
+  OUT_LOG(logDEBUG1)  << "% >> solve qp positive" ;
+  OUT_LOG(logDEBUG1)  << "%QP variables" ;
+  OUTLOG(Q,"qp_Q",logDEBUG1);
+  OUTLOG(c,"qp_c",logDEBUG1);
+  OUTLOG(A,"qp_A",logDEBUG1);
+  OUTLOG(b,"qp_b",logDEBUG1);
 //  OUT_LOG(logINFO)  << "LCP variables" << std::endl;
 //  OUTLOG(MMM,"MM");
 //  OUTLOG(qqq,"qq");
@@ -70,10 +70,10 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
   for(int i=0;i<n;i++)
       x[i] = zzz[i];
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << "%Solutions" << std::endl;
+  OUT_LOG(logDEBUG1)  << "%Solutions" ;
 //  OUTLOG(zzz,"zz");
-  OUTLOG(x,"xx");
-  OUT_LOG(logINFO)  << "% << solve qp positive" << std::endl;
+  OUTLOG(x,"xx",logDEBUG1);
+  OUT_LOG(logDEBUG1)  << "% << solve qp positive" ;
 #endif
   return SOLVE_FLAG;
 }
@@ -88,7 +88,7 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Raveli
   bool SOLVE_FLAG = true;
 
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << " >> solve qp positive" << std::endl;
+  OUT_LOG(logDEBUG1)  << " >> solve qp positive" ;
 //  OUT_LOG(logINFO)  << "LCP variables" << std::endl;
 //  OUTLOG(Q,"MM");
 //  OUTLOG(c,"qq");
@@ -101,9 +101,9 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Raveli
 //    SOLVE_FLAG = isvalid(x);
 
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << "Solutions" << std::endl;
-  OUTLOG(x,"zz");
-  OUT_LOG(logINFO)  << " << solve qp positive" << std::endl;
+  OUT_LOG(logDEBUG1)  << "Solutions" ;
+  OUTLOG(x,"zz",logDEBUG1);
+  OUT_LOG(logDEBUG1)  << " << solve qp positive" ;
 #endif
   return SOLVE_FLAG;
 }
@@ -150,12 +150,12 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   qqq.set_sub_vec(2*n,nb);
 
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << "% >> solve qp" << std::endl;
-  OUT_LOG(logINFO)  << "%QP variables" << std::endl;
-  OUTLOG(Q,"Q");
-  OUTLOG(c,"c");
-  OUTLOG(A,"AA");
-  OUTLOG(b,"bb");
+  OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;
+  OUT_LOG(logDEBUG1)  << "%QP variables" << std::endl;
+  OUTLOG(Q,"Q",logDEBUG1);
+  OUTLOG(c,"c",logDEBUG1);
+  OUTLOG(A,"AA",logDEBUG1);
+  OUTLOG(b,"bb",logDEBUG1);
 //  OUT_LOG(logINFO)  << "LCP variables" << std::endl;
 //  OUTLOG(MMM,"MM");
 //  OUTLOG(qqq,"qq");
@@ -179,10 +179,10 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
     x[i] = zzz[i] - zzz[n+i];
 
 #ifndef NDEBUG
-  OUT_LOG(logINFO)  << "%Solutions" << std::endl;
+  OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;
 //  OUTLOG(zzz,"zz");
-  OUTLOG(x,"xx");
-  OUT_LOG(logINFO)  << "% << solve qp" << std::endl;
+  OUTLOG(x,"xx",logDEBUG1);
+  OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
 #endif
   return SOLVE_FLAG;
 }

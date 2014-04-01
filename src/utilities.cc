@@ -383,6 +383,6 @@ void PID::control(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd& qd_des
     double ierr = gains[joint_name].perr_sum;
     double derr = qd_des[i] - qd[i];
 
-    ufb[i] = perr*KP + derr*KV + ierr*KI;
+    ufb[i] += perr*KP + derr*KV + ierr*KI;
   }
 }

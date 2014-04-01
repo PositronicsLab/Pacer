@@ -3,10 +3,12 @@
  ****************************************************************************/
 #include <quadruped.h>
 
-std::string LOG_TYPE("ERROR");  // Only major failures from the system
-//std::string LOG_TYPE("INFO");     // Normal print out
+//std::string LOG_TYPE("ERROR");  // Only major failures from the system
+std::string LOG_TYPE("INFO");     // Normal print out
 //std::string LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
 //std::string LOG_TYPE("DEBUG1"); // all function parameters and results
+
+bool new_sim_step = true;
 
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
@@ -30,7 +32,7 @@ void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointP
 
 void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
-  std::cerr << " -- controller() entered" << std::endl;
+//  std::cerr << " -- controller() entered" << std::endl;
 
   std::vector<EndEffector>& eefs_ = robot_ptr->get_end_effectors();
   std::vector<Moby::JointPtr>& joints_ = robot_ptr->get_joints();
@@ -128,9 +130,8 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
       abrobot->update_link_poses();
       abrobot->update_link_velocities();
     }
-#else
-    apply_simulation_forces(U,joints_);
 #endif
+    apply_simulation_forces(U,joints_);
 
      last_time = t;
 
@@ -161,8 +162,9 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   dxl_->set_torque(udat.data());
 # endif
 #endif
-  std::cerr << " -- controller() exited" << std::endl;
+//  std::cerr << " -- controller() exited" << std::endl;
 
+  new_sim_step = false;
 }
 
 void init_cpp(){
@@ -175,7 +177,11 @@ void init_cpp(){
   dxl_ = new Dynamixel("/dev/tty.usbserial-A9YL9ZZV",1000000);
   dxl_->relaxed(false);
 #endif
-  OUT_LOG(logDEBUG) << LOG_TYPE << std::endl;
+  OUT_LOG(logERROR) << "Log Type : " << LOG_TYPE;
+  OUT_LOG(logERROR) << "logERROR";
+  OUT_LOG(logINFO) << "logINFO";
+  OUT_LOG(logDEBUG) << "logDEBUG";
+  OUT_LOG(logDEBUG1) << "logDEBUG1";
 
 }
 /// plugin must be "extern C"

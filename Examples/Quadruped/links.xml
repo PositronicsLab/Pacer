@@ -12,19 +12,19 @@
     <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
     <EulerIntegrator id="euler" />
     <RungeKuttaIntegrator id="rk4" />
-    <RungeKuttaFehlbergIntegrator id="rkf" abs-err-tol="1e-3" rel-err-tol="1e-3" />
-    <BulirschStoerIntegrator id="bs" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+    <RungeKuttaFehlbergIntegrator id="rkf" abs-err-tol="1e-1" rel-err-tol="1e-1" />
+    <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
-  <EventDrivenSimulator integrator-id="rkf" max-event-time="0.01" min-advance="1e-3" Euler-step="1e-6">
+  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1.0" mu-viscous="0" epsilon="0.0"/>
   </EventDrivenSimulator>
 
 

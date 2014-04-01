@@ -49,9 +49,9 @@ void set_terrain_robot_contact_parameters(DynamicBodyPtr terrain, DynamicBodyPtr
   // note: alter contact parameters here
   cp->objects = make_sorted_pair(terrain, robot);
   cp->epsilon = 0.0;
-  cp->mu_coulomb = 1000;
-  cp->mu_viscous = 1000;
-  cp->NK = 8;
+  cp->mu_coulomb = 0;
+  cp->mu_viscous = 1;
+  cp->NK = 4;
 
   // set it up in the simulator
   sim->contact_params[make_sorted_pair(terrain, robot)] = cp;
@@ -71,7 +71,7 @@ boost::shared_ptr<ContactParameters> cp_callback(CollisionGeometryPtr g1, Collis
 
   // setup NK
 //  cp->NK = UINF;
-  cp->NK = 8;
+  cp->NK = 4;
   std::cout << "MU = " << cp->mu_coulomb << std::endl;
 
   return cp;

@@ -51,7 +51,7 @@ class Robot {
   void compile();
   void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext);
   double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
-  void calc_com( Ravelin::Vector3d& weighted_com, Ravelin::Vector3d& com_acc);
+  void calc_com();
   std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
   std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
   std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
@@ -104,7 +104,10 @@ void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, Ravelin::Vecto
                                          base_frame_global;
     unsigned          NC;
     EndEffector       center_of_contact;
-    Ravelin::Vector3d center_of_mass,zero_moment_point;
+    Ravelin::Vector3d center_of_mass_x,
+                      center_of_mass_xd,
+                      center_of_mass_xdd,
+                      zero_moment_point;
     Ravelin::Vector3d roll_pitch_yaw;
     Ravelin::VectorNd uff, ufb;
     Ravelin::VectorNd qdd_des, qdd;

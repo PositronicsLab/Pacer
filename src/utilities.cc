@@ -73,7 +73,7 @@ unsigned Utility::kernal( Ravelin::MatrixNd& M,Ravelin::MatrixNd& Vk){
 
 void Utility::check_finite(Ravelin::VectorNd& v){
   for(int i=0;i<v.rows();i++)
-    if(!isfinite(v[i]))
+    if(!std::isfinite(v[i]))
       v[i] = 0;
 }
 

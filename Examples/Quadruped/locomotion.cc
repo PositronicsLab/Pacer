@@ -164,7 +164,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
         if(!inited){ // first iteration
           // Get Current Foot pos, Velocities & Accelerations
           x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-          foot_jacobian(x,eefs_[i],workM_);
+          foot_jacobian(x,eefs_[i],base_frame,workM_);
           workM_.transpose_mult(qd.select(eefs_[i].chain_bool,workv_),xd);
           workM_.transpose_mult(qdd.select(eefs_[i].chain_bool,workv_),xdd);
         } else {
@@ -175,12 +175,25 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
             assert(pass);
           }
         }
+        Ravelin::AAngled aa_gamma(center_of_contact.normal,command[5] * phase_time * (double)gait[PHASE][i]);
+        OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
 
-        Ravelin::Origin3d to_com(x[0],x[1],0),
-                          arc_step = Ravelin::Origin3d::cross(to_com,Ravelin::Origin3d(0,0,1)),
-                          foot_goal = Ravelin::Origin3d(command[0],command[1],command[2]) + arc_step*command[5];
+        Ravelin::Matrix3d R_gamma;
+        R_gamma =aa_gamma;
+
+        OUTLOG(R_gamma,"R_gamma",logDEBUG);
+
+        Ravelin::Origin3d from_com(x[0],x[1],0),
+//                          arc_step = Ravelin::Origin3d::cross(from_com,Ravelin::Origin3d(0,0,1)),
+//                          foot_goal = Ravelin::Origin3d(command[0],command[1],command[2]) + arc_step*command[5];
+                            arc_step,
+                            foot_goal = Ravelin::Origin3d(command[0],command[1],command[2]) ;
+        R_gamma.mult(from_com,arc_step) -= from_com;
+        OUTLOG(arc_step,"arc_step",logDEBUG);
 
         if(!inited) foot_goal /= 2;
+
+        foot_goal *= phase_time*(double)gait[PHASE][i];
         OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
         std::vector<Ravelin::Origin3d> control_points;
         // TODO: Legs fall behind -- gate timing needs to be adjusted slightly
@@ -188,12 +201,12 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
           // for x:
           control_points.push_back(x);
           control_points.push_back(x + Ravelin::Origin3d(0,0,step_height));
-          control_points.push_back(x + foot_goal*phase_time * (double)gait[PHASE][i] + Ravelin::Origin3d(0,0,step_height));
-          control_points.push_back(x + foot_goal*phase_time * (double)gait[PHASE][i]);
+          control_points.push_back(x + foot_goal + arc_step + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(x + foot_goal + arc_step);
 
         } else if(gait[PHASE][i] < 0){ // swing phase
           control_points.push_back(x);
-          control_points.push_back(x + foot_goal*phase_time * (double)gait[PHASE][i]);
+          control_points.push_back(x + foot_goal + arc_step) ;
         }
 
         Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
@@ -231,8 +244,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   // EEF POSITION
   for(int i=0;i<NUM_EEFS;i++){
     OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_x =" << foot_pos[i];
+    foot_pos[i].pose = base_frame;
     RRMC(eefs_[i],q,foot_pos[i],q_des);
-    OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_q =" << foot_pos[i];
+    OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_q =" << q_des.select(eefs_[i].chain_bool,workv_);
   }
 
   // EEF VELOCITY
@@ -243,7 +257,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
     Ravelin::Origin3d x;
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
       x[k] = q[foot.chain[k]];
-    foot_jacobian(x,foot,J);
+    foot_jacobian(x,foot,base_frame,J);
+
+    OUTLOG(J,foot.id + "J",logERROR);
 
     OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_xd =" << foot_vel[i];
     foot_vel[i].pose = base_frame;

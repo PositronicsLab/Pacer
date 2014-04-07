@@ -84,3 +84,11 @@ void OUTLOG(const Ravelin::SharedVectorNd& z, std::string name,TLogLevel LL){
     OUT_LOG(LL) << name << " = [ %"  << z.rows() << "\n" << str.str() << "]';";
 #endif
 }
+
+void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL){
+#ifndef NDEBUG
+    OUT_LOG(LL) << std::setprecision(9)
+                << name << " = <"
+                << z.x << " " << z.y << " " << z.z << "> (" << z.angle << ");";
+#endif
+}

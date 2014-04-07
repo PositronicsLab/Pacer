@@ -4,12 +4,12 @@
 #include <quadruped.h>
 
 //std::string LOG_TYPE("ERROR");  // Only major failures from the system
-std::string LOG_TYPE("INFO");     // Normal print out
-//std::string LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
+//std::string LOG_TYPE("INFO");     // Normal print out
+std::string LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
 //std::string LOG_TYPE("DEBUG1"); // all function parameters and results
 
 bool new_sim_step = true;
-
+Ravelin::VectorNd perturbation;
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
     Dynamixel* dxl_;
@@ -47,6 +47,12 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 
   Ravelin::MatrixNd q(num_joints,1),
                    qd(num_joints,1);
+
+  perturbation.set_zero(18);
+//  perturbation[12 + 2] = 0.05;
+
+//  abrobot->add_generalized_force(perturbation);
+
   ///  Record Robot State
 #ifdef USE_ROBOT_STATE
     // Query state of robot from R. Links

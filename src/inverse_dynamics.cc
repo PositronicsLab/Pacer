@@ -9,6 +9,10 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
+//bool Robot::inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, Ravelin::VectorNd& x){
+//  M.mult(qdd,x) -= fext;
+//}
+
 bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
 

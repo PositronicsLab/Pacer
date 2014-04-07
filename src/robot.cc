@@ -38,7 +38,10 @@ void Robot::compile(){
 
   NUM_FIXED_JOINTS = 0;
   for(unsigned i=0;i<joints.size();i++){
+    OUT_LOG(logINFO)  << joints[i]->id;
     if(joints[i]->q.rows() == 0){
+      OUT_LOG(logINFO) <<"\tFixed: "<< joints[i]->id;
+
       NUM_FIXED_JOINTS ++;
       continue;
     }
@@ -50,8 +53,8 @@ void Robot::compile(){
       continue;
     }
     joint_names_.push_back(joints_[i]->id);
-    std::cout << joints_[i]->get_coord_index() << " "
-              << joints_[i]->id << std::endl;
+    OUT_LOG(logINFO)  << joints_[i]->get_coord_index() << " "
+              << joints_[i]->id;
   }
 
   // Set up link references
@@ -112,7 +115,6 @@ void Robot::update(){
 
   base_horizontal_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));
   base_horizontal_frame->update_relative_pose(Moby::GLOBAL);
-  base_horizontal_frame->x = base_frame->x;
   Ravelin::Matrix3d Rot(base_frame->q);
   Utility::R2rpy(Rot,roll_pitch_yaw);
 //  OUTLOG(roll_pitch_yaw,"roll_pitch_yaw");
@@ -138,15 +140,18 @@ void Robot::update(){
 
   if(NC != 0) {
     center_of_contact.point.set_zero();
+    center_of_contact.normal.set_zero();
     center_of_contact.point.pose = Moby::GLOBAL;
     center_of_contact.normal.pose = Moby::GLOBAL;
     for(int f=0;f<NUM_EEFS;f++){
       // set gait centers
       if(eefs_[f].active){
         center_of_contact.point += eefs_[f].point/NC;
-        center_of_contact.normal = eefs_[f].normal;
+        center_of_contact.normal += eefs_[f].normal/NC;
       }
     }
+  } else {
+    center_of_contact.normal = Ravelin::Vector3d(0,0,1,Moby::GLOBAL);
   }
 
 #ifdef VISUALIZE_MOBY

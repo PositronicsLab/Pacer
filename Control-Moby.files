@@ -60,3 +60,13 @@ Examples/Monopod/monopod.cc
 Examples/Monopod/monopod.h
 src/moby_callback.cc
 src/terrain.cc
+Examples/Arm/CMakeLists.txt
+Examples/Arm/Arm.h
+Examples/Arm/Arm.cc
+Examples/Arm/control_moby.cc
+Examples/Arm/arm.xml
+Examples/Exoskeleton/CMakeLists.txt
+Examples/Exoskeleton/exoskeleton.h
+Examples/Exoskeleton/exoskeleton.cc
+Examples/Exoskeleton/control_moby.cc
+Examples/Exoskeleton/exo.xml

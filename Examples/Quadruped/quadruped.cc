@@ -4,7 +4,8 @@
 using namespace Ravelin;
 //using namespace Moby;
 
-const bool WALK = true,
+
+const bool WALK = false,
            TRUNK_STABILIZATION = false,
            CONTROL_IDYN = true,
            FRICTION_EST = false,
@@ -13,6 +14,8 @@ const bool WALK = true,
 extern Ravelin::VectorNd STAGE1, STAGE2;
 extern int N_SYSTEMS;
 std::vector<std::vector<int> > trot,trot2,walk, walk2;
+
+extern Ravelin::VectorNd perturbation;
 
 // TODO: This should be extern double to moby's (nominal) STEP_SIZE
 double STEP_SIZE = 0.01;
@@ -30,22 +33,28 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   update();
 
+  try{
+    fext -= perturbation;
+  }catch(Ravelin::MissizeException e){
+
+  }
+
   ((qdd = qd)-=qd_last)/=STEP_SIZE;
 
-  for(int i=0,ii=0;i<NC;i++,ii++){
+  for(int ii=0;ii<NUM_EEFS;ii++){
     Ravelin::Origin3d impulse(0,0,0),contact(0,0,0);
-    while(!eefs_[ii].active){
+    if(eefs_[ii].active){
+      for(unsigned j=0;j< eefs_[ii].contacts.size();j++){
+        impulse += Ravelin::Origin3d(eefs_[ii].contact_impulses[j]);
+        contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[ii].contacts[j]))/eefs_[ii].contacts.size();
+      }
+      OUT_LOG(logINFO) << eefs_[ii].id << "(" << eefs_[ii].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
+                      << "\t@  " << contact
+                      << ",\tn =" << eefs_[ii].normal << std::endl;
       OUTLOG(impulse,"cfM",logINFO);
-      ii++;
+    } else {
+      OUTLOG(impulse,"cfM",logINFO);
     }
-    for(unsigned j=0;j< eefs_[ii].contacts.size();j++){
-      impulse += Ravelin::Origin3d(eefs_[ii].contact_impulses[j]);
-      contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[ii].contacts[j]))/eefs_[ii].contacts.size();
-    }
-    OUT_LOG(logINFO) << eefs_[ii].id << "(" << eefs_[ii].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
-                    << "\t@  " << contact
-                    << ",\tn =" << eefs_[ii].normal << std::endl;
-    OUTLOG(impulse,"cfM",logINFO);
   }
 #ifdef COLLECT_DATA   // record all input vars
   {
@@ -92,22 +101,26 @@ Ravelin::VectorNd& Quadruped::control(double t,
   abrobot_->update_link_velocities();
 
   q_des = q;
-  qd_des = qd;
-  qdd_des = qdd;
-
   if(WALK){
     std::vector<std::vector<int> > gait = trot;
-    Ravelin::SVector6d go_to(0.2,0,0,0,0,0,base_horizontal_frame);
-    double phase_time = 0.1, step_height = 0.02;
+    Ravelin::SVector6d go_to(0.1,0,0,0,0,0,base_horizontal_frame);
+    double phase_time = 0.1, step_height = 0.01;
     walk_toward(go_to,gait,phase_time,step_height,t,q_des,qd_des,qdd_des);
-  }
 
-  if(TRUNK_STABILIZATION){
-    Ravelin::VectorNd id(NUM_JOINTS);
-    id.set_zero();
-    contact_jacobian_null_stabilizer(R,id);
-    OUTLOG(id,"STABILIZATION_FORCES",logDEBUG);
-    uff += id;
+    if(TRUNK_STABILIZATION){
+      double alpha = 1.0;
+
+      Ravelin::VectorNd id(NUM_JOINTS);
+      id.set_zero();
+      Ravelin::SVector6d vel_base = go_to,
+                         pos_base(0,0,0.135,0,0,0);
+      contact_jacobian_null_stabilizer(R,pos_base,vel_base,id);
+      OUTLOG(id,"STABILIZATION_FORCES",logDEBUG);
+      ufb += (id *= alpha);
+    }
+  } else {
+    for(int i=0;i<NUM_EEFS;i++)
+      RRMC(eefs_[i],q,eefs_[i].origin,q_des);
   }
 
   static Ravelin::MatrixNd MU;
@@ -128,13 +141,22 @@ Ravelin::VectorNd& Quadruped::control(double t,
   //  Determine FB forces
   if(PARALLEL_STIFFNESS){
     // Determine accuracy of IDYN
-
     // Apply eef Compliance
     eef_stiffness_fb(q_des, qd_des,q,qd,ufb);
-  } else
-    PID::control(q_des, qd_des,q,qd,joint_names_, gains_,qdd_des);
+  }
+  else{
+    static std::map<std::string, Gains>      gains;
 
-  Utility::check_finite(ufb);
+    // Setup gains
+    if(gains.size() == 0)
+      for(int i=0;i<NUM_JOINTS;i++){
+        gains[joints_[i]->id].perr_sum = 0;
+        gains[joints_[i]->id].kp = 1e5;
+        gains[joints_[i]->id].kv = 5e2;
+        gains[joints_[i]->id].ki = 0;
+      }
+    PID::control(q_des, qd_des,q,qd,joint_names_, gains,qdd_des);
+  }
 
   if(CONTROL_IDYN){
     double dt = STEP_SIZE;
@@ -143,7 +165,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
     Ravelin::VectorNd id(NUM_JOINTS);
     id.set_zero();
     cf.set_zero();
-    inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
+    if(NC>0)
+      inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
+    else{
+      // do simple inverse dynamics
+      M.get_sub_mat(0,NUM_JOINTS,0,NUM_JOINTS,workM_).mult(qdd_des,id) -= fext.get_sub_vec(0,NUM_JOINTS,workv_);
+    }
+
     // Parallel stiffness controller
 #ifdef COLLECT_DATA   // record all input vars
     {
@@ -179,19 +207,18 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 #endif
 
-    for(int i=0,ii=0;i<NC;i++,ii++){
+    for(int i=0,ii=0;ii<NUM_EEFS;ii++){
       Ravelin::Origin3d contact_impulse(0,0,0);
-      while(!eefs_[ii].active){
-//        OUTLOG(contact_impulse,eefs_[ii].id + "_cf2",logINFO);
+      if(eefs_[ii].active){
+        Ravelin::Matrix3d R_foot(             eefs_[ii].normal[0],              eefs_[ii].normal[1],              eefs_[ii].normal[2],
+                                 eefs_[ii].event->contact_tan1[0], eefs_[ii].event->contact_tan1[1], eefs_[ii].event->contact_tan1[2],
+                                 eefs_[ii].event->contact_tan2[0], eefs_[ii].event->contact_tan2[1], eefs_[ii].event->contact_tan2[2]);
+        contact_impulse = Ravelin::Origin3d(cf[i],(cf[i*NK+NC]-cf[i*NK+NC+NK/2]),(cf[i*NK+NC+1]-cf[i*NK+NC+NK/2+1]));
+        OUTLOG(R_foot.transpose_mult(contact_impulse,workv3_),"cf",logINFO);
+        i++;
+      } else {
         OUTLOG(contact_impulse,"cf",logINFO);
-        ii++;
       }
-      Ravelin::Matrix3d R_foot(             eefs_[ii].normal[0],              eefs_[ii].normal[1],              eefs_[ii].normal[2],
-                               eefs_[ii].event->contact_tan1[0], eefs_[ii].event->contact_tan1[1], eefs_[ii].event->contact_tan1[2],
-                               eefs_[ii].event->contact_tan2[0], eefs_[ii].event->contact_tan2[1], eefs_[ii].event->contact_tan2[2]);
-      contact_impulse = Ravelin::Origin3d(cf[i],(cf[i*NK+NC]-cf[i*NK+NC+NK/2]),(cf[i*NK+NC+1]-cf[i*NK+NC+NK/2+1]));
-//      OUTLOG(contact_impulse,eefs_[ii].id + "_cf2",logINFO);
-      OUTLOG(R_foot.transpose_mult(contact_impulse,workv3_),"cf",logINFO);
     }
 
     OUTLOG(STAGE1,"STAGE1",logDEBUG1);
@@ -199,7 +226,23 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     uff += (id*=alpha);
   }
+  else
+  {
+    static std::map<std::string, Gains>      gains;
 
+    // Setup gains
+    if(gains.size() == 0)
+      for(int i=0;i<NUM_JOINTS;i++){
+        gains[joints_[i]->id].perr_sum = 0;
+        gains[joints_[i]->id].kp = 1e2;
+        gains[joints_[i]->id].kv = 1e-1;
+        gains[joints_[i]->id].ki = 0;
+      }
+
+    PID::control(q_des, qd_des,q,qd,joint_names_, gains,ufb);
+  }
+
+  Utility::check_finite(ufb);
   Utility::check_finite(uff);
   // combine ufb and uff
   u = ufb;
@@ -212,7 +255,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 
-  OUT_LOG(logINFO)<< "NC = " << NC << " @ time = "<< t << std::endl;
+  OUT_LOG(logINFO)<< "num_contacts = " << NC ;
+  OUT_LOG(logINFO)<< "time = "<< t ;
      ((workv_ = qd)-=qd_last)/=STEP_SIZE;
      OUT_LOG(logINFO) <<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
      for(unsigned i=0;i< NUM_JOINTS;i++)
@@ -238,6 +282,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
      OUTLOG(q,"q",logDEBUG);
      OUTLOG(qd,"qd",logDEBUG);
      OUTLOG(qdd,"qdd",logDEBUG);
+     OUTLOG(fext,"fext",logDEBUG);
 
      OUTLOG(uff,"uff",logDEBUG);
      OUTLOG(ufb,"ufb",logDEBUG);
@@ -320,14 +365,10 @@ void Quadruped::init(){
   int num_leg_stance = 4;
   switch(num_leg_stance){
     case 4:
-//      eef_origins_["LF_FOOT"] = Ravelin::Vector3d(0.12, 0.056278, -0.13);
-//      eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.12, -0.056278, -0.13);
-//      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.08, 0.0495, -0.13);
-//      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.08, -0.0495, -0.13);
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.11, 0.096278, -0.13);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.11,-0.096278, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.08, 0.096278, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.08,-0.096278, -0.13);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.12, 0.096278, -0.13);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.12,-0.096278, -0.13);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.07, 0.096278, -0.13);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.07,-0.096278, -0.13);
     break;
     case 3:
       // NOTE THIS IS A STABLE 3-leg stance
@@ -412,18 +453,6 @@ void Quadruped::init(){
   torque_limits_["RH_HIP_FE"] =  6.00;
   torque_limits_["RH_LEG_FE"] =  2.60;
 
-  // Setup gains
-  for(int i=0;i<NUM_JOINTS;i++){
-    gains_[joints_[i]->id].perr_sum = 0;
-//    gains_[joints_[i]->id].kp = 2e1;
-//    gains_[joints_[i]->id].kv = 2e-1;
-//    gains_[joints_[i]->id].kp = 2e0;
-//    gains_[joints_[i]->id].kv = 2e-2;
-    gains_[joints_[i]->id].kp = 1e5;
-    gains_[joints_[i]->id].kv = 1e3;
-    gains_[joints_[i]->id].ki = 0;
-  }
-
   // Set Initial State
   Ravelin::VectorNd q_start(NUM_JOINTS+NEULER),
                     qd_start(NUM_JOINTS+NSPATIAL);
@@ -431,10 +460,13 @@ void Quadruped::init(){
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
   qd_start.set_zero();
   qd_start.set_zero();
+  OUTLOG(q_start,"q_start",logINFO);
 
   for(unsigned i=0;i< NUM_JOINTS;i++)
     q_start[i] = (joints_[i]->q[0]  = q0_[joints_[i]->id]);
+  OUTLOG(q_start,"q_start",logINFO);
   abrobot_->update_link_poses();
+
   update();
 
   for(int i=0;i<NUM_EEFS;i++){
@@ -445,7 +477,6 @@ void Quadruped::init(){
     }
   }
   abrobot_->update_link_poses();
-
 
   {
     std::vector<int> step;

@@ -210,8 +210,11 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
   A(2,2) = T[0];
   A(2,3) = 1;
   // start Virtual constraints
+  double tv0 = T[0] + 1e-8;
+  // xddd
+//  A(3,0) = 6;
+//  A(3,4) = -6;
   // xdd
-  double tv0 = T[0] + 1e-4;
   A(3,0) = 6*tv0;
   A(3,1) = 2;
   A(3,4) = -6*tv0;
@@ -235,7 +238,10 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
 
   // End Virtual Constraints
   // Virtual constraints
-  double tvN = T[N-1] - 1e-4;
+  double tvN = T[N-1] - 1e-8;
+  // xddd
+//  A(A.rows()-6,A.columns()-8) = 6;
+//  A(A.rows()-6,A.columns()-4) = -6;
   // xdd
   A(A.rows()-6,A.columns()-8) = 6*tvN;
   A(A.rows()-6,A.columns()-7) = 2;
@@ -318,6 +324,10 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
 
   // Exclude virtual points
   workv_.get_sub_vec(4,workv_.size()-4,B);
+//  for(int i=0;i<4;i++){
+//    B[i] = workv_[i];
+//    B[B.size()-1-i] = workv_[workv_.size()-1-i];
+//  }
 }
 
 void Utility::eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
@@ -343,9 +353,6 @@ void Utility::eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::Ve
 
 bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                        double& X, double& Xd, double& Xdd){
-
-
-
   int j=0,k=0;
   while(t >= t_limits[j][k+1]){
     k++;

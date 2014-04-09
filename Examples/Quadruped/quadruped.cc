@@ -562,8 +562,7 @@ void Quadruped::init(){
 
   }
 
-  trot2 = trot;
-//  expand_gait(trot,2,trot2);
+  expand_gait(trot,2,trot2);
 
   for(int i=0;i<trot2.size();i++){
     for(int j=0;j<trot2[i].size();j++)
@@ -571,7 +570,6 @@ void Quadruped::init(){
   OUT_LOG(logINFO);
 
   }
-//  assert(false);
 }
   // Push initial state to robot
 

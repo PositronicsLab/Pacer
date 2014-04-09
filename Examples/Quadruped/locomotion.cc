@@ -192,7 +192,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
           assert(pass);
         }
       }
-      Ravelin::AAngled aa_gamma(center_of_contact.normal,command[5] * phase_time * ((gait[PHASE][i]>0)? 1.0 : -1.0) );
+      Ravelin::AAngled aa_gamma(center_of_contact.normal,command[5] * phase_time * (double)gait[PHASE][i]);
       OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
 
       Ravelin::Matrix3d R_gamma;
@@ -207,47 +207,29 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
       OUTLOG(arc_step,"arc_step",logDEBUG);
 
-      if(!inited) foot_goal /= 2;
 
-      foot_goal *= phase_time*((gait[PHASE][i]>0)? 1.0 : -1.0);
+      foot_goal *= phase_time* (double)gait[PHASE][i];
+
+      foot_goal += arc_step;
+
+      if(!inited) foot_goal /= 2;  // only works for 2 interval gait
 
       OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
+
       std::vector<Ravelin::Origin3d> control_points;
 
       if(gait[PHASE][i] > 0){
         // SWING PAHSE
-
-        if(gait[PHASE][i] == 1){
-          // Swing -> stance
-          if(gait[(PHASE-1+N_PHASES)%N_PHASES][i] < 0){
-            // stance -> swing -> stance
-
-            control_points.push_back(x);
-            control_points.push_back(x + Ravelin::Origin3d(0,0,step_height));
-            control_points.push_back(x + foot_goal + arc_step + Ravelin::Origin3d(0,0,step_height));
-            control_points.push_back(x + foot_goal + arc_step);
-          } else {
-            // Swing -> stance
-
-            control_points.push_back(x);
-            control_points.push_back(x + foot_goal + arc_step);
-            control_points.push_back(x + foot_goal + arc_step - Ravelin::Origin3d(0,0,step_height));
-          }
-        } else {
-          // Swing -> swing
-
-          control_points.push_back(x);
-          control_points.push_back(x + foot_goal + arc_step);
-        }
+        control_points.push_back(x);
+        control_points.push_back(x + Ravelin::Origin3d(0,0,step_height));
+        control_points.push_back(x + foot_goal + Ravelin::Origin3d(0,0,step_height));
+        control_points.push_back(x + foot_goal);
       }
       else if(gait[PHASE][i] < 0){
         // all stance phase cases
-
         control_points.push_back(x);
-        control_points.push_back(x + foot_goal + arc_step) ;
+        control_points.push_back(x + foot_goal) ;
       }
-
-      Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
 
       // create new spline!!
       // copy last spline to history erasing oldest spline
@@ -267,13 +249,14 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
         T.set_zero(n);
         for(int j=0;j<n;j++){
-//          T[j] = t0 + (phase_time * fabs(gait[PHASE][i]) / (n-1)) * (double)j ;
-          T[j] = t0 + (phase_time / (n-1)) * (double)j ;
+          T[j] = t0 + (phase_time * fabs(gait[PHASE][i]) / (n-1)) * (double)j ;
           X[j] = control_points[j][d];
         }
 
         Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_velocity[d]),Ravelin::Vector2d(xdd[d],0),coefs);
 
+        // then re-evaluate spline
+        // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
       }
     }
@@ -282,7 +265,6 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   ///////////////////////////////////////////////////////
   ////////////////////// CONTROL ////////////////////////
   OUT_LOG(logDEBUG) << "Resulting Controls:";
-
 
   for(int i=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];

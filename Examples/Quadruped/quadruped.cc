@@ -5,7 +5,7 @@ using namespace Ravelin;
 //using namespace Moby;
 
 
-const bool WALK = false,
+const bool WALK = true,
            TRUNK_STABILIZATION = false,
            CONTROL_IDYN = true,
            FRICTION_EST = false,
@@ -41,44 +41,41 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   ((qdd = qd)-=qd_last)/=STEP_SIZE;
 
-  for(int ii=0;ii<NUM_EEFS;ii++){
-    Ravelin::Origin3d impulse(0,0,0),contact(0,0,0);
-    if(eefs_[ii].active){
-      for(unsigned j=0;j< eefs_[ii].contacts.size();j++){
-        impulse += Ravelin::Origin3d(eefs_[ii].contact_impulses[j]);
-        contact += Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[ii].contacts[j]))/eefs_[ii].contacts.size();
-      }
-      OUT_LOG(logINFO) << eefs_[ii].id << "(" << eefs_[ii].contacts.size()<< ")\t " <<  std::setprecision(5) << impulse
-                      << "\t@  " << contact
-                      << ",\tn =" << eefs_[ii].normal << std::endl;
-      OUTLOG(impulse,"cfM",logINFO);
-    } else {
-      OUTLOG(impulse,"cfM",logINFO);
-    }
-  }
 #ifdef COLLECT_DATA   // record all input vars
   {
     // generate a unique filename
     std::ostringstream fname;
-    fname << "moby_cf" << (N_SYSTEMS) << ".m";
+    fname << "data/true_data" << (N_SYSTEMS) << ".m";
 
     // open the file
     std::ofstream out(fname.str().c_str());
 
+    out << "contacts = [";
     for(unsigned i=0;i< eefs_.size();i++){
+      if(eefs_[i].active)
+        out << 1 << " "<< std::endl;
+      else
+        out << 0 << " " << std::endl;
+    }
+    out << "];" << std::endl;
+
+    for(unsigned i=0,ii=0;i< eefs_.size();i++){
       if(!eefs_[i].active){
-        out << "cfs_" << i << " = [0/0,0/0,0/0];" << std::endl;
-        out << "pts_" << i << " = [0/0,0/0,0/0];" << std::endl;
+        out << "impulse_" << i << " = [0,0,0];" << std::endl;
+        out << "normal_"  << i << " = [0,0,0];" << std::endl;
+        out << "point_"   << i << " = [0,0,0];" << std::endl;
         continue;
       }
-      Ravelin::MatrixNd impulses(eefs_[i].contacts.size(),3),contacts(eefs_[i].contacts.size(),3);
-      for(unsigned j=0;j< eefs_[i].contacts.size();j++){
-        impulses.set_row(j,eefs_[i].contact_impulses[j]);
-        contacts.set_row(j,Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].contacts[j]));
-      }
-      out << "cfs_" << i << " = [\n"<< impulses << "];" << std::endl;
-      out << "pts_" << i << " = [\n"<< contacts << "];" << std::endl;
+
+      out << "impulse_" << i << " = "<< eefs_[i].contact_impulses[0] << ";" << std::endl;
+      out << "normal_"  << i << " = "<< eefs_[i].normal << ";" << std::endl;
+      out << "point_"   << i << " = "<< eefs_[i].point << ";" << std::endl;
+      ii++;
     }
+
+    out <<"impulse_true = [impulse_0' impulse_1' impulse_2' impulse_3'];" << std::endl;
+    out <<"normal_true  = [normal_0' normal_1' normal_2' normal_3'];" << std::endl;
+    out <<"point_true   = [point_0' point_1' point_2' point_3'];" << std::endl;
 
     out.close();
   }
@@ -177,31 +174,40 @@ Ravelin::VectorNd& Quadruped::control(double t,
     {
       // generate a unique filename
       std::ostringstream fname;
-      fname << "idyn_soln" << (N_SYSTEMS) << ".m";
+      fname << "data/observed_data" << (N_SYSTEMS) << ".m";
 
       // open the file
       std::ofstream out(fname.str().c_str());
 
-      out  << "x = " << id << std::endl;
-      out  << "x = x';" << std::endl;
-
-      out  << "z = " << cf << std::endl;
-      out  << "z = z';" << std::endl;
+      out << "contacts = [";
+      for(unsigned i=0;i< eefs_.size();i++){
+        if(eefs_[i].active)
+          out << 1 << " "<< std::endl;
+        else
+          out << 0 << " " << std::endl;
+      }
+      out << "];" << std::endl;
 
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active){
-          out << "cfs_" << i << " = [0/0,0/0,0/0];" << std::endl;
-          out << "pts_" << i << " = [0/0,0/0,0/0];" << std::endl;
+          out << "impulse_" << i << " = [0,0,0];" << std::endl;
+          out << "normal_"  << i << " = [0,0,0];" << std::endl;
+          out << "point_"   << i << " = [0,0,0];" << std::endl;
           continue;
         }
         Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
                                  eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
                                  eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
         Ravelin::Origin3d contact_impulse(cf[ii],(cf[ii*NK+NC]-cf[ii*NK+NC+NK/2]),(cf[ii*NK+NC+1]-cf[ii*NK+NC+NK/2+1]));
-        out << "cfs_idyn_" << i << " = "<< R_foot.transpose_mult(contact_impulse,workv3_) << "; cfs_idyn_" << i <<"= cfs_idyn_" << i <<"'"<< std::endl;
-        out << "pts_idyn_" << i << " = "<< eefs_[i].point << "; pts_idyn_" << i <<"= pts_idyn_" << i <<"'" << std::endl;
+        out << "impulse_" << i << " = "<< R_foot.transpose_mult(contact_impulse,workv3_)/(STEP_SIZE/0.001) << ";" << std::endl;
+        out << "normal_"  << i << " = "<< eefs_[i].normal << ";" << std::endl;
+        out << "point_"   << i << " = "<< eefs_[i].point << ";" << std::endl;
         ii++;
       }
+
+      out <<"impulse_observed = [impulse_0' impulse_1' impulse_2' impulse_3'];" << std::endl;
+      out <<"normal_observed  = [normal_0' normal_1' normal_2' normal_3'];" << std::endl;
+      out <<"point_observed   = [point_0' point_1' point_2' point_3'];" << std::endl;
 
       out.close();
     }

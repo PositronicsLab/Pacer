@@ -96,7 +96,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 #ifdef COLLECT_DATA   // record all input vars
     // generate a unique filename
     std::ostringstream fname;
-    fname << "idyn_system" << (N_SYSTEMS) << ".m";
+    fname << "data/idyn_system" << (N_SYSTEMS) << ".m";
 
     // open the file
     std::ofstream out(fname.str().c_str());

@@ -24,6 +24,8 @@ class Quadruped : public Robot{
       const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Ravelin::MatrixNd& C,
       double Ls,const Ravelin::VectorNd& Hs,double Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd);
 
+    static std::vector<std::vector<int> >& expand_gait(const std::vector<std::vector<int> >& gait1,int m, std::vector<std::vector<int> >& gait2);
+
     void init();
 
     void fk_stance_adjustment(double dt);

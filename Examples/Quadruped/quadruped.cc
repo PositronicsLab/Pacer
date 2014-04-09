@@ -99,9 +99,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   q_des = q;
   if(WALK){
-    std::vector<std::vector<int> > gait = trot;
+    std::vector<std::vector<int> > gait = trot2;
     Ravelin::SVector6d go_to(0.1,0,0,0,0,0,base_horizontal_frame);
-    double phase_time = 0.1, step_height = 0.01;
+    double phase_time = 0.05, step_height = 0.01;
     walk_toward(go_to,gait,phase_time,step_height,t,q_des,qd_des,qdd_des);
 
     if(TRUNK_STABILIZATION){
@@ -115,10 +115,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
       OUTLOG(id,"STABILIZATION_FORCES",logDEBUG);
       ufb += (id *= alpha);
     }
-  } else {
+  }
+  else {
     for(int i=0;i<NUM_EEFS;i++)
       RRMC(eefs_[i],q,eefs_[i].origin,q_des);
   }
+  qdd_des.set_zero(NUM_JOINTS);
+  qd_des.set_zero(NUM_JOINTS);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
@@ -501,33 +504,6 @@ void Quadruped::init(){
 
   {
     std::vector<int> step;
-    step.push_back(-3);
-    step.push_back(-1);
-    step.push_back(-1);
-    step.push_back(-3);
-    trot2.push_back(step);
-    step.clear();
-    step.push_back(-2);
-    step.push_back(1);
-    step.push_back(1);
-    step.push_back(-2);
-    trot2.push_back(step);
-    step.clear();
-    step.push_back(-1);
-    step.push_back(-3);
-    step.push_back(-3);
-    step.push_back(-1);
-    trot2.push_back(step);
-    step.clear();
-    step.push_back(1);
-    step.push_back(-2);
-    step.push_back(-2);
-    step.push_back(1);
-    trot2.push_back(step);
-  }
-
-  {
-    std::vector<int> step;
     step.push_back(1);
     step.push_back(-1);
     step.push_back(-2);
@@ -585,6 +561,17 @@ void Quadruped::init(){
   OUT_LOG(logINFO);
 
   }
+
+  trot2 = trot;
+//  expand_gait(trot,2,trot2);
+
+  for(int i=0;i<trot2.size();i++){
+    for(int j=0;j<trot2[i].size();j++)
+      OUT_LOG(logINFO)<< trot2[i][j] << " ";
+  OUT_LOG(logINFO);
+
+  }
+//  assert(false);
 }
   // Push initial state to robot
 

@@ -44,17 +44,17 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const R
 
 Kp[0] = 0;
 Kp[1] = 0;
-Kp[2] = 1e-1;
-Kp[3] = 1e-1;
-Kp[4] = 1e-1;
+Kp[2] = 1e5;
+Kp[3] = 1e5;
+Kp[4] = 1e5;
 Kp[5] = 0;
 
-Kv[0] = 1e-1;
-Kv[1] = 1e-1;
-Kv[2] = 1e-1;
-Kv[3] = 1e-1;
-Kv[4] = 1e-1;
-Kv[5] = 1e-1;
+Kv[0] = 1e3;
+Kv[1] = 1e3;
+Kv[2] = 1e3;
+Kv[3] = 1e3;
+Kv[4] = 1e3;
+Kv[5] = 1e3;
 
   Ravelin::VectorNd pos_base(6), vel_base(6);
   vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
@@ -63,6 +63,8 @@ Kv[5] = 1e-1;
 
   vel_base -= vel_des;
   pos_base -= pos_des;
+  vel_base.negate();
+  pos_base.negate();
 
   static Ravelin::VectorNd Y,tY;
   Y.set_zero(active_dofs.size());
@@ -73,7 +75,7 @@ Kv[5] = 1e-1;
 
 
   OUTLOG(Y,"g_stabilization",logDEBUG);
-  Jh.mult(Y,tY);
+  Jh.get_sub_mat(0,active_dofs.size(),active_dofs.size()-6,active_dofs.size(),workM_).mult(Y,tY);
   OUTLOG(tY,"stabilization",logDEBUG);
   // apply base stabilization forces
   for(int i=0;i<NC*3;i++)

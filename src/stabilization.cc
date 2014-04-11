@@ -1,5 +1,6 @@
 #include<robot.h>
 #include <utilities.h>
+extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 
 using namespace Ravelin;
 
@@ -25,58 +26,63 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const R
 
   std::sort(active_dofs.begin(),active_dofs.end());
   R.select_rows(active_dofs.begin(),active_dofs.end(),J);
+  J.transpose();
   OUTLOG(J,"J",logDEBUG1);
 
   // Generate Jh homogenous portion of jacobian system
-  Ravelin::MatrixNd Jh = MatrixNd::identity(J.rows()),
-      J_plus = J;
-  LA_.pseudo_invert(J_plus);
-  OUTLOG(J_plus,"J+",logDEBUG1);
-
-  Jh -= J.mult(J_plus,workM_);
-
-  OUTLOG(Jh,"Jh",logDEBUG1);
+  Ravelin::MatrixNd J_star;
+//  Utility::kernal(J,J_star);
+  LA_.nullspace(J,J_star);
+  OUTLOG(J_star,"J*",logDEBUG1);
 
   // Trunk Stability gains
 
-  OUTLOG(roll_pitch_yaw,"Roll, Pitch, Yaw",logDEBUG1);
-  Ravelin::VectorNd Kp(6), Kv(6);
+  Ravelin::VectorNd Kv(6);
 
-Kp[0] = 0;
-Kp[1] = 0;
-Kp[2] = 1e5;
-Kp[3] = 1e5;
-Kp[4] = 1e5;
-Kp[5] = 0;
+  Kv[0] = 0;
+  Kv[1] = 0;
+  Kv[2] = 0;
+  Kv[3] = 1e4;
+  Kv[4] = 1e4;
+  Kv[5] = 0;
 
-Kv[0] = 1e3;
-Kv[1] = 1e3;
-Kv[2] = 1e3;
-Kv[3] = 1e3;
-Kv[4] = 1e3;
-Kv[5] = 1e3;
-
-  Ravelin::VectorNd pos_base(6), vel_base(6);
+  Ravelin::VectorNd vel_base(6);
   vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
-  pos_base.set_sub_vec(3,roll_pitch_yaw);
-  pos_base.set_sub_vec(0,gc.get_sub_vec(NUM_JOINTS,NUM_JOINTS+3,workv_));
 
   vel_base -= vel_des;
-  pos_base -= pos_des;
-  vel_base.negate();
-  pos_base.negate();
 
-  static Ravelin::VectorNd Y,tY;
-  Y.set_zero(active_dofs.size());
-  tY.set_zero(active_dofs.size()-6);
+  static Ravelin::VectorNd tY;
 
-  // Y = Kp*perr + Kv*ver
-  Ravelin::MatrixNd::diag_mult(Kp,pos_base,Y) +=  Ravelin::MatrixNd::diag_mult(Kv,vel_base,workv_);
+  {
+    // Minimize ( Kv (qd - qd_des) + J* w )^2
+    // min(w) y = w' [J*' J*] w + [qd_err Kv' J*] w
+    // apply J* w to joints
 
+    Ravelin::MatrixNd Q,//(J_star.columns(),J_star.columns()),
+                      A(0,J_star.columns()),
+                      K(active_dofs.size(),active_dofs.size());
+    Ravelin::VectorNd c,//(J_star.columns()),
+                      b(0),
+                      qd_err,
+                      w(J_star.columns());
+    qd_err.set_zero(active_dofs.size());
+    qd_err.set_sub_vec(active_dofs.size()-6,vel_base);
+    OUTLOG(qd_err,"qd_err",logDEBUG);
 
-  OUTLOG(Y,"g_stabilization",logDEBUG);
-  Jh.get_sub_mat(0,active_dofs.size(),active_dofs.size()-6,active_dofs.size(),workM_).mult(Y,tY);
-  OUTLOG(tY,"stabilization",logDEBUG);
+    K.set_zero(active_dofs.size(),active_dofs.size());
+    K.set_sub_mat(active_dofs.size()-6,active_dofs.size()-6,Ravelin::MatrixNd::diag_mult(Kv,Ravelin::MatrixNd::identity(6),workM_));
+
+    J_star.transpose_mult(J_star,Q);
+    K.transpose_mult(J_star,workM_).transpose_mult(qd_err,c);
+
+    solve_qp(Q,c,A,b,w);
+
+    // tY = J* w
+    J_star.mult(w,tY);
+    OUTLOG(tY,"qd_correction",logDEBUG);
+
+  }
+
   // apply base stabilization forces
   for(int i=0;i<NC*3;i++)
     uff[active_dofs[i]] += tY[i];

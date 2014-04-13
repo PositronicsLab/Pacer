@@ -6,3 +6,4 @@ Examples/Monopod
 /usr/include
 /opt/include
 /opt/local/include
+ThirdParty/alglib/src

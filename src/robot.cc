@@ -136,8 +136,6 @@ void Robot::update(){
   draw_pose(Moby::GLOBAL,sim);
 #endif
 
-  calc_eef_jacobians(J);
-
   if(NC != 0) {
     center_of_contact.point.set_zero();
     center_of_contact.normal.set_zero();

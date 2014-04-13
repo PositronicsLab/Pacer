@@ -49,7 +49,8 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                    qd(num_joints,1);
 
   perturbation.set_zero(18);
-//  perturbation[12 + 2] = 0.05;
+//  perturbation[12 + 2] = -2;
+//  perturbation[12 + 3] = 1;
 
 //  abrobot->add_generalized_force(perturbation);
 

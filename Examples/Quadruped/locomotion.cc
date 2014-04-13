@@ -1,12 +1,11 @@
 #include<quadruped.h>
 #include<utilities.h>
-using namespace Ravelin;
 
 void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
   if(dt==0)
     t = 0;
-  static Ravelin::VectorNd workv_,last_qd_des = VectorNd::zero(NUM_JOINTS);
+  static Ravelin::VectorNd workv_,last_qd_des = Ravelin::VectorNd::zero(NUM_JOINTS);
   static Ravelin::MatrixNd workM_;
   t += dt;
 
@@ -105,7 +104,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   if(last_time - t > phase_time)
     inited = false;
   // Vector holding spline coefs
-  static std::vector< std::vector< std::vector<Ravelin::VectorNd> > > spline_coef(NUM_EEFS);
+  static std::vector< std::vector< std::vector<alglib::spline1dinterpolant> > > spline_coef(NUM_EEFS);
   // Vector holding time delimitations to each spline
   static std::vector< std::vector<Ravelin::VectorNd> > spline_t(NUM_EEFS);
   assert(gait[0].size() == NUM_EEFS);
@@ -125,7 +124,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       for(int d=0; d<3;d++){
         spline_coef[i][d].resize(spline_plan_length);
         for(int j = 0; j<  spline_plan_length;j++)
-          spline_coef[i][d][j] = Ravelin::VectorNd::zero(2);
+          spline_coef[i][d][j] = alglib::spline1dinterpolant();
       }
       spline_t[i].resize(spline_plan_length);
       for(int j = 0; j<  spline_plan_length;j++)
@@ -193,6 +192,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
         }
       }
       Ravelin::AAngled aa_gamma(center_of_contact.normal,command[5] * phase_time * (double)gait[PHASE][i]);
+
       OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
 
       Ravelin::Matrix3d R_gamma;
@@ -206,7 +206,6 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       R_gamma.mult(from_com,arc_step) -= from_com;
 
       OUTLOG(arc_step,"arc_step",logDEBUG);
-
 
       foot_goal *= phase_time* (double)gait[PHASE][i];
 
@@ -244,8 +243,8 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       for(int d=0;d<3;d++){
         int n = control_points.size();
         Ravelin::VectorNd X(n);
-        Ravelin::VectorNd &T     = *(spline_t[i].rbegin()),
-                          &coefs = *(spline_coef[i][d].rbegin());
+        Ravelin::VectorNd           &T     = *(spline_t[i].rbegin());
+        alglib::spline1dinterpolant &coefs = *(spline_coef[i][d].rbegin());
 
         T.set_zero(n);
         for(int j=0;j<n;j++){
@@ -253,8 +252,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
           X[j] = control_points[j][d];
         }
 
-        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_velocity[d]),Ravelin::Vector2d(xdd[d],0),coefs);
+        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_velocity[d]),coefs);
 
+        OUTLOG(T,"T",logERROR);
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
@@ -285,12 +285,12 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
     // VELOCITY & ACCELERATION
     OUT_LOG(logDEBUG) << "\t" << foot.id << "_xd =" << foot_vel[i];
     foot_vel[i].pose = base_frame;
-    LA_.solve_fast(J,foot_vel[i]);
+    LA_.solve_fast((workM_ = J),foot_vel[i]);
     OUT_LOG(logDEBUG) << "\t" << foot.id << "_qd =" << foot_vel[i];
 
     OUT_LOG(logDEBUG) << "\t" << foot.id << "_xdd =" << foot_acc[i];
     foot_acc[i].pose = base_frame;
-    LA_.solve_fast(J,foot_acc[i]);
+    LA_.solve_fast((workM_ = J),foot_acc[i]);
     OUT_LOG(logDEBUG) << "\t" << foot.id << "_qdd =" << foot_acc[i];
 
     for(int j=0;j<foot.chain.size();j++){
@@ -318,11 +318,11 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
       }
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-//      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-//      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      visualize_ray( p, pos, Ravelin::Vector3d(0,0,0), sim);
-//      visualize_ray(v+p, p, Ravelin::Vector3d(1,0,0), sim);
-//      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
+      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+      visualize_ray(    p, pos,   Ravelin::Vector3d(0,0,0), sim);
+      visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
+      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
     }
 
     Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
@@ -332,8 +332,8 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
     Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
     Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-    visualize_ray( p, pos, Ravelin::Vector3d(0,0,0), sim);
-    visualize_ray(v+p, p, Ravelin::Vector3d(1,0,0), sim);
+    visualize_ray(    p, pos,   Ravelin::Vector3d(0,0,0), sim);
+    visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
     visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
   }
 #endif

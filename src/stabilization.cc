@@ -4,7 +4,7 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 using namespace Ravelin;
 
-void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& pos_des, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& uff){
+void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::SVelocityd& vel_des, Ravelin::VectorNd& uff){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
 
@@ -17,13 +17,16 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const R
         active_dofs.push_back(eefs_[i].chain[j]);
 
   if(active_dofs.size() == 0) return;
-  OUTLOG(R,"R",logDEBUG1);
+
   // Select active rows in Jacobian Matrix
   // R -> Jh
   static Ravelin::MatrixNd J;
-  for(int i=NUM_JOINTS;i<NDOFS;i++)
-    active_dofs.push_back(i);
 
+  for(int i=0;i<NUM_EEFS;i++){
+    static Ravelin::MatrixNd Jf;
+
+
+  }
   std::sort(active_dofs.begin(),active_dofs.end());
   R.select_rows(active_dofs.begin(),active_dofs.end(),J);
   J.transpose();
@@ -46,10 +49,11 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const R
   Kv[4] = 1e4;
   Kv[5] = 0;
 
-  Ravelin::VectorNd vel_base(6);
+  Ravelin::SVelocityd vel_base;
   vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
 
   vel_base -= vel_des;
+//  vel_base = (Ravelin::VectorNd::diag_mult(Kv,))
 
   static Ravelin::VectorNd tY;
 
@@ -68,9 +72,6 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const R
     qd_err.set_zero(active_dofs.size());
     qd_err.set_sub_vec(active_dofs.size()-6,vel_base);
     OUTLOG(qd_err,"qd_err",logDEBUG);
-
-    K.set_zero(active_dofs.size(),active_dofs.size());
-    K.set_sub_mat(active_dofs.size()-6,active_dofs.size()-6,Ravelin::MatrixNd::diag_mult(Kv,Ravelin::MatrixNd::identity(6),workM_));
 
     J_star.transpose_mult(J_star,Q);
     K.transpose_mult(J_star,workM_).transpose_mult(qd_err,c);

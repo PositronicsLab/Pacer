@@ -63,13 +63,13 @@ class Robot {
                              const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
                              Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
-void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& pos_des, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& uff);
+  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVelocityd& vel_des, Ravelin::VectorNd& uff);
 
   bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                         double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
   void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
-  void calc_eef_jacobians(Ravelin::MatrixNd& R);
+  void calc_base_jacobian(Ravelin::MatrixNd& R);
   void RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
   void eef_stiffness_fb(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd&  qd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
@@ -111,7 +111,7 @@ void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin:
     Ravelin::Vector3d roll_pitch_yaw;
     Ravelin::VectorNd uff, ufb;
     Ravelin::VectorNd qdd_des, qdd;
-    Ravelin::MatrixNd N,D,M,ST,R,J;
+    Ravelin::MatrixNd N,D,M,ST,R;
     Ravelin::VectorNd fext;
     Ravelin::VectorNd vel, gc, acc;
     // NDFOFS for forces, accel, & velocities

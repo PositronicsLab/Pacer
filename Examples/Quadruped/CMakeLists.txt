@@ -120,7 +120,7 @@ set(THIRDPARTY
 
 add_library(${PROJECT_NAME} MODULE ${SOURCES} ${SOURCES2} ${THIRDPARTY})
 
-target_link_libraries(${PROJECT_NAME} Moby Ravelin glut osg osgDB GLU OpenThreads)
+target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt glut osg osgDB GLU OpenThreads)
 
 if(DYNAMIXEL)
   target_link_libraries(${PROJECT_NAME} dxl)

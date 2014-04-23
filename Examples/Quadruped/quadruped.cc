@@ -9,16 +9,17 @@ const bool WALK = true,
            TRUNK_STABILIZATION = false,
            CONTROL_IDYN = true,
            FRICTION_EST = false,
-           PARALLEL_STIFFNESS = false;
+           PARALLEL_STIFFNESS = false,
+           USE_LAST_CFS = true;
 
 extern Ravelin::VectorNd STAGE1, STAGE2;
 extern int N_SYSTEMS;
-std::vector<std::vector<int> > trot,trot2,walk, walk2;
+std::vector<std::vector<int> > trot, walk,gallop;
 
 extern Ravelin::VectorNd perturbation;
 
 // TODO: This should be extern double to moby's (nominal) STEP_SIZE
-double STEP_SIZE = 0.01;
+double STEP_SIZE = 0.001;
 
 extern bool new_sim_step;
 
@@ -101,11 +102,25 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   q_des = q;
   Ravelin::SVector6d go_to;
+  Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
+
   if(WALK){
-    std::vector<std::vector<int> > gait = trot2;
-    go_to = Ravelin::SVector6d(0.15,0,0,0,0,0,base_horizontal_frame);
-    double phase_time = 0.1, step_height = 0.02;
-    walk_toward(go_to,gait,phase_time,step_height,t,q_des,qd_des,qdd_des);
+    double interval_time = 0.1, step_height = 0.01;
+    // Assign Gait to the locomotion controller
+    std::vector<std::vector<int> > gait = trot;
+
+    // Determine footholds (every 10th of a second)
+    static std::vector<Ravelin::Vector3d> footholds;
+//    if(((int)(t*1000) % 100) == 0){
+    if((int)(t*1000) == 0){
+      footholds.clear();
+//      find_footholds(footholds,1000);
+    }
+    std::vector<Ravelin::Vector3d> foot_vel, foot_pos, foot_acc;
+    go_to = Ravelin::SVector6d(0.01,0,0,0,0,0,base_horizontal_frame);
+    walk_toward(go_to,gait,footholds,interval_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
+    workspace_trajectory_goal(go_to,foot_pos,foot_vel, foot_acc,1,0.001,vb_w);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++)
@@ -126,6 +141,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
       for(int k=0;k<NK/2;k++)
         MU(i,k) = 1;
 
+  if(TRUNK_STABILIZATION){
+    Ravelin::VectorNd id(NUM_JOINTS);
+    Ravelin::MatrixNd J;
+    calc_base_jacobian(J);
+    zmp_stabilizer(J,Ravelin::Vector2d(0,0),id);
+//    qdd_des += id;
+  }
 
   //  Determine FB forces
   if(PARALLEL_STIFFNESS){
@@ -151,16 +173,38 @@ Ravelin::VectorNd& Quadruped::control(double t,
   if(CONTROL_IDYN){
     double dt = STEP_SIZE;
     double alpha = 1.0;
-    Ravelin::VectorNd cf(NC*5);
+    Ravelin::VectorNd cf;
     Ravelin::VectorNd id(NUM_JOINTS);
     id.set_zero();
-    cf.set_zero();
-    if(NC>0)
-      inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
-    else{
-      // do simple inverse dynamics
-      M.get_sub_mat(0,NUM_JOINTS,0,NUM_JOINTS,workM_).mult(qdd_des,id) -= fext.get_sub_vec(0,NUM_JOINTS,workv_);
+    if(USE_LAST_CFS || NC==0){
+      cf.set_zero(NC*5);
+      for(unsigned i=0,ii=0;i< eefs_.size();i++){
+        if(!eefs_[i].active) continue;
+          Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
+                                 eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
+                                 eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
+        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].contact_impulses[0],workv3_)*(STEP_SIZE/0.001));
+        cf[ii] = contact_impulse[0];
+        if(contact_impulse[1] > 0)
+          cf[ii*NK+NC] = contact_impulse[1];
+        else
+          cf[ii*NK+NC+NK/2] = contact_impulse[1];
+        if(contact_impulse[2] > 0)
+          cf[ii*NK+NC+1] = contact_impulse[2];
+        else
+          cf[ii*NK+NC+1+NK/2] = contact_impulse[2];
+        ii++;
+      }
+      Utility::check_finite(cf);
+      OUTLOG(cf,"cf z",logERROR);
     }
+
+
+//    if(NC>0)
+//      inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
+      vel_w = Rw.mult(vel,workv_);
+      inverse_dynamics(vel_w,vb_w,M,fext,dt,MU,id,cf);
+
 
     // Parallel stiffness controller
 #ifdef COLLECT_DATA   // record all input vars
@@ -328,6 +372,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
      return u;
 }
 
+#include <boost/assign/std/vector.hpp>
+#include <boost/assign/list_of.hpp>
+
 void Quadruped::init(){
   // Set up joint references
 #ifdef FIXED_BASE
@@ -419,6 +466,7 @@ void Quadruped::init(){
   q0_["RH_LEG_FE"] =  M_PI_2;
 
   // Maximum torques
+  std::map<std::string, double> torque_limits_;
   torque_limits_["BODY_JOINT"]=  2.60;
   torque_limits_["LF_HIP_AA"] =  2.60;
   torque_limits_["LF_HIP_FE"] =  2.60;
@@ -435,6 +483,14 @@ void Quadruped::init(){
   torque_limits_["RH_HIP_AA"] =  2.60;
   torque_limits_["RH_HIP_FE"] =  6.00;
   torque_limits_["RH_LEG_FE"] =  2.60;
+
+  // push into robot
+  torque_limits_l.resize(NUM_JOINTS);
+  torque_limits_u.resize(NUM_JOINTS);
+  for(int i=0;i<NUM_JOINTS;i++){
+    torque_limits_l[i] = -torque_limits_[joints_[i]->id];
+    torque_limits_u[i] = torque_limits_[joints_[i]->id];
+  }
 
   // Set Initial State
   Ravelin::VectorNd q_start(NUM_JOINTS+NEULER),
@@ -462,88 +518,31 @@ void Quadruped::init(){
 
   {
     std::vector<int> step;
-    step.push_back(-1);
-    step.push_back(1);
-    step.push_back(1);
-    step.push_back(-1);
+
+    // Trotting gait 50/50 duty cycle
+    step = boost::assign::list_of(-1)(1)(1)(-1);
     trot.push_back(step);
-    step.clear();
-    step.push_back(1);
-    step.push_back(-1);
-    step.push_back(-1);
-    step.push_back(1);
+    step = boost::assign::list_of(1)(-1)(-1)(1);
     trot.push_back(step);
-  }
 
-  {
-    std::vector<int> step;
-    step.push_back(1);
-    step.push_back(-1);
-    step.push_back(-2);
-    step.push_back(-3);
+    // walk lf,rf,lh,rh
+    step = boost::assign::list_of(-1)(-3)(1)(-2);
     walk.push_back(step);
-    step.clear();
-    step.push_back(-3);
-    step.push_back(1);
-    step.push_back(-1);
-    step.push_back(-2);
+    step = boost::assign::list_of(1)(-2)(-3)(-1);
     walk.push_back(step);
-    step.clear();
-    step.push_back(-2);
-    step.push_back(-3);
-    step.push_back(1);
-    step.push_back(-1);
+    step = boost::assign::list_of(-3)(-1)(-2)(1);
     walk.push_back(step);
-    step.clear();
-    step.push_back(-1);
-    step.push_back(-2);
-    step.push_back(-3);
-    step.push_back(1);
+    step = boost::assign::list_of(-2)(1)(-1)(-3);
     walk.push_back(step);
-  }
 
-  {
-    std::vector<int> step;
-    step.push_back(1);
-    step.push_back(-2);
-    step.push_back(-3);
-    step.push_back(-1);
-    walk2.push_back(step);
-    step.clear();
-    step.push_back(-3);
-    step.push_back(-1);
-    step.push_back(-2);
-    step.push_back(1);
-    walk2.push_back(step);
-    step.clear();
-    step.push_back(-2);
-    step.push_back(1);
-    step.push_back(-1);
-    step.push_back(-3);
-    walk2.push_back(step);
-    step.clear();
-    step.push_back(-1);
-    step.push_back(-3);
-    step.push_back(1);
-    step.push_back(-2);
-    walk2.push_back(step);
-  }
-  for(int i=0;i<trot.size();i++){
-    for(int j=0;j<trot[i].size();j++)
-      OUT_LOG(logINFO)<< trot[i][j] << " ";
-  OUT_LOG(logINFO);
+    // transverse gallop
+    step = boost::assign::list_of(1)(2)(3)(4);
+    gallop.push_back(step);
+
+    // Rotary gallop
 
   }
 
-//  trot2 = trot;
-  expand_gait(trot,2,trot2);
-
-  for(int i=0;i<trot2.size();i++){
-    for(int j=0;j<trot2[i].size();j++)
-      OUT_LOG(logINFO)<< trot2[i][j] << " ";
-  OUT_LOG(logINFO);
-
-  }
 }
   // Push initial state to robot
 

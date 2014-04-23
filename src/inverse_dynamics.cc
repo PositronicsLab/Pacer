@@ -6,6 +6,7 @@ int N_SYSTEMS = 0;
 extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
 extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb, const Ravelin::VectorNd& ub, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
@@ -192,6 +193,15 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
 
+  if(cf_final.rows() != 0){
+    (x = vqstar) -= k;
+    FET.mult(R,workM1);
+    workM1.mult(cf_final,x,-1,1);
+    LA_.solve_chol_fast(iF,x);
+    x /= h;
+    return true;
+  }
+
   /////////////////////////////////////////////////////////////////////////////
   ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////
   /////////////////////////////////////////////////////////////////////////////
@@ -237,7 +247,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // qq1 = -N'[vq* ; p]
   Ravelin::VectorNd qq1(N.columns());
   N.transpose_mult(vqstar_p,qq1);
-  qq1.negate(); // TODO: Fix This
+  qq1.negate();
 
   // setup linear inequality constraints -- coulomb friction
   // where : z = [{cN_i .. cN_nc}  {[cS -cS  cT -cT]_i .. [cS -cS  cT -cT]_nc}]'
@@ -499,7 +509,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   //  Note compare contact force prediction to Moby contact force
 
   cf_final = cf;
-  // return the inverse dynamics forces
+// return the inverse dynamics forces
   // x = iF*(vqstar - k - FET*R*(cf))/h
   (x = vqstar) -= k;
   FET.mult(R,workM1);
@@ -575,5 +585,146 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     OUTLOG(workM1,"T' * inv(M) * T");
   }
 #endif
+  return true;
+}
+
+bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
+
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+
+//  z.set_zero();
+  Ravelin::MatrixNd W;
+  if(W.rows() == 0)
+    (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1e-1;
+  OUTLOG(W,"W",logERROR);
+  static Ravelin::MatrixNd workM1,workM2;
+  static Ravelin::VectorNd workv1, workv2;
+
+  // Invert M -> iM
+  static Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  LA_.factor_chol(iM_chol);
+
+  static Ravelin::MatrixNd iM;
+  iM = Ravelin::MatrixNd::identity(n);
+  LA_.solve_chol_fast(iM_chol,iM);
+
+  // Workspace Jacobian
+  Ravelin::MatrixNd Rb;
+  calc_base_jacobian(Rb);
+
+  Ravelin::MatrixNd F,U;
+  OUTLOG(Rw,"Rw",logERROR);
+
+  // Actuated joint selection matrix
+  F.set_zero(n,nq);
+  F.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
+
+  // v_err
+  Ravelin::VectorNd v_err,V;
+  (v_err = v) -= v_bar;
+  OUTLOG(v_bar,"v_bar",logERROR);
+  OUTLOG(v,"v",logERROR);
+  OUTLOG(v_err,"v_err",logERROR);
+
+  // W Rw iM
+  Rw.mult(iM,workM1);
+  W.mult(workM1,workM2);
+
+  // V = (v_err)' W Rw iM
+  workM2.transpose_mult(v_err,V);
+
+  // U = (Rw iM)' W Rw iM
+  workM1.transpose_mult(workM2,U);
+
+  //
+//  if(z.rows() != 0){
+    // do widyn for torque only
+    Ravelin::MatrixNd qpQ,qpA;
+    Ravelin::VectorNd qpc,qpb;
+    // OBJECTIVE
+    // Min workspace deviation from v_bar with weights W
+
+    // Q = 1/2 h^2 [F' U F]
+    F.transpose_mult(U,workM1);
+    workM1.mult(F,qpQ);
+    qpQ *= 0.5*h*h;
+
+    // c = h[h fext' U + V + z'R U ] F
+    // + h fext' U
+    U.transpose_mult(fext,qpc,h,0);
+    // + V
+    qpc += V;
+    // + z'R U
+    qpc += U.transpose_mult(R.mult(z,workv1),workv2);
+    // h*[^]*F
+    F.transpose_mult((workv2 = qpc),qpc,h,0);
+    // workv1 is R'z
+
+    // CONSTRAINTS
+    qpA.set_zero(NC+nq*2,nq);
+//    qpA.set_zero(NC,nq);
+    qpb.set_zero(qpA.rows());
+
+    // Interpenetration
+    // A = N iM F
+    N.transpose_mult(iM.mult(F,workM1),workM2);
+    qpA.set_sub_mat(0,0,workM2);
+    // b = -N(v + iM(h fext + R'z))
+    ((workv2 = fext) *= h) += workv1;
+    iM.mult(workv2,workv1) += v;
+    N.transpose_mult(workv1,workv2);
+    workv2.negate();
+    qpb.set_sub_vec(0,workv2);
+
+//    std::fill_n(torque_limits_u.begin(), torque_limits_u.size(), 1e+30);
+//    std::fill_n(torque_limits_l.begin(), torque_limits_l.size(),-1e+30);
+
+    // Torque Limits
+    // Lower Torque Limit
+    // A
+    qpA.set_sub_mat(NC,0,Ravelin::MatrixNd::identity(nq));
+    // b
+    qpb.set_sub_vec(NC,(workv2 = torque_limits_l));
+
+    // Upper Torque Limit
+    // A
+    qpA.set_sub_mat(NC+nq,0,Ravelin::MatrixNd::identity(nq).negate());
+    // b
+    qpb.set_sub_vec(NC+nq,(workv2 = torque_limits_u).negate());
+
+    x.resize(qpQ.rows());
+    OUTLOG(qpQ,"qpQ",logERROR);
+    OUTLOG(qpc,"qpc",logERROR);
+    OUTLOG(qpA,"qpA",logERROR);
+    OUTLOG(qpb,"qpb",logERROR);
+//    qpA = Ravelin::MatrixNd::zero(0,qpc.rows());;
+//    qpb = Ravelin::VectorNd::zero(0);
+//    qpc = Ravelin::VectorNd::zero(qpc.rows());
+//    qpQ = Ravelin::MatrixNd::identity(qpc.rows());
+
+    if(!solve_qp(qpQ,qpc,qpA,qpb,x)){
+//    if(!solve_qp(qpQ,qpc,torque_limits_l,torque_limits_u,qpA,qpb,x)){
+      OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
+//      assert(false);
+    }
+
+    OUTLOG(x,"x",logERROR);
+
+    qpA.mult(x,workv1);
+    workv1 -= qpb;
+    OUTLOG(workv1,"feas >= 0",logERROR);
+    qpQ.transpose_mult(x,workv1) += qpc;
+    OUTLOG(workv1,"x'Q + c",logERROR);
+    OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
+
+    return true;
+//  } else {
+//    // Do larger "Coupled" optimizations
+//    // for torque and cfs
+//  }
+
   return true;
 }

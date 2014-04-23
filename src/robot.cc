@@ -101,6 +101,8 @@ void Robot::update(){
   dbrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,vel);
   dbrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,gc);
   calc_contact_jacobians(N,ST,D,R);
+  calc_workspace_jacobian(Rw);
+
   // Cn * M * v = iM * fext
   //      M * v = iM * fext * h
   // Get robot dynamics state
@@ -129,6 +131,10 @@ void Robot::update(){
   base_frame_global->update_relative_pose(Moby::GLOBAL);
   base_frame_global->x = base_frame->x;
   base_frame_global->q.set_identity();
+
+  environment_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));
+  environment_frame->x = Ravelin::Origin3d(0,0,0);
+  environment_frame->q.set_identity();
 
 
 #ifdef VISUALIZE_MOBY
@@ -179,9 +185,9 @@ void Robot::update(){
                            sim);
        }
 
-       visualize_ray(center_of_contact.point,
-                  center_of_contact.normal + center_of_contact.point,
-                  Ravelin::Vector3d(1,1,0),
-                  sim);
+//       visualize_ray(center_of_contact.point,
+//                  center_of_contact.normal + center_of_contact.point,
+//                  Ravelin::Vector3d(1,1,0),
+//                  sim);
 #endif
 }

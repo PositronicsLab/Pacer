@@ -246,6 +246,7 @@ bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,cons
   return true;
 }
 
+/// http://www.alglib.net/translator/man/manual.cpp.html#sub_spline1dbuildcubic
 /// CUBIC SPLINE: C2 smooth position, C1 smooth velocity, continuous acceleration
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, alglib::spline1dinterpolant &B)
 {

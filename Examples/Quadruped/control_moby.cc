@@ -122,10 +122,10 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
     U.set_column(0,u_vec);
 
       // send torque commands to robot
-# ifdef CONTROL_KINEMATICS
+# ifdef SET_KINEMATICS
     {
       Ravelin::VectorNd des_coordinates;
-      abrobot->get_generalized_coordinates(DynamicBody::eEuler,des_coordinates);
+      abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,des_coordinates);
       for(unsigned m=0,i=0;i< num_joints;m++){
           if(joints_[m]->q.size() == 0) continue;
           joints_[m]->q[0] = q_des[i];
@@ -133,7 +133,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
           i++;
       }
       // Push initial state to robot
-      abrobot->set_generalized_coordinates(DynamicBody::eEuler,des_coordinates);
+      abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,des_coordinates);
       abrobot->update_link_poses();
       abrobot->update_link_velocities();
     }
@@ -143,7 +143,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
      last_time = t;
 
 #ifdef USE_ROBOT
-# ifdef CONTROL_KINEMATICS
+# ifdef SET_KINEMATICS
      Ravelin::VectorNd qdat(Dynamixel::N_JOINTS),
                       qddat(Dynamixel::N_JOINTS);
      qdat.set_zero();
@@ -159,8 +159,8 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
        i++;
      }
 
-     OUTLOG(qdat,"qdat");
-     OUTLOG(qddat,"qddat");
+     OUTLOG(qdat,"qdat",logDEBUG);
+     OUTLOG(qddat,"qddat",logDEBUG);
 
 //     dxl_->set_position(qdat.data());
      dxl_->set_state(qdat.data(),qddat.data());

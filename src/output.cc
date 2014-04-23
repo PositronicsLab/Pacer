@@ -76,6 +76,15 @@ void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL){
 #endif
 }
 
+void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL){
+#ifndef NDEBUG
+    std::ostringstream str;
+    for(int i=0;i<2;i++)
+        str << std::setprecision(9) << z[i] << " ";
+    OUT_LOG(LL) << name << " = [" << str.str() << "]';";
+#endif
+}
+
 void OUTLOG(const Ravelin::SharedVectorNd& z, std::string name,TLogLevel LL){
 #ifndef NDEBUG
     std::ostringstream str;

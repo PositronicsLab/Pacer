@@ -594,10 +594,10 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   int n = M.rows();
   int nq = n - 6;
 
-//  z.set_zero();
+  z.set_zero();
   Ravelin::MatrixNd W;
   if(W.rows() == 0)
-    (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1e-1;
+    (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1e-3;
   OUTLOG(W,"W",logERROR);
   static Ravelin::MatrixNd workM1,workM2;
   static Ravelin::VectorNd workv1, workv2;

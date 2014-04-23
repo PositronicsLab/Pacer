@@ -117,10 +117,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
 //      find_footholds(footholds,1000);
     }
     std::vector<Ravelin::Vector3d> foot_vel, foot_pos, foot_acc;
-    go_to = Ravelin::SVector6d(0.01,0,0,0,0,0,base_horizontal_frame);
+    go_to = Ravelin::SVector6d(0.1,0,0,0,0,0,base_horizontal_frame);
     walk_toward(go_to,gait,footholds,interval_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
-    workspace_trajectory_goal(go_to,foot_pos,foot_vel, foot_acc,1,0.001,vb_w);
+    workspace_trajectory_goal(go_to,foot_pos,foot_vel, foot_acc,0.5,0.001,vb_w);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++)
@@ -202,7 +202,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 //    if(NC>0)
 //      inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
-      vel_w = Rw.mult(vel,workv_);
+      Rw.mult(vel,vel_w);
       inverse_dynamics(vel_w,vb_w,M,fext,dt,MU,id,cf);
 
 

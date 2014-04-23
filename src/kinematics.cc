@@ -201,7 +201,7 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
 void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
   Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
   Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
 
   Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,Ravelin::MatrixNd::identity(6));
   for(int i=0,ii=0;i<NUM_EEFS;i++){
@@ -223,7 +223,7 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
       // swing foot jacobian
       // [x y z]_ environment oriented environment frame
       // at center of foot
-      event_frame->x = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+      event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
 
       dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
       workM_.get_sub_mat(0,3,0,NDOFS,J);

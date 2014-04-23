@@ -132,7 +132,7 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //      joints_[eefs_[i].chain[i]]->q[0] = q[eefs_[i].chain[i]];
 //    abrobot_->update_link_poses();
 
-    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
 
     v_bar.set_sub_vec(i*3,foot_vel[i] + beta/dt * (foot_pos[i] - pos));
 //    v_bar.set_sub_vec(i*3,foot_vel[i]);
@@ -374,10 +374,10 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
     foot_acc[i].pose = base_frame;
     foot_pos[i].pose = base_frame;
     foot_vel[i].pose = base_frame;
-    // Define velocity in environment frame
-    foot_acc[i] = Ravelin::Pose3d::transform_vector(environment_frame,foot_acc[i]);
-    foot_vel[i] = Ravelin::Pose3d::transform_vector(environment_frame,foot_vel[i]);
-    foot_pos[i] = Ravelin::Pose3d::transform_point(environment_frame,foot_pos[i]);
+    // Define output in environment frame
+//    foot_acc[i] = Ravelin::Pose3d::transform_vector(environment_frame,foot_acc[i]);
+//    foot_vel[i] = Ravelin::Pose3d::transform_vector(environment_frame,foot_vel[i]);
+//    foot_pos[i] = Ravelin::Pose3d::transform_point(environment_frame,foot_pos[i]);
 
   }
 

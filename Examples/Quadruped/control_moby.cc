@@ -12,7 +12,6 @@ bool new_sim_step = true;
 Ravelin::VectorNd perturbation;
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
-    Dynamixel* dxl_;
 #endif
 
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
@@ -144,26 +143,34 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 
 #ifdef USE_ROBOT
 # ifdef SET_KINEMATICS
-     Ravelin::VectorNd qdat(Dynamixel::N_JOINTS),
-                      qddat(Dynamixel::N_JOINTS);
+     static std::vector<int> inds;
+     static Ravelin::VectorNd qdat(DXL::N_JOINTS),
+                              qddat(DXL::N_JOINTS);
      qdat.set_zero();
      qddat.set_zero();
 
-     for(unsigned m=0,i=0;i< num_joints;m++){
-       if(joints_[m]->q.size() == 0) continue;
-       for(int j=0;j<Dynamixel::N_JOINTS;j++)
-         if(joints_[m]->id.compare(dxl_->JointName(j)) == 0){
-           qdat[j] = q_des[i];
-           qddat[j] = 0;//qd_des[i];
-         }
-       i++;
+     if(inds.size() == 0){
+       inds.resize(num_joints);
+       for(unsigned m=0,i=0;i< num_joints;m++){
+         if(joints_[m]->q.size() == 0) continue;
+         for(int j=0;j<DXL::N_JOINTS;j++)
+           if(joints_[m]->id.compare(DXL::Dynamixel::JointName(j)) == 0){
+             inds[i] = j;
+           }
+         i++;
+       }
+     }
+
+     for(int i=0;i<inds.size();i++){
+       qdat[inds[i]] = q_des[i];
+       qddat[inds[i]] = 0;//qd_des[i];
      }
 
      OUTLOG(qdat,"qdat",logDEBUG);
      OUTLOG(qddat,"qddat",logDEBUG);
 
 //     dxl_->set_position(qdat.data());
-     dxl_->set_state(qdat.data(),qddat.data());
+//     DXL::Dynamixel::set_state(qdat.data(),qddat.data());
 # else
   Ravelin::VectorNd udat = u.column(0);
   dxl_->set_torque(udat.data());
@@ -181,8 +188,7 @@ void init_cpp(){
 
   robot_ptr = boost::dynamic_pointer_cast<Robot>(quad_ptr);
 #ifdef USE_ROBOT
-  dxl_ = new Dynamixel("/dev/tty.usbserial-A9YL9ZZV",1000000);
-  dxl_->relaxed(false);
+  DXL::Dynamixel::init("/dev/tty.usbserial-A9YL9ZZV",1000000);
 #endif
   OUT_LOG(logERROR) << "Log Type : " << LOG_TYPE;
   OUT_LOG(logERROR) << "logERROR";

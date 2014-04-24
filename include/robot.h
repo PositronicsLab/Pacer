@@ -110,6 +110,7 @@ class Robot {
     Ravelin::Vector3d center_of_mass_x,
                       center_of_mass_xd,
                       center_of_mass_xdd,
+                      center_of_feet_x,
                       roll_pitch_yaw;
     Ravelin::Vector2d zero_moment_point;
     Ravelin::VectorNd uff, ufb;

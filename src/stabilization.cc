@@ -111,15 +111,16 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
 
 void Robot::calc_com(){
   center_of_mass_x.set_zero();
+  center_of_mass_x.pose = environment_frame;
   double total_mass=0;
   for(int i=0;i<links_.size();i++){
     double m = links_[i]->get_mass();
     total_mass += m;
-    center_of_mass_x += (Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,links_[i]->get_inertial_pose())) *= m);
+    center_of_mass_x += (Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_inertial_pose())) *= m);
   }
   center_of_mass_x /= total_mass;
 
-  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(Moby::GLOBAL));
+  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(environment_frame));
   base_com_w->x = Ravelin::Origin3d(center_of_mass_x);
   Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_velocity());
   center_of_mass_xd = com_vel.get_upper();
@@ -147,20 +148,20 @@ void Robot::calc_com(){
 
   // e = p - p_ref
   //
-  Ravelin::Vector3d C(1,0,-center_of_mass_x[2]/grav,Moby::GLOBAL);
+  Ravelin::Vector3d C(1,0,-center_of_mass_x[2]/grav,environment_frame);
   zero_moment_point =
-      Ravelin::Vector2d(C.dot(Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_xd[0],center_of_mass_xdd[0],Moby::GLOBAL)),
-                        C.dot(Ravelin::Vector3d(center_of_mass_x[1],center_of_mass_xd[1],center_of_mass_xdd[1],Moby::GLOBAL)));
+      Ravelin::Vector2d(C.dot(Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_xd[0],center_of_mass_xdd[0],environment_frame)),
+                        C.dot(Ravelin::Vector3d(center_of_mass_x[1],center_of_mass_xd[1],center_of_mass_xdd[1],environment_frame)));
 
-  center_of_mass_x.pose = center_of_mass_xd.pose = center_of_mass_xdd.pose = Moby::GLOBAL;
+  center_of_mass_x.pose = center_of_mass_xd.pose = center_of_mass_xdd.pose = environment_frame;
 
 #ifdef VISUALIZE_MOBY
   // ZMP and COM
-  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],0,Moby::GLOBAL);
+  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
 //  visualize_ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
 //  visualize_ray(center_of_mass_x + center_of_mass_xd,center_of_mass_x,Ravelin::Vector3d(0.5,0,1),sim);
 //  visualize_ray(center_of_mass_x + center_of_mass_xd + center_of_mass_xdd,center_of_mass_x + center_of_mass_xd,Ravelin::Vector3d(1,0,1),sim);
-  visualize_ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0),CoM_2D,Ravelin::Vector3d(0,0,1),sim);
+  visualize_ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,environment_frame),CoM_2D,Ravelin::Vector3d(0,0,1),sim);
 #endif
 
 }

@@ -125,17 +125,33 @@ void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,
 
 void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                                           double beta, double dt, Ravelin::VectorNd& v_bar){
+  v_bar.set_sub_vec(NUM_EEFS*3,Ravelin::Pose3d::transform(environment_frame,Ravelin::SVelocityd(v_base)));
+  // Position ERROR Correction for robot base
+  // height correction
 
-  v_bar.set_sub_vec(NUM_EEFS*3,v_base);
+  Ravelin::Vector3d goal_base_pose = center_of_feet_x + Ravelin::Vector3d(0,0,0.13,environment_frame);
+
+  visualize_ray(goal_base_pose,
+                center_of_feet_x,
+                Ravelin::Vector3d(1,1,1),
+                sim);
+  visualize_ray(goal_base_pose,
+                center_of_mass_x,
+                Ravelin::Vector3d(1,0,0),
+                sim);
+
+//  v_bar.set_sub_vec(NUM_EEFS*3,beta/dt * (
+//                    goal_base_pose
+//                    - center_of_mass_x
+//                    ));
+
+  //
+  v_bar.set_sub_vec(NUM_EEFS*3+3,v_bar.get_sub_vec(NUM_EEFS*3+3,NUM_EEFS*3+6,workv3_)-beta*roll_pitch_yaw);
+  // base position should be 0.13m above centroid of feet
   for(int i=0;i<NUM_EEFS;i++){
-//    for(int i=0;i<eefs_[i].chain.size();i++)
-//      joints_[eefs_[i].chain[i]]->q[0] = q[eefs_[i].chain[i]];
-//    abrobot_->update_link_poses();
-
-    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-
-    v_bar.set_sub_vec(i*3,foot_vel[i] + beta/dt * (foot_pos[i] - pos));
-//    v_bar.set_sub_vec(i*3,foot_vel[i]);
+//    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+//    v_bar.set_sub_vec(i*3,foot_vel[i] + beta/dt * (foot_pos[i] - pos));
+    v_bar.set_sub_vec(i*3,foot_vel[i]);
   }
   OUTLOG(v_bar,"v_bar",logERROR);
 }
@@ -269,10 +285,12 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
       if(!inited){ // first iteration
         // Get Current Foot pos, Velocities & Accelerations
-        x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-        foot_jacobian(x,eefs_[i],base_frame,workM_);
-        workM_.transpose_mult(qd.select(eefs_[i].chain_bool,workv_),xd);
-        workM_.transpose_mult(qdd.select(eefs_[i].chain_bool,workv_),xdd);
+        x = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+//        foot_jacobian(x,eefs_[i],environment_frame,workM_);
+//        workM_.transpose_mult(qd.select(eefs_[i].chain_bool,workv_),xd);
+//        workM_.transpose_mult(qdd.select(eefs_[i].chain_bool,workv_),xdd);
+        xd.set_zero();
+        xdd.set_zero();
       } else {
         // continue off of the end of the last spline
         t0 = *(spline_t[i].back().end()-1) - Moby::NEAR_ZERO;
@@ -306,6 +324,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       foot_goal +=  yaw_step;
 
       if(!inited) foot_goal /= 2;  // only works for 2 interval gait
+
+      // Define output in environment frame
+      foot_goal = Ravelin::Pose3d::transform_vector(environment_frame,Ravelin::Vector3d(foot_goal,base_frame));
 
       OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
 
@@ -371,14 +392,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
       }
     }
-    foot_acc[i].pose = base_frame;
-    foot_pos[i].pose = base_frame;
-    foot_vel[i].pose = base_frame;
-    // Define output in environment frame
-//    foot_acc[i] = Ravelin::Pose3d::transform_vector(environment_frame,foot_acc[i]);
-//    foot_vel[i] = Ravelin::Pose3d::transform_vector(environment_frame,foot_vel[i]);
-//    foot_pos[i] = Ravelin::Pose3d::transform_point(environment_frame,foot_pos[i]);
-
+    foot_acc[i].pose = environment_frame;
+    foot_pos[i].pose = environment_frame;
+    foot_vel[i].pose = environment_frame;
   }
 
 
@@ -411,7 +427,8 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
       Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
       Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      visualize_ray(    p, p,   Ravelin::Vector3d(0,0,0), sim);
+//      visualize_ray(    p, p,   Ravelin::Vector3d(0,0,0), sim);
+      visualize_ray(    x, x,   Ravelin::Vector3d(0,0,0), sim);
 //      visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
 //      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
     }

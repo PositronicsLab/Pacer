@@ -201,7 +201,7 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
 void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
   Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
   Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(environment_frame));
 
   Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,Ravelin::MatrixNd::identity(6));
   for(int i=0,ii=0;i<NUM_EEFS;i++){
@@ -210,7 +210,7 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
 //    [j;b] -> [f;b]
 //    [Jj Jb;
 //     0  I ]
-    if(foot.active){
+    if(foot.active && false){
       // stance foot jacobian
       // [n s t]_ contact oriented environment frame
       // at contact point

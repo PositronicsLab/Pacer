@@ -132,11 +132,6 @@ void Robot::update(){
   base_frame_global->x = base_frame->x;
   base_frame_global->q.set_identity();
 
-  environment_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));
-  environment_frame->x = Ravelin::Origin3d(0,0,0);
-  environment_frame->q.set_identity();
-
-
 #ifdef VISUALIZE_MOBY
   draw_pose(*base_frame,sim);
   draw_pose(Moby::GLOBAL,sim);
@@ -157,6 +152,13 @@ void Robot::update(){
   } else {
     center_of_contact.normal = Ravelin::Vector3d(0,0,1,Moby::GLOBAL);
   }
+
+  center_of_feet_x.set_zero();
+  center_of_feet_x.pose = environment_frame;
+  for(int i=0;i<NUM_EEFS;i++)
+     center_of_feet_x += Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()))/NUM_EEFS;
+
+
 
 #ifdef VISUALIZE_MOBY
        // CONTACTS

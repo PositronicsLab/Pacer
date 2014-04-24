@@ -101,31 +101,40 @@ Ravelin::VectorNd& Quadruped::control(double t,
   abrobot_->update_link_velocities();
 
   q_des = q;
-  Ravelin::SVector6d go_to;
+  Ravelin::SVector6d go_to(0,0,0,0,0,0,base_frame);;
   Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
+  std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS), foot_pos(NUM_EEFS), foot_acc(NUM_EEFS);
 
   if(WALK){
     double interval_time = 0.1, step_height = 0.01;
     // Assign Gait to the locomotion controller
     std::vector<std::vector<int> > gait = trot;
 
-    // Determine footholds (every 10th of a second)
     static std::vector<Ravelin::Vector3d> footholds;
+    // Determine footholds (every 10th of a second)
 //    if(((int)(t*1000) % 100) == 0){
     if((int)(t*1000) == 0){
       footholds.clear();
 //      find_footholds(footholds,1000);
     }
-    std::vector<Ravelin::Vector3d> foot_vel, foot_pos, foot_acc;
     go_to = Ravelin::SVector6d(0.1,0,0,0,0,0,base_horizontal_frame);
     walk_toward(go_to,gait,footholds,interval_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
-    workspace_trajectory_goal(go_to,foot_pos,foot_vel, foot_acc,0.5,0.001,vb_w);
   }
   else {
-    for(int i=0;i<NUM_EEFS;i++)
+    for(int i=0;i<NUM_EEFS;i++){
+      workv3_ = eefs_[i].origin;
+      workv3_.pose = base_frame;
+      foot_pos[i] = Ravelin::Pose3d::transform_point(environment_frame, workv3_);
       RRMC(eefs_[i],q,eefs_[i].origin,q_des);
+      foot_vel[i].set_zero();
+      foot_acc[i].set_zero();
+
+      foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose;
+      visualize_ray( foot_pos[i], foot_pos[i],   Ravelin::Vector3d(0,0,1), sim);
+    }
   }
+  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.01,0.001,vb_w);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
@@ -204,7 +213,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 //      inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
       Rw.mult(vel,vel_w);
       inverse_dynamics(vel_w,vb_w,M,fext,dt,MU,id,cf);
-
 
     // Parallel stiffness controller
 #ifdef COLLECT_DATA   // record all input vars
@@ -543,6 +551,9 @@ void Quadruped::init(){
 
   }
 
+  environment_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));
+  environment_frame->x = Ravelin::Origin3d(0,0,0);
+  environment_frame->q.set_identity();
 }
   // Push initial state to robot
 

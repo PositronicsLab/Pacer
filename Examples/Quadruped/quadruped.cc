@@ -117,7 +117,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       footholds.clear();
 //      find_footholds(footholds,1000);
     }
-    go_to = Ravelin::SVector6d(0.1,0,0,0,0,0,base_horizontal_frame);
+    go_to = Ravelin::SVector6d(0.2,0,0,0,0,0,base_horizontal_frame);
     walk_toward(go_to,gait,footholds,interval_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
   }
@@ -134,7 +134,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       visualize_ray( foot_pos[i], foot_pos[i],   Ravelin::Vector3d(0,0,1), sim);
     }
   }
-  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.01,0.001,vb_w);
+  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.1,0.001,vb_w);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);

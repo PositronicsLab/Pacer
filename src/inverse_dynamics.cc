@@ -597,7 +597,16 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 //  z.set_zero();
   Ravelin::MatrixNd W;
   if(W.rows() == 0)
-    (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1e-2;
+    (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1;
+
+  // only roll and pitch
+  for(int i=NUM_JOINTS;i<NUM_JOINTS+6;i++)
+    W(i,i) = 10;
+  for(int i=NUM_JOINTS;i<NUM_JOINTS+3;i++)
+    W(i,i) = 0;
+//  W(NUM_JOINTS+5,NUM_JOINTS+5) = 0;
+
+
   OUTLOG(W,"W",logERROR);
   static Ravelin::MatrixNd workM1,workM2;
   static Ravelin::VectorNd workv1, workv2;
@@ -664,20 +673,19 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     // workv1 is R'z
 
     // CONSTRAINTS
-    qpA.set_zero(NC+nq*2,nq);
-//    qpA.set_zero(NC,nq);
+    qpA.set_zero(nq*2,nq);
     qpb.set_zero(qpA.rows());
 
     // Interpenetration
     // A = N iM F
-    N.transpose_mult(iM.mult(F,workM1),workM2);
-    qpA.set_sub_mat(0,0,workM2);
-    // b = -N(v + iM(h fext + R'z))
-    ((workv2 = fext) *= h) += workv1;
-    iM.mult(workv2,workv1) += v;
-    N.transpose_mult(workv1,workv2);
-    workv2.negate();
-    qpb.set_sub_vec(0,workv2);
+//    N.transpose_mult(iM.mult(F,workM1),workM2);
+//    qpA.set_sub_mat(nq*2,0,workM2);
+//    // b = -N(v + iM(h fext + R'z))
+//    ((workv2 = fext) *= h) += workv1;
+//    iM.mult(workv2,workv1) += v;
+//    N.transpose_mult(workv1,workv2);
+//    workv2.negate();
+//    qpb.set_sub_vec(nq*2,workv2);
 
 //    std::fill_n(torque_limits_u.begin(), torque_limits_u.size(), 1e+30);
 //    std::fill_n(torque_limits_l.begin(), torque_limits_l.size(),-1e+30);
@@ -685,23 +693,23 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     // Torque Limits
     // Lower Torque Limit
     // A
-    qpA.set_sub_mat(NC,0,Ravelin::MatrixNd::identity(nq));
+    qpA.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
     // b
-    qpb.set_sub_vec(NC,(workv2 = torque_limits_l));
+    qpb.set_sub_vec(0,(workv2 = torque_limits_l));
 
     // Upper Torque Limit
     // A
-    qpA.set_sub_mat(NC+nq,0,Ravelin::MatrixNd::identity(nq).negate());
+    qpA.set_sub_mat(nq,0,Ravelin::MatrixNd::identity(nq).negate());
     // b
-    qpb.set_sub_vec(NC+nq,(workv2 = torque_limits_u).negate());
+    qpb.set_sub_vec(nq,(workv2 = torque_limits_u).negate());
 
     x.resize(qpQ.rows());
     OUTLOG(qpQ,"qpQ",logERROR);
     OUTLOG(qpc,"qpc",logERROR);
     OUTLOG(qpA,"qpA",logERROR);
     OUTLOG(qpb,"qpb",logERROR);
-    qpA = Ravelin::MatrixNd::zero(0,qpc.rows());;
-    qpb = Ravelin::VectorNd::zero(0);
+//    qpA = Ravelin::MatrixNd::zero(0,qpc.rows());;
+//    qpb = Ravelin::VectorNd::zero(0);
 //    qpc = Ravelin::VectorNd::zero(qpc.rows());
 //    qpQ = Ravelin::MatrixNd::identity(qpc.rows());
 

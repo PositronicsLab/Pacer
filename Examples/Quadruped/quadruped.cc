@@ -1,11 +1,14 @@
 #include <quadruped.h>
 #include <utilities.h>
 
+#include <random>
+std::default_random_engine generator;
+
 using namespace Ravelin;
 //using namespace Moby;
 
 
-const bool WALK = true,
+const bool WALK = false,
            TRUNK_STABILIZATION = false,
            CONTROL_IDYN = true,
            FRICTION_EST = false,
@@ -18,7 +21,7 @@ std::vector<std::vector<int> > trot,trot2,walk, walk2;
 extern Ravelin::VectorNd perturbation;
 
 // TODO: This should be extern double to moby's (nominal) STEP_SIZE
-double STEP_SIZE = 0.01;
+double STEP_SIZE = 0.001;
 
 extern bool new_sim_step;
 
@@ -30,8 +33,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                       Ravelin::VectorNd& u){
   static Ravelin::VectorNd qd_last = qd;
   std::cerr << " -- Quadruped::control(.) entered" << std::endl;
-
-  update();
 
   try{
     fext -= perturbation;
@@ -81,6 +82,20 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 #endif
   N_SYSTEMS++;
+
+  static std::normal_distribution<double> distribution_normal(0,0.1);
+  static std::normal_distribution<double> distribution_point(0,0.01);
+
+  for(int i=0;i<=0;i++){
+    // PERTURB NORMAL
+    eefs_[i].normal += Ravelin::Vector3d(distribution_normal(generator),distribution_normal(generator),0);
+    eefs_[i].normal.normalize();
+    // PERTURB POINT
+    eefs_[i].point += Ravelin::Vector3d(distribution_point(generator),distribution_point(generator),distribution_point(generator));
+    visualize_ray(eefs_[i].point+eefs_[i].normal,eefs_[i].point,Ravelin::Vector3d(1,1,0),sim);
+  }
+
+  update();
 
   uff.set_zero(NUM_JOINTS);
   ufb.set_zero(NUM_JOINTS);

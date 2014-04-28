@@ -70,3 +70,4 @@ Examples/Exoskeleton/exoskeleton.h
 Examples/Exoskeleton/exoskeleton.cc
 Examples/Exoskeleton/control_moby.cc
 Examples/Exoskeleton/exo.xml
+Examples/Quadruped/eval_idyn.m

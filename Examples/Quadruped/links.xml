@@ -155,7 +155,7 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-  <Box id="ground-primitive" xlen="50" ylen="50" zlen="0.05" />
+  <Box id="ground-primitive" xlen="1" ylen="1" zlen="0.05" />
 
   <RigidBody id="ground" enabled="false"
     position="0 0 -0.025" visualization-id="ground-primitive">

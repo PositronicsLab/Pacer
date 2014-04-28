@@ -14,10 +14,28 @@ Ravelin::Vector3d& Utility::R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d&
 }
 
 Ravelin::Vector3d& Utility::quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy){
-  rpy[0] = atan2(2.0*(q[0]*q[1] + q[2]*q[3]),1.0 - 2.0*(q[1]*q[1] + q[2]*q[2]));
-  rpy[1] = asin(2.0*(q[0]*q[2] - q[3]*q[1]));
-  rpy[2] = atan2(2.0*(q[0]*q[3] + q[1]*q[2]),1.0 - 2.0*(q[2]*q[2] + q[3]*q[3]));
-  return rpy;
+
+  double rotateXa0 = 2.0*(q.y*q.z + q.w*q.x);
+  double rotateXa1 = q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z;
+  double rotateX = 0.0;
+  if (rotateXa0 != 0.0 && rotateXa1 != 0.0)
+    rotateX = atan2(rotateXa0, rotateXa1);
+
+  double rotateYa0 = -2.0*(q.x*q.z - q.w*q.y);
+  double rotateY = 0.0;
+  if( rotateYa0 >= 1.0 )
+    rotateY = M_PI/2.0;
+  else if( rotateYa0 <= -1.0 )
+    rotateY = -M_PI/2.0;
+  else rotateY = asin(rotateYa0);
+
+  double rotateZa0 = 2.0*(q.x*q.y + q.w*q.z);
+  double rotateZa1 = q.w*q.w + q.x*q.x - q.y*q.y - q.z*q.z;
+  double rotateZ = 0.0;
+  if (rotateZa0 != 0.0 && rotateZa1 != 0.0)
+    rotateZ = atan2(rotateZa0, rotateZa1);
+
+  return (rpy = Ravelin::Vector3d(rotateX,rotateY,rotateZ));
 }
 
 Ravelin::Quatd& Utility::aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q){

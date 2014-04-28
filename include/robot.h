@@ -104,7 +104,9 @@ class Robot {
     boost::shared_ptr<Ravelin::Pose3d>   base_horizontal_frame,
                                          base_frame,
                                          environment_frame,
-                                         base_frame_global;
+                                         base_link_frame;
+    Ravelin::MatrixNd                    base_stability_offset;
+
     unsigned          NC;
     EndEffector       center_of_contact;
     Ravelin::Vector3d center_of_mass_x,

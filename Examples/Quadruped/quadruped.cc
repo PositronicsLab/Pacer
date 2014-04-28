@@ -19,7 +19,7 @@ std::vector<std::vector<int> > trot, walk,gallop;
 extern Ravelin::VectorNd perturbation;
 
 // TODO: This should be extern double to moby's (nominal) STEP_SIZE
-double STEP_SIZE = 0.001;
+double STEP_SIZE = 0.01;
 
 extern bool new_sim_step;
 
@@ -117,24 +117,20 @@ Ravelin::VectorNd& Quadruped::control(double t,
       footholds.clear();
 //      find_footholds(footholds,1000);
     }
-    go_to = Ravelin::SVector6d(0.2,0,0,0,0,0,base_horizontal_frame);
+    go_to = Ravelin::SVector6d(0.1,0,0,0,0,0,base_frame);
     walk_toward(go_to,gait,footholds,interval_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
-      workv3_ = eefs_[i].origin;
-      workv3_.pose = base_frame;
-      foot_pos[i] = Ravelin::Pose3d::transform_point(environment_frame, workv3_);
+      foot_pos[i] = eefs_[i].origin;
       RRMC(eefs_[i],q,eefs_[i].origin,q_des);
       foot_vel[i].set_zero();
       foot_acc[i].set_zero();
-
-      foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose;
-      visualize_ray( foot_pos[i], foot_pos[i],   Ravelin::Vector3d(0,0,1), sim);
+      foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose = base_frame;
     }
   }
-  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.1,0.001,vb_w);
+  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.05,0.001,vb_w);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
@@ -195,13 +191,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
         Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].contact_impulses[0],workv3_)*(STEP_SIZE/0.001));
         cf[ii] = contact_impulse[0];
         if(contact_impulse[1] > 0)
-          cf[ii*NK+NC] = contact_impulse[1];
+          cf[NC+ii] = contact_impulse[1];
         else
-          cf[ii*NK+NC+NK/2] = contact_impulse[1];
+          cf[NC+ii+NC*2] = contact_impulse[1];
         if(contact_impulse[2] > 0)
-          cf[ii*NK+NC+1] = contact_impulse[2];
+          cf[NC+ii+NC] = contact_impulse[2];
         else
-          cf[ii*NK+NC+1+NK/2] = contact_impulse[2];
+          cf[NC+ii+NC*3] = contact_impulse[2];
         ii++;
       }
       Utility::check_finite(cf);
@@ -209,7 +205,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 
 
-//    if(NC>0)
 //      inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
       Rw.mult(vel,vel_w);
       inverse_dynamics(vel_w,vb_w,M,fext,dt,MU,id,cf);

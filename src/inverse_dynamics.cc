@@ -594,20 +594,24 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   int n = M.rows();
   int nq = n - 6;
 
+  // SRZ: Ground reaction forces are set to zero
+  // (they destabilize robot system, why?)
 //  z.set_zero();
+
   Ravelin::MatrixNd W;
   if(W.rows() == 0)
     (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1;
 
-  // only roll and pitch
+  // no base control
   for(int i=NUM_JOINTS;i<NUM_JOINTS+6;i++)
-    W(i,i) = 10;
-  for(int i=NUM_JOINTS;i<NUM_JOINTS+3;i++)
-    W(i,i) = 0;
+    W(i,i) = 100;
+
+//  W(NUM_JOINTS,NUM_JOINTS) = 0;
+//  W(NUM_JOINTS+1,NUM_JOINTS+1) = 0;
+//  W(NUM_JOINTS+2,NUM_JOINTS+2) = 0;
 //  W(NUM_JOINTS+5,NUM_JOINTS+5) = 0;
 
-
-  OUTLOG(W,"W",logERROR);
+  OUTLOG(W,"W",logDEBUG1);
   static Ravelin::MatrixNd workM1,workM2;
   static Ravelin::VectorNd workv1, workv2;
 
@@ -625,7 +629,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   calc_base_jacobian(Rb);
 
   Ravelin::MatrixNd F,U;
-  OUTLOG(Rw,"Rw",logERROR);
+  OUTLOG(Rw,"Rw",logDEBUG1);
 
   // Actuated joint selection matrix
   F.set_zero(n,nq);
@@ -634,9 +638,12 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // v_err
   Ravelin::VectorNd v_err,V;
   (v_err = v) -= v_bar;
-  OUTLOG(v_bar,"v_bar",logERROR);
-  OUTLOG(v,"v",logERROR);
-  OUTLOG(v_err,"v_err",logERROR);
+  OUTLOG(v_bar,"v_bar",logDEBUG1);
+  OUTLOG(v,"v",logDEBUG1);
+  OUTLOG(v_err,"v_err",logDEBUG1);
+  OUTLOG(v_err.get_sub_vec(NUM_EEFS*3,NUM_EEFS*3+6,workv_),"BASE_ERR",logERROR);
+  for (int i=0;i<NUM_EEFS;i++)
+    OUTLOG(v_err.get_sub_vec(i*3,(i+1)*3,workv_),eefs_[i].id + "_ERR",logERROR);
 
   // W Rw iM
   Rw.mult(iM,workM1);
@@ -649,10 +656,10 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   workM1.transpose_mult(workM2,U);
 
   //
-//  if(z.rows() != 0){
+  Ravelin::MatrixNd qpQ,qpA;
+  Ravelin::VectorNd qpc,qpb;
+  if(z.rows() != 0){
     // do widyn for torque only
-    Ravelin::MatrixNd qpQ,qpA;
-    Ravelin::VectorNd qpc,qpb;
     // OBJECTIVE
     // Min workspace deviation from v_bar with weights W
 
@@ -702,21 +709,15 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     qpA.set_sub_mat(nq,0,Ravelin::MatrixNd::identity(nq).negate());
     // b
     qpb.set_sub_vec(nq,(workv2 = torque_limits_u).negate());
-
+    OUTLOG(D,"D",logERROR);
     x.resize(qpQ.rows());
-    OUTLOG(qpQ,"qpQ",logERROR);
-    OUTLOG(qpc,"qpc",logERROR);
-    OUTLOG(qpA,"qpA",logERROR);
-    OUTLOG(qpb,"qpb",logERROR);
-//    qpA = Ravelin::MatrixNd::zero(0,qpc.rows());;
-//    qpb = Ravelin::VectorNd::zero(0);
-//    qpc = Ravelin::VectorNd::zero(qpc.rows());
-//    qpQ = Ravelin::MatrixNd::identity(qpc.rows());
 
+    // SRZ: This is a QP with Symmetric PD hessian and box constraints
+    // we can solve it faster than this!
     if(!solve_qp(qpQ,qpc,qpA,qpb,x)){
 //    if(!solve_qp(qpQ,qpc,torque_limits_l,torque_limits_u,qpA,qpb,x)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
-//      assert(false);
+      assert(false);
     }
 
     OUTLOG(x,"x",logERROR);
@@ -729,10 +730,61 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
 
     return true;
-//  } else {
-//    // Do larger "Coupled" optimizations
-//    // for torque and cfs
-//  }
+  } else {
+    // Do larger "Coupled" optimizations
+    // for torque and cfs
+
+    qpA.set_zero(NC+NC+nq*2,NC*3+nq);
+    qpb.set_zero(qpA.rows());
+
+    // CONSTARINTS
+    // Interpenetration
+    // K = N*iM*[R' F]
+    workM2.set_zero(NDOFS,NC*5+nq);
+    workM2.set_sub_mat(0,0,R);
+    workM2.set_sub_mat(NC*5,0,F);
+    iM.mult(workM2,workM1);
+    N.transpose_mult(workM1,workM2);
+
+    qpA.set_sub_mat(0,0,workM2);
+
+    // h*iM*fext
+    iM.mult((workv2 = fext)*=h,workv1);
+    // + v
+    workv1 += v;
+    // -N*[]
+    N.transpose_mult(workv1,workv2);
+    workv2.negate();
+    qpb.set_sub_vec(0,workv2);
+
+    // Coulomb Friction
+    // D goes 1_t1 2_t1 ... 1_t2 2_t2.. etc
+    workM2.set_zero(NC,NC*5+nq);
+    for (int ii=0;ii < NC;ii++){
+      // normal force
+      workM2(ii,ii) = MU(ii,0);
+      // tangent forces [polygonal]
+      for(int kk=NC+ii;kk<NC+4*NC;kk+=NC)
+        workM2(ii,kk) = -1.0;
+    }
+
+    qpA.set_sub_mat(NC,0,workM2);
+//    qpb.set_sub_vec(NC,/*zero*/);
+
+    // Torque Limits
+    // Lower Torque Limit
+    // A
+    qpA.set_sub_mat(NC*2,NC*5,Ravelin::MatrixNd::identity(nq));
+    // b
+    qpb.set_sub_vec(NC*2,(workv2 = torque_limits_l));
+
+    // Upper Torque Limit
+    // A
+    qpA.set_sub_mat(NC*2+nq,0,Ravelin::MatrixNd::identity(nq).negate());
+    // b
+    qpb.set_sub_vec(NC*2+nq,(workv2 = torque_limits_u).negate());
+
+  }
 
   return true;
 }

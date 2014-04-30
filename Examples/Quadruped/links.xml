@@ -39,7 +39,7 @@
     <Sphere id="foot" radius="0.01" mass="0.01" />
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.139" >
+      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.140" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
 <!--        <CollisionGeometry primitive-id="abdomen" />-->

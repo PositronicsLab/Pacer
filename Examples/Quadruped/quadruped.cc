@@ -83,10 +83,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
   N_SYSTEMS++;
 
-  static std::normal_distribution<double> distribution_normal(0,0.1);
+  static std::normal_distribution<double> distribution_normal(0,0.5);
   static std::normal_distribution<double> distribution_point(0,0.01);
 
-  for(int i=0;i<=0;i++){
+  for(int i=0;i<4;i++){
     // PERTURB NORMAL
     eefs_[i].normal += Ravelin::Vector3d(distribution_normal(generator),distribution_normal(generator),0);
     eefs_[i].normal.normalize();
@@ -177,9 +177,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
     Ravelin::VectorNd id(NUM_JOINTS);
     id.set_zero();
     cf.set_zero();
-    if(NC>0)
+    if(NC>0){
+      OUT_LOG(logERROR) << "IDYN";
       inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
-    else{
+    }else{
       // do simple inverse dynamics
       M.get_sub_mat(0,NUM_JOINTS,0,NUM_JOINTS,workM_).mult(qdd_des,id) -= fext.get_sub_vec(0,NUM_JOINTS,workv_);
     }
@@ -236,9 +237,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                  eefs_[ii].event->contact_tan2[0], eefs_[ii].event->contact_tan2[1], eefs_[ii].event->contact_tan2[2]);
         contact_impulse = Ravelin::Origin3d(cf[i],(cf[i*NK+NC]-cf[i*NK+NC+NK/2]),(cf[i*NK+NC+1]-cf[i*NK+NC+NK/2+1]));
         OUTLOG(R_foot.transpose_mult(contact_impulse,workv3_),"cf",logINFO);
+        for(int j=0;j<eefs_[ii].contact_impulses.size();j++)
+          OUTLOG(eefs_[ii].contact_impulses[j],"cf_true",logINFO);
         i++;
       } else {
         OUTLOG(contact_impulse,"cf",logINFO);
+//        OUTLOG(contact_impulse,"cf_true",logINFO);
       }
     }
 

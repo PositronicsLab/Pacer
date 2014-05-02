@@ -86,13 +86,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
   static std::normal_distribution<double> distribution_normal(0,0.5);
   static std::normal_distribution<double> distribution_point(0,0.01);
 
-  for(int i=0;i<4;i++){
+  for(int i=0;i<0;i++){
     // PERTURB NORMAL
     eefs_[i].normal += Ravelin::Vector3d(distribution_normal(generator),distribution_normal(generator),0);
     eefs_[i].normal.normalize();
     // PERTURB POINT
     eefs_[i].point += Ravelin::Vector3d(distribution_point(generator),distribution_point(generator),distribution_point(generator));
-    visualize_ray(eefs_[i].point+eefs_[i].normal,eefs_[i].point,Ravelin::Vector3d(1,1,0),sim);
+    //visualize_ray(eefs_[i].point+eefs_[i].normal,eefs_[i].point,Ravelin::Vector3d(1,1,0),sim);
   }
 
   update();

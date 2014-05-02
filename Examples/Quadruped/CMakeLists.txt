@@ -7,7 +7,7 @@ include (CheckLibraryExists)
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 set (PROJECT_SRC_DIR .)
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 find_package(Boost REQUIRED)
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)

@@ -124,18 +124,15 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
 void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
-  unsigned NC = 0;
-  for (unsigned i=0; i< NUM_EEFS;i++)
-    if(eefs_[i].active)
-      NC++;
 
   N.set_zero(NDOFS,NC);
   ST.set_zero(NDOFS,NC*2);
   D.set_zero(NDOFS,NC*NK);
   R.set_zero(NDOFS,NC*5);
+  if(NC==0) return;
   // Contact Jacobian [GLOBAL frame]
   Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(environment_frame));
 
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
@@ -150,6 +147,9 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ra
       normal  = foot.normal,
       tan1    = foot.tan1,
       tan2    = foot.tan2;
+
+    // TODO: TEST FOR BAD TANGENTS BEFORE DOIGN THIS
+    Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);
 
     // Normal direction
     J.transpose_mult(normal,workv_);
@@ -177,36 +177,64 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ra
   R.set_sub_mat(0,NC,D);
 }
 
-void Robot::calc_eef_jacobians(Ravelin::MatrixNd& R){
-  static Ravelin::VectorNd workv_;
-  static Ravelin::MatrixNd workM_;
+void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
+  int ndofs = NUM_EEFS*3;
 
-  R.set_zero(NDOFS,NUM_EEFS*3);
-  // Contact Jacobian [GLOBAL frame]
-  Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(*base_frame));
-  for(int i=0;i<NUM_EEFS;i++){
-    event_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+  R.set_zero(6,ndofs);
+  Ravelin::MatrixNd J;
 
-    dbrobot_->calc_jacobian(event_frame,eefs_[i].link,workM_);
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
+  for(int ii=0,i=0;ii<NUM_EEFS;i++,ii++){
+    while(!eefs_[ii].active) ii++;
 
-    workM_.get_sub_mat(0,3,0,NDOFS,J);
+    // J: Jacobian, _point@link ^frame
+    // calculate J_f^base : [vb,qd] -> [vf]
+    event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    dbrobot_->calc_jacobian(event_frame,eefs_[i].link,J);
 
-    Ravelin::Vector3d normal = Ravelin::Vector3d(0,0,1),
-                      tan1 = Ravelin::Vector3d(1,0,0),
-                      tan2 = Ravelin::Vector3d(0,1,0);
-
-    // Normal direction
-    J.transpose_mult(normal,workv_);
-    this->J.set_column(i,workv_);
-    // 1st tangent
-    J.transpose_mult(tan1,workv_);
-    this->J.set_column(NUM_EEFS+i,workv_);
-    // 2nd tangent
-    J.transpose_mult(tan2,workv_);
-    this->J.set_column(NUM_EEFS*2+i,workv_);
+    for(int c=0;c<eefs_[i].chain.size();c++)
+      for(int r=0;r<6;r++)
+        R(r,eefs_[i].chain[c]) = -J(r,eefs_[i].chain[c]);
   }
 }
+
+void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
+  Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
+  Ravelin::MatrixNd J(3,NDOFS);
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
+
+  // [x y z alpha beta gamma]_ environment_frame
+  Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,base_stability_offset);
+  for(int i=0,ii=0;i<NUM_EEFS;i++){
+    EndEffector& foot = eefs_[i];
+
+//    [j;b] -> [f;b]
+//    [Jj Jb;
+//     0  I ]
+    if(foot.active && false){
+      // stance foot jacobian
+      // [n s t]_ contact oriented environment frame
+      // at contact point
+      Rw.set_row(3*i,R.column(ii));
+      Rw.set_row(3*i+1,R.column(NC+ii*NK));
+      Rw.set_row(3*i+2,R.column(NC+ii*NK+1));
+
+      ii++;
+    } else {
+      // swing foot jacobian
+      // [x y z]_ base_frame
+      // at center of foot
+      event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+
+      dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
+      workM_.get_sub_mat(0,3,0,NDOFS,J);
+      Rw.set_row(3*i,J.row(0));
+      Rw.set_row(3*i+1,J.row(1));
+      Rw.set_row(3*i+2,J.row(2));
+    }
+  }
+}
+
 /*
 :%s/Sin\[/sin(/g
 :%s/Cos\[/cos(/g

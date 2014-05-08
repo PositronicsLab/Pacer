@@ -31,6 +31,10 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
+#include <utilities.h>
+#ifdef SET_KINEMATICS
+  #define NDEBUG
+#endif
 
 const double grav     = 9.8; // M/s.s
 const double M_PI_8   = 0.39269908169;
@@ -50,6 +54,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
  void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
 

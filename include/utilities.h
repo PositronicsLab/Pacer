@@ -2,6 +2,7 @@
 #define UTILITIES_H
 
 #include <project_common.h>
+#include <interpolation.h>
 
 class Utility{
   public:
@@ -14,7 +15,7 @@ class Utility{
 
   /// Calculates The null pace for matrix M and places it in Vk
   /// returns the number of columns in Vk
-  static unsigned kernal( Ravelin::MatrixNd& M,Ravelin::MatrixNd& Vk);
+  static unsigned kernal( Ravelin::MatrixNd& M,Ravelin::MatrixNd& null_M);
   static void check_finite(Ravelin::VectorNd& v);
 
   static double distance_from_plane(const Ravelin::Vector3d& normal,const Ravelin::Vector3d& point, const Ravelin::Vector3d& x);
@@ -37,11 +38,35 @@ class Utility{
   static void calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd& X,
                                              const Ravelin::Vector2d& Xd,const Ravelin::Vector2d& Xdd,
                                              Ravelin::VectorNd& B);
+  static void calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, Ravelin::VectorNd &B);
+  static void calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, alglib::spline1dinterpolant &B);
+
   static void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
                            Ravelin::VectorNd& X, Ravelin::VectorNd& Xd, Ravelin::VectorNd& Xdd);
   static bool eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                            double& X, double& Xd, double& Xdd);
+  static bool eval_cubic_spline(const std::vector<alglib::spline1dinterpolant>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
+                           double& X, double& Xd, double& Xdd);
+
   static double linesearch(double (*f)(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::VectorNd& gk) ,
                       const Ravelin::VectorNd& d,const Ravelin::VectorNd& x,double rho = 0.5,double c = 1e-4);
+
+  static int gcd(int a, int b)
+  {
+      for (;;)
+      {
+          if (a == 0) return b;
+          b %= a;
+          if (b == 0) return a;
+          a %= b;
+      }
+  }
+
+  static int lcm(int a, int b)
+  {
+      int temp = gcd(a, b);
+
+      return temp ? (a / temp * b) : 0;
+  }
 };
 #endif // UTILITIES_H

@@ -24,11 +24,34 @@ class Quadruped : public Robot{
       const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Ravelin::MatrixNd& C,
       double Ls,const Ravelin::VectorNd& Hs,double Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd);
 
+    static std::vector<std::vector<int> >& expand_gait(const std::vector<std::vector<int> >& gait1,int m, std::vector<std::vector<int> >& gait2);
+
     void init();
 
     void fk_stance_adjustment(double dt);
 
-    void walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<int> >& gait,double phase_time,double step_height,double t,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd);
+    void find_footholds(std::vector<Ravelin::Vector3d>& footholds, int num_footholds);
+    static void select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh);
+
+    void workspace_trajectory_goal(const Ravelin::SVector6d& v_base, const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
+                                              double beta, double dt, Ravelin::VectorNd& v_bar);
+
+    void trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
+                                  Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des);
+
+    /// Walks while trying to match COM velocity "command" in base_frame
+    void walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<int> >& gait,const std::vector<Ravelin::Vector3d>& footholds,double  interval_time,double step_height,double t,
+                               const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,const Ravelin::VectorNd& qdd,
+                               std::vector<Ravelin::Vector3d>& foot_pos, std::vector<Ravelin::Vector3d>& foot_vel, std::vector<Ravelin::Vector3d>& foot_acc);
+
+    static void gait(const std::vector<double> ff, double tG,std::vector<std::vector<int> >& gait);
+    void eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
+
+    //
+    void plan_drive_traj(const Ravelin::Vector2d& x_source,const Ravelin::Vector2d& x_goal,
+                         const std::vector<Ravelin::Vector2d>& via_pts, double duration,
+                         std::vector<alglib::spline1dinterpolant>& coefs);
+
 };
 
 #endif // CONTROL_H

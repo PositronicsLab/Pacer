@@ -18,7 +18,8 @@
     <GravityForce id="gravity" accel="0 0 -9.81" />
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
-  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">
+<!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
+  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
@@ -36,10 +37,10 @@
     <Box id="arm" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.11763"/>
     <Box id="uleg" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.13266"/>
     <Box id="lleg" xlen="0.134" ylen="0.01" zlen="0.01" mass="0.04"/>
-    <Sphere id="foot" radius="0.01" mass="0.01" />
+    <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.140" >
+      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.141" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
         <CollisionGeometry primitive-id="abdomen" />
@@ -154,8 +155,8 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-  <Box id="ground-primitive" xlen="50" ylen="50" zlen="0.05" />
-
+   <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />
+<!--  <Heightmap id="ground-primitive" filename="heightmap.mat" width="1" depth="1" rpy="-1.571 0 0"/>-->
   <RigidBody id="ground" enabled="false"
     position="0 0 -0.025" visualization-id="ground-primitive">
     <CollisionGeometry primitive-id="ground-primitive" />

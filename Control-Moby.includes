@@ -1,8 +1,6 @@
+/usr/local/include
 include
 Examples/Quadruped
 Examples/Monopod
-/usr/local/include
-/Users/samzapo/ThirdParty/Ravelin/include
 /usr/include
-/opt/include
-/opt/local/include
+ThirdParty/alglib/src

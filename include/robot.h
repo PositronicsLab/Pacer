@@ -63,16 +63,17 @@ class Robot {
                              const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
                              Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
-void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& pos_des, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& uff);
-
+  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVelocityd& vel_des, Ravelin::VectorNd& ufb);
+  void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
   bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                         double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
+  bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z);
   void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
-  void calc_eef_jacobians(Ravelin::MatrixNd& R);
+  void calc_base_jacobian(Ravelin::MatrixNd& R);
+  void calc_workspace_jacobian(Ravelin::MatrixNd& Rw);
   void RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
-  void eef_stiffness_fb(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd&  qd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
 //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
   Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
   Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
@@ -101,19 +102,23 @@ void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin:
     // Useful Stored Data
     boost::shared_ptr<Ravelin::Pose3d>   base_horizontal_frame,
                                          base_frame,
-                                         base_frame_global;
+                                         environment_frame,
+                                         base_link_frame;
+    Ravelin::MatrixNd                    base_stability_offset;
+
     unsigned          NC;
     EndEffector       center_of_contact;
     Ravelin::Vector3d center_of_mass_x,
                       center_of_mass_xd,
                       center_of_mass_xdd,
-                      zero_moment_point;
-    Ravelin::Vector3d roll_pitch_yaw;
+                      center_of_feet_x,
+                      roll_pitch_yaw;
+    Ravelin::Vector2d zero_moment_point;
     Ravelin::VectorNd uff, ufb;
     Ravelin::VectorNd qdd_des, qdd;
-    Ravelin::MatrixNd N,D,M,ST,R,J;
+    Ravelin::MatrixNd N,D,M,ST,R,Rw;
     Ravelin::VectorNd fext;
-    Ravelin::VectorNd vel, gc, acc;
+    Ravelin::VectorNd vel, gc, acc,vel_w;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;
@@ -124,7 +129,7 @@ void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin:
 
   // PHYSICAL ROBOT LIMITS AND VARIABLES
     std::map<std::string, double>     q0_;
-    std::map<std::string, double>     torque_limits_;
+    Ravelin::VectorNd     torque_limits_l,torque_limits_u;
 
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that

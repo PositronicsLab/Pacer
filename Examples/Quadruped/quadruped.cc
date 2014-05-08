@@ -1,21 +1,5 @@
 #include <quadruped.h>
 #include <utilities.h>
-
-<<<<<<< HEAD
-#include <random>
-std::default_random_engine generator;
-
-using namespace Ravelin;
-//using namespace Moby;
-
-
-const bool WALK = false,
-           TRUNK_STABILIZATION = false,
-           CONTROL_IDYN = true,
-           FRICTION_EST = false,
-           PARALLEL_STIFFNESS = false;
-
-=======
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 // -----------------------------------------------------------------------------

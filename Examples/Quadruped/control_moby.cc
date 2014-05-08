@@ -3,10 +3,11 @@
  ****************************************************************************/
 #include <quadruped.h>
 
-//std::string LOG_TYPE("ERROR");  // Only major failures from the system
-//std::string LOG_TYPE("INFO");     // Normal print out
-std::string LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
-//std::string LOG_TYPE("DEBUG1"); // all function parameters and results
+std::string
+// LOG_TYPE("ERROR");  // Only major failures from the system
+// LOG_TYPE("INFO");     // Normal print out
+// LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
+  LOG_TYPE("DEBUG1"); // all function parameters and results
 
 bool new_sim_step = true;
 Ravelin::VectorNd perturbation;
@@ -136,8 +137,9 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
       abrobot->update_link_poses();
       abrobot->update_link_velocities();
     }
-#endif
+#else
     apply_simulation_forces(U,joints_);
+#endif
 
      last_time = t;
 
@@ -169,8 +171,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
      OUTLOG(qdat,"qdat",logDEBUG);
      OUTLOG(qddat,"qddat",logDEBUG);
 
-//     dxl_->set_position(qdat.data());
-//     DXL::Dynamixel::set_state(qdat.data(),qddat.data());
+     DXL::Dynamixel::set_state(qdat.data(),qddat.data());
 # else
   Ravelin::VectorNd udat = u.column(0);
   dxl_->set_torque(udat.data());

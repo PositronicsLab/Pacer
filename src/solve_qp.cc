@@ -205,7 +205,7 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   OUTLOG(ub,"ub",logDEBUG1);
 #endif
   bool SOLVE_FLAG = true;
-  SOLVE_FLAG = as_.qp_activeset(Q,c,lb,ub,A,b,Ravelin::MatrixNd::zero(0,c.rows()),Ravelin::VectorNd::zero(0),x);
+  /*SOLVE_FLAG = */as_.qp_activeset(Q,c,lb,ub,A,b,Ravelin::MatrixNd::zero(0,c.rows()),Ravelin::VectorNd::zero(0),x);
 
 #ifndef NDEBUG
   OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;

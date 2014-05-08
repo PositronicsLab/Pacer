@@ -149,7 +149,7 @@ void Robot::update(){
 //  base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
   base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(*base_link_frame));
 
-  Ravelin::Pose3d::spatial_transform_to_matrix(base_link_frame,environment_frame,base_stability_offset);
+  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
 
 #ifdef VISUALIZE_MOBY
 //  draw_pose(*base_frame,sim);

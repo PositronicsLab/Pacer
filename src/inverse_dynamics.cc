@@ -604,7 +604,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // no base control
   for(int i=NUM_JOINTS;i<NUM_JOINTS+6;i++)
-    W(i,i) = 100;
+    W(i,i) = 1;
 
 //  W(NUM_JOINTS,NUM_JOINTS) = 0;
 //  W(NUM_JOINTS+1,NUM_JOINTS+1) = 0;
@@ -685,14 +685,14 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
     // Interpenetration
     // A = N iM F
-//    N.transpose_mult(iM.mult(F,workM1),workM2);
-//    qpA.set_sub_mat(nq*2,0,workM2);
-//    // b = -N(v + iM(h fext + R'z))
-//    ((workv2 = fext) *= h) += workv1;
-//    iM.mult(workv2,workv1) += v;
-//    N.transpose_mult(workv1,workv2);
-//    workv2.negate();
-//    qpb.set_sub_vec(nq*2,workv2);
+    N.transpose_mult(iM.mult(F,workM1),workM2);
+    qpA.set_sub_mat(nq*2,0,workM2);
+    // b = -N(v + iM(h fext + R'z))
+    ((workv2 = fext) *= h) += workv1;
+    iM.mult(workv2,workv1) += v;
+    N.transpose_mult(workv1,workv2);
+    workv2.negate();
+    qpb.set_sub_vec(nq*2,workv2);
 
 //    std::fill_n(torque_limits_u.begin(), torque_limits_u.size(), 1e+30);
 //    std::fill_n(torque_limits_l.begin(), torque_limits_l.size(),-1e+30);
@@ -709,13 +709,17 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     qpA.set_sub_mat(nq,0,Ravelin::MatrixNd::identity(nq).negate());
     // b
     qpb.set_sub_vec(nq,(workv2 = torque_limits_u).negate());
-    OUTLOG(D,"D",logERROR);
     x.resize(qpQ.rows());
+
+//    qpQ = Ravelin::MatrixNd::identity(qpQ.rows());
+//    qpc.set_zero();
+    qpA.resize(0,qpQ.rows());
+    qpb.resize(0);
 
     // SRZ: This is a QP with Symmetric PD hessian and box constraints
     // we can solve it faster than this!
-    if(!solve_qp(qpQ,qpc,qpA,qpb,x)){
-//    if(!solve_qp(qpQ,qpc,torque_limits_l,torque_limits_u,qpA,qpb,x)){
+//    if(!solve_qp(qpQ,qpc,qpA,qpb,x)){
+    if(!solve_qp(qpQ,qpc,torque_limits_l,torque_limits_u,qpA,qpb,x)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
       assert(false);
     }
@@ -742,9 +746,12 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     // K = N*iM*[R' F]
     workM2.set_zero(NDOFS,NC*5+nq);
     workM2.set_sub_mat(0,0,R);
-    workM2.set_sub_mat(NC*5,0,F);
+    workM2.set_sub_mat(0,NC*5,F);
+    OUTLOG(workM2,"[R' F]",logERROR);
     iM.mult(workM2,workM1);
     N.transpose_mult(workM1,workM2);
+
+    OUTLOG(workM2,"K = [ % = N*iM*[R' F]",logERROR);
 
     qpA.set_sub_mat(0,0,workM2);
 

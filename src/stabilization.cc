@@ -165,5 +165,3 @@ void Robot::calc_com(){
 #endif
 
 }
-
-

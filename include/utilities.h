@@ -50,5 +50,23 @@ class Utility{
 
   static double linesearch(double (*f)(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::VectorNd& gk) ,
                       const Ravelin::VectorNd& d,const Ravelin::VectorNd& x,double rho = 0.5,double c = 1e-4);
+
+  static int gcd(int a, int b)
+  {
+      for (;;)
+      {
+          if (a == 0) return b;
+          b %= a;
+          if (b == 0) return a;
+          a %= b;
+      }
+  }
+
+  static int lcm(int a, int b)
+  {
+      int temp = gcd(a, b);
+
+      return temp ? (a / temp * b) : 0;
+  }
 };
 #endif // UTILITIES_H

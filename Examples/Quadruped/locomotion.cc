@@ -320,7 +320,10 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       // Combine x, y, and yaw to for full step
       foot_goal +=  yaw_step;
 
-      if(!inited) foot_goal /= 2;  // only works for 2 interval gait
+      if(!inited){
+        foot_goal /= 2;  // only works for 2 interval gait
+      }
+
 
       OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
 
@@ -329,6 +332,20 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
       if(gait[PHASE][i] > 0){
         foot_goal /= duty_factor[i];
+
+        // velocity correction
+        // FEEDBACK CAPTURE POINT
+//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
+//        double eta = 1.2,
+//               height = hip_pos[2];
+//        Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
+//                                     -  Ravelin::Origin3d(
+//                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, vel.get_sub_vec(NUM_JOINTS,NUM_JOINTS+3,workv3_))
+//                                        )
+//                                     ) * sqrt(height/grav);
+//        rfb[2] = 0;
+//        foot_goal += Ravelin::Origin3d(rfb);
+
           control_points.push_back(x);
           control_points.push_back(x + Ravelin::Origin3d(0,0,step_height));
         if(footholds.empty()){
@@ -384,15 +401,11 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
     foot_acc[i].pose =  foot_pos[i].pose = foot_vel[i].pose = base_frame;
   }
 
-
-
 #ifdef VISUALIZE_MOBY
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);
-
   }
-
 
   for(int i=0;i<NUM_EEFS;i++){
 
@@ -414,7 +427,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
       Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
       Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-//      visualize_ray(    p, p,   Ravelin::Vector3d(0,0,0), sim);
+      visualize_ray(    p, p,   Ravelin::Vector3d(0,0,0), sim);
 //      visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
 //      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
     }
@@ -434,4 +447,22 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
   last_time = t;
   inited = true;
+}
+
+void Quadruped::gait(const std::vector<double> footfall, double stance_time,std::vector<std::vector<int> >& gait){
+  // smallest interval size is 0.01
+  int N = 100;
+  gait.resize(N);
+  for(int i=0;i<N;i++){
+    gait[i].resize(footfall.size());
+    for(int j=0;j<footfall.size();j++){
+      if(i > N*footfall[j] && i < N*(footfall[j]+stance_time) ){
+        gait[i][j] = -(N*stance_time - (i-N*footfall[j]) + 2);
+      } else {
+        gait[i][j] = 2 + N - N*stance_time - (int)(N + (i-N*(footfall[j]+stance_time))) % N;
+      }
+      std::cout << gait[i][j] << " ";
+    }
+    std::cout << std::endl;
+  }
 }

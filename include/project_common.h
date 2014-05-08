@@ -31,6 +31,10 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
+#include <utilities.h>
+#ifdef SET_KINEMATICS
+  #define NDEBUG
+#endif
 
 const double grav     = 9.8; // M/s.s
 const double M_PI_8   = 0.39269908169;

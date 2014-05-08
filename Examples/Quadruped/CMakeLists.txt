@@ -20,6 +20,7 @@ option(VISUALIZE_MOBY "Display Moby Visualizations?" OFF)
 option(COLLECT_DATA "Output Matlab Data?" OFF)
 option(USE_TERRAIN "Add Terrain to the world?" OFF)
 option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
+option(PERTURB_CONTACT_DATA "Perturb Contact Data to simulate inaccurate sensors?" OFF)
 
 # you may have to add additional includes in here...
 add_definitions(-DBUILD_DOUBLE)
@@ -30,6 +31,10 @@ add_definitions(-DUSE_GLPK)
 if(USE_TERRAIN)
 add_definitions( -DUSE_TERRAIN )
 endif(USE_TERRAIN)
+
+if(PERTURB_CONTACT_DATA)
+  add_definitions( -DPERTURB_CONTACT_DATA )
+endif(PERTURB_CONTACT_DATA)
 
 if(SPLITTING_METHOD)
 add_definitions( -DSPLITTING_METHOD )

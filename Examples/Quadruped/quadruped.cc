@@ -65,9 +65,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   ((qdd = qd)-=qd_last)/=STEP_SIZE;
 
-  update();
-  OUT_LOG(logINFO)<< "num_contacts = " << NC ;
-
+#ifdef PERTURB_CONTACT_DATA
   static std::normal_distribution<double> distribution_normal(0,0.5);
   static std::normal_distribution<double> distribution_point(0,0.01);
 
@@ -83,8 +81,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
     visualize_ray(eefs_[i].point,eefs_[i].point+eefs_[i].normal*0.05,Ravelin::Vector3d(1,1,0),sim);
 #endif
   }
+#endif
 
   update();
+  OUT_LOG(logINFO)<< "num_contacts = " << NC ;
 
   uff.set_zero(NUM_JOINTS);
   ufb.set_zero(NUM_JOINTS);
@@ -184,8 +184,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 
     if(WORKSPACE_FEEDBACK){
-      std::vector<Ravelin::Matrix3d> W;
-      W = boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity());
+      std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
+//      std::vector<Ravelin::Matrix3d> W;
+//      W = boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity());
       // CURRENTLY THIS IS ONLY FORCE
       // BUT IT CAN BE ACCELERATIONS TOO
       eef_stiffness_fb(W,foot_pos,foot_vel,q,qd,ufb);
@@ -486,40 +487,40 @@ void Quadruped::init(){
     std::vector<int> step;
 
     // Trotting gait 50/50 duty cycle
-    step = boost::assign::list_of(-1)(1)(1)(-1);
+    step = boost::assign::list_of(-1)(1)(1)(-1).convert_to_container<std::vector<int> >();
     trot.push_back(step);
-    step = boost::assign::list_of(1)(-1)(-1)(1);
+    step = boost::assign::list_of(1)(-1)(-1)(1).convert_to_container<std::vector<int> >();
     trot.push_back(step);
 
     // walk lf,rf,lh,rh
-    step = boost::assign::list_of(-1)(-3)(1)(-2);
+    step = boost::assign::list_of(-1)(-3)(1)(-2).convert_to_container<std::vector<int> >();
     walk.push_back(step);
-    step = boost::assign::list_of(1)(-2)(-3)(-1);
+    step = boost::assign::list_of(1)(-2)(-3)(-1).convert_to_container<std::vector<int> >();
     walk.push_back(step);
-    step = boost::assign::list_of(-3)(-1)(-2)(1);
+    step = boost::assign::list_of(-3)(-1)(-2)(1).convert_to_container<std::vector<int> >();
     walk.push_back(step);
-    step = boost::assign::list_of(-2)(1)(-1)(-3);
+    step = boost::assign::list_of(-2)(1)(-1)(-3).convert_to_container<std::vector<int> >();
     walk.push_back(step);
 
     // pace
-    step = boost::assign::list_of(-1)(1)(-1)(1);
+    step = boost::assign::list_of(-1)(1)(-1)(1).convert_to_container<std::vector<int> >();
     pace.push_back(step);
-    step = boost::assign::list_of(1)(-1)(1)(-1);
+    step = boost::assign::list_of(1)(-1)(1)(-1).convert_to_container<std::vector<int> >();
     pace.push_back(step);
 
     // bound
-    step = boost::assign::list_of(-1)(-1)(1)(1);
+    step = boost::assign::list_of(-1)(-1)(1)(1).convert_to_container<std::vector<int> >();
     bound.push_back(step);
-    step = boost::assign::list_of(1)(1)(-1)(-1);
+    step = boost::assign::list_of(1)(1)(-1)(-1).convert_to_container<std::vector<int> >();
     bound.push_back(step);
 
     // transverse gallop
     std::vector<double> ff;
-    ff = boost::assign::list_of(0.8)(0.9)(0.3)(0.4);
+    ff = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
     gait(ff,0.2,tgallop);
 
     // Rotary gallop
-    ff = boost::assign::list_of(0.7)(0.6)(0.0)(0.1);
+    ff = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
     gait(ff,0.2,rgallop);
 
   }

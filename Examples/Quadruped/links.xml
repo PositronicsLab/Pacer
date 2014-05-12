@@ -19,7 +19,7 @@
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
 <!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
-  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01">
+  <EventDrivenSimulator integrator-id="rk4" max-event-time="0.01">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>

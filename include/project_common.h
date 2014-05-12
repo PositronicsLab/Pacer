@@ -36,6 +36,22 @@
   #define NDEBUG
 #endif
 
+// ----------------------------------------------------------------------------
+// Get these from https://github.com/arpg/GLConsole.git
+//include this header for CVars and GLConsole
+#include <GLConsole/GLConsole.h>
+//A CVar version of std::vector
+#include <CVars/CVarVectorIO.h>
+//A CVar version of std::map
+#include <CVars/CVarMapIO.h>
+// Single global instance so glut can get access
+extern GLConsole theConsole;
+
+using CVarUtils::operator<<;
+using CVarUtils::operator>>;
+
+// ----------------------------------------------------------------------------
+
 const double grav     = 9.8; // M/s.s
 const double M_PI_8   = 0.39269908169;
 const double M_PI_16  = 0.19634954084;
@@ -46,6 +62,7 @@ extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vect
 extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim );
 #endif
 
+// ----------------------------------------------------------------------------
 #include <Log.h>
  void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
@@ -59,6 +76,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
  void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
 
 extern std::string LOG_TYPE;
+// ----------------------------------------------------------------------------
 
 // STATIC declarations to be used in each src file
 

@@ -9,6 +9,9 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 set (PROJECT_SRC_DIR .)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 find_package(Boost REQUIRED)
+FIND_PACKAGE( GLUT REQUIRED )
+#FIND_PACKAGE( GLU REQUIRED )
+FIND_PACKAGE( OpenGL REQUIRED )
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
@@ -125,7 +128,7 @@ set(THIRDPARTY
 
 add_library(${PROJECT_NAME} MODULE ${SOURCES} ${SOURCES2} ${THIRDPARTY})
 
-target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt glut osg osgDB GLU OpenThreads)
+target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt glut osg osgDB GLU OpenThreads cvars ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
 
 if(DYNAMIXEL)
   target_link_libraries(${PROJECT_NAME} dxl)

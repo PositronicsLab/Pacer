@@ -140,15 +140,15 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //  Ravelin::Vector3d base_correct = beta/dt * ( goal_base_pose - center_of_mass_x);
 //  v_bar[NUM_EEFS*3]   += base_correct[0];
 //  v_bar[NUM_EEFS*3+1] += base_correct[1];
-//  v_bar[NUM_EEFS*3+3] += beta/dt * roll_pitch_yaw[0];
+  v_bar[NUM_EEFS*3+3] += -beta/dt * roll_pitch_yaw[0];
   v_bar[NUM_EEFS*3+4] += -beta/dt * roll_pitch_yaw[1];
   // base position should be 0.13m above centroid of feet
   for(int i=0;i<NUM_EEFS;i++){
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
     Ravelin::Vector3d pos_correct = beta/dt * (foot_pos[i] - pos);
     v_bar.set_sub_vec(i*3,foot_vel[i] + pos_correct);
-//    visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos)+Ravelin::Pose3d::transform_vector(Moby::GLOBAL,pos_correct), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,1), sim);
-//    visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,0), sim);
+    visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos)+Ravelin::Pose3d::transform_vector(Moby::GLOBAL,pos_correct), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,1), sim);
+    visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,0), sim);
   }
   OUTLOG(v_bar,"v_bar",logERROR);
 }

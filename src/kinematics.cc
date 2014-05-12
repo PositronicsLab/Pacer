@@ -204,6 +204,7 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
   boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
 
   // [x y z alpha beta gamma]_ environment_frame
+  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
   Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,base_stability_offset);
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
@@ -211,27 +212,17 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
 //    [j;b] -> [f;b]
 //    [Jj Jb;
 //     0  I ]
-    if(foot.active && false){
-      // stance foot jacobian
-      // [n s t]_ contact oriented environment frame
-      // at contact point
-      Rw.set_row(3*i,R.column(ii));
-      Rw.set_row(3*i+1,R.column(NC+ii*NK));
-      Rw.set_row(3*i+2,R.column(NC+ii*NK+1));
+    // swing foot jacobian
+    // [x y z]_ base_frame
+    // at center of foot
+    event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
 
-      ii++;
-    } else {
-      // swing foot jacobian
-      // [x y z]_ base_frame
-      // at center of foot
-      event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+    dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
+    workM_.get_sub_mat(0,3,0,NDOFS,J);
+    Rw.set_row(3*i,J.row(0));
+    Rw.set_row(3*i+1,J.row(1));
+    Rw.set_row(3*i+2,J.row(2));
 
-      dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
-      workM_.get_sub_mat(0,3,0,NDOFS,J);
-      Rw.set_row(3*i,J.row(0));
-      Rw.set_row(3*i+1,J.row(1));
-      Rw.set_row(3*i+2,J.row(2));
-    }
   }
 }
 

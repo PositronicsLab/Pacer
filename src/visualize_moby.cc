@@ -115,3 +115,167 @@ void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator>
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,1,0),sim);
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(0,0,1),sim);
 }
+
+
+// ============================================================================
+/**
+ * What to draw each refresh
+ * Called by GLUT
+ */
+
+using namespace std;
+
+void display()
+{
+//  // This is how you register a CVar with the console, having a CVar
+//  // in an inner loop is a bad idea, however.
+//  //Hence the try/catch block
+
+//  float triangleSize = 1.0;
+//  try {
+//    //triangleSize is set to the default value of the CVar "triangle.size
+//    //      Use this syntax to make the CVar    CVar name,    Default value,   Help text,
+//    triangleSize = CVarUtils::CreateCVar<float>( "triangle.size", 1.0f, "Triangle size value" );
+//  }
+//  catch( CVarUtils::CVarException e ) {
+//    switch( e ) {
+//      case CVarUtils::CVarAlreadyCreated:
+//        //it already exists, so just assign the latest value
+//        triangleSize = CVarUtils::GetCVar<float>( "triangle.size" );
+//        break;
+//      default:
+//        printf( "Unknown exception" );
+//      break;
+//    }
+//  }
+
+//  //set up the scene
+//  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//  glLoadIdentity();
+//  glTranslatef(0,0.0f,-2.0f);
+
+//  //draw the triangle
+//  glBegin(GL_TRIANGLES); {
+//    glColor3f(1.0f,0.0f,0.0f);
+//    glVertex3f( 0.0f, triangleSize, 0.0f);
+//    glColor3f(0.0f,triangleSize,0.0f);
+//    glVertex3f(-triangleSize,-triangleSize, 0.0f);
+//    glColor3f(0.0f,0.0f,triangleSize);
+//    glVertex3f( triangleSize,-triangleSize, 0.0f);
+//  }
+//  glEnd();
+
+  //draw the console. always call it last so it is drawn on top of everything
+  theConsole.RenderConsole();
+
+  glutSwapBuffers();
+}
+
+/**
+ * resize the window to the desired size
+ * @param w Window width
+ * @param h Window height
+ */
+void reshape (int w, int h)
+{
+  glViewport     ( 0, 0, w, h );
+  glMatrixMode   ( GL_PROJECTION );
+  glLoadIdentity ( );
+
+  if ( h == 0 )
+    gluPerspective ( 80, ( float ) w, 1.0, 5000.0 );
+  else
+    gluPerspective ( 80, ( float ) w / ( float ) h, 1.0, 5000.0 );
+
+  glMatrixMode   ( GL_MODELVIEW );
+  glLoadIdentity ( );
+}
+
+/**
+ * just redisplay constantly to let the console update...
+ */
+void idle()
+{
+#ifdef WIN32
+  Sleep( 1 );
+#else
+  usleep( (int)1e4 );
+#endif
+    glutPostRedisplay(); // we have
+}
+
+/**
+ * Pass keboard events to the console.
+ * Up and down arrows to scroll through console history.
+ * Shift+up or shift+down to scroll the console window.
+ * Pageup or pagedown to scroll the console window as well.
+ */
+void special(int key, int, int )
+{
+  if( theConsole.IsOpen() )
+  {
+    //pass all key strokes to the console
+    theConsole.SpecialFunc( key );
+  }
+  else
+  {
+    //do your own thing with the keys
+  }
+}
+
+/**
+ * handle incoming key events and send to console
+ */
+void keyfunc( unsigned char key, int, int )
+{
+  switch( key ) {
+
+    case 27:  //escape
+      exit ( 0 );
+      break;
+
+    case GLCONSOLE_KEY: //~ key opens console on US keyboards.
+                                  //On UK keyboards it is the ` key (the one above the Tab and left of the 1 keys)
+      theConsole.ToggleConsole();
+      break;
+
+    default:
+      if( theConsole.IsOpen() ) {
+        //send keystroke to console
+        theConsole.KeyboardFunc( key );
+      }
+      else {
+        //do your own thing with the keys
+      }
+      break;
+  }
+}
+
+void init_glconsole(){
+  int argc = 0;
+  const char * argv[] = {};
+  //Initialise GLUT
+  glutInit(&argc,(char **)argv);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowPosition (300, 50);
+  glutInitWindowSize (800, 600);
+  glutCreateWindow("GLConsole Demo");
+
+//   standard GL init
+  glShadeModel(GL_SMOOTH);
+  glClearColor(0.0f, 0.0f, 1.0f, 0.5f);
+  glClearDepth(1.0f);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LEQUAL);
+  glEnable ( GL_COLOR_MATERIAL );
+  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+  //register functions
+  glutReshapeFunc (reshape);
+  glutDisplayFunc (display);
+  glutKeyboardFunc (keyfunc);
+  glutSpecialFunc (special);
+  glutIdleFunc(idle);
+
+  glutMainLoop();
+}

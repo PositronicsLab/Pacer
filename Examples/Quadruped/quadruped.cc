@@ -2,6 +2,10 @@
 #include <utilities.h>
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
+
+#    include <OpenGL/gl.h>
+#    include <OpenGL/glu.h>
+#    include <GLUT/glut.h>
 // -----------------------------------------------------------------------------
 using namespace Ravelin;
 //using namespace Moby;
@@ -16,33 +20,34 @@ extern Ravelin::VectorNd perturbation;
 
 extern bool new_sim_step;
 
+GLConsole theConsole;
 // ============================================================================
 // ======================= USER DEFINED PARAMETERS ============================
 
-const bool  WALK                = true,
-              TRACK_FOOTHOLDS     = false,// EXPERIMENTAL
+static bool &WALK                = CVarUtils::CreateCVar( "quadruped.locomotion.active",true,"Activate Walking?"),
+              &TRACK_FOOTHOLDS     = CVarUtils::CreateCVar( "quadruped.locomotion.track_footholds",false,"Locate and use footholds?"),// EXPERIMENTAL
             TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-            CONTROL_IDYN        = true,
-              WORKSPACE_IDYN      = false,// EXPERIMENTAL
-              USE_LAST_CFS        = false,// EXPERIMENTAL
+            &CONTROL_IDYN        = CVarUtils::CreateCVar( "quadruped.idyn",false,"Activate IDYN?"),
+              &WORKSPACE_IDYN      = CVarUtils::CreateCVar( "quadruped.widyn",false,"Activate WIDYN?"),// EXPERIMENTAL
+              &USE_LAST_CFS        = CVarUtils::CreateCVar( "quadruped.use_cfs",false,"Use last detected contact forces?"),// EXPERIMENTAL
             FRICTION_EST        = false,  // EXPERIMENTAL
-            ERROR_FEEDBACK      = true,
-              FEEDBACK_FORCE      = true,
-              FEEDBACK_ACCEL      = false,
-              WORKSPACE_FEEDBACK  = true;
+            &ERROR_FEEDBACK      = CVarUtils::CreateCVar( "quadruped.error-feedback.active",true,"Use error-feedback control?"),
+              &FEEDBACK_FORCE      = CVarUtils::CreateCVar( "quadruped.error-feedback.force",false,"Apply error-feedback as forces?"),
+              &FEEDBACK_ACCEL      = CVarUtils::CreateCVar( "quadruped.error-feedback.accel",false,"Apply error-feedback as accelerations?"),
+              &WORKSPACE_FEEDBACK  = CVarUtils::CreateCVar( "quadruped.error-feedback.workspace",true,"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
-double  gait_time   = 0.4,
-        step_height = 0.014,
-        goto_X      = 0.05,
-        goto_Y      = 0,
-        goto_GAMMA  = 0.0;
+double  &gait_time   = CVarUtils::CreateCVar( "quadruped.locomotion.gait_time",0.4,"Gait Duration over one cycle."),
+        &step_height = CVarUtils::CreateCVar( "quadruped.locomotion.step_height",0.014,""),
+        &goto_X      = CVarUtils::CreateCVar( "quadruped.locomotion.x",0.05,"command forward direction"),
+        &goto_Y      = CVarUtils::CreateCVar( "quadruped.locomotion.y",0.0,"command lateral direction"),
+        &goto_GAMMA  = CVarUtils::CreateCVar( "quadruped.locomotion.gamma",0.0,"command rotation");
 
 // Assign Gait to the locomotion controller
 const std::vector<std::vector<int> >& locomotion_gait = trot;
 
 // -- IDYN OPTIONS --
-double STEP_SIZE = 0.01;
+double &STEP_SIZE = CVarUtils::CreateCVar( "quadruped.dt",0.01,"value for dt (also h) used in IDYN and other functions");
 
 // ============================================================================
 // ============================================================================
@@ -129,7 +134,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose = base_frame;
     }
   }
-  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.05,0.001,vb_w);
+  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.01,STEP_SIZE,vb_w);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
@@ -176,8 +181,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
       // GAINS FOR FORCE ERROR FEEDABCK
       for(int i=0;i<NUM_JOINTS;i++){
         gains[joints_[i]->id].perr_sum = 0;
-        gains[joints_[i]->id].kp = 1e2;
-        gains[joints_[i]->id].kv = 1e-1;
+        gains[joints_[i]->id].kp = 1e1;
+        gains[joints_[i]->id].kv = 1e-2;
         gains[joints_[i]->id].ki = 1e-3;
       }
       PID::control(q_des, qd_des,q,qd,joint_names_, gains,ufb);
@@ -185,8 +190,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     if(WORKSPACE_FEEDBACK){
       std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
-//      std::vector<Ravelin::Matrix3d> W;
-//      W = boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity());
       // CURRENTLY THIS IS ONLY FORCE
       // BUT IT CAN BE ACCELERATIONS TOO
       eef_stiffness_fb(W,foot_pos,foot_vel,q,qd,ufb);
@@ -342,7 +345,11 @@ Ravelin::VectorNd& Quadruped::control(double t,
    return u;
 }
 
+//extern void init_glconsole();
+//#include <thread>
+//std::thread * tglc;
 void Quadruped::init(){
+//   tglc = new std::thread(init_glconsole);
   // Set up joint references
 #ifdef FIXED_BASE
   NSPATIAL = 0;
@@ -529,6 +536,3 @@ void Quadruped::init(){
   environment_frame->x = Ravelin::Origin3d(0,0,0);
   environment_frame->q.set_identity();
 }
-  // Push initial state to robot
-
-

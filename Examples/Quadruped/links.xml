@@ -23,9 +23,12 @@
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
+<!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1.0" mu-viscous="0" epsilon="0.0"/>
+    <DynamicBody dynamic-body-id="ball" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="1"/>
   </EventDrivenSimulator>
 
 
@@ -62,7 +65,7 @@
 
       <RevoluteJoint id="LF_HIP_FE" qd="0" location="0.11685 0.056278 0" inboard-link-id="LF_HIP" outboard-link-id="LF_ULEG" axis="0 1 0" />
       <RigidBody id="LF_ULEG" position="0.16185 0.056278 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="arm">
-<!--        <CollisionGeometry primitive-id="arm" />-->
+        <CollisionGeometry primitive-id="arm" />
         <InertiaFromPrimitive primitive-id="arm" />
       </RigidBody>
 
@@ -168,6 +171,13 @@
     position="0 0 -100" visualization-id="globe">
     <CollisionGeometry primitive-id="globe" />
   </RigidBody>-->
+
+
+  <RigidBody id="ball" enabled="true"
+    position="0.1 0.1 0.15" visualization-id="foot">
+    <CollisionGeometry primitive-id="foot" />
+    <InertiaFromPrimitive primitive-id="foot" />
+  </RigidBody>
 
   </MOBY>
 </XML>

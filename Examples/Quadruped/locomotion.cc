@@ -223,9 +223,10 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   foot_vel.resize(NUM_EEFS);
   foot_acc.resize(NUM_EEFS);
 
-  // Populate spline vectors
+  // (Re)Populate spline vectors
   if(!inited){
     for(int i=0;i<NUM_EEFS;i++){
+      duty_factor[i] = 0;
       //calculate step to swing ratio throughout the gait
       for(int j = 0; j<  N_PHASES;j++)
         duty_factor[i] += (gait[j][i] > 0)? 1.0 : 0.0;
@@ -298,9 +299,11 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
         }
       }
 
+      Ravelin::Origin3d x0 = Ravelin::Origin3d(eefs_[i].origin);
+
       // Calculate foot-step info
       // Determine linear portion of step
-      Ravelin::Origin3d from_com(x[0],x[1],0),
+      Ravelin::Origin3d from_com(x0[0],x0[1],0),
                          yaw_step,
                         foot_goal = Ravelin::Origin3d(command[0],command[1],command[2]);
 
@@ -320,17 +323,17 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       // Combine x, y, and yaw to for full step
       foot_goal +=  yaw_step;
 
-      if(!inited){
-        foot_goal /= 2;  // only works for 2 interval gait
-      }
-
+      // All steps wrt to x0
+      foot_goal /= 2;
 
       OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
 
       // Set control point for either stance or swing phase
       std::vector<Ravelin::Origin3d> control_points;
 
+
       if(gait[PHASE][i] > 0){
+        // SWING
         foot_goal /= duty_factor[i];
 
         // velocity correction
@@ -349,17 +352,19 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
           control_points.push_back(x);
           control_points.push_back(x + Ravelin::Origin3d(0,0,step_height));
         if(footholds.empty()){
-          control_points.push_back(x + foot_goal + Ravelin::Origin3d(0,0,step_height));
-          control_points.push_back(x + foot_goal);
+          control_points.push_back(x0 + foot_goal + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(x0 + foot_goal);
         } else {
           Ravelin::Origin3d x_fh;
-          select_foothold(footholds,x+foot_goal,x_fh);
+          select_foothold(footholds,x0+foot_goal,x_fh);
           // Reach new foothold, account for movement of robot during step
           control_points.push_back(x_fh - foot_goal + Ravelin::Origin3d(0,0,step_height));
           control_points.push_back(x_fh - foot_goal);
         }
       }
       else if(gait[PHASE][i] < 0){
+        // STANCE
+
         foot_goal /= (1-duty_factor[i]);
 
         // all stance phase cases

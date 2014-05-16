@@ -24,30 +24,30 @@ GLConsole theConsole;
 // ============================================================================
 // ======================= USER DEFINED PARAMETERS ============================
 
-static bool &WALK                = CVarUtils::CreateCVar( "quadruped.locomotion.active",true,"Activate Walking?"),
-              &TRACK_FOOTHOLDS     = CVarUtils::CreateCVar( "quadruped.locomotion.track_footholds",false,"Locate and use footholds?"),// EXPERIMENTAL
+static bool &WALK                = CVarUtils::CreateCVar( "qd.locomotion.active",true,"Activate Walking?"),
+              &TRACK_FOOTHOLDS     = CVarUtils::CreateCVar( "qd.locomotion.track_footholds",false,"Locate and use footholds?"),// EXPERIMENTAL
             TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-            &CONTROL_IDYN        = CVarUtils::CreateCVar( "quadruped.idyn",false,"Activate IDYN?"),
-              &WORKSPACE_IDYN      = CVarUtils::CreateCVar( "quadruped.widyn",false,"Activate WIDYN?"),// EXPERIMENTAL
-              &USE_LAST_CFS        = CVarUtils::CreateCVar( "quadruped.use_cfs",false,"Use last detected contact forces?"),// EXPERIMENTAL
+            &CONTROL_IDYN        = CVarUtils::CreateCVar( "qd.idyn",false,"Activate IDYN?"),
+              &WORKSPACE_IDYN      = CVarUtils::CreateCVar( "qd.widyn",false,"Activate WIDYN?"),// EXPERIMENTAL
+              &USE_LAST_CFS        = CVarUtils::CreateCVar( "qd.use_cfs",false,"Use last detected contact forces?"),// EXPERIMENTAL
             FRICTION_EST        = false,  // EXPERIMENTAL
-            &ERROR_FEEDBACK      = CVarUtils::CreateCVar( "quadruped.error-feedback.active",true,"Use error-feedback control?"),
-              &FEEDBACK_FORCE      = CVarUtils::CreateCVar( "quadruped.error-feedback.force",false,"Apply error-feedback as forces?"),
-              &FEEDBACK_ACCEL      = CVarUtils::CreateCVar( "quadruped.error-feedback.accel",false,"Apply error-feedback as accelerations?"),
-              &WORKSPACE_FEEDBACK  = CVarUtils::CreateCVar( "quadruped.error-feedback.workspace",true,"Use error-feedback in workspace frame?");
+            &ERROR_FEEDBACK      = CVarUtils::CreateCVar( "qd.error-feedback.active",true,"Use error-feedback control?"),
+              &FEEDBACK_FORCE      = CVarUtils::CreateCVar( "qd.error-feedback.force",false,"Apply error-feedback as forces?"),
+              &FEEDBACK_ACCEL      = CVarUtils::CreateCVar( "qd.error-feedback.accel",false,"Apply error-feedback as accelerations?"),
+              &WORKSPACE_FEEDBACK  = CVarUtils::CreateCVar( "qd.error-feedback.workspace",true,"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
-double  &gait_time   = CVarUtils::CreateCVar( "quadruped.locomotion.gait_time",0.4,"Gait Duration over one cycle."),
-        &step_height = CVarUtils::CreateCVar( "quadruped.locomotion.step_height",0.014,""),
-        &goto_X      = CVarUtils::CreateCVar( "quadruped.locomotion.x",0.05,"command forward direction"),
-        &goto_Y      = CVarUtils::CreateCVar( "quadruped.locomotion.y",0.0,"command lateral direction"),
-        &goto_GAMMA  = CVarUtils::CreateCVar( "quadruped.locomotion.gamma",0.0,"command rotation");
+double  &gait_time   = CVarUtils::CreateCVar( "qd.locomotion.gait_time",0.4,"Gait Duration over one cycle."),
+        &step_height = CVarUtils::CreateCVar( "qd.locomotion.step_height",0.01,""),
+        &goto_X      = CVarUtils::CreateCVar( "qd.locomotion.x",0.01,"command forward direction"),
+        &goto_Y      = CVarUtils::CreateCVar( "qd.locomotion.y",0.0,"command lateral direction"),
+        &goto_GAMMA  = CVarUtils::CreateCVar( "qd.locomotion.gamma",0.0,"command rotation");
 
 // Assign Gait to the locomotion controller
 const std::vector<std::vector<int> >& locomotion_gait = trot;
 
 // -- IDYN OPTIONS --
-double &STEP_SIZE = CVarUtils::CreateCVar( "quadruped.dt",0.01,"value for dt (also h) used in IDYN and other functions");
+double &STEP_SIZE = CVarUtils::CreateCVar( "qd.dt",0.01,"value for dt (also h) used in IDYN and other functions");
 
 // ============================================================================
 // ============================================================================
@@ -129,6 +129,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
     for(int i=0;i<NUM_EEFS;i++){
       foot_pos[i] = eefs_[i].origin;
       RRMC(eefs_[i],q,eefs_[i].origin,q_des);
+      Ravelin::VectorNd q_diff;
+      (q_diff= q_des) -= q;
+      q_diff *= STEP_SIZE;
+      (q_des = q) += q_diff;
       foot_vel[i].set_zero();
       foot_acc[i].set_zero();
       foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose = base_frame;
@@ -345,11 +349,11 @@ Ravelin::VectorNd& Quadruped::control(double t,
    return u;
 }
 
-//extern void init_glconsole();
-//#include <thread>
-//std::thread * tglc;
+extern void init_glconsole();
+#include <thread>
+std::thread * tglc;
 void Quadruped::init(){
-//   tglc = new std::thread(init_glconsole);
+   tglc = new std::thread(init_glconsole);
   // Set up joint references
 #ifdef FIXED_BASE
   NSPATIAL = 0;

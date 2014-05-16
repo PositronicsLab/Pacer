@@ -127,43 +127,10 @@ using namespace std;
 
 void display()
 {
-//  // This is how you register a CVar with the console, having a CVar
-//  // in an inner loop is a bad idea, however.
-//  //Hence the try/catch block
-
-//  float triangleSize = 1.0;
-//  try {
-//    //triangleSize is set to the default value of the CVar "triangle.size
-//    //      Use this syntax to make the CVar    CVar name,    Default value,   Help text,
-//    triangleSize = CVarUtils::CreateCVar<float>( "triangle.size", 1.0f, "Triangle size value" );
-//  }
-//  catch( CVarUtils::CVarException e ) {
-//    switch( e ) {
-//      case CVarUtils::CVarAlreadyCreated:
-//        //it already exists, so just assign the latest value
-//        triangleSize = CVarUtils::GetCVar<float>( "triangle.size" );
-//        break;
-//      default:
-//        printf( "Unknown exception" );
-//      break;
-//    }
-//  }
-
-//  //set up the scene
-//  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//  glLoadIdentity();
-//  glTranslatef(0,0.0f,-2.0f);
-
-//  //draw the triangle
-//  glBegin(GL_TRIANGLES); {
-//    glColor3f(1.0f,0.0f,0.0f);
-//    glVertex3f( 0.0f, triangleSize, 0.0f);
-//    glColor3f(0.0f,triangleSize,0.0f);
-//    glVertex3f(-triangleSize,-triangleSize, 0.0f);
-//    glColor3f(0.0f,0.0f,triangleSize);
-//    glVertex3f( triangleSize,-triangleSize, 0.0f);
-//  }
-//  glEnd();
+  //set up the scene
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glLoadIdentity();
+  glTranslatef(0,0.0f,-2.0f);
 
   //draw the console. always call it last so it is drawn on top of everything
   theConsole.RenderConsole();
@@ -270,7 +237,6 @@ void init_glconsole(){
   glEnable ( GL_COLOR_MATERIAL );
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-  //register functions
   glutReshapeFunc (reshape);
   glutDisplayFunc (display);
   glutKeyboardFunc (keyfunc);

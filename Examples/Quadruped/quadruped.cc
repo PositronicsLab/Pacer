@@ -12,7 +12,7 @@ using namespace Ravelin;
 
 extern Ravelin::VectorNd STAGE1, STAGE2;
 extern int N_SYSTEMS;
-std::vector<std::vector<int> > trot, walk,tgallop,rgallop, pace,bound;
+std::map<std::string , std::vector<double> > gait;
 
 extern Ravelin::VectorNd perturbation;
 
@@ -39,13 +39,13 @@ static bool &WALK                = CVarUtils::CreateCVar( "qd.locomotion.active"
 // -- LOCOMOTION OPTIONS --
 double  &gait_time   = CVarUtils::CreateCVar( "qd.locomotion.gait_time",0.4,"Gait Duration over one cycle."),
         &step_height = CVarUtils::CreateCVar( "qd.locomotion.step_height",0.01,""),
-        &goto_X      = CVarUtils::CreateCVar( "qd.locomotion.x",0.01,"command forward direction"),
+        &goto_X      = CVarUtils::CreateCVar( "qd.locomotion.x",0.1,"command forward direction"),
         &goto_Y      = CVarUtils::CreateCVar( "qd.locomotion.y",0.0,"command lateral direction"),
         &goto_GAMMA  = CVarUtils::CreateCVar( "qd.locomotion.gamma",0.0,"command rotation");
 
 // Assign Gait to the locomotion controller
-const std::vector<std::vector<int> >& locomotion_gait = trot;
-
+std::string& gait_type = CVarUtils::CreateCVar<std::string>( "qd.locomotion.gait_type","trot","Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+std::vector<double>& duty_factor = CVarUtils::CreateCVar< std::vector<double> >( "qd.locomotion.duty_factor",std::vector<double>(),"duty_factor");
 // -- IDYN OPTIONS --
 double &STEP_SIZE = CVarUtils::CreateCVar( "qd.dt",0.01,"value for dt (also h) used in IDYN and other functions");
 
@@ -122,7 +122,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
       footholds.clear();
     }
     go_to = Ravelin::SVector6d(goto_X,goto_Y,0,0,0,goto_GAMMA,base_frame);
-    walk_toward(go_to,locomotion_gait,footholds,gait_time/(double)locomotion_gait.size(),step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    OUTLOG(gait[gait_type],gait_type,logINFO);
+    OUTLOG(duty_factor,"duty_factor",logINFO);
+    walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
   }
   else {
@@ -349,11 +351,11 @@ Ravelin::VectorNd& Quadruped::control(double t,
    return u;
 }
 
-extern void init_glconsole();
-#include <thread>
-std::thread * tglc;
+//extern void init_glconsole();
+//#include <thread>
+//std::thread * tglc;
 void Quadruped::init(){
-   tglc = new std::thread(init_glconsole);
+//   tglc = new std::thread(init_glconsole);
   // Set up joint references
 #ifdef FIXED_BASE
   NSPATIAL = 0;
@@ -495,45 +497,25 @@ void Quadruped::init(){
   abrobot_->update_link_poses();
 
   {
-    std::vector<int> step;
+    duty_factor = boost::assign::list_of(0.5)(0.5)(0.5)(0.5).convert_to_container<std::vector<double> >();
 
     // Trotting gait 50/50 duty cycle
-    step = boost::assign::list_of(-1)(1)(1)(-1).convert_to_container<std::vector<int> >();
-    trot.push_back(step);
-    step = boost::assign::list_of(1)(-1)(-1)(1).convert_to_container<std::vector<int> >();
-    trot.push_back(step);
+    gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
 
     // walk lf,rf,lh,rh
-    step = boost::assign::list_of(-1)(-3)(1)(-2).convert_to_container<std::vector<int> >();
-    walk.push_back(step);
-    step = boost::assign::list_of(1)(-2)(-3)(-1).convert_to_container<std::vector<int> >();
-    walk.push_back(step);
-    step = boost::assign::list_of(-3)(-1)(-2)(1).convert_to_container<std::vector<int> >();
-    walk.push_back(step);
-    step = boost::assign::list_of(-2)(1)(-1)(-3).convert_to_container<std::vector<int> >();
-    walk.push_back(step);
+    gait["walk"] = boost::assign::list_of(0.25)(0.75)(0.0)(0.5).convert_to_container<std::vector<double> >();
 
     // pace
-    step = boost::assign::list_of(-1)(1)(-1)(1).convert_to_container<std::vector<int> >();
-    pace.push_back(step);
-    step = boost::assign::list_of(1)(-1)(1)(-1).convert_to_container<std::vector<int> >();
-    pace.push_back(step);
+    gait["pace"] = boost::assign::list_of(0.0)(0.5)(0.0)(0.5).convert_to_container<std::vector<double> >();
 
     // bound
-    step = boost::assign::list_of(-1)(-1)(1)(1).convert_to_container<std::vector<int> >();
-    bound.push_back(step);
-    step = boost::assign::list_of(1)(1)(-1)(-1).convert_to_container<std::vector<int> >();
-    bound.push_back(step);
+    gait["bound"] = boost::assign::list_of(0.5)(0.5)(0.0)(0.0).convert_to_container<std::vector<double> >();
 
     // transverse gallop
-    std::vector<double> ff;
-    ff = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
-    gait(ff,0.2,tgallop);
+    gait["tgallop"] = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
 
     // Rotary gallop
-    ff = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
-    gait(ff,0.2,rgallop);
-
+    gait["rgallop"] = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
   }
 
   environment_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));

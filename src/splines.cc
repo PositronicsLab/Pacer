@@ -55,7 +55,7 @@ void Utility::bezierCurve(const std::vector<Ravelin::Vector3d>& control_points, 
     dtrajectory[t] *= u[1];
   }
 }
-
+/*
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd& X,
                                            const Ravelin::Vector2d& Xd,const Ravelin::Vector2d& Xdd,
                                            Ravelin::VectorNd& B){
@@ -245,7 +245,7 @@ bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,cons
 
   return true;
 }
-
+*/
 /// http://www.alglib.net/translator/man/manual.cpp.html#sub_spline1dbuildcubic
 /// CUBIC SPLINE: C2 smooth position, C1 smooth velocity, continuous acceleration
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, alglib::spline1dinterpolant &B)
@@ -272,6 +272,7 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin:
 bool Utility::eval_cubic_spline(const std::vector<alglib::spline1dinterpolant>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                        double& X, double& Xd, double& Xdd){
 
+//  OUT_LOG(logDEBUG) << ">> entering Utility::eval_cubic_spline(.)";
   // Select which of of the splines to evaluate based on:
   // time t and spline knots T
   int j=0,k=0;
@@ -286,9 +287,12 @@ bool Utility::eval_cubic_spline(const std::vector<alglib::spline1dinterpolant>& 
     }
   }
 
+  OUT_LOG(logDEBUG) << "Eval spline at: " << t;
+  OUTLOG(t_limits[j],"spline interval ",logDEBUG);
   // Evaluate spline at t
   alglib::spline1ddiff(coefs[j],t,X,Xd,Xdd);
 
+//  OUT_LOG(logDEBUG) << "<< exiting Utility::eval_cubic_spline(.)";
   return true;
 }
 

@@ -68,5 +68,14 @@ class Utility{
 
       return temp ? (a / temp * b) : 0;
   }
+
+  static int sign(double x){
+    if(x>0)
+      return 1;
+    if(x<0)
+      return -1;
+    else
+      return 0;
+  }
 };
 #endif // UTILITIES_H

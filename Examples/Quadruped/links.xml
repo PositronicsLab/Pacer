@@ -43,10 +43,10 @@
     <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.141" >
+      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.145" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
-        <CollisionGeometry primitive-id="abdomen" />
+<!--        <CollisionGeometry primitive-id="abdomen" />-->
         <InertiaFromPrimitive primitive-id="abdomen" />
       </RigidBody>
       <FixedJoint id="BODY_JOINT" qd="0" location="0 0 0" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />
@@ -65,7 +65,7 @@
 
       <RevoluteJoint id="LF_HIP_FE" qd="0" location="0.11685 0.056278 0" inboard-link-id="LF_HIP" outboard-link-id="LF_ULEG" axis="0 1 0" />
       <RigidBody id="LF_ULEG" position="0.16185 0.056278 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="arm">
-        <CollisionGeometry primitive-id="arm" />
+<!--        <CollisionGeometry primitive-id="arm" />-->
         <InertiaFromPrimitive primitive-id="arm" />
       </RigidBody>
 
@@ -159,7 +159,7 @@
 
   <!-- setup the platform rigid body; it is not active -->
    <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />
-<!--  <Heightmap id="ground-primitive" filename="heightmap.mat" width="1" depth="1" rpy="-1.571 0 0"/>-->
+<!--  <Heightmap id="ground-primitive" filename="heightmap.mat" width="3" depth="3" rpy="-1.571 0 0"/>-->
   <RigidBody id="ground" enabled="false"
     position="0 0 -0.025" visualization-id="ground-primitive">
     <CollisionGeometry primitive-id="ground-primitive" />

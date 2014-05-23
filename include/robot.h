@@ -104,6 +104,7 @@ class Robot {
                                          base_frame,
                                          environment_frame,
                                          base_link_frame;
+
     Ravelin::MatrixNd                    base_stability_offset;
 
     unsigned          NC;

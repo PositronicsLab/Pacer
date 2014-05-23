@@ -112,7 +112,7 @@ void Robot::update(){
   calc_com();
 
   // Get base frame
-  base_link_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(*links_[0]->get_pose()));
+  base_link_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(*links_[0]->get_pose().get()));
   base_link_frame->update_relative_pose(Moby::GLOBAL);
   for(int i=0;i<NUM_EEFS;i++)
     eefs_[i].origin.pose = base_link_frame;

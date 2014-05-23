@@ -48,6 +48,16 @@ void OUTLOG(const Ravelin::VectorNd& z, std::string name,TLogLevel LL){
 #endif
 }
 
+void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL){
+#ifndef NDEBUG
+    std::ostringstream str;
+    for(int i=0;i<z.size();i++)
+        str << std::setprecision(9) << z[i] << " ";
+//    OUT_LOG(LL) << name << " = [ %"  << z.size() << "\n" << str.str() << "]';" << std::endl;
+    OUT_LOG(LL) << name << " = [" << str.str() << "]';";
+#endif
+}
+
 void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL){
 #ifndef NDEBUG
     std::ostringstream str;

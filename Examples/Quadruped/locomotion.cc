@@ -132,8 +132,10 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
     Ravelin::Vector3d pos_correct = beta/dt * (foot_pos[i] - pos);
     v_bar.set_sub_vec(i*3,foot_vel[i] + pos_correct);
+#ifdef VISUALIZE_MOBY
     visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos)+Ravelin::Pose3d::transform_vector(Moby::GLOBAL,pos_correct), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,1), sim);
     visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,0), sim);
+#endif
   }
   OUTLOG(v_bar,"v_bar",logERROR);
 }
@@ -182,13 +184,19 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
 
 double gait_phase(double touchdown,double duty_factor,double gait_progress){
   double intpart;
-  double liftoff = modf(touchdown + duty_factor,&intpart),left_in_phase = 0;
+  double liftoff       = modf(touchdown + duty_factor,&intpart) - 1e-2,
+         left_in_phase = 0;
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+//  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+
   // ----- STANCE PHASE ------
   if(// during STANCE (no wrap around)
      ( gait_progress >= touchdown  &&  gait_progress  < liftoff)
      // during STANCE (with wrap around) -- same as !SWING
-    || !( gait_progress  < touchdown  &&  gait_progress >= liftoff) ){
-
+    || (!(gait_progress  < touchdown  &&  gait_progress >= liftoff) && liftoff < touchdown)
+     ){
     // left in stance phase = negaive time left in phase
     left_in_phase = (liftoff - gait_progress);
 
@@ -287,7 +295,8 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 //        else
 //          left_in_phase = -duty_factor[i];
 //      }
-      OUT_LOG(logDEBUG) << "\tleft in phase : " << left_in_phase;
+      OUT_LOG(logDEBUG) << "\tleft in phase (sec) : " << left_in_phase
+                        << " (" << left_in_phase*gait_duration << ") ";
 
       OUT_LOG(logDEBUG) << "\tPlanning next Spline";
       // creat new spline at top of history
@@ -433,7 +442,6 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   }
 
 #ifdef VISUALIZE_MOBY
-  /*
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);
@@ -476,7 +484,6 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 //    visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
 //    visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
   }
-  */
 #endif
 
   last_time = t;

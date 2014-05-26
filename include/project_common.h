@@ -32,9 +32,9 @@
 #include <math.h>
 #include <numeric>
 #include <utilities.h>
-#ifdef SET_KINEMATICS
-  #define NDEBUG
-#endif
+//#ifdef SET_KINEMATICS
+//  #define NDEBUG
+//#endif
 
 // ----------------------------------------------------------------------------
 // Get these from https://github.com/arpg/GLConsole.git

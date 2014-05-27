@@ -2,10 +2,6 @@
 #include <utilities.h>
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
-
-#    include <OpenGL/gl.h>
-#    include <OpenGL/glu.h>
-#    include <GLUT/glut.h>
 // -----------------------------------------------------------------------------
 using namespace Ravelin;
 //using namespace Moby;
@@ -20,9 +16,14 @@ extern Ravelin::VectorNd perturbation;
 
 extern bool new_sim_step;
 
-GLConsole theConsole;
 // ============================================================================
 // ======================= USER DEFINED PARAMETERS ============================
+
+#ifdef VISUALIZE_MOBY
+# include <OpenGL/gl.h>
+# include <OpenGL/glu.h>
+# include <GLUT/glut.h>
+GLConsole theConsole;
 
 static bool &WALK                = CVarUtils::CreateCVar( "qd.locomotion.active",true,"Activate Walking?"),
               &TRACK_FOOTHOLDS     = CVarUtils::CreateCVar( "qd.locomotion.track_footholds",false,"Locate and use footholds?"),// EXPERIMENTAL
@@ -48,7 +49,32 @@ std::string& gait_type = CVarUtils::CreateCVar<std::string>( "qd.locomotion.gait
 std::vector<double>& duty_factor = CVarUtils::CreateCVar< std::vector<double> >( "qd.locomotion.duty_factor",std::vector<double>(),"duty_factor");
 // -- IDYN OPTIONS --
 double &STEP_SIZE = CVarUtils::CreateCVar( "qd.dt",0.01,"value for dt (also h) used in IDYN and other functions");
+#else
+static bool WALK                = true,//"Activate Walking?"),
+              TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
+            TRUNK_STABILIZATION = false,  // EXPERIMENTAL
+            CONTROL_IDYN        = false,//"Activate IDYN?"),
+              WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
+              USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
+            FRICTION_EST        = false,  // EXPERIMENTAL
+            ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
+              FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
+              FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
+              WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
+// -- LOCOMOTION OPTIONS --
+double  gait_time   = 0.4,//,"Gait Duration over one cycle."),
+        step_height = 0.01,//,""),
+        goto_X      = 0.1,//,"command forward direction"),
+        goto_Y      = 0.0,//,"command lateral direction"),
+        goto_GAMMA  = 0.0;//,"command rotation");
+
+// Assign Gait to the locomotion controller
+std::string gait_type = "trot"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+std::vector<double> duty_factor = std::vector<double>();
+// -- IDYN OPTIONS --
+double STEP_SIZE = 0.01;
+#endif
 // ============================================================================
 // ============================================================================
 
@@ -350,12 +376,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
    return u;
 }
+#ifdef VISUALIZE_MOBY
+# include <thread>
+  extern void init_glconsole();
+  std::thread * tglc;
+#endif
 
-//extern void init_glconsole();
-//#include <thread>
-//std::thread * tglc;
 void Quadruped::init(){
-//   tglc = new std::thread(init_glconsole);
+#ifdef VISUALIZE_MOBY
+   tglc = new std::thread(init_glconsole);
+#endif
   // Set up joint references
 #ifdef FIXED_BASE
   NSPATIAL = 0;

@@ -22,12 +22,12 @@
   <EventDrivenSimulator integrator-id="rk4" max-event-time="0.01">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
-    <DisabledPair object1-id="links" object2-id="links"/>
+<!--    <DisabledPair object1-id="links" object2-id="links"/>-->
 <!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
-    <DynamicBody dynamic-body-id="links" />
+<!--    <DynamicBody dynamic-body-id="links" />-->
     <DynamicBody dynamic-body-id="ground" />
-<!--    <DynamicBody dynamic-body-id="ball" />-->
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
+    <DynamicBody dynamic-body-id="ball" />
+<!--    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>-->
 <!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="1"/>-->
   </EventDrivenSimulator>
 
@@ -161,7 +161,7 @@
 <!--   <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />-->
   <Heightmap id="ground-primitive" filename="heightmap.mat" width="3" depth="3" rpy="-1.571 0 0"/>
   <RigidBody id="ground" enabled="false"
-    position="0 0 -0.1" visualization-id="ground-primitive">
+    position="0 0 0" visualization-id="ground-primitive">
     <CollisionGeometry primitive-id="ground-primitive" />
   </RigidBody>
 
@@ -174,7 +174,7 @@
 
 
   <RigidBody id="ball" enabled="true"
-    position="0.1 0.1 0.15" visualization-id="foot">
+    position="0.1 0.1 0.2" visualization-id="foot">
     <CollisionGeometry primitive-id="foot" />
     <InertiaFromPrimitive primitive-id="foot" />
   </RigidBody>

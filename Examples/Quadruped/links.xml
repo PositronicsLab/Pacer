@@ -22,13 +22,13 @@
   <EventDrivenSimulator integrator-id="rk4" max-event-time="0.01">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
-<!--    <DisabledPair object1-id="links" object2-id="links"/>-->
-<!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
-<!--    <DynamicBody dynamic-body-id="links" />-->
+    <DisabledPair object1-id="links" object2-id="links"/>
+    <DisabledPair object1-id="links" object2-id="ball"/>
+    <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
     <DynamicBody dynamic-body-id="ball" />
-<!--    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>-->
-<!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="1"/>-->
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="1"/>
   </EventDrivenSimulator>
 
 

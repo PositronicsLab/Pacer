@@ -264,8 +264,9 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   for(int i=0;i<NUM_EEFS;i++){
 
     // What phase of the gait is the controller in?
-    double intpart;
-    double gait_progress = modf(t/gait_duration,&intpart);
+    // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
+    double gait_progress = t/gait_duration;
+    gait_progress = gait_progress - (double) ((int) gait_progress);
 
     OUT_LOG(logDEBUG) << eefs_[i].id;
     OUT_LOG(logDEBUG) << "\tprog : " << gait_progress;

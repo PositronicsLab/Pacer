@@ -19,16 +19,16 @@
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
 <!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
-  <EventDrivenSimulator integrator-id="rk4" max-event-time="0.01">
+  <EventDrivenSimulator integrator-id="rk4" max-event-time="inf">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
-    <DisabledPair object1-id="links" object2-id="ball"/>
+<!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-    <DynamicBody dynamic-body-id="ball" />
+<!--    <DynamicBody dynamic-body-id="ball" />-->
     <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
-    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="1"/>
+<!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="1"/>-->
   </EventDrivenSimulator>
 
 
@@ -43,7 +43,7 @@
     <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.145" >
+      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.17" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
 <!--        <CollisionGeometry primitive-id="abdomen" />-->
@@ -158,8 +158,8 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-<!--   <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />-->
-  <Heightmap id="ground-primitive" filename="heightmap.mat" width="3" depth="3" rpy="-1.571 0 0"/>
+   <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />
+<!--  <Heightmap id="ground-primitive" filename="heightmap.mat" width="3" depth="3" rpy="-1.571 0 0"/>-->
   <RigidBody id="ground" enabled="false"
     position="0 0 0" visualization-id="ground-primitive">
     <CollisionGeometry primitive-id="ground-primitive" />

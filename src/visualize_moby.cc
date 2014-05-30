@@ -224,8 +224,8 @@ void init_glconsole(){
   //Initialise GLUT
   glutInit(&argc,(char **)argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-  glutInitWindowPosition (300, 50);
-  glutInitWindowSize (800, 600);
+  glutInitWindowPosition (800, 50);
+  glutInitWindowSize (600, 200);
   glutCreateWindow("GLConsole Demo");
 
 //   standard GL init

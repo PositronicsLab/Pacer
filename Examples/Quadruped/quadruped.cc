@@ -1,7 +1,5 @@
 #include <quadruped.h>
 #include <utilities.h>
-#include <boost/assign/std/vector.hpp>
-#include <boost/assign/list_of.hpp>
 // -----------------------------------------------------------------------------
 using namespace Ravelin;
 //using namespace Moby;
@@ -10,7 +8,8 @@ extern Ravelin::VectorNd STAGE1, STAGE2;
 extern int N_SYSTEMS;
 std::map<std::string , std::vector<double> > gait;
 
-extern Ravelin::VectorNd perturbation;
+extern std::vector<double> unknown_base_perturbation;
+extern std::vector<double> known_base_perturbation;
 
 // TODO: This should be extern double to moby's (nominal) STEP_SIZE
 
@@ -35,15 +34,15 @@ static bool
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
+          FEEDBACK_FORCE      = true,//"Apply error-feedback as forces?"),
           FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
 double
-        gait_time   = 0.6,//,"Gait Duration over one cycle."),
+        gait_time   = 0.4,//,"Gait Duration over one cycle."),
         step_height = 0.01,//,""),
-        goto_X      = 0.1,//,"command forward direction"),
+        goto_X      = 0.05,//,"command forward direction"),
         goto_Y      = 0.0,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
 
@@ -71,11 +70,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
   std::cerr << " -- Quadruped::control(.) entered" << std::endl;
   OUT_LOG(logINFO)<< "time = "<< t ;
 
-  try{
-    fext -= perturbation;
-  }catch(Ravelin::MissizeException e){
-
-  }
+  // Subtract unknown perturbations from fext vector
+  for(int i=0;i<6;i++)
+    fext[NUM_JOINTS+i] -= unknown_base_perturbation[i];
 
   ((qdd = qd)-=qd_last)/=STEP_SIZE;
 
@@ -319,6 +316,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 void Quadruped::init(){
 #ifdef VISUALIZE_MOBY
+  CVarUtils::AttachCVar( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
+  CVarUtils::AttachCVar( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");
+
   CVarUtils::AttachCVar( "qd.locomotion.active",&WALK,"Activate Walking?");
   CVarUtils::AttachCVar( "qd.locomotion.track_footholds",&TRACK_FOOTHOLDS,"Locate and use footholds?");// EXPERIMENTAL
   CVarUtils::AttachCVar( "qd.idyn",&CONTROL_IDYN,"Activate IDYN?");

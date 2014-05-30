@@ -10,7 +10,9 @@ std::string
   LOG_TYPE("DEBUG1"); // all function parameters and results
 
 bool new_sim_step = true;
-Ravelin::VectorNd perturbation;
+
+std::vector<double> unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+std::vector<double> known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
 #ifdef USE_ROBOT
   #include <dxl/Dynamixel.h>
 #endif
@@ -48,11 +50,14 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   Ravelin::MatrixNd q(num_joints,1),
                    qd(num_joints,1);
 
-  perturbation.set_zero(18);
-//  perturbation[12 + 2] = -2;
-//  perturbation[12 + 3] = 1;
-
-//  abrobot->add_generalized_force(perturbation);
+  static Ravelin::VectorNd perturbation;
+  perturbation.set_zero(num_joints+6);
+  // Subtract unknown perturbations from fext vector
+  for(int i=0;i<6;i++){
+    perturbation[num_joints+i] += unknown_base_perturbation[i];
+    perturbation[num_joints+i] += known_base_perturbation[i];
+  }
+  abrobot->add_generalized_force(perturbation);
 
   ///  Record Robot State
 #ifdef USE_ROBOT_STATE

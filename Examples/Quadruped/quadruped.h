@@ -51,5 +51,4 @@ class Quadruped : public Robot{
                          std::vector<alglib::spline1dinterpolant>& coefs);
 
 };
-
 #endif // CONTROL_H

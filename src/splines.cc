@@ -287,8 +287,8 @@ bool Utility::eval_cubic_spline(const std::vector<alglib::spline1dinterpolant>& 
     }
   }
 
-  OUT_LOG(logDEBUG) << "Eval spline at: " << t;
-  OUTLOG(t_limits[j],"spline interval ",logDEBUG);
+//  OUT_LOG(logDEBUG) << "Eval spline at: " << t;
+//  OUTLOG(t_limits[j],"spline interval ",logDEBUG);
   // Evaluate spline at t
   alglib::spline1ddiff(coefs[j],t,X,Xd,Xdd);
 

@@ -182,14 +182,14 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
   }
 }
 
-double gait_phase(double touchdown,double duty_factor,double gait_progress){
-  double intpart;
-  double liftoff       = modf(touchdown + duty_factor,&intpart) - 1e-2,
-         left_in_phase = 0;
-//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
-//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
-//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
-//  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+bool gait_phase(double touchdown,double duty_factor,double gait_progress){
+  double liftoff = touchdown + duty_factor,left_in_phase = 0;
+  liftoff = liftoff - (double) ((int) liftoff);
+
+  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
 
   // ----- STANCE PHASE ------
   if(// during STANCE (no wrap around)
@@ -197,31 +197,73 @@ double gait_phase(double touchdown,double duty_factor,double gait_progress){
      // during STANCE (with wrap around) -- same as !SWING
     || (!(gait_progress  < touchdown  &&  gait_progress >= liftoff) && liftoff < touchdown)
      ){
+    return true;
+  }
+  // ----- SWING PHASE -----
+  return false;
+
+}
+
+double gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
+  double liftoff = touchdown + duty_factor,left_in_phase = 0;
+  liftoff = liftoff - (double) ((int) liftoff);
+
+  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+
+  // ----- STANCE PHASE ------
+  if(stance_phase){
     // left in stance phase = negaive time left in phase
     left_in_phase = (liftoff - gait_progress);
-
     if(left_in_phase < 0)
       left_in_phase = (1.0 - gait_progress) + liftoff;
-
-    left_in_phase *= -1.0;
-    left_in_phase = -duty_factor;
+//    left_in_phase = -duty_factor;
   }
   // ----- SWING PHASE -----
   else {
     left_in_phase = (touchdown - gait_progress);
     if(left_in_phase < 0)
       left_in_phase = (1.0 - gait_progress) + touchdown;
-
-    left_in_phase = 1-duty_factor;
+//    left_in_phase = 1-duty_factor;
   }
   return left_in_phase;
 }
 
-/// Walks while trying to match COM velocity "command" in base_frame
-void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<double>& touchdown,const std::vector<Ravelin::Vector3d>& footholds,
-                            const std::vector<double> duty_factor, double gait_duration, double step_height,
-                            double t, const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,const Ravelin::VectorNd& qdd,
-                            std::vector<Ravelin::Vector3d>& foot_pos, std::vector<Ravelin::Vector3d>& foot_vel, std::vector<Ravelin::Vector3d>& foot_acc)
+/**
+ * @brief Quadruped::walk_toward : OSRF Locomotion System Implementation
+ * @param command : 6x1 vector of goal base velocity differential
+ * @param touchdown : specify the moment in the gait where a foot touches down stance phase. touchdown_i \in [0..1)
+ * @param footholds : vector of 3x1 points indicating locations for valid foot placement
+ * @param duty_factor : portion of gait a foot is in stance phase after touchdown duty_factor_{i} \in [0..1)
+ * @param gait_duration : duration of time in seconds of one gait cycle [0..inf)
+ * @param step_height : maximu height of foot during a step
+ * @param t : current time
+ * @param q : current generalized coordinates
+ * @param qd : current generalized velocity
+ * @param qdd : current generalized acceleration
+ * @param foot_pos : NUM_FEET length vector of 3x1 cartesian coordinates for feet
+ * @param foot_vel : NUM_FEET length vector of 3x1 cartesian velocities for feet
+ * @param foot_acc : NUM_FEET length vector of 3x1 cartesian acceleration for feet
+ */
+void Quadruped::walk_toward(
+    // PARAMETERS
+    const Ravelin::SVector6d& command,
+    const std::vector<double>& touchdown,
+    const std::vector<Ravelin::Vector3d>& footholds,
+    const std::vector<double> duty_factor,
+    double gait_duration,
+    double step_height,
+    // MODEL
+    double t,
+    const Ravelin::VectorNd& q,
+    const Ravelin::VectorNd& qd,
+    const Ravelin::VectorNd& qdd,
+    // OUTPUT
+    std::vector<Ravelin::Vector3d>& foot_pos,
+    std::vector<Ravelin::Vector3d>& foot_vel,
+    std::vector<Ravelin::Vector3d>& foot_acc)
 {
   OUT_LOG(logDEBUG) << " -- Quadruped::walk_toward() entered";
   static bool inited = false;
@@ -238,15 +280,23 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
   // persistent Vector storing time delimitations to each spline
   // [foot][interval]
   static std::vector< std::vector<Ravelin::VectorNd> > spline_t(NUM_EEFS);
+  static std::vector< bool > stance_phase(NUM_EEFS);
 
   foot_pos.resize(NUM_EEFS);
   foot_vel.resize(NUM_EEFS);
   foot_acc.resize(NUM_EEFS);
 
+  double gait_progress = t/gait_duration;
+  gait_progress = gait_progress - (double) ((int) gait_progress);
+  if(gait_progress >= 1) gait_progress = Moby::NEAR_ZERO;
+  OUT_LOG(logDEBUG) << "\tprog : " << gait_progress;
+  OUT_LOG(logDEBUG) << "\ttime : " << t;
+
   // (Re)Populate spline vectors
   if(!inited){
     last_phase.resize(NUM_EEFS);
     for(int i=0;i<NUM_EEFS;i++){
+      stance_phase[i] = gait_phase(touchdown[i],duty_factor[i],gait_progress);
       spline_coef[i].resize(3);
       for(int d=0; d<3;d++){
         spline_coef[i][d].resize(spline_plan_length);
@@ -262,17 +312,6 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
   ////////////////// PHASE PLANNING ///////////////////////
   for(int i=0;i<NUM_EEFS;i++){
-
-    // What phase of the gait is the controller in?
-    // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
-    double gait_progress = t/gait_duration;
-    gait_progress = gait_progress - (double) ((int) gait_progress);
-
-    OUT_LOG(logDEBUG) << eefs_[i].id;
-    OUT_LOG(logDEBUG) << "\tprog : " << gait_progress;
-    OUT_LOG(logDEBUG) << "\ttime : " << t;
-    OUT_LOG(logDEBUG) << "\t -- stance : { " << touchdown[i] << " .. " << (touchdown[i] + duty_factor[i]) <<" }";
-
     // Check if Spline must be reevaluated
     double left_in_phase;
     bool replan_path = false;
@@ -287,15 +326,15 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
+      // What phase of the gait is the controller in?
+      // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
+      // truncates t/gait_duration at decimal; gait_progress \in [0,1)
+
+      OUT_LOG(logDEBUG) << eefs_[i].id;
+      OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }";
       // How much time is left in the current phase stance (-), swing (+)
-      left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
-//      if(Utility::sign(left_in_phase) == Utility::sign(last_phase[i])){
-//        OUT_LOG(logDEBUG) << "\tTraj ended before phase change: " << last_phase[i] << " -> "<< left_in_phase;
-//        if(left_in_phase < 0)
-//          left_in_phase = 1-duty_factor[i];
-//        else
-//          left_in_phase = -duty_factor[i];
-//      }
+      left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,stance_phase[i]);
+
       OUT_LOG(logDEBUG) << "\tleft in phase (sec) : " << left_in_phase
                         << " (" << left_in_phase*gait_duration << ") ";
 
@@ -357,11 +396,12 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
       std::vector<Ravelin::Origin3d> control_points;
 
 
-      if(left_in_phase > 0){
+      if(!stance_phase[i]){
         // SWING
         OUT_LOG(logDEBUG) << "\tPlanning Swing phase (phase > 0)...";
 
-        foot_goal /= duty_factor[i];
+        foot_goal /= (1-duty_factor[i]);
+        OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
 
         // velocity correction
         // FEEDBACK CAPTURE POINT
@@ -389,12 +429,12 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
           control_points.push_back(x_fh - foot_goal);
         }
       }
-      else if(left_in_phase < 0){
+      else if(stance_phase[i]){
         OUT_LOG(logDEBUG) << "\tPlanning Stance phase (phase < 0)...";
 
         // STANCE
 
-        foot_goal /= (1-duty_factor[i]);
+        foot_goal /= -duty_factor[i];
 
         // all stance phase cases
         control_points.push_back(x);
@@ -437,6 +477,7 @@ void Quadruped::walk_toward(const Ravelin::SVector6d& command,const std::vector<
         OUT_LOG(logDEBUG) << "Eval first step in spline";
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,foot_pos[i][d],foot_vel[i][d],foot_acc[i][d]);
       }
+      stance_phase[i] = !stance_phase[i];
     }
     foot_acc[i].pose =  foot_pos[i].pose = foot_vel[i].pose = base_frame;
     last_phase[i] = left_in_phase;

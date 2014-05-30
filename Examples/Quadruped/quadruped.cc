@@ -24,57 +24,40 @@ extern bool new_sim_step;
 # include <OpenGL/glu.h>
 # include <GLUT/glut.h>
 GLConsole theConsole;
+#endif
 
-static bool &WALK                = CVarUtils::CreateCVar( "qd.locomotion.active",true,"Activate Walking?"),
-              &TRACK_FOOTHOLDS     = CVarUtils::CreateCVar( "qd.locomotion.track_footholds",false,"Locate and use footholds?"),// EXPERIMENTAL
-            TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-            &CONTROL_IDYN        = CVarUtils::CreateCVar( "qd.idyn",false,"Activate IDYN?"),
-              &WORKSPACE_IDYN      = CVarUtils::CreateCVar( "qd.widyn",false,"Activate WIDYN?"),// EXPERIMENTAL
-              &USE_LAST_CFS        = CVarUtils::CreateCVar( "qd.use_cfs",false,"Use last detected contact forces?"),// EXPERIMENTAL
-            FRICTION_EST        = false,  // EXPERIMENTAL
-            &ERROR_FEEDBACK      = CVarUtils::CreateCVar( "qd.error-feedback.active",true,"Use error-feedback control?"),
-              &FEEDBACK_FORCE      = CVarUtils::CreateCVar( "qd.error-feedback.force",false,"Apply error-feedback as forces?"),
-              &FEEDBACK_ACCEL      = CVarUtils::CreateCVar( "qd.error-feedback.accel",false,"Apply error-feedback as accelerations?"),
-              &WORKSPACE_FEEDBACK  = CVarUtils::CreateCVar( "qd.error-feedback.workspace",true,"Use error-feedback in workspace frame?");
-
-// -- LOCOMOTION OPTIONS --
-double  &gait_time   = CVarUtils::CreateCVar( "qd.locomotion.gait_time",0.4,"Gait Duration over one cycle."),
-        &step_height = CVarUtils::CreateCVar( "qd.locomotion.step_height",0.01,""),
-        &goto_X      = CVarUtils::CreateCVar( "qd.locomotion.x",0.1,"command forward direction"),
-        &goto_Y      = CVarUtils::CreateCVar( "qd.locomotion.y",0.0,"command lateral direction"),
-        &goto_GAMMA  = CVarUtils::CreateCVar( "qd.locomotion.gamma",0.0,"command rotation");
-
-// Assign Gait to the locomotion controller
-std::string& gait_type = CVarUtils::CreateCVar<std::string>( "qd.locomotion.gait_type","trot","Gait type [trot,walk,pace,bount,rgallop,tgallop]");
-std::vector<double>& duty_factor = CVarUtils::CreateCVar< std::vector<double> >( "qd.locomotion.duty_factor",std::vector<double>(),"duty_factor");
-// -- IDYN OPTIONS --
-double &STEP_SIZE = CVarUtils::CreateCVar( "qd.dt",0.01,"value for dt (also h) used in IDYN and other functions");
-#else
-static bool WALK                = true,//"Activate Walking?"),
-              TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
-            TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-            CONTROL_IDYN        = false,//"Activate IDYN?"),
-              WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
-              USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
-            FRICTION_EST        = false,  // EXPERIMENTAL
-            ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-              FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
-              FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
-              WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
+static bool
+        WALK                = true,//"Activate Walking?"),
+          TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
+        TRUNK_STABILIZATION = false,  // EXPERIMENTAL
+        CONTROL_IDYN        = false,//"Activate IDYN?"),
+          WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
+          USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
+        FRICTION_EST        = false,  // EXPERIMENTAL
+        ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
+          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
+          FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
+          WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
-double  gait_time   = 0.4,//,"Gait Duration over one cycle."),
+double
+        gait_time   = 0.6,//,"Gait Duration over one cycle."),
         step_height = 0.01,//,""),
         goto_X      = 0.1,//,"command forward direction"),
         goto_Y      = 0.0,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
 
 // Assign Gait to the locomotion controller
-std::string gait_type = "trot"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
-std::vector<double> duty_factor = std::vector<double>();
+std::string
+        gait_type   = "trot"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+
+std::vector<double>
+        duty_factor = std::vector<double>();
+
 // -- IDYN OPTIONS --
-double STEP_SIZE = 0.01;
-#endif
+double
+        STEP_SIZE = 0.01;
+
 // ============================================================================
 // ============================================================================
 
@@ -316,54 +299,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
      OUTLOG(uff,"uff",logDEBUG);
      OUTLOG(ufb,"ufb",logDEBUG);
-
-#ifdef VISUALIZE_MOBY
-     for(unsigned i=0;i< NUM_JOINTS;i++){
-       joints_[i]->q[0]  = q[i];
-       joints_[i]->qd[0]  = qd[i];
-     }
-     abrobot_->update_link_poses();
-     abrobot_->update_link_velocities();
-/*
-     for(int i=0;i<NUM_EEFS;i++){
-       Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-
-       EndEffector& foot = eefs_[i];
-       // Calc jacobian for AB at this EEF
-       Ravelin::MatrixNd J;
-       Ravelin::Origin3d x,xd,xdd;
-       for(int k=0;k<foot.chain.size();k++){                // actuated joints
-         OUT_LOG(logINFO)<< joints_[foot.chain[k]]->id;
-         x[k] = q_des[foot.chain[k]];
-         xd[k] = qd_des[foot.chain[k]];
-         xdd[k] = qdd_des[foot.chain[k]];
-       }
-       OUTLOG(x,foot.id + "_q",logINFO);
-       OUTLOG(xd,foot.id + "_qd",logINFO);
-       OUTLOG(xdd,foot.id + "_qdd",logINFO);
-       foot_jacobian(x,foot,J);
-
-       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-       OUTLOG(p,foot.id + "_x",logINFO);
-       visualize_ray( p, pos, Ravelin::Vector3d(0,0,0), sim);
-
-       J.mult((workv3_ = xd), xd) *= sqrt(STEP_SIZE);
-       xd = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,Ravelin::Vector3d(xd,base_frame));
-       OUTLOG(xd,foot.id + "_xd",logINFO);
-       visualize_ray(xd+p, p, Ravelin::Vector3d(1,0,0), sim);
-
-       J.mult((workv3_ = xdd), xdd) *= STEP_SIZE;
-       OUTLOG(xdd,eefs_[i].id + "_xdd",logINFO);
-       visualize_ray(xdd+xd+p, xd+p, Ravelin::Vector3d(1,0.5,0), sim);
-     }
-*/
-     for(unsigned i=0;i< NUM_JOINTS;i++){
-       joints_[i]->q[0]  = q[i];
-       joints_[i]->qd[0]  = qd[i];
-     }
-     abrobot_->update_link_poses();
-     abrobot_->update_link_velocities();
-#endif
    // -----------------------------------------------------------------------------
 
    // Deactivate all contacts
@@ -384,6 +319,29 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 void Quadruped::init(){
 #ifdef VISUALIZE_MOBY
+  CVarUtils::AttachCVar( "qd.locomotion.active",&WALK,"Activate Walking?");
+  CVarUtils::AttachCVar( "qd.locomotion.track_footholds",&TRACK_FOOTHOLDS,"Locate and use footholds?");// EXPERIMENTAL
+  CVarUtils::AttachCVar( "qd.idyn",&CONTROL_IDYN,"Activate IDYN?");
+  CVarUtils::AttachCVar( "qd.widyn",&WORKSPACE_IDYN,"Activate WIDYN?");// EXPERIMENTAL
+  CVarUtils::AttachCVar( "qd.use_cfs",&USE_LAST_CFS,"Use last detected contact forces?");// EXPERIMENTAL
+  CVarUtils::AttachCVar( "qd.error-feedback.active",&ERROR_FEEDBACK,"Use error-feedback control?");
+  CVarUtils::AttachCVar( "qd.error-feedback.force",&FEEDBACK_FORCE,"Apply error-feedback as forces?");
+  CVarUtils::AttachCVar( "qd.error-feedback.accel",&FEEDBACK_ACCEL,"Apply error-feedback as accelerations?");
+  CVarUtils::AttachCVar( "qd.error-feedback.workspace",&WORKSPACE_FEEDBACK,"Use error-feedback in workspace frame?");
+
+  // -- LOCOMOTION OPTIONS --
+  CVarUtils::AttachCVar( "qd.locomotion.gait_time",&gait_time,"Gait Duration over one cycle.");
+  CVarUtils::AttachCVar( "qd.locomotion.step_height",&step_height,"Height of a step");
+  CVarUtils::AttachCVar( "qd.locomotion.x",&goto_X,"command forward direction");
+  CVarUtils::AttachCVar( "qd.locomotion.y",&goto_Y,"command lateral direction");
+  CVarUtils::AttachCVar( "qd.locomotion.gamma",&goto_GAMMA,"command rotation");
+
+  // Assign Gait to the locomotion controller
+  CVarUtils::AttachCVar<std::string>( "qd.locomotion.gait_type",&gait_type,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+  CVarUtils::AttachCVar< std::vector<double> >( "qd.locomotion.duty_factor",&duty_factor,"duty_factor");
+  // -- IDYN OPTIONS --
+  CVarUtils::AttachCVar( "qd.dt",&STEP_SIZE,"value for dt (also h) used in IDYN and other functions");
+
    tglc = new std::thread(init_glconsole);
 #endif
   // Set up joint references
@@ -527,7 +485,7 @@ void Quadruped::init(){
   abrobot_->update_link_poses();
 
   {
-    duty_factor = boost::assign::list_of(0.5)(0.5)(0.5)(0.5).convert_to_container<std::vector<double> >();
+    duty_factor = boost::assign::list_of(0.501)(0.501)(0.501)(0.501).convert_to_container<std::vector<double> >();
 
     // Trotting gait 50/50 duty cycle
     gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();

@@ -29,7 +29,7 @@ static bool
         WALK                = true,//"Activate Walking?"),
           TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
         TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-        CONTROL_IDYN        = false,//"Activate IDYN?"),
+        CONTROL_IDYN        = true,//"Activate IDYN?"),
           WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
@@ -40,22 +40,23 @@ static bool
 
 // -- LOCOMOTION OPTIONS --
 double
-        gait_time   = 0.4,//,"Gait Duration over one cycle."),
+        gait_time   = 1.0,//,"Gait Duration over one cycle."),
         step_height = 0.01,//,""),
-        goto_X      = 0.05,//,"command forward direction"),
+        goto_X      = 0.02,//,"command forward direction"),
         goto_Y      = 0.0,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
 
 // Assign Gait to the locomotion controller
 std::string
-        gait_type   = "trot"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+        gait_type   = "walk"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
 
 std::vector<double>
-        duty_factor = std::vector<double>();
+        duty_factor = std::vector<double>(),
+        goto_command = std::vector<double>();
 
 // -- IDYN OPTIONS --
 double
-        STEP_SIZE = 0.01;
+        STEP_SIZE = 0.002;
 
 // ============================================================================
 // ============================================================================
@@ -68,7 +69,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                       Ravelin::VectorNd& u){
   static Ravelin::VectorNd qd_last = qd;
   std::cerr << " -- Quadruped::control(.) entered" << std::endl;
+
   OUT_LOG(logINFO)<< "time = "<< t ;
+
+  OUTLOG(q,"q",logDEBUG);
+  OUTLOG(qd,"qd",logDEBUG);
+  OUTLOG(qdd,"qdd",logDEBUG);
+  OUTLOG(fext,"fext",logDEBUG);
 
   // Subtract unknown perturbations from fext vector
   for(int i=0;i<6;i++)
@@ -88,10 +95,45 @@ Ravelin::VectorNd& Quadruped::control(double t,
     eefs_[i].normal.normalize();
     // PERTURB POINT
     eefs_[i].point += Ravelin::Vector3d(distribution_point(generator),distribution_point(generator),distribution_point(generator));
-#ifdef VISUALIZE_MOBY
-    visualize_ray(eefs_[i].point,eefs_[i].point+eefs_[i].normal*0.05,Ravelin::Vector3d(1,1,0),sim);
-#endif
+#  ifdef VISUALIZE_MOBY
+      visualize_ray(eefs_[i].point,eefs_[i].point+eefs_[i].normal*0.05,Ravelin::Vector3d(1,1,0),sim);
+#  endif
   }
+
+#  ifdef COLLECT_DATA   // record all input vars
+ {
+   // generate a unique filename
+   std::ostringstream fname;
+   fname << "data/true_data" << (N_SYSTEMS) << ".m";
+   // open the file
+   std::ofstream out(fname.str().c_str());
+   out << "contacts = [";
+   for(unsigned i=0;i< eefs_.size();i++){
+     if(eefs_[i].active)
+       out << 1 << " "<< std::endl;
+     else
+       out << 0 << " " << std::endl;
+   }
+   out << "];" << std::endl;
+   for(unsigned i=0,ii=0;i< eefs_.size();i++){
+      if(!eefs_[i].active){
+        out << "impulse_" << i << " = [0,0,0];" << std::endl;
+        out << "normal_"  << i << " = [0,0,0];" << std::endl;
+        out << "point_"   << i << " = [0,0,0];" << std::endl;
+        continue;
+      }
+      out << "impulse_" << i << " = "<< eefs_[i].contact_impulses[0] << ";" << std::endl;
+      out << "normal_"  << i << " = "<< eefs_[i].normal << ";" << std::endl;
+      out << "point_"   << i << " = "<< eefs_[i].point << ";" << std::endl;
+      ii++;
+    }
+      out <<"impulse_true = [impulse_0' impulse_1' impulse_2' impulse_3'];" << std::endl;
+      out <<"normal_true  = [normal_0' normal_1' normal_2' normal_3'];" << std::endl;
+      out <<"point_true   = [point_0' point_1' point_2' point_3'];" << std::endl;
+
+      out.close();
+    }
+#  endif
 #endif
 
   update();
@@ -117,7 +159,15 @@ Ravelin::VectorNd& Quadruped::control(double t,
   Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
   std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS), foot_pos(NUM_EEFS), foot_acc(NUM_EEFS);
 
+  for(unsigned i=0;i< NUM_EEFS;i++){
+    foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    foot_vel[i].set_zero();
+    foot_acc[i].set_zero();
+    foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose = base_frame;
+  }
+
   if(WALK){
+    // FOOTHOLDS
     static std::vector<Ravelin::Vector3d> footholds;
     if(TRACK_FOOTHOLDS){
       // Determine new footholds (every 10th of a second)
@@ -127,11 +177,19 @@ Ravelin::VectorNd& Quadruped::control(double t,
     } else {
       footholds.clear();
     }
-    go_to = Ravelin::SVector6d(goto_X,goto_Y,0,0,0,goto_GAMMA,base_frame);
+
+    // Foot Locations
+    std::vector<Ravelin::Vector3d> foot_origin;
+    for(unsigned i=0;i< NUM_EEFS;i++)
+      foot_origin.push_back(eefs_[i].origin);
+
+    for(int i=0;i<6;i++)
+      go_to[i] = goto_command[i];
+
     OUTLOG(gait[gait_type],gait_type,logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
-    walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
-    trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
+
+    walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
@@ -141,12 +199,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
       (q_diff= q_des) -= q;
       q_diff *= STEP_SIZE;
       (q_des = q) += q_diff;
-      foot_vel[i].set_zero();
-      foot_acc[i].set_zero();
-      foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose = base_frame;
     }
   }
-  workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.01,STEP_SIZE,vb_w);
+  trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
@@ -161,8 +216,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
     OUTLOG(cf,"contact_forces",logDEBUG);
   } else
     for(int i=0;i<NC;i++)
-      for(int k=0;k<NK/2;k++)
-        MU(i,k) = 1;
+      if(eefs_[i].active)
+        for(int k=0;k<NK/2;k++)
+          MU(i,k) = eefs_[i].event->contact_mu_coulomb;
 
   // -----------------------------------------------------------------------------
   // EXPERIMENTAL
@@ -242,10 +298,59 @@ Ravelin::VectorNd& Quadruped::control(double t,
     if(WORKSPACE_IDYN){
       // EXPERIMENTAL
       Rw.mult(vel,vel_w);
-      inverse_dynamics(vel_w,vb_w,M,fext,dt,MU,id,cf);
+      workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.01,STEP_SIZE,vb_w);
+
+      workspace_inverse_dynamics(vel_w,vb_w,M,fext,dt,MU,id,cf);
     } else {
       inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
     }
+
+#ifdef COLLECT_DATA   // record all input vars
+    {
+      // generate a unique filename
+      std::ostringstream fname;
+      fname << "data/observed_data" << (N_SYSTEMS) << ".m";
+
+      // open the file
+      std::ofstream out(fname.str().c_str());
+
+      out << "contacts = [";
+      for(unsigned i=0;i< eefs_.size();i++){
+        if(eefs_[i].active)
+          out << 1 << " "<< std::endl;
+        else
+          out << 0 << " " << std::endl;
+      }
+      out << "];" << std::endl;
+
+      for(unsigned i=0,ii=0;i< eefs_.size();i++){
+        if(!eefs_[i].active){
+          out << "impulse_" << i << " = [0,0,0];" << std::endl;
+          out << "normal_"  << i << " = [0,0,0];" << std::endl;
+          out << "point_"   << i << " = [0,0,0];" << std::endl;
+          continue;
+        }
+        Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
+                                 eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
+                                 eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
+        Ravelin::Origin3d contact_impulse(cf[ii],(cf[ii*NK+NC]-cf[ii*NK+NC+NK/2]),(cf[ii*NK+NC+1]-cf[ii*NK+NC+NK/2+1]));
+        out << "impulse_" << i << " = "<< R_foot.transpose_mult(contact_impulse,workv3_)/(STEP_SIZE/0.001) << ";" << std::endl;
+        out << "normal_"  << i << " = "<< eefs_[i].normal << ";" << std::endl;
+        out << "point_"   << i << " = "<< eefs_[i].point << ";" << std::endl;
+        OUTLOG(eefs_[i].normal,eefs_[i].id + "_normal",logERROR);
+#ifdef VISUALIZE_MOBY
+        visualize_ray(eefs_[i].point+eefs_[i].normal,eefs_[i].point,Ravelin::Vector3d(1,1,0),sim);
+#endif
+        ii++;
+      }
+
+      out <<"impulse_observed = [impulse_0' impulse_1' impulse_2' impulse_3'];" << std::endl;
+      out <<"normal_observed  = [normal_0' normal_1' normal_2' normal_3'];" << std::endl;
+      out <<"point_observed   = [point_0' point_1' point_2' point_3'];" << std::endl;
+
+      out.close();
+    }
+#endif
 
     uff += (id*=alpha);
   }
@@ -289,10 +394,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
      OUTLOG(q_des,"q_des",logDEBUG);
      OUTLOG(qd_des,"qd_des",logDEBUG);
      OUTLOG(qdd_des,"qdd_des",logDEBUG);
-     OUTLOG(q,"q",logDEBUG);
-     OUTLOG(qd,"qd",logDEBUG);
-     OUTLOG(qdd,"qdd",logDEBUG);
-     OUTLOG(fext,"fext",logDEBUG);
 
      OUTLOG(uff,"uff",logDEBUG);
      OUTLOG(ufb,"ufb",logDEBUG);
@@ -332,9 +433,7 @@ void Quadruped::init(){
   // -- LOCOMOTION OPTIONS --
   CVarUtils::AttachCVar( "qd.locomotion.gait_time",&gait_time,"Gait Duration over one cycle.");
   CVarUtils::AttachCVar( "qd.locomotion.step_height",&step_height,"Height of a step");
-  CVarUtils::AttachCVar( "qd.locomotion.x",&goto_X,"command forward direction");
-  CVarUtils::AttachCVar( "qd.locomotion.y",&goto_Y,"command lateral direction");
-  CVarUtils::AttachCVar( "qd.locomotion.gamma",&goto_GAMMA,"command rotation");
+  CVarUtils::AttachCVar( "qd.locomotion.command",&goto_command,"Base command differential");
 
   // Assign Gait to the locomotion controller
   CVarUtils::AttachCVar<std::string>( "qd.locomotion.gait_type",&gait_type,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
@@ -363,10 +462,10 @@ void Quadruped::init(){
   int num_leg_stance = 4;
   switch(num_leg_stance){
     case 4:
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.11, 0.096278, -0.13);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.11,-0.096278, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.08, 0.096278, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.08,-0.096278, -0.13);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.105, 0.096278, -0.13);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.105,-0.096278, -0.13);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.085, 0.096278, -0.13);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.085,-0.096278, -0.13);
     break;
     case 3:
       // NOTE THIS IS A STABLE 3-leg stance
@@ -485,8 +584,8 @@ void Quadruped::init(){
   abrobot_->update_link_poses();
 
   {
-    duty_factor = boost::assign::list_of(0.501)(0.501)(0.501)(0.501).convert_to_container<std::vector<double> >();
-
+    duty_factor = boost::assign::list_of(0.8)(0.8)(0.8)(0.8).convert_to_container<std::vector<double> >();
+    goto_command = boost::assign::list_of(goto_X)(goto_Y)(0)(0)(0)(goto_GAMMA).convert_to_container<std::vector<double> >();
     // Trotting gait 50/50 duty cycle
     gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
 

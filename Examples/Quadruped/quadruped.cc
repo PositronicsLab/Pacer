@@ -29,13 +29,13 @@ static bool
         WALK                = true,//"Activate Walking?"),
           TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
         TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-        CONTROL_IDYN        = true,//"Activate IDYN?"),
+        CONTROL_IDYN        = false,//"Activate IDYN?"),
           WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
-          FEEDBACK_ACCEL      = true,//"Apply error-feedback as accelerations?"),
+          FEEDBACK_FORCE      = true,//"Apply error-feedback as forces?"),
+          FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --

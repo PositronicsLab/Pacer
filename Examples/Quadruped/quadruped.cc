@@ -34,21 +34,21 @@ static bool
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-          FEEDBACK_FORCE      = true,//"Apply error-feedback as forces?"),
-          FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
+          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
+          FEEDBACK_ACCEL      = true,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
 double
-        gait_time   = 1.0,//,"Gait Duration over one cycle."),
-        step_height = 0.01,//,""),
-        goto_X      = 0.02,//,"command forward direction"),
-        goto_Y      = 0.0,//,"command lateral direction"),
+        gait_time   = 0.5,//,"Gait Duration over one cycle."),
+        step_height = 0.02,//,""),
+        goto_X      = 0.05,//,"command forward direction"),
+        goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
 
 // Assign Gait to the locomotion controller
 std::string
-        gait_type   = "walk"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+        gait_type   = "trot"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
 
 std::vector<double>
         duty_factor = std::vector<double>(),
@@ -56,7 +56,7 @@ std::vector<double>
 
 // -- IDYN OPTIONS --
 double
-        STEP_SIZE = 0.002;
+        STEP_SIZE = 0.01;
 
 // ============================================================================
 // ============================================================================
@@ -71,11 +71,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
   std::cerr << " -- Quadruped::control(.) entered" << std::endl;
 
   OUT_LOG(logINFO)<< "time = "<< t ;
-
-  OUTLOG(q,"q",logDEBUG);
-  OUTLOG(qd,"qd",logDEBUG);
-  OUTLOG(qdd,"qdd",logDEBUG);
-  OUTLOG(fext,"fext",logDEBUG);
 
   // Subtract unknown perturbations from fext vector
   for(int i=0;i<6;i++)
@@ -163,7 +158,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
     foot_vel[i].set_zero();
     foot_acc[i].set_zero();
-    foot_vel[i].pose = foot_acc[i].pose = foot_pos[i].pose = base_frame;
+    foot_pos[i].pose = foot_vel[i].pose = foot_acc[i].pose = base_frame;
   }
 
   if(WALK){
@@ -190,10 +185,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
     OUTLOG(duty_factor,"duty_factor",logINFO);
 
     walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    for(int i=0;i<NUM_EEFS;i++){
+      OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_x =" << foot_pos[i];
+      OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_xd =" << foot_vel[i];
+      OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_xdd =" << foot_acc[i];
+    }
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
       foot_pos[i] = eefs_[i].origin;
+      foot_pos[i].pose = base_frame;
       RRMC(eefs_[i],q,eefs_[i].origin,q_des);
       Ravelin::VectorNd q_diff;
       (q_diff= q_des) -= q;
@@ -218,7 +219,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     for(int i=0;i<NC;i++)
       if(eefs_[i].active)
         for(int k=0;k<NK/2;k++)
-          MU(i,k) = eefs_[i].event->contact_mu_coulomb;
+          MU(i,k) = /*100.0;//*/eefs_[i].event->contact_mu_coulomb;
 
   // -----------------------------------------------------------------------------
   // EXPERIMENTAL
@@ -305,7 +306,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
       inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf);
     }
 
-#ifdef COLLECT_DATA   // record all input vars
+#ifdef PERTURB_CONTACT_DATA
+#  ifdef COLLECT_DATA   // record all input vars
     {
       // generate a unique filename
       std::ostringstream fname;
@@ -338,9 +340,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
         out << "normal_"  << i << " = "<< eefs_[i].normal << ";" << std::endl;
         out << "point_"   << i << " = "<< eefs_[i].point << ";" << std::endl;
         OUTLOG(eefs_[i].normal,eefs_[i].id + "_normal",logERROR);
-#ifdef VISUALIZE_MOBY
+#    ifdef VISUALIZE_MOBY
         visualize_ray(eefs_[i].point+eefs_[i].normal,eefs_[i].point,Ravelin::Vector3d(1,1,0),sim);
-#endif
+#    endif
         ii++;
       }
 
@@ -350,6 +352,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
       out.close();
     }
+#  endif
 #endif
 
     uff += (id*=alpha);
@@ -391,9 +394,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
      OUTLOG(center_of_mass_x,"CoM_x",logINFO);
      OUTLOG(center_of_mass_xd,"CoM_xd",logINFO);
      OUTLOG(center_of_mass_xdd,"CoM_xdd",logINFO);
+     OUTLOG(q,"q",logDEBUG);
+     OUTLOG(qd,"qd",logDEBUG);
+     OUTLOG(qdd,"qdd",logDEBUG);
      OUTLOG(q_des,"q_des",logDEBUG);
      OUTLOG(qd_des,"qd_des",logDEBUG);
      OUTLOG(qdd_des,"qdd_des",logDEBUG);
+     OUTLOG(fext,"fext",logDEBUG);
 
      OUTLOG(uff,"uff",logDEBUG);
      OUTLOG(ufb,"ufb",logDEBUG);
@@ -462,10 +469,10 @@ void Quadruped::init(){
   int num_leg_stance = 4;
   switch(num_leg_stance){
     case 4:
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.105, 0.096278, -0.13);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.105,-0.096278, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.085, 0.096278, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.085,-0.096278, -0.13);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.096278, -0.16);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.096278, -0.16);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.096278, -0.16);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.096278, -0.16);
     break;
     case 3:
       // NOTE THIS IS A STABLE 3-leg stance
@@ -584,7 +591,7 @@ void Quadruped::init(){
   abrobot_->update_link_poses();
 
   {
-    duty_factor = boost::assign::list_of(0.8)(0.8)(0.8)(0.8).convert_to_container<std::vector<double> >();
+    duty_factor = boost::assign::list_of(0.5)(0.5)(0.5)(0.5).convert_to_container<std::vector<double> >();
     goto_command = boost::assign::list_of(goto_X)(goto_Y)(0)(0)(0)(goto_GAMMA).convert_to_container<std::vector<double> >();
     // Trotting gait 50/50 duty cycle
     gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();

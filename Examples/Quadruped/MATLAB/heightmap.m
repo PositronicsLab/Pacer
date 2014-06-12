@@ -2,8 +2,8 @@ function h = heightmap
 close all;
 NUM_HILLS           = 1000;
 SIZE                = 3;
-RES                 = 0.05; 
-HEIGHT              = 0.01;
+RES                 = 0.02; 
+HEIGHT              = 0.02;
 HILL_WIDTH          = 0.01; 
 WIDTH_VARIABILITY   = 0.5; % 0 =< x < 1
 HEIGHT_VARIABILITY  = 0;
@@ -32,6 +32,12 @@ surf(x,y,h);
  heightmap_size = size(h);
  save('heightmap.mat','h','-ascii')
  prepend2file([num2str(heightmap_size(1)),' ',num2str(heightmap_size(2))],'heightmap.mat',1);
+ 
+%  h2 = fliplr(h);
+%  h2 = -h2;
+%   save('heightmap-viz.mat','h2','-ascii')
+%  prepend2file([num2str(heightmap_size(1)),' ',num2str(heightmap_size(2))],'heightmap-viz.mat',1);
+
 end
 
 function mat = gauss2d(R,C, SIGMA, MU)

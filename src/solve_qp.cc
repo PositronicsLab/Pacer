@@ -13,6 +13,8 @@ bool isvalid(const Ravelin::VectorNd& v){
   return true;
 }
 
+//#define SPLITTING_METHOD
+
 bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 {
      const int n = Q.rows();
@@ -55,8 +57,8 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-//  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
-  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+//  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
     SOLVE_FLAG = isvalid(zzz);
@@ -92,11 +94,11 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Raveli
 //  OUTLOG(c,"qq");
 #endif
 
-//  if(!lcp_.lcp_lemke_regularized(Q,c,x))
-////    if(!lcp_.lcp_lemke(Q,c,x))
-//      SOLVE_FLAG = false;
-//  else
-//    SOLVE_FLAG = isvalid(x);
+  if(!lcp_.lcp_lemke_regularized(Q,c,x))
+//    if(!lcp_.lcp_lemke(Q,c,x))
+      SOLVE_FLAG = false;
+  else
+    SOLVE_FLAG = isvalid(x);
 
 #ifndef NDEBUG
   OUT_LOG(logDEBUG1)  << "Solutions" ;
@@ -189,10 +191,16 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
 
 Opt::QPActiveSet as_;
 
-bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb, const Ravelin::VectorNd& ub, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
+bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 {
   const int n = Q.rows();
   const int m = A.rows();
+  Ravelin::VectorNd lb = lb_;
+  Ravelin::VectorNd ub = ub_;
+  if(lb.rows() == 0)
+    lb.set_one(Q.columns()) *= -1e29;
+  if(ub.rows() == 0)
+    ub.set_one(Q.columns()) *= 1e29;
 
 #ifndef NDEBUG
   OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;

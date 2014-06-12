@@ -1,0 +1,843 @@
+<?xml version='1.0'?>
+<sdf version="1.5">
+  <model name="lynx">
+    <static>0</static>
+    <pose>0 0 0.3 0 0 0</pose>
+
+    <joint name='/lynx/STAND' type='revolute'>
+      <parent>world</parent>
+      <child>/lynx/ABDOMEN</child>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>0 0 1</xyz>
+      </axis>
+    </joint>
+
+    <link name="/lynx/ABDOMEN">
+      <pose>-0.037175 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.23801</mass>
+        <inertia>
+          <ixx>0.000320348766133333</ixx>
+          <iyy>0.000165086909466667</iyy>
+          <izz>0.000435161616666667</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/ABDOMEN/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.0840 0.122 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/ABDOMEN/visual">
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.0840 0.122 0.0356</size>
+        </box>
+      </geometry>
+      </visual>
+
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+      <self_collide>0</self_collide>
+    </link>
+
+    <joint name="/lynx/BODY_JOINT" type="revolute">
+      <parent>/lynx/ABDOMEN</parent>
+      <child>/lynx/THORAX</child>
+      <pose>0 0 0 0 0 0</pose>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <link name="/lynx/THORAX">
+      <pose>0.037764 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.23801</mass>
+        <inertia>
+          <ixx>0.000332799559733333</ixx>
+          <iyy>0.000112621853066667</iyy>
+          <izz>0.000402145293333333</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/THORAX/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.073 0.135 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/THORAX/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.073 0.135 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <!-- LF LEG -->
+    <link name="/lynx/LF_HIP">
+      <pose>0.103528 0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.11763</mass>
+        <inertia>
+          <ixx>2.4776897025e-05</ixx>
+          <iyy>9.18235464e-05</iyy>
+          <izz>9.1753850625e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LF_HIP/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LF_HIP/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.066 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+
+    <link name="/lynx/LF_ULEG">
+      <pose>0.16185 0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.13266</mass>
+        <inertia>
+          <ixx>2.794272855e-05</ixx>
+          <iyy>0.0001035561648</iyy>
+          <izz>0.00010347756375</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LF_ULEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LF_ULEG/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/LF_LLEG">
+      <pose>0.261962 0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.04</mass>
+        <inertia>
+          <ixx>6.66666666666667e-07</ixx>
+          <iyy>6.01866666666667e-05</iyy>
+          <izz>6.01866666666667e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LF_LLEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LF_LLEG/visual">
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/LF_FOOT">
+      <pose>0.327962 0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1.66666666666667e-07</ixx>
+          <iyy>1.66666666666667e-07</iyy>
+          <izz>1.66666666666667e-07</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LF_FOOT/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LF_FOOT/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <joint name="/lynx/LF_HIP_AA" type="revolute">
+      <parent>/lynx/THORAX</parent>
+      <child>/lynx/LF_HIP</child>
+      <pose>-0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/LF_HIP_FE" type="revolute">
+      <parent>/lynx/LF_HIP</parent>
+      <child>/lynx/LF_ULEG</child>
+      <pose>-0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/LF_LEG_FE" type="revolute">
+      <parent>/lynx/LF_ULEG</parent>
+      <child>/lynx/LF_LLEG</child>
+      <pose>-0.067 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/LF_ANKLE" type="revolute">
+      <parent>/lynx/LF_LLEG</parent>
+      <child>/lynx/LF_FOOT</child>
+      <pose>0.0 0.0 0 0 0 0</pose>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>1 0 0</xyz>
+      </axis>
+
+    </joint>
+
+    <!-- RF LEG -->
+    <link name="/lynx/RF_HIP">
+      <pose>0.103528 -0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.11763</mass>
+        <inertia>
+          <ixx>2.4776897025e-05</ixx>
+          <iyy>9.18235464e-05</iyy>
+          <izz>9.1753850625e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RF_HIP/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RF_HIP/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.066 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+
+    <link name="/lynx/RF_ULEG">
+      <pose>0.16185 -0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.13266</mass>
+        <inertia>
+          <ixx>2.794272855e-05</ixx>
+          <iyy>0.0001035561648</iyy>
+          <izz>0.00010347756375</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RF_ULEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RF_ULEG/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/RF_LLEG">
+      <pose>0.261962 -0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.04</mass>
+        <inertia>
+          <ixx>6.66666666666667e-07</ixx>
+          <iyy>6.01866666666667e-05</iyy>
+          <izz>6.01866666666667e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RF_LLEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RF_LLEG/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/RF_FOOT">
+      <pose>0.327962 -0.056278 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1.66666666666667e-07</ixx>
+          <iyy>1.66666666666667e-07</iyy>
+          <izz>1.66666666666667e-07</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RF_FOOT/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RF_FOOT/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <joint name="/lynx/RF_HIP_AA" type="revolute">
+      <parent>/lynx/THORAX</parent>
+      <child>/lynx/RF_HIP</child>
+      <pose>-0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/RF_HIP_FE" type="revolute">
+      <parent>/lynx/RF_HIP</parent>
+      <child>/lynx/RF_ULEG</child>
+      <pose>-0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/RF_LEG_FE" type="revolute">
+      <parent>/lynx/RF_ULEG</parent>
+      <child>/lynx/RF_LLEG</child>
+      <pose>-0.067 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/RF_ANKLE" type="revolute">
+      <parent>/lynx/RF_LLEG</parent>
+      <child>/lynx/RF_FOOT</child>
+      <pose>0.0 0.0 0 0 0 0</pose>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>1 0 0</xyz>
+      </axis>
+
+    </joint>
+
+    <!-- LH LEG -->
+    <link name="/lynx/LH_HIP">
+      <pose>-0.103528 0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.14318</mass>
+        <inertia>
+          <ixx>3.01585999833333e-05</ixx>
+          <iyy>6.70960570666667e-05</iyy>
+          <izz>6.70112229166667e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LH_HIP/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.066 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LH_HIP/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.066 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+    </link>
+
+
+    <link name="/lynx/LH_ULEG">
+      <pose>-0.16185 0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.13266</mass>
+        <inertia>
+          <ixx>2.794272855e-05</ixx>
+          <iyy>0.0001035561648</iyy>
+          <izz>0.00010347756375</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LH_ULEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LH_ULEG/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/LH_LLEG">
+      <pose>-0.261962 0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.04</mass>
+        <inertia>
+          <ixx>6.66666666666667e-07</ixx>
+          <iyy>6.01866666666667e-05</iyy>
+          <izz>6.01866666666667e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LH_LLEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LH_LLEG/visual">
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/LH_FOOT">
+      <pose>-0.336316 0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1.66666666666667e-07</ixx>
+          <iyy>1.66666666666667e-07</iyy>
+          <izz>1.66666666666667e-07</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/LH_FOOT/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/LH_FOOT/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <joint name="/lynx/LH_HIP_AA" type="revolute">
+      <parent>/lynx/THORAX</parent>
+      <child>/lynx/LH_HIP</child>
+      <pose>0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/LH_HIP_FE" type="revolute">
+      <parent>/lynx/LH_HIP</parent>
+      <child>/lynx/LH_ULEG</child>
+      <pose>0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/LH_LEG_FE" type="revolute">
+      <parent>/lynx/LH_ULEG</parent>
+      <child>/lynx/LH_LLEG</child>
+      <pose>0.067 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+
+    </joint>
+
+    <joint name="/lynx/LH_ANKLE" type="revolute">
+      <parent>/lynx/LH_LLEG</parent>
+      <child>/lynx/LH_FOOT</child>
+      <pose>0.0 0.0 0 0 0 0</pose>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>1 0 0</xyz>
+      </axis>
+
+    </joint>
+
+    <!-- RH LEG -->
+    <link name="/lynx/RH_HIP">
+      <pose>-0.103528 -0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.14318</mass>
+        <inertia>
+          <ixx>3.01585999833333e-05</ixx>
+          <iyy>6.70960570666667e-05</iyy>
+          <izz>6.70112229166667e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RH_HIP/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.066 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RH_HIP/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.066 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+    </link>
+
+    <link name="/lynx/RH_ULEG">
+      <pose>-0.16185 -0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.13266</mass>
+        <inertia>
+          <ixx>2.794272855e-05</ixx>
+          <iyy>0.0001035561648</iyy>
+          <izz>0.00010347756375</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RH_ULEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RH_ULEG/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.09 0.0355 0.0356</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+    </link>
+
+    <link name="/lynx/RH_LLEG">
+      <pose>-0.261962 -0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.04</mass>
+        <inertia>
+          <ixx>6.66666666666667e-07</ixx>
+          <iyy>6.01866666666667e-05</iyy>
+          <izz>6.01866666666667e-05</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RH_LLEG/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RH_LLEG/visual">
+        <geometry>
+          <box>
+            <size>0.134 0.01 0.01</size>
+          </box>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+
+    </link>
+
+    <link name="/lynx/RH_FOOT">
+      <pose>-0.336316 -0.0495 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1.66666666666667e-07</ixx>
+          <iyy>1.66666666666667e-07</iyy>
+          <izz>1.66666666666667e-07</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="/lynx/RH_FOOT/collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name="/lynx/RH_FOOT/visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+      </visual>
+      <self_collide>0</self_collide>
+    </link>
+
+    <joint name="/lynx/RH_HIP_AA" type="revolute">
+      <parent>/lynx/THORAX</parent>
+      <child>/lynx/RH_HIP</child>
+      <pose>0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="/lynx/RH_HIP_FE" type="revolute">
+      <parent>/lynx/RH_HIP</parent>
+      <child>/lynx/RH_ULEG</child>
+      <pose>0.045 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="/lynx/RH_LEG_FE" type="revolute">
+      <parent>/lynx/RH_ULEG</parent>
+      <child>/lynx/RH_LLEG</child>
+      <pose>0.067 0.0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <dynamics>
+          <damping>0.0</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="/lynx/RH_ANKLE" type="revolute">
+      <parent>/lynx/RH_LLEG</parent>
+      <child>/lynx/RH_FOOT</child>
+      <pose>0 0 0 0 0 0</pose>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>1 0 0</xyz>
+      </axis>
+    </joint>
+
+    </link>
+    <plugin name='ros_control' filename='libLINKSgazebo.so'>
+      <namespace>/lynx</namespace>
+    </plugin>
+  </model>
+</sdf>

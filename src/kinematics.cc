@@ -61,7 +61,7 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     x[k] = q[foot.chain[k]];
 
   foot_kinematics(x,foot,base_frame,goal,step,J);
-  OUTLOG(x,"q",logDEBUG1);
+//  OUTLOG(x,"q",logDEBUG1);
   OUTLOG(goal,"goal",logDEBUG1);
 
   err = step.norm();
@@ -69,7 +69,7 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
   while(err > 1e-3  && err < last_err){
     // update error
     last_err = err;
-    OUTLOG(x,"q",logDEBUG1);
+//    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
     LA_.solve_fast(J,step);
     Ravelin::VectorNd qstep = step;

@@ -23,7 +23,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     STAGE2.set_zero(NUM_JOINTS);
     STAGE1 *= NAN;
     STAGE2 *= NAN;
-
   }
 #endif
   // get number of degrees of freedom and number of contact points
@@ -237,7 +236,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // qM1 = N'[zeros(nq,:) ; Z]
   Ravelin::MatrixNd qM1(N.columns(),Z.columns());
   N.transpose_mult(workM1,qM1);
-//  OUTLOG(qM1,"IP");
+  OUTLOG(qM1,"M_IP",logDEBUG);
   // [vq* ; p]
   Ravelin::VectorNd vqstar_p(n);
   vqstar_p.set_sub_vec(0,vqstar);
@@ -248,6 +247,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   Ravelin::VectorNd qq1(N.columns());
   N.transpose_mult(vqstar_p,qq1);
   qq1.negate();
+  OUTLOG(qq1,"q_IP",logDEBUG);
 
   // setup linear inequality constraints -- coulomb friction
   // where : z = [{cN_i .. cN_nc}  {[cS -cS  cT -cT]_i .. [cS -cS  cT -cT]_nc}]'
@@ -301,13 +301,13 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     return false;
   }
 
-//  OUTLOG(z,"Z_OP1");
+  OUTLOG(z,"Z_OP1",logDEBUG);
   // measure feasibility of solution
   // qM z - qq >= 0
   Ravelin::VectorNd feas;
   qM.mult(z,feas) -= qq;
 
-//  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)");
+  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)",logDEBUG);
 
   // push z into output vector
   cf = z;
@@ -473,21 +473,21 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
       return false;
       // then skip to calculating x from stage 1 solution
     } else {
-//      OUTLOG(w,"W_OP2");
+      OUTLOG(w,"W_OP2",logDEBUG);
 
       // measure feasibility of solution
       // qM w - qq >= 0
       feas = qq;
       qM.mult(w,feas,1,-1);
 
-//      OUTLOG(feas,"feas_OP2 =[ % (A*w - b >= 0)");
+      OUTLOG(feas,"feas_OP2 =[ % (A*w - b >= 0)",logDEBUG);
 
       // return the solution (contact forces)
       // cf = z + P*w;
 
       P.mult(w,cf,1,1);
 
-//      OUTLOG(cf,"z_OP2 =[ % (P*w + z)");
+      OUTLOG(cf,"z_OP2 =[ % (P*w + z)",logDEBUG);
 
 #ifdef COLLECT_DATA   // record all input vars
       { // TODO: REMOVE THIS, FOR IROS PAPER
@@ -518,77 +518,86 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   x /= h;
 
   // Some debugging dialogue
+#define OUTPUT
 #ifdef OUTPUT
   {
     // Zz + p == v + inv(M)(fext*h + R*z)
-    Z.mult(z,workv1);
-    workv1 += p;
-    OUTLOG(workv1,"Z*z + p");
+//    Z.mult(z,workv1);
+//    workv1 += p;
+//    OUTLOG(workv1,"Z*z + p",logDEBUG);
 
-    (workv1 = fext)*=h;
+    // Idyn Result
+    workv1.set_zero(fext.rows());
+    workv1.set_sub_vec(0,x);
+    (workv1 += fext) *= h;
     R.mult(z,workv1,1,1);
-    iM.mult(workv1,workv2) += v;
-    OUTLOG(workv2," == v + inv(M)(fext*h + R*z)");
+    iM.mult(workv1,workv2);
+//    OUTLOG(workv2.get_sub_vec(0,nq,workv1),"qdd2 == inv(M)( (fext + [x;0])*h + R*z)",logDEBUG);
+    OUTLOG(workv2.get_sub_vec(0,nq,workv1),"qdd_idyn",logDEBUG);
+    OUTLOG(qdd,"qdd_des_idyn",logDEBUG);
+    workv2 += v;
+    OUTLOG(workv2,"v* == v + inv(M)( (fext + [x;0])*h + R*z)",logDEBUG);
 
     // N*(v + inv(M)fext*h == N*p
-    workv1.set_zero(fext.rows());
-    workv1.set_sub_vec(nq,p);
-    N.transpose_mult(workv1,workv2);
-    OUTLOG(workv2,"N'*p");
+//    workv1.set_zero(fext.rows());
+//    workv1.set_sub_vec(nq,p);
+//    N.transpose_mult(workv1,workv2);
+//    OUTLOG(workv2,"N'*p",logDEBUG);
 
-    (workv1 = fext)*=h;
-    iM.mult(workv1,workv2) += v;
-    N.transpose_mult(workv2,workv1);
-    OUTLOG(workv1," == N'*(v + inv(M)*fext*h");
+//    (workv1 = fext)*=h;
+//    iM.mult(workv1,workv2) += v;
+//    N.transpose_mult(workv2,workv1);
+//    OUTLOG(workv1," == N'*(v + inv(M)*fext*h",logDEBUG);
 
     // vq* == v + inv(M)(fext + [x; 0])*h
-    OUTLOG(vqstar,"vq*");
+    OUTLOG(vqstar,"vq*",logDEBUG);
 
-    workv1.set_zero(fext.rows());
-    workv1.set_sub_vec(0,x);
-    (workv1 += fext);
-    OUTLOG(workv1," (fext + [x; 0])");
-    iM.mult(workv1,workv2);
-    OUTLOG(workv2," inv(M)(fext + [x; 0])");
-    (workv2*=h) += v;
-    OUTLOG(workv2," v + inv(M)(fext + [x; 0])*h");
+//    workv1.set_zero(fext.rows());
+//    workv1.set_sub_vec(0,x);
+//    (workv1 += fext);
+//    OUTLOG(workv1," (fext + [x; 0])",logDEBUG);
+//    iM.mult(workv1,workv2);
+//    OUTLOG(workv2," inv(M)(fext + [x; 0])",logDEBUG);
+//    (workv2*=h) += v;
+//    OUTLOG(workv2," v + inv(M)(fext + [x; 0])*h",logDEBUG);
 
-    workv1.set_zero(fext.rows());
-    workv1.set_sub_vec(0,x);
-    (workv1 += fext)*=h;
-    R.mult(cf,workv1,1,1);
-    iM.mult(workv1,workv2) += v;
-    OUTLOG(workv1,"qdd == inv(M)(fext + R*z + [x; 0])*h)");
+//    workv1.set_zero(fext.rows());
+//    workv1.set_sub_vec(0,x);
+//    (workv1 += fext)*=h;
+//    R.mult(cf,workv1,1,1);
+//    iM.mult(workv1,workv2) += v;
+//    OUTLOG(workv1,"qdd == inv(M)(fext + R*z + [x; 0])*h)",logDEBUG);
 
-    Ravelin::MatrixNd S,T;
-    ST.get_sub_mat(0,NDOFS,0,nc,S);
-    ST.get_sub_mat(0,NDOFS,nc,nc*2,T);
-    N.transpose_mult(iM,workM2);
-    workM2.mult(N,workM1);
-    OUTLOG(workM1,"N' * inv(M) * N");
+//    Ravelin::MatrixNd S,T;
+//    ST.get_sub_mat(0,NDOFS,0,nc,S);
+//    ST.get_sub_mat(0,NDOFS,nc,nc*2,T);
+//    N.transpose_mult(iM,workM2);
+//    workM2.mult(N,workM1);
+//    OUTLOG(workM1,"N' * inv(M) * N",logDEBUG);
 
-    workM2.mult(S,workM1);
-    OUTLOG(workM1,"N' * inv(M) * S");
+//    workM2.mult(S,workM1);
+//    OUTLOG(workM1,"N' * inv(M) * S",logDEBUG);
 
-    workM2.mult(T,workM1);
-    OUTLOG(workM1,"N' * inv(M) * T");
+//    workM2.mult(T,workM1);
+//    OUTLOG(workM1,"N' * inv(M) * T",logDEBUG);
 
-    S.transpose_mult(iM,workM2);
-    workM2.mult(S,workM1);
-    OUTLOG(workM1,"S' * inv(M) * S");
+//    S.transpose_mult(iM,workM2);
+//    workM2.mult(S,workM1);
+//    OUTLOG(workM1,"S' * inv(M) * S",logDEBUG);
 
-    workM2.mult(T,workM1);
-    OUTLOG(workM1,"S' * inv(M) * T");
+//    workM2.mult(T,workM1);
+//    OUTLOG(workM1,"S' * inv(M) * T",logDEBUG);
 
-    T.transpose_mult(iM,workM2);
-    workM2.mult(T,workM1);
-    OUTLOG(workM1,"T' * inv(M) * T");
+//    T.transpose_mult(iM,workM2);
+//    workM2.mult(T,workM1);
+//    OUTLOG(workM1,"T' * inv(M) * T",logDEBUG);
   }
 #endif
+//  assert(nc!= 4);
   return true;
 }
 
-bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
+bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
 
   Ravelin::VectorNd fext = fext_;
   fext.negate();

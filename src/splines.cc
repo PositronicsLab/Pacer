@@ -55,10 +55,10 @@ void Utility::bezierCurve(const std::vector<Ravelin::Vector3d>& control_points, 
     dtrajectory[t] *= u[1];
   }
 }
-/*
+
+
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd& X,
-                                           const Ravelin::Vector2d& Xd,const Ravelin::Vector2d& Xdd,
-                                           Ravelin::VectorNd& B){
+                                           const Ravelin::Vector2d& Xd, Ravelin::VectorNd& B){
   static Ravelin::MatrixNd A;
 
   assert(T.rows() == X.rows());
@@ -72,7 +72,7 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
   A.set_zero(4*(N+1),4*(N+1));
 
   // start constraint
-  B[0] = Xdd[0];
+  B[0] = 0;
   B[1] =  Xd[0];
   B[2] =   X[0];
   // xdd
@@ -145,7 +145,7 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
   A(A.rows()-4,A.columns()-1) = -1;
 
   // End constraint
-  B[B.rows()-3] = Xdd[1];
+  B[B.rows()-3] = 0;
   B[B.rows()-2] =  Xd[1];
   B[B.rows()-1] =   X[N-1];
   // xdd
@@ -206,6 +206,7 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
   workv_.get_sub_vec(4,workv_.size()-4,B);
 }
 
+/*
 void Utility::eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
                        Ravelin::VectorNd& X, Ravelin::VectorNd& Xd, Ravelin::VectorNd& Xdd){
     X.set_zero(num_segments);
@@ -226,6 +227,7 @@ void Utility::eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::Ve
     Xdd[i]  =   6*t*coefs[k*4] +   2*coefs[k*4+1] ;
   }
 }
+*/
 
 bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                        double& X, double& Xd, double& Xdd){
@@ -245,7 +247,7 @@ bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,cons
 
   return true;
 }
-*/
+
 /// http://www.alglib.net/translator/man/manual.cpp.html#sub_spline1dbuildcubic
 /// CUBIC SPLINE: C2 smooth position, C1 smooth velocity, continuous acceleration
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, alglib::spline1dinterpolant &B)
@@ -295,6 +297,5 @@ bool Utility::eval_cubic_spline(const std::vector<alglib::spline1dinterpolant>& 
 //  OUT_LOG(logDEBUG) << "<< exiting Utility::eval_cubic_spline(.)";
   return true;
 }
-
 
 

@@ -18,6 +18,8 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
     eefs_[i].contacts.clear();
     eefs_[i].contact_impulses.clear();
   }
+//#define FAKE_CONTACTS
+#ifndef FAKE_CONTACTS
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].event_type == Moby::Event::eContact)
@@ -74,6 +76,25 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
       eefs_[index].event = boost::shared_ptr<const Moby::Event>(new Moby::Event(e[i]));
     }
   }
+#else
+  // PROCESS CONTACTS
+  for(unsigned index=0;index<4;index++){
+    Ravelin::Pose3d foot_pose = *eefs_[index].link->get_pose();
+    foot_pose.update_relative_pose(Moby::GLOBAL);
+
+    eefs_[index].contacts.push_back(Ravelin::Vector3d(foot_pose.x.data()));
+
+      // Increment number of active contacts
+      NC++;
+
+      // Push Active contact info to EEF
+      eefs_[index].active = true;
+      eefs_[index].point = Ravelin::Vector3d(foot_pose.x.data());
+      eefs_[index].normal = Ravelin::Vector3d(0,0,1);
+      eefs_[index].tan1 = Ravelin::Vector3d(1,0,0);;
+      eefs_[index].tan2 = Ravelin::Vector3d(0,1,0);;
+    }
+#endif
 }
 
 void post_step_callback_fn(Moby::Simulator* s){

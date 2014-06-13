@@ -29,20 +29,20 @@ static bool
         WALK                = true,//"Activate Walking?"),
           TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
         TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-        CONTROL_IDYN        = false,//"Activate IDYN?"),
+        CONTROL_IDYN        = true,//"Activate IDYN?"),
           WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-          FEEDBACK_FORCE      = true,//"Apply error-feedback as forces?"),
-          FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
+          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
+          FEEDBACK_ACCEL      = true,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
 double
-        gait_time   = 0.5,//,"Gait Duration over one cycle."),
+        gait_time   = 0.4,//,"Gait Duration over one cycle."),
         step_height = 0.02,//,""),
-        goto_X      = 0.05,//,"command forward direction"),
+        goto_X      = 0.04,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
 
@@ -56,7 +56,7 @@ std::vector<double>
 
 // -- IDYN OPTIONS --
 double
-        STEP_SIZE = 0.01;
+        STEP_SIZE = 0.001;
 
 // ============================================================================
 // ============================================================================
@@ -251,8 +251,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
       for(int i=0;i<NUM_JOINTS;i++){
         gains[joints_[i]->id].perr_sum = 0;
         gains[joints_[i]->id].kp = 1e1;
-        gains[joints_[i]->id].kv = 1e-2;
-        gains[joints_[i]->id].ki = 1e-3;
+        gains[joints_[i]->id].kv = 5e-2;
+        gains[joints_[i]->id].ki = 0;
       }
       PID::control(q_des, qd_des,q,qd,joint_names_, gains,ufb);
     }
@@ -469,10 +469,10 @@ void Quadruped::init(){
   int num_leg_stance = 4;
   switch(num_leg_stance){
     case 4:
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.096278, -0.16);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.096278, -0.16);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.096278, -0.16);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.096278, -0.16);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.1, -0.15);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.1, -0.15);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.1, -0.15);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.1, -0.15);
     break;
     case 3:
       // NOTE THIS IS A STABLE 3-leg stance

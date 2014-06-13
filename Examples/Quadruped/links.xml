@@ -27,7 +27,7 @@
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
 <!--    <DynamicBody dynamic-body-id="ball" />-->
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.2" mu-viscous="0" epsilon="0.0"/>
 <!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.25"/>-->
   </EventDrivenSimulator>
 
@@ -43,7 +43,7 @@
     <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
+      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.2" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
 <!--        <CollisionGeometry primitive-id="abdomen" />-->
@@ -158,11 +158,11 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-<!--   <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />-->
-<Heightmap id="ground-primitive" filename="MATLAB/heightmap.mat" width="1" depth="1" rpy="1.571 0 0"/>
+   <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.05" />
+<!--<Heightmap id="ground-primitive" filename="MATLAB/heightmap.mat" width="1" depth="1" rpy="1.571 0 0"/>-->
 <!--<Sphere id="ground-primitive" radius="100" />-->
   <RigidBody id="ground" enabled="false"
-  position="0 0 -0.00" >
+  position="0 0 -0.00" visualization-id="ground-primitive">
 <!--  position="0 0 -100" visualization-id="ground-primitive">-->
     <CollisionGeometry primitive-id="ground-primitive" />
   </RigidBody>

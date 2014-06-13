@@ -2,7 +2,6 @@
 #define UTILITIES_H
 
 #include <project_common.h>
-#include <interpolation.h>
 
 class Utility{
   public:
@@ -39,13 +38,10 @@ class Utility{
                                              const Ravelin::Vector2d& Xd,const Ravelin::Vector2d& Xdd,
                                              Ravelin::VectorNd& B);
   static void calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, Ravelin::VectorNd &B);
-  static void calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, alglib::spline1dinterpolant &B);
 
   static void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
                            Ravelin::VectorNd& X, Ravelin::VectorNd& Xd, Ravelin::VectorNd& Xdd);
   static bool eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
-                           double& X, double& Xd, double& Xdd);
-  static bool eval_cubic_spline(const std::vector<alglib::spline1dinterpolant>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                            double& X, double& Xd, double& Xdd);
 
   static double linesearch(double (*f)(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::VectorNd& gk) ,

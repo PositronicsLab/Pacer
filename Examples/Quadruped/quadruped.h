@@ -45,10 +45,5 @@ class Quadruped : public Robot{
 
     void eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
 
-    //
-    void plan_drive_traj(const Ravelin::Vector2d& x_source,const Ravelin::Vector2d& x_goal,
-                         const std::vector<Ravelin::Vector2d>& via_pts, double duration,
-                         std::vector<alglib::spline1dinterpolant>& coefs);
-
 };
 #endif // CONTROL_H

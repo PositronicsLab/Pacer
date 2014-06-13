@@ -279,7 +279,7 @@ void Quadruped::walk_toward(
 
   // persistent Vector storing spline coefs
   // [foot][dimension][interval]
-  static std::vector< std::vector< std::vector<alglib::spline1dinterpolant> > > spline_coef(NUM_EEFS);
+  static std::vector< std::vector< std::vector<Ravelin::VectorNd> > > spline_coef(NUM_EEFS);
   // persistent Vector storing time delimitations to each spline
   // [foot][interval]
   static std::vector< std::vector<Ravelin::VectorNd> > spline_t(NUM_EEFS);
@@ -299,7 +299,7 @@ void Quadruped::walk_toward(
       for(int d=0; d<3;d++){
         spline_coef[i][d].resize(spline_plan_length);
         for(int j = 0; j<  spline_plan_length;j++)
-          spline_coef[i][d][j] = alglib::spline1dinterpolant();
+          spline_coef[i][d][j] = Ravelin::VectorNd();
       }
 
       spline_t[i].resize(spline_plan_length);
@@ -419,7 +419,7 @@ void Quadruped::walk_toward(
 //                                        )
 //                                     ) * sqrt(height/grav);
 //        rfb[2] = 0;
-//        foot_goal += Ravelin::Origin3d(rfb);
+//        foot_goal -= Ravelin::Origin3d(rfb);
 
           control_points.push_back(Ravelin::Origin3d(x));
           control_points.push_back(Ravelin::Origin3d(x) + Ravelin::Origin3d(0,0,step_height));
@@ -468,7 +468,7 @@ void Quadruped::walk_toward(
 
       for(int d=0;d<3;d++){
         Ravelin::VectorNd           X(n);
-        alglib::spline1dinterpolant &coefs = *(spline_coef[i][d].rbegin());
+        Ravelin::VectorNd          &coefs = *(spline_coef[i][d].rbegin());
 
         for(int j=0;j<n;j++)
           X[j] = control_points[j][d];

@@ -137,7 +137,7 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
     visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,0), sim);
 #endif
   }
-  OUTLOG(v_bar,"v_bar",logERROR);
+  OUTLOG(v_bar,"v_bar",logDEBUG);
 }
 
 

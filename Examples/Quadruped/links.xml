@@ -27,7 +27,7 @@
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
 <!--    <DynamicBody dynamic-body-id="ball" />-->
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.2" mu-viscous="0" epsilon="0.0"/>
 <!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.25"/>-->
   </EventDrivenSimulator>
 
@@ -45,7 +45,7 @@
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.17" >
       <!-- the body -->
-      <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0.5 0" visualization-id="abdomen" >
+      <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" >
 <!--        <CollisionGeometry primitive-id="abdomen" />-->
         <InertiaFromPrimitive primitive-id="abdomen" />
       </RigidBody>

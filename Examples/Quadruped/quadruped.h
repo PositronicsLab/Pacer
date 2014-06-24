@@ -45,5 +45,10 @@ class Quadruped : public Robot{
 
     void eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
 
+public:
+    std::vector<double> unknown_base_perturbation;// = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+    std::vector<double> known_base_perturbation;// = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+    std::vector<double> known_leading_force;// = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+
 };
 #endif // CONTROL_H

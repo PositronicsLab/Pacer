@@ -311,8 +311,8 @@ void Quadruped::walk_toward(
   ////////////////// PHASE PLANNING ///////////////////////
   for(int i=0;i<NUM_EEFS;i++){
 
-    Ravelin::Vector3d &x = foot_pos[i],
-                      &xd = foot_vel[i],
+    Ravelin::Vector3d &x   = foot_pos[i],
+                      &xd  = foot_vel[i],
                       &xdd = foot_acc[i];
 
     // Check if Spline must be reevaluated

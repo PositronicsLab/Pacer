@@ -8,10 +8,6 @@ extern Ravelin::VectorNd STAGE1, STAGE2;
 extern int N_SYSTEMS;
 std::map<std::string , std::vector<double> > gait;
 
-std::vector<double> unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-std::vector<double> known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-std::vector<double> known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-
 // TODO: This should be extern double to moby's (nominal) STEP_SIZE
 
 extern bool new_sim_step;
@@ -30,19 +26,19 @@ static bool
         WALK                = true,//"Activate Walking?"),
           TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
         TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-        CONTROL_IDYN        = true,//"Activate IDYN?"),
+        CONTROL_IDYN        = false,//"Activate IDYN?"),
           WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
           FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
-          FEEDBACK_ACCEL      = true,//"Apply error-feedback as accelerations?"),
-          WORKSPACE_FEEDBACK  = false;//"Use error-feedback in workspace frame?");
+          FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
+          WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.4,//,"Gait Duration over one cycle."),
-        step_height = 0.01,//,""),
+        step_height = 0.015,//,""),
         goto_X      = 0.00,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
@@ -74,27 +70,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
   OUT_LOG(logINFO)<< "time = "<< t ;
 
   // ----------------------------------------------------------------
-  Ravelin::SForced lead(known_leading_force[3],known_leading_force[4],known_leading_force[5],
-                        known_leading_force[6],known_leading_force[7],known_leading_force[8],
-                        Moby::GLOBAL);
-  lead = Ravelin::Pose3d::transform(
-           boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(
-             Ravelin::Quatd::identity(),
-             Ravelin::Origin3d(known_leading_force[0],known_leading_force[1],known_leading_force[2])
-           )),
-          lead
-         );
+  Ravelin::Vector3d lead(known_leading_force[3],
+                         known_leading_force[4],
+                         known_leading_force[5],
+                         Moby::GLOBAL);
 
-  static Ravelin::VectorNd perturbation;
-  perturbation.set_zero(NUM_JOINTS+6);
-
-  for(int i=0;i<6;i++){
-    perturbation[NUM_JOINTS+i] += ( unknown_base_perturbation[i]
-                                   + known_base_perturbation[i]
-                                   + lead[i]);
-  }
-  abrobot_->add_generalized_force(perturbation);
-  // ----------------------------------------------------------------
+  OUTLOG(lead,"LEAD_g",logDEBUG);
 
   ((qdd = qd)-=qd_last)/=STEP_SIZE;
 
@@ -156,7 +137,41 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 #endif
 
+  update_poses();
+
+//  update();
+  Ravelin::Vector3d point_on_robot(known_leading_force[0],
+                                   known_leading_force[1],
+                                   known_leading_force[2],
+                                   base_link_frame);
+  Ravelin::Vector3d lead_transform
+      = Ravelin::Pose3d::transform_point(Moby::GLOBAL,point_on_robot);
+
+  Ravelin::SForced lead_force = Ravelin::Pose3d::transform(
+                                   boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(
+                                     Ravelin::Quatd::identity(),
+                                     Ravelin::Origin3d(
+                                       lead_transform
+                                     )
+                                   )),
+                                   Ravelin::SForced(lead,Ravelin::Vector3d(0,0,0))
+                                 );
+  OUTLOG(lead,"LEAD_bt",logDEBUG);
+
+#ifndef SET_KINEMATICS
+  Ravelin::VectorNd perturbation(NUM_JOINTS+6);
+  perturbation.set_zero();
+
+  for(int i=0;i<6;i++){
+    perturbation[NUM_JOINTS+i] += ( unknown_base_perturbation[i]
+                                   + known_base_perturbation[i]
+                                   + lead_force[i]);
+  }
+  abrobot_->add_generalized_force(perturbation);
+  // ----------------------------------------------------------------
+
   update();
+#endif
 
   // Subtract unknown perturbations from fext vector
   // ----------------------------------------------------------------
@@ -195,8 +210,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 
   if(WALK){
-    lead = Ravelin::Pose3d::transform(base_frame,lead);
-
+    Ravelin::Vector3d lead_base = Ravelin::Pose3d::transform_vector(base_link_frame,lead);
+    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force);
+    OUTLOG(lead_base,"LEAD_base",logDEBUG);
     // FOOTHOLDS
     static std::vector<Ravelin::Vector3d> footholds;
     if(TRACK_FOOTHOLDS){
@@ -214,7 +230,25 @@ Ravelin::VectorNd& Quadruped::control(double t,
       foot_origin.push_back(eefs_[i].origin);
 
     for(int i=0;i<6;i++)
-      go_to[i] = goto_command[i] + lead[i]/2.0;
+      go_to[i] = goto_command[i];
+
+    // Robot attempts to align base with force and then walk along force axis
+    go_to[0] += lead_base[0];
+    go_to[5] += lead_base[1];//*lead_transform[1]/0.13;
+
+    OUTLOG(go_to,"go_to",logDEBUG);
+
+#ifdef VISUALIZE_MOBY
+    visualize_ray(  lead_transform,
+                    lead_transform
+                     + Ravelin::Vector3d(known_leading_force[3],
+                                         known_leading_force[4],
+                                         known_leading_force[5],
+                                         Moby::GLOBAL),
+                    Ravelin::Vector3d(1,0,1),
+                    sim
+                  );
+#endif
 
     OUTLOG(gait[gait_type],gait_type,logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
@@ -331,7 +365,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
         ii++;
       }
       Utility::check_finite(cf);
-      OUTLOG(cf,"cf z",logERROR);
+      OUTLOG(cf,"cf z",logDEBUG);
     }
 
     if(WORKSPACE_IDYN){
@@ -348,7 +382,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 //      diff = clock() - start;
 //      double msec = (double) diff * 1000.0 / (double) CLOCKS_PER_SEC;
 //        OUT_LOG(logERROR) << "IDYN_TIMING = " << msec;
-        OUTLOG(cf,"cf",logERROR);
+        OUTLOG(cf,"cf",logDEBUG);
     }
 
 #ifdef PERTURB_CONTACT_DATA
@@ -443,10 +477,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
 
 void Quadruped::init(){
+  unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.2)(0.0).convert_to_container<std::vector<double> >();
 #ifdef VISUALIZE_MOBY
   CVarUtils::AttachCVar( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
   CVarUtils::AttachCVar( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");
-  CVarUtils::AttachCVar( "qd.known_leading_force",&known_leading_force,"Apply a constant [3 pt{base_frame}][3 linear,3 angular] force to robot base, the robot can sense the applied force and will follow it");
+  CVarUtils::AttachCVar( "qd.known_leading_force",&known_leading_force,"Apply a constant [3 pt{base_frame}][3 linear] force to robot base, the robot can sense the applied force and will follow it");
 
   CVarUtils::AttachCVar( "qd.locomotion.active",&WALK,"Activate Walking?");
   CVarUtils::AttachCVar( "qd.locomotion.track_footholds",&TRACK_FOOTHOLDS,"Locate and use footholds?");// EXPERIMENTAL

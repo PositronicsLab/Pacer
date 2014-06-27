@@ -110,7 +110,7 @@ void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,
 
 void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                                           double beta, double dt, Ravelin::VectorNd& v_bar){
-  v_bar.set_sub_vec(NUM_EEFS*3,v_base);
+//  v_bar.set_sub_vec(NUM_EEFS*3,v_base);
 // Position ERROR Correction for robot base
 // SRZ: Base is non-holonomically constrained cannot control position directly
 //  Ravelin::Vector3d goal_base_pose = center_of_feet_x + Ravelin::Vector3d(0,0,0.13,environment_frame);
@@ -125,8 +125,8 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //  Ravelin::Vector3d base_correct = beta/dt * ( goal_base_pose - center_of_mass_x);
 //  v_bar[NUM_EEFS*3]   += base_correct[0];
 //  v_bar[NUM_EEFS*3+1] += base_correct[1];
-  v_bar[NUM_EEFS*3+3] += -beta/dt * roll_pitch_yaw[0];
-  v_bar[NUM_EEFS*3+4] += -beta/dt * roll_pitch_yaw[1];
+//  v_bar[NUM_EEFS*3+3] += -beta/dt * roll_pitch_yaw[0];
+//  v_bar[NUM_EEFS*3+4] += -beta/dt * roll_pitch_yaw[1];
   // base position should be 0.13m above centroid of feet
   for(int i=0;i<NUM_EEFS;i++){
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));

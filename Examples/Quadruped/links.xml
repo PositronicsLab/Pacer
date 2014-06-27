@@ -3,7 +3,7 @@
 
 <XML>
   <DRIVER>
-    <camera position="0.55 -0.75 0.5" target="0 0 0" up="0 0 1" />
+    <camera position="0.35 -0.55 0.5" target="0 0 0" up="0 0 1" />
     <window location="0 0" size="640 480" />
   </DRIVER>
 
@@ -25,9 +25,9 @@
     <DisabledPair object1-id="links" object2-id="links"/>
 <!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
     <DynamicBody dynamic-body-id="links" />
-    <DynamicBody dynamic-body-id="ground" />
+<!--    <DynamicBody dynamic-body-id="ground" />-->
 <!--    <DynamicBody dynamic-body-id="ball" />-->
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1000" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
 <!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.25"/>-->
   </EventDrivenSimulator>
 

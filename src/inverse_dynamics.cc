@@ -1,5 +1,6 @@
 #include <robot.h>
 #include <utilities.h>
+#include <Opt/LP.h>
 
 int N_SYSTEMS = 0;
 
@@ -600,28 +601,14 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
 
   Ravelin::VectorNd fext = fext_;
-  fext.negate();
+//  fext.negate();
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
 
   // SRZ: Ground reaction forces are set to zero
   // (they destabilize robot system, why?)
-//  z.set_zero();
 
-  Ravelin::MatrixNd W;
-  if(W.rows() == 0)
-    (W = Ravelin::MatrixNd::identity(NUM_EEFS*3 + 6)) *= 1e-8;
-
-  for(int i=NUM_JOINTS;i<NUM_JOINTS+6;i++)
-    W(i,i) = 1e-5;
-
-  W(NUM_JOINTS,NUM_JOINTS) = 0;
-  W(NUM_JOINTS+1,NUM_JOINTS+1) = 0;
-  W(NUM_JOINTS+2,NUM_JOINTS+2) = 0;
-  W(NUM_JOINTS+5,NUM_JOINTS+5) = 0;
-
-  OUTLOG(W,"W",logDEBUG1);
   OUTLOG(R,"R",logERROR);
   static Ravelin::MatrixNd workM1,workM2;
   static Ravelin::VectorNd workv1, workv2;
@@ -636,35 +623,27 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
   LA_.solve_chol_fast(iM_chol,iM);
 
   Ravelin::MatrixNd F,U;
-  OUTLOG(Rw,"Rw",logDEBUG1);
+  OUTLOG(Rw,"Rw",logERROR);
 
   // Actuated joint selection matrix
   F.set_zero(n,nq);
   F.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
+  F *= h;
 
   // v_err
-  Ravelin::VectorNd v_err,V;
-  (v_err = v) -= v_bar;
-  OUTLOG(v_bar,"v_bar",logDEBUG1);
-  OUTLOG(v,"v",logDEBUG1);
-  OUTLOG(v_err,"v_err",logDEBUG1);
-  OUTLOG(v_err.get_sub_vec(NUM_EEFS*3,NUM_EEFS*3+6,workv_),"BASE_ERR",logERROR);
+  Ravelin::VectorNd v_err,vel_w;
+  Rw.mult(v,vel_w);
+  (v_err = vel_w) -= v_bar;
+  OUTLOG(v_bar,"v_bar",logERROR);
+  OUTLOG(vel_w,"vel_w",logERROR);
+  OUTLOG(v_err,"v_err",logERROR);
+//  OUTLOG(v_err.get_sub_vec(NUM_EEFS*3,NUM_EEFS*3+6,workv_),"BASE_ERR",logERROR);
   for (int i=0;i<NUM_EEFS;i++)
     OUTLOG(v_err.get_sub_vec(i*3,(i+1)*3,workv_),eefs_[i].id + "_ERR",logERROR);
 
-  // W Rw iM
-  Rw.mult(iM,workM1);
-  W.mult(workM1,workM2);
-
-  // V = (v_err)' W Rw iM
-  workM2.transpose_mult(v_err,V);
-
-  // U = (Rw iM)' W Rw iM
-  workM1.transpose_mult(workM2,U);
-
-  //
   Ravelin::MatrixNd qpQ,qpA;
   Ravelin::VectorNd qpc,qpb;
+#ifdef asda
   if(z.rows() != 0){
     // do widyn for torque only
     // OBJECTIVE
@@ -741,108 +720,230 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
 
     return true;
-  } else {
+  }
+  else
+#endif
+  {
+    const int NVARS = NC*5+nq;
     // Do larger "Coupled" optimizations
     // for torque and cfs
 
-    // OBJECTIVE
-    // Min workspace deviation from v_bar with weights W
-    // Q = [ZZ TZ' ; TZ TT]
-    static Ravelin::MatrixNd ZZ,TT,TZ;
-
-    // z' [R [iM' Rw' W Rw iM] R'] z
-    R.transpose_mult(U,workM1);
-    workM1.mult(R,ZZ);
-
-    // t' [h F' [iM' Rw' W Rw iM] R'] z
-    F.transpose_mult(U,workM1);
-    workM1.mult(R,TZ) *= h;
-
-    // t' [F' [iM' Rw' W Rw iM] F'] t
-    F.transpose_mult(U,workM1);
-    workM1.mult(F,TT);
-
-    qpQ.set_zero(ZZ.rows() + TZ.rows(),ZZ.rows() + TZ.rows());
-    qpc.set_zero(ZZ.rows() + TZ.rows());
-
-    qpQ.set_sub_mat(        0,        0,ZZ);
-    qpQ.set_sub_mat(ZZ.rows(),        0,TZ);
-    qpQ.set_sub_mat(        0,ZZ.rows(),TZ.transpose());
-    qpQ.set_sub_mat(ZZ.rows(),ZZ.rows(),TT);
-
-    qpQ *= 0.5;
-
-    // c = [ (V + h fext'U)R', h(V + h fext'U)F']
-    U.transpose_mult(fext,workv1,h,0) += V;
-    R.transpose_mult(workv1,workv2);
-    qpc.set_sub_vec(0,workv2);
-
-    U.transpose_mult(fext,workv1,h,0) += V;
-    F.transpose_mult(workv1,workv2) *= h;
-    qpc.set_sub_vec(NC*5,workv2);
-
-    qpA.set_zero(NC+NC,NC*5+nq);
-    qpb.set_zero(qpA.rows());
-
-    // CONSTARINTS
-    //  -- Interpenetration --
-    // K = N*iM*[R' F]
-    workM2.set_zero(NDOFS,NC*5+nq);
-    workM2.set_sub_mat(0,0,R);
-    workM2.set_sub_mat(0,NC*5,F);
-    iM.mult(workM2,workM1);
-    N.transpose_mult(workM1,workM2);
-
-    OUTLOG(workM2,"qpA: IP",logERROR);
-
-    qpA.set_sub_mat(0,0,workM2);
-
-    // h*iM*fext
-    iM.mult((workv2 = fext),workv1,h,0);
-    // + v
-    workv1 += v;
-    // -N*[]
-    N.transpose_mult(workv1,workv2);
-    workv2.negate();
-    qpb.set_sub_vec(0,workv2);
-
-    //  -- Coulomb Friction --
+    //////////////////////// COEFS /////////////////////////
+    // iM [R' F]: [z,\tau] --> [generalized_xdd]
+    Ravelin::MatrixNd RTF;
+    Ravelin::MatrixNd iMRTF;
+    RTF.set_zero(NDOFS,NVARS);
+    RTF.set_sub_mat(0,0,R);
+    RTF.set_sub_mat(0,NC*5,F);
+    iM.mult(RTF,iMRTF);
 
     // D goes [1_t1 2_t1 ... 1_t2 2_t2..] -[1_t1 2_t1 ... 1_t2 2_t2]
-    workM2.set_zero(NC,NC*5+nq);
+    // coulomb friction pyramid matrix
+    Ravelin::MatrixNd CF;
+    CF.set_zero(NC,NVARS);
     for (int ii=0;ii < NC;ii++){
       // normal force
-      workM2(ii,ii) = MU(ii,0);
+      CF(ii,ii) = MU(ii,0);
       // tangent forces [polygonal]
       for(int kk=NC+ii;kk<NC+4*NC;kk+=NC)
-        workM2(ii,kk) = -1.0;
+        CF(ii,kk) = -1.0;
     }
-    OUTLOG(workM2,"qpA: CF",logERROR);
 
-    qpA.set_sub_mat(NC,0,workM2);
-//    qpb.set_sub_vec(NC,/*zero*/);
+    // QP Nullspace
+    Ravelin::MatrixNd P;
 
-    // -- Torque Limits --
-    Ravelin::VectorNd ll(NC*5+nq),ul(NC*5+nq);
+    int WS_DOFS = Rw.rows();
+#ifdef asdasd
+    //////////////////////// LP PHASE /////////////////////////
+    /* OBJECTIVE
+     * Min workspace deviation from v_bar
+     * min_{x = [z,T,s]'}
+     *   [0,0,1] x
+     * s.t.
+     *   -[A,",-I] x   >= -v_bar              // operational space goal l1-norm
+     *   [A,",-I] x    >=  v_bar              // "
+     *   N*iM*[R' F,0] x >= -N(h*iM*fext + v)   // Interpenetration
+     *   [CF,0,0] x      >=  0                  // coulomb friction
+     *   z >= 0                                 // compressive force
+     *   T+ >= T >= T-                          // torque limits
+     */
+
+    Ravelin::MatrixNd lpM(WS_DOFS*2 + NC*2,nq+NC*5+WS_DOFS);
+    Ravelin::VectorNd lpq(lpM.rows()),lpc(nq+NC*5+WS_DOFS);
+
+
+    lpc.set_zero(nq+NC*5+WS_DOFS);
+    lpc.set_sub_vec(nq+NC*5,Ravelin::VectorNd::one(WS_DOFS));
+
+//    assert(Rw.rows() == WS_DOFS);
+
+    // -- operational space goal l1-norm --
+    // A = J iM [R' F]
+    Rw.mult(iMRTF,workM2);
+    // Nullspace for QP phase
+    LA_.nullspace(workM2,P);
+
+    workM1.set_zero(workM2.rows()*2,workM2.columns()+WS_DOFS);
+    workM1.set_sub_mat(0,0,workM2);
+    workM1.set_sub_mat(workM2.rows(),workM2.columns(),Ravelin::MatrixNd::identity(WS_DOFS));
+    workM1.negate();
+    workM1.set_sub_mat(workM2.rows(),0,workM2);
+    workM1.set_sub_mat(0,workM2.columns(),Ravelin::MatrixNd::identity(WS_DOFS));
+    lpM.set_sub_mat(0,0,workM1);
+
+    workv1.set_zero(WS_DOFS*2);
+    workv1.set_sub_vec(WS_DOFS,v_bar);
+    workv1.negate();
+    workv1.set_sub_vec(0,v_bar);
+    lpq.set_sub_vec(0,workv1);
+
+    //  -- Interpenetration --
+    // N*iM*[R' F] >= -N*( h*iM*fext + v )
+    N.transpose_mult(iMRTF,workM2);
+    lpM.set_sub_mat(WS_DOFS*2,0,workM2);
+
+    iM.mult((workv2 = fext),workv1,h,0);
+    workv1 += v;
+    N.transpose_mult(workv1,workv2);
+    workv2.negate();
+    lpq.set_sub_vec(WS_DOFS*2,workv2);
+
+    //  -- Coulomb Friction --
+    lpM.set_sub_mat(WS_DOFS*2+NC,0,CF);
+//  lpq.set_sub_vec(WS_DOFS*2+NC,Ravelin::VectorNd::zeros(NC));
+
+    Ravelin::VectorNd ll(NVARS+WS_DOFS),ul(NVARS+WS_DOFS);
     // Lower Torque Limit
-    std::fill_n(ll.begin(), ll.size(), 0);
+    std::fill(ll.begin(), ll.end(), -1e29);
+    ll.set_sub_vec(0,Ravelin::VectorNd::zero(NC*5));
     ll.set_sub_vec(NC*5,torque_limits_l);
 //    // A
-//    qpA.set_sub_mat(NC*2,NC*5,Ravelin::MatrixNd::identity(nq));
+//    qpA.set_sub_mat(WS_DOFS+NC*2,NC*5,Ravelin::MatrixNd::identity(nq));
 //    // b
-//    qpb.set_sub_vec(NC*2,(workv2 = torque_limits_l));
+//    qpb.set_sub_vec(WS_DOFS+NC*2,(workv2 = torque_limits_l));
 
     // Upper Torque Limit
-    std::fill_n(ul.begin(), ul.size(), 1e+30);
+    std::fill(ul.begin(), ul.end(), 1e29);
     ul.set_sub_vec(NC*5,torque_limits_u);
-//    // A
-//    qpA.set_sub_mat(NC*2+nq,0,Ravelin::MatrixNd::identity(nq).negate());
-//    // b
-//    qpb.set_sub_vec(NC*2+nq,(workv2 = torque_limits_u).negate());
+
+    x1.set_zero(lpc.rows());
+    OUTLOG(lpM,"LP: lpM",logERROR);
+    OUTLOG(lpq,"LP: lpq",logERROR);
+    OUTLOG(lpc,"LP: lpc",logERROR);
+    OUTLOG(ll,"LP: ll",logERROR);
+    OUTLOG(ul,"LP: ul",logERROR);
+
+    if(!Opt::LP::lp_seidel(lpM,lpq,lpc,ll,ul,x1)){
+      OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
+      assert(false);
+    }
+
+    OUTLOG(x1,"LP: [z,T]",logERROR);
+
+    LA_.nullspace(iMRTF,P);
+    unsigned size_null_space = P.columns();
+//    if(size_null_space != 0){
+#endif
+    //////////////////////// QP PHASE /////////////////////////
+    // OBJECTIVE
+    // Min energy gain wrt T & z
+    /* OBJECTIVE
+     * Min workspace deviation from v_bar
+     * ARGMIN(x = [z,T]')
+     *   v+' M v+ ==>
+     *   x'[R' F]'iM [R' F] x + (v' + fext'iM) [R' F] x
+     * SUCH THAT
+     *   [A,",-I] x + vbar == s               // operational space goal l1-norm result from LP
+     *   N*iM*[R' F] x >= -N(h*iM*fext + v)   // Interpenetration
+     *   [CF,0] x      >=  0                  // coulomb friction
+     * Variable Box Constraints:
+     *   z >= [0]                             // compressive force
+     *   z <= [inf]
+     *   XXXXXXXX T+ >= T >= T-               // torque limits
+     */
+    qpA.set_zero(WS_DOFS*2 + NC + NC,NVARS);
+    qpb.set_zero(qpA.rows());
+
+
+    // qpQ = [R' F]'iM [R' F]
+
+    RTF.transpose_mult(iMRTF,qpQ);
+
+    // qpc = v'[R' F] + fext'iM
+
+    workv1 = v;
+    iM.transpose_mult(fext,workv1,h,1);
+    RTF.transpose_mult(workv1,qpc);
+    OUTLOG(qpc,"qpc",logERROR);
+
+    // CONSTARINTS
+
+    //  -- Operational Space Goal --
+    // J iM [R' F] x >= Og
+    Rw.mult(iMRTF,workM2);
+    OUTLOG(workM2,"qpA: OS_goal",logERROR);
+    qpA.set_sub_mat(0,0,workM2);
+    workM2.negate();
+    qpA.set_sub_mat(WS_DOFS,0,workM2);
+
+    iM.mult(fext,workv2,h,0);
+    Rw.mult(workv2,workv1);
+    ((workv2 = v_bar) -=vel_w) -= workv1;
+    workv1.set_zero(WS_DOFS);
+    std::fill(workv1.begin(), workv1.end(), Moby::NEAR_ZERO);
+    qpb.set_sub_vec(0,(workv_ = workv2) -= workv1);
+    workv2.negate();
+    qpb.set_sub_vec(WS_DOFS,(workv_ = workv2) -= workv1);
+
+
+
+    //  -- Interpenetration --
+    // N*iM*[R' F] x >= -N*(h*iM*fext + v)
+    N.transpose_mult(iMRTF,workM2);
+    OUTLOG(workM2,"qpA: IP",logERROR);
+    qpA.set_sub_mat(WS_DOFS*2,0,workM2);
+
+    iM.mult((workv2 = fext),workv1,h,0);
+    workv1 += v;
+    N.transpose_mult(workv1,workv2);
+    workv2.negate();
+    qpb.set_sub_vec(WS_DOFS*2,workv2);
+
+    //  -- Coulomb Friction --
+    // CF x >= 0
+    OUTLOG(CF,"qpA: CF",logERROR);
+    qpA.set_sub_mat(WS_DOFS*2+NC,0,CF);
+    qpb.set_sub_vec(WS_DOFS*2+NC,Ravelin::VectorNd::zero(NC));
+
+    // -- Torque Limits --
+    Ravelin::VectorNd ll(NVARS),ul(NVARS);
+
+    // Lower var Limits
+    std::fill(ll.begin(), ll.end(), -1e29);
+    ll.set_sub_vec(0,Ravelin::VectorNd::zero(NC*5));
+//    ll.set_sub_vec(NC*5,torque_limits_l);
+    // A
+//    qpA.set_sub_mat(WS_DOFS+NC*2,NC*5,Ravelin::MatrixNd::identity(nq));
+    // b
+//    qpb.set_sub_vec(WS_DOFS+NC*2,(workv2 = torque_limits_l));
+
+    // Upper var Limits
+    std::fill(ul.begin(), ul.end(), 1e29);
+//    ul.set_sub_vec(NC*5,torque_limits_u);
+    // A
+//    qpA.set_sub_mat(WS_DOFS+NC*2+nq,0,Ravelin::MatrixNd::identity(nq).negate());
+    // b
+//    qpb.set_sub_vec(WS_DOFS+NC*2+nq,(workv2 = torque_limits_u).negate());
+
+    OUTLOG(qpQ,"qpLimit: Q",logERROR);
+    OUTLOG(qpc,"qpLimit: c",logERROR);
+    OUTLOG(qpA,"qpLimit: A",logERROR);
+    OUTLOG(qpb,"qpLimit: b",logERROR);
 
     OUTLOG(ll,"qpLimit: LL",logERROR);
     OUTLOG(ul,"qpLimit: UL",logERROR);
 
+    x.set_zero(NVARS);
     if(!solve_qp(qpQ,qpc,ll,ul,qpA,qpb,x)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
       assert(false);
@@ -850,25 +951,26 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     // ------------------------------------------------------------------------
     // ---------------- CHECK FEASIBILITY OF RESULT ---------------------------
-    OUTLOG(x,"x",logERROR);
+    OUTLOG(x,"x = [z,tau]",logERROR);
 
     qpA.mult(x,workv1);
     workv1 -= qpb;
     OUTLOG(workv1,"feas >= 0",logERROR);
     qpQ.transpose_mult(x,workv1) += qpc;
-    OUTLOG(workv1,"x'Q + c",logERROR);
-    OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
+//    OUTLOG(workv1,"x'Q + c",logERROR);
+//    OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
 
     // iM(fext + R'z + x)
     x.get_sub_vec(0,NC*5,workv2);
-    (workv1 = x).get_sub_vec(NC*5,NC*5+nq,x);
+    (workv1 = x).get_sub_vec(NC*5,NVARS,x);
     (R.mult(workv2,workv_) += fext);
     for(int i=0;i<NUM_JOINTS;i++)
       workv_[i] += h*x[i];
     iM.mult(workv_,workv2);
 
     OUTLOG(workv2,"dv",logERROR);
+    OUTLOG(x,"tau",logERROR);
   }
-
+//#endif
   return true;
 }

@@ -68,7 +68,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                       Ravelin::VectorNd& qd_des,
                                       Ravelin::VectorNd& u){
   static Ravelin::VectorNd qd_last = qd;
-  std::cerr << " -- Quadruped::control(.) entered" << std::endl;
+  OUT_LOG(logINFO) << " -- Quadruped::control(.) entered" << std::endl;
 
   OUT_LOG(logINFO)<< "time = "<< t ;
 
@@ -412,7 +412,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
      eefs_[i].active = false;
 
    qd_last = qd;
-   std::cerr << " -- Quadruped::control(.) exited" << std::endl;
+   OUT_LOG(logINFO) << " -- Quadruped::control(.) exited" << std::endl;
 
    return u;
 }

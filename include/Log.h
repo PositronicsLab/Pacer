@@ -7,7 +7,7 @@
 
 inline std::string NowTime();
 
-enum TLogLevel {logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
+enum TLogLevel { logNONE, logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
 
 class Log
 {

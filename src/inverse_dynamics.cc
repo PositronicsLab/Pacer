@@ -331,7 +331,8 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // H = Z'AZ
   Ravelin::MatrixNd P;
-  unsigned size_null_space = Utility::kernal(H,P);
+  LA_.nullspace(H,P);
+  unsigned size_null_space = P.columns();
   if(size_null_space != 0)
   {
     // second optimization is necessary if the previous Hessian was PSD:
@@ -518,7 +519,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   x /= h;
 
   // Some debugging dialogue
-#define OUTPUT
+//#define OUTPUT
 #ifdef OUTPUT
   {
     // Zz + p == v + inv(M)(fext*h + R*z)
@@ -593,7 +594,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 //    OUTLOG(workM1,"T' * inv(M) * T",logDEBUG);
   }
 #endif
-//  assert(nc!= 4);
   return true;
 }
 

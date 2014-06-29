@@ -59,8 +59,8 @@ void Quadruped::eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W, const 
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 
-  double  Kp = 5e3,
-          Kv = 1e1,
+  double  Kp = 1e3,
+          Kv = 5e0,
           Ki = 0;
 
   for(int i=0;i<NUM_EEFS;i++){

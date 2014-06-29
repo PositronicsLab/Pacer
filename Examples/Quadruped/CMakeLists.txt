@@ -111,20 +111,6 @@ set(SOURCES2 control_moby.cc
             )
 
 set(THIRDPARTY
-                ../../ThirdParty/alglib/src/interpolation.cpp
-                ../../ThirdParty/alglib/src/integration.cpp
-                ../../ThirdParty/alglib/src/alglibinternal.cpp
-                ../../ThirdParty/alglib/src/alglibmisc.cpp
-                ../../ThirdParty/alglib/src/ap.cpp
-                ../../ThirdParty/alglib/src/dataanalysis.cpp
-                ../../ThirdParty/alglib/src/diffequations.cpp
-                ../../ThirdParty/alglib/src/fasttransforms.cpp
-                ../../ThirdParty/alglib/src/interpolation.cpp
-                ../../ThirdParty/alglib/src/linalg.cpp
-                ../../ThirdParty/alglib/src/optimization.cpp
-                ../../ThirdParty/alglib/src/solvers.cpp
-                ../../ThirdParty/alglib/src/specialfunctions.cpp
-                ../../ThirdParty/alglib/src/statistics.cpp
                 )
 
 add_library(${PROJECT_NAME} MODULE ${SOURCES} ${SOURCES2} ${THIRDPARTY})

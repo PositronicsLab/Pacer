@@ -30,15 +30,15 @@ static bool
           WORKSPACE_IDYN      = true,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
-        ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-          FEEDBACK_FORCE      = true,//"Apply error-feedback as forces?"),
+        ERROR_FEEDBACK      = false,//"Use error-feedback control?"),
+          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
           FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.5,//,"Gait Duration over one cycle."),
-        step_height = 0.01,//,""),
+        step_height = 0.00,//,""),
         goto_X      = 0.00,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
@@ -52,7 +52,7 @@ std::vector<double>
         goto_command = std::vector<double>();
 
 // -- IDYN OPTIONS --
-double STEP_SIZE = 0.005;
+double STEP_SIZE = 0.001;
 
 // ============================================================================
 // ============================================================================
@@ -278,7 +278,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
 
-  // -----------------------------------------------------------------------------
+  // --------------------------- FRICTION ESTIMATION ---------------------------
   // EXPERIMENTAL
   if(FRICTION_EST){
     Ravelin::VectorNd cf;
@@ -286,13 +286,17 @@ Ravelin::VectorNd& Quadruped::control(double t,
     OUT_LOG(logINFO)<< "err (friction estimation): " << err << std::endl;
     OUTLOG(MU,"MU",logDEBUG);
     OUTLOG(cf,"contact_forces",logDEBUG);
-  } else
-    for(int i=0;i<NC;i++)
-      if(eefs_[i].active)
+  } else {
+    for(int i=0,ii=0;i<NUM_EEFS;i++){
+      if(eefs_[i].active){
         for(int k=0;k<NK/2;k++)
-          MU(i,k) = eefs_[i].event->contact_mu_coulomb;
+          MU(ii,k) = eefs_[i].event->contact_mu_coulomb;
+        ii++;
+      }
+    }
+  }
 
-  // -----------------------------------------------------------------------------
+  // -------------Kinematic (Sticking Stabilization)----------------------------
   // EXPERIMENTAL
   if(TRUNK_STABILIZATION){
     Ravelin::VectorNd id(NUM_JOINTS);
@@ -302,7 +306,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     qdd_des += id;
   }
 
-  // -----------------------------------------------------------------------------
+  // --------------------------- ERROR FEEDBACK --------------------------------
 
   if (ERROR_FEEDBACK){
     static std::map<std::string, Gains>      gains;
@@ -336,7 +340,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
   }
 
-  // -----------------------------------------------------------------------------
+  // ------------------------ INVERSE DYNAMICS ---------------------------------
 
   if(CONTROL_IDYN){
     double dt = STEP_SIZE;
@@ -348,19 +352,19 @@ Ravelin::VectorNd& Quadruped::control(double t,
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active) continue;
-          Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
-                                 eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
-                                 eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
+        Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
+                               eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
+                               eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
         Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].contact_impulses[0],workv3_)*(STEP_SIZE/0.001));
         cf[ii] = contact_impulse[0];
-        if(contact_impulse[1] > 0)
+        if(contact_impulse[1] >= 0)
           cf[NC+ii] = contact_impulse[1];
         else
-          cf[NC+ii+NC*2] = contact_impulse[1];
-        if(contact_impulse[2] > 0)
+          cf[NC+ii+NC*2] = -contact_impulse[1];
+        if(contact_impulse[2] >= 0)
           cf[NC+ii+NC] = contact_impulse[2];
         else
-          cf[NC+ii+NC*3] = contact_impulse[2];
+          cf[NC+ii+NC*3] = -contact_impulse[2];
         ii++;
       }
       Utility::check_finite(cf);
@@ -370,7 +374,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     if(WORKSPACE_IDYN){
       // EXPERIMENTAL
       vb_w.set_zero(Rw.rows());
-      workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0.01,STEP_SIZE,vb_w);
+      workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0,STEP_SIZE,vb_w);
 
       workspace_inverse_dynamics(vel,vb_w,M,fext,dt,MU,id,cf);
     } else {
@@ -455,8 +459,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
      OUTLOG(qdd_des,"qdd_des",logDEBUG);
      OUTLOG(fext,"fext",logDEBUG);
 
-     OUTLOG(uff,"uff",logDEBUG);
-     OUTLOG(ufb,"ufb",logDEBUG);
+     OUTLOG(uff,"uff",logINFO);
+     OUTLOG(ufb,"ufb",logINFO);
    // -----------------------------------------------------------------------------
 
    // Deactivate all contacts
@@ -478,7 +482,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 void Quadruped::init(){
   unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
   known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.05)(0.0).convert_to_container<std::vector<double> >();
+  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
 #ifdef VISUALIZE_MOBY
   CVarUtils::AttachCVar( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
   CVarUtils::AttachCVar( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");

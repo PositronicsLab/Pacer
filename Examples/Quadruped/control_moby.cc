@@ -4,8 +4,8 @@
 #include <quadruped.h>
 
 std::string
- LOG_TYPE("ERROR");  // Only major failures from the system
-// LOG_TYPE("INFO");     // Normal print out
+// LOG_TYPE("ERROR");  // Only major failures from the system
+ LOG_TYPE("INFO");     // Normal print out
 // LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
 //  LOG_TYPE("DEBUG1"); // all function parameters and results
 

@@ -133,11 +133,27 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
     Ravelin::Vector3d pos_correct = beta/dt * (foot_pos[i] - pos);
     v_bar.set_sub_vec(i*3,foot_vel[i] + pos_correct);
 #ifdef VISUALIZE_MOBY
-    visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos)+Ravelin::Pose3d::transform_vector(Moby::GLOBAL,pos_correct), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,1), sim);
-    visualize_ray(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]), Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),   Ravelin::Vector3d(1,0,0), sim);
+    OUTLOG(foot_vel[i],eefs_[i].id + "_vel",logERROR);
+    OUTLOG(foot_pos[i],eefs_[i].id + "_DES_pos",logERROR);
+    OUTLOG(pos,eefs_[i].id + "_pos",logERROR);
+    OUTLOG(pos_correct,eefs_[i].id + "_pos_err",logERROR);
+
+    visualize_ray(
+          Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos)
+            +Ravelin::Pose3d::transform_vector(Moby::GLOBAL,foot_vel[i] + pos_correct),
+          Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),
+          Ravelin::Vector3d(0,1,0), sim);
+    visualize_ray(
+          Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos)
+            +Ravelin::Pose3d::transform_vector(Moby::GLOBAL,pos_correct),
+          Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),
+          Ravelin::Vector3d(0,0,1), sim);
+    visualize_ray(
+          Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]),
+          Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),
+          Ravelin::Vector3d(1,0,0), sim);
 #endif
   }
-  OUTLOG(v_bar,"v_bar",logDEBUG);
 }
 
 

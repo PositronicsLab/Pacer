@@ -30,7 +30,7 @@ static bool
           WORKSPACE_IDYN      = true,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
-        ERROR_FEEDBACK      = false,//"Use error-feedback control?"),
+        ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
           FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
           FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
@@ -38,7 +38,7 @@ static bool
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.5,//,"Gait Duration over one cycle."),
-        step_height = 0.00,//,""),
+        step_height = 0.01,//,""),
         goto_X      = 0.00,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
@@ -52,7 +52,7 @@ std::vector<double>
         goto_command = std::vector<double>();
 
 // -- IDYN OPTIONS --
-double STEP_SIZE = 0.001;
+double STEP_SIZE = 0.01;
 
 // ============================================================================
 // ============================================================================
@@ -374,7 +374,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
     if(WORKSPACE_IDYN){
       // EXPERIMENTAL
       vb_w.set_zero(Rw.rows());
-      workspace_trajectory_goal(go_to,foot_pos,foot_vel,foot_acc,0,STEP_SIZE,vb_w);
+      Ravelin::SVector6d go_to_global(Ravelin::Pose3d::transform_vector(Moby::GLOBAL,go_to.get_upper()),go_to.get_lower());
+      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e-2,STEP_SIZE,vb_w);
 
       workspace_inverse_dynamics(vel,vb_w,M,fext,dt,MU,id,cf);
     } else {
@@ -426,6 +427,11 @@ Ravelin::VectorNd& Quadruped::control(double t,
   // -----------------------------------------------------------------------------
 
   for(unsigned i=0;i< NUM_JOINTS;i++){
+    if(u[i] > torque_limits_u[i])
+      u[i] = torque_limits_u[i];
+    if(u[i] < torque_limits_l[i])
+      u[i] = torque_limits_l[i];
+
     joints_[i]->q[0]  = q[i];
     joints_[i]->qd[0]  = qd[i];
   }

@@ -38,7 +38,7 @@ static bool
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.5,//,"Gait Duration over one cycle."),
-        step_height = 0.01,//,""),
+        step_height = 0.00,//,""),
         goto_X      = 0.00,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
@@ -375,7 +375,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       // EXPERIMENTAL
       vb_w.set_zero(Rw.rows());
       Ravelin::SVector6d go_to_global(Ravelin::Pose3d::transform_vector(Moby::GLOBAL,go_to.get_upper()),go_to.get_lower());
-      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e-2,STEP_SIZE,vb_w);
+      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,0,STEP_SIZE,vb_w);
 
       workspace_inverse_dynamics(vel,vb_w,M,fext,dt,MU,id,cf);
     } else {

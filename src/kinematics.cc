@@ -215,7 +215,7 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_p
 //  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
 //  Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,base_stability_offset);
   Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,Ravelin::MatrixNd::identity(6));
-  for(int i=0,ii=0;i<NUM_EEFS;i++){
+  for(int i=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
 
 //    [j;b] -> [f;b]
@@ -233,6 +233,10 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_p
     Rw.set_row(3*i+2,J.row(2));
 
   }
+
+//  Rw.set_sub_mat(0,NUM_JOINTS,Rw.get_sub_mat(0,NUM_EEFS*3,NUM_JOINTS,NUM_JOINTS+6,workM_).negate());
+  Rw.set_sub_mat(0,NUM_JOINTS,Ravelin::MatrixNd::zero(NUM_EEFS*3,6));
+
 }
 
 /*

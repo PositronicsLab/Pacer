@@ -102,7 +102,7 @@ void Robot::update(){
   dbrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,vel);
   dbrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,gc);
   calc_contact_jacobians(N,D,R);
-  calc_workspace_jacobian(Rw,base_frame);
+  calc_workspace_jacobian(Rw,base_link_frame);
 
   // Cn * M * v = iM * fext
   //      M * v = iM * fext * h

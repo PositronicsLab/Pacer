@@ -113,7 +113,6 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //  v_bar.set_zero();
 //  v_bar.set_sub_vec(NUM_EEFS*3,vel.get_sub_vec(NUM_JOINTS,NUM_JOINTS+6,workv_));
   v_bar.set_sub_vec(NUM_EEFS*3,v_base);
-
 #ifdef VISUALIZE_MOBY
   visualize_ray(center_of_mass_x + center_of_mass_xd,
                 center_of_mass_x,
@@ -128,12 +127,12 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //  v_bar[NUM_EEFS*3+4] += -beta/dt * roll_pitch_yaw[1];
   // base position should be 0.13m above centroid of feet
   for(int i=0;i<NUM_EEFS;i++){
-    boost::shared_ptr<Ravelin::Pose3d> base_orient_at_foot = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Origin3d(foot_pos[i]),base_frame));
-    Ravelin::SVelocityd base_velocity_at_foot = Ravelin::Pose3d::transform(base_orient_at_foot,links_[0]->get_velocity());
-    base_velocity_at_foot.pose = base_frame;
+//    boost::shared_ptr<Ravelin::Pose3d> base_orient_at_foot = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Origin3d(foot_pos[i]),base_frame));
+//    Ravelin::SVelocityd base_velocity_at_foot = Ravelin::Pose3d::transform(base_orient_at_foot,links_[0]->get_velocity());
+//    base_velocity_at_foot.pose = base_frame;
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),
                       pos_correct = beta * (foot_pos[i] - pos)/dt,
-                      foot_vel_wrt_base = base_velocity_at_foot.get_linear() - foot_vel[i];
+                      foot_vel_wrt_base = foot_vel[i] + foot_acc[i]*dt;
     v_bar.set_sub_vec(i*3,foot_vel_wrt_base + pos_correct);
 #ifdef VISUALIZE_MOBY
     OUTLOG(foot_vel_wrt_base,eefs_[i].id + "_des_vel",logERROR);

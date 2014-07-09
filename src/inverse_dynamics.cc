@@ -600,7 +600,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 }
 //#define LCP_METHOD
 bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
-
+  static Ravelin::VectorNd tau;
   Ravelin::VectorNd fext = fext_;
 //  fext.negate();
   // get number of degrees of freedom and number of contact points
@@ -624,7 +624,8 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
   LA_.solve_chol_fast(iM_chol,iM);
 
   Ravelin::MatrixNd F,U;
-//  OUTLOG(Rw,"Rw",logERROR);
+  OUTLOG(Rw,"Rw",logERROR);
+  OUTLOG(v,"v",logERROR);
 
   // Actuated joint selection matrix
   F.set_zero(n,nq);
@@ -711,8 +712,8 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     Rw.mult(workv2,workv1);
     (workv2 = v_err) -= workv1;
     workv1.set_zero(WS_DOFS);
-    std::fill(workv1.begin(), workv1.end(), Moby::NEAR_ZERO);
-//    std::fill(workv1.begin(), workv1.end(), 1e-5);
+//    std::fill(workv1.begin(), workv1.end(), Moby::NEAR_ZERO);
+    std::fill(workv1.begin(), workv1.end(), 1e-1);
     qpb.set_sub_vec(0,(workv_ = workv2) -= workv1);
     OUTLOG(workv_,"qpb_OpSpace_goal1",logERROR);
     workv2.negate();
@@ -749,28 +750,15 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     //  -- Operational Space Goal --
     // J iM [R' F] x >= Og
     qpM = JiMRTF;
-    OUTLOG(JiMRTF,"qpM_OpSpace_goal",logERROR);
+//    JiMRTF.get_sub_mat(0,NUM_EEFS*3,0,NUM_JOINTS+NC*5,qpM); // only constrain feet
+    OUTLOG(qpM,"qpM_OpSpace_goal",logERROR);
 
     iM.mult(fext,workv2,h,0);
     Rw.mult(workv2,workv1);
     (workv2 = v_err) -= workv1;
-    workv1.set_zero(WS_DOFS);
-    qpq = ((workv_ = workv2) -= workv1);
-    OUTLOG(workv_,"qpq_OpSpace_goal",logERROR);
-
-#endif
-
-    // qpQ = [R' F]'iM [R' F]
-    RTF.transpose_mult(iMRTF,qpQ);
-
-    // qpc = (v' + fext'iM)[R' F]
-    workv1 = v;
-    iM.transpose_mult(fext,workv1,h,1);
-    RTF.transpose_mult(workv1,qpc);
-//    OUTLOG(qpc,"qpc",logERROR);
-
-    //  == CONSTARINTS ==
-
+    qpq = workv2;
+//    workv2.get_sub_vec(0,NUM_EEFS*3,qpq); // only constrain feet
+    OUTLOG(qpq,"qpq_OpSpace_goal",logERROR);
 
     //  -- Interpenetration --
     // N*iM*[R' F] x >= -N*(h*iM*fext + v)
@@ -792,6 +780,20 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     qpb.set_sub_vec(NC,Ravelin::VectorNd::zero(NC));
     OUTLOG(Ravelin::VectorNd::zero(NC),"qpb_CFrict",logERROR);
 
+#endif
+
+    // qpQ = [R' F]'iM [R' F]
+    RTF.transpose_mult(iMRTF,qpQ);
+
+    // qpc = (v' + fext'iM)[R' F]
+    workv1 = v;
+    iM.transpose_mult(fext,workv1,h,1);
+    RTF.transpose_mult(workv1,qpc);
+//    OUTLOG(qpc,"qpc",logERROR);
+
+    //  == CONSTARINTS ==
+
+
     // -- Torque Limits --
 #ifdef LCP_METHOD
     qpA.set_sub_mat(WS_DOFS*2+NC*2,0,Ravelin::MatrixNd::identity(NC*5));
@@ -808,53 +810,70 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 //    ul.set_sub_vec(NC*5,torque_limits_u);
     OUTLOG(ll,"qpLimit_LL",logERROR);
     OUTLOG(ul,"qpLimit_UL",logERROR);
+    OUTLOG(qpM,"qpLimit_M",logERROR);
+    OUTLOG(qpq,"qpLimit_q",logERROR);
 #endif
     OUTLOG(qpQ,"qpLimit_Q",logERROR);
     OUTLOG(qpc,"qpLimit_c",logERROR);
     OUTLOG(qpA,"qpLimit_A",logERROR);
     OUTLOG(qpb,"qpLimit_b",logERROR);
-    OUTLOG(qpM,"qpLimit_M",logERROR);
-    OUTLOG(qpq,"qpLimit_q",logERROR);
 
     x.set_zero(NVARS);
+    bool RESULT_FLAG = false;
 #ifdef LCP_METHOD
-    if(!solve_qp(qpQ,qpc,qpA,qpb,x)){
+    if(!(RESULT_FLAG = solve_qp(qpQ,qpc,qpA,qpb,x)){
 #else
-    if(!solve_qp(qpQ,qpc,ll,ul,qpA,qpb,qpM,qpq,x)){
+    if(!(RESULT_FLAG = solve_qp(qpQ,qpc,ll,ul,qpA,qpb,qpM,qpq,x))){
 #endif
       OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
-      assert(false);
     }
 
     // ------------------------------------------------------------------------
     // ---------------- CHECK FEASIBILITY OF RESULT ---------------------------
-    OUTLOG(x,"x = [z,tau]",logERROR);
+    if(RESULT_FLAG){
+      OUTLOG(x,"x = [z,tau]",logERROR);
 
-    JiMRTF.mult(x,workv1);
-    OUTLOG(workv1,"v_correct",logERROR);
-    OUTLOG(v_err,"v_err",logERROR);
+      JiMRTF.mult(x,workv1);
+      OUTLOG(workv1,"dv_os_widyn",logERROR);
 
-    qpA.mult(x,workv1);
-    workv1 -= qpb;
-    OUTLOG(workv1,"feas >= 0",logERROR);
-    qpQ.transpose_mult(x,workv1) += qpc;
-//    OUTLOG(workv1,"x'Q + c",logERROR);
-//    OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
+      iM.mult(fext,workv2,h,0);
+      Rw.mult(workv2,workv1);
+      (workv2 = v_err) -= workv1;
+      OUTLOG(workv2,"dv_os_goal",logERROR);
 
-    // iM(fext + R'z + x)
-    x.get_sub_vec(0,NC*5,workv2);
-    OUTLOG(workv2,"cfs",logERROR);
-    (workv1 = x).get_sub_vec(NC*5,NVARS,x);
-    (R.mult(workv2,workv_) += fext);
-    for(int i=0;i<NUM_JOINTS;i++)
-      workv_[i] += h*x[i];
-    iM.mult(workv_,workv2);
+      qpA.mult(x,workv1);
+      workv1 -= qpb;
+      if(NC == 4)
+//        OUTLOG(workv1,"feas_neq %{ >= 0 %}",logERROR);
+        OUTLOG(workv1,"feas_neq",logERROR);
 
-    OUTLOG(workv2,"dv",logERROR);
-    OUTLOG(x,"tau",logERROR);
-//    assert(fabs(x.norm_inf()) < 5.0);
-//    assert(NC != 4);
+#ifdef LCP_METHOD
+
+#else
+      qpM.mult(x,workv1);
+      workv1 -= qpq;
+      OUTLOG(workv1,"feas_eq %{ == 0 %}",logERROR);
+#endif
+
+      qpQ.transpose_mult(x,workv1) += qpc;
+  //    OUTLOG(workv1,"x'Q + c",logERROR);
+  //    OUT_LOG(logERROR) << "(x'Q + c) x = "<< workv1.dot(x);
+
+      // iM(fext + R'z + x)
+      x.get_sub_vec(0,NC*5,workv2);
+      OUTLOG(workv2,"cfs",logERROR);
+      (workv1 = x).get_sub_vec(NC*5,NVARS,x);
+      (R.mult(workv2,workv_) += fext);
+      for(int i=0;i<NUM_JOINTS;i++)
+        workv_[i] += h*x[i];
+      iM.mult(workv_,workv2);
+
+      OUTLOG(workv2,"dv",logERROR);
+    } else {
+      x = tau;
+      OUTLOG(x,"tau",logERROR);
+    }
   }
-//#endif
+  tau = x;
   return true;
 }

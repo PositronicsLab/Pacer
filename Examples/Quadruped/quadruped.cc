@@ -31,14 +31,14 @@ static bool
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
-          FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
+          FEEDBACK_FORCE      = true,//"Apply error-feedback as forces?"),
           FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
-          WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
+          WORKSPACE_FEEDBACK  = false;//"Use error-feedback in workspace frame?");
 
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.4,//,"Gait Duration over one cycle."),
-        step_height = 0.0 ,//,""),
+        step_height = 0.00 ,//,""),
         goto_X      = 0.00,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
@@ -323,7 +323,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       for(int i=0;i<NUM_JOINTS;i++){
         gains[joints_[i]->id].perr_sum = 0;
         gains[joints_[i]->id].kp = 1e1;
-        gains[joints_[i]->id].kv = 1e-2;
+        gains[joints_[i]->id].kv = 1e-1;
         gains[joints_[i]->id].ki = 1e-3;
       }
       PID::control(q_des, qd_des,q,qd,joint_names_, gains,ufb);
@@ -479,7 +479,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 void Quadruped::init(){
   unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
   known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.2)(0.0).convert_to_container<std::vector<double> >();
+  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
 #ifdef VISUALIZE_MOBY
   CVarUtils::AttachCVar( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
   CVarUtils::AttachCVar( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");

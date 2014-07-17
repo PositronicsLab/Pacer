@@ -38,7 +38,7 @@ static bool
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.4,//,"Gait Duration over one cycle."),
-        step_height = 0.015,//,""),
+        step_height = 0.0 ,//,""),
         goto_X      = 0.00,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
         goto_GAMMA  = 0.0;//,"command rotation");
@@ -527,10 +527,10 @@ void Quadruped::init(){
   int num_leg_stance = 4;
   switch(num_leg_stance){
     case 4:
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.096278, -0.16);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.096278, -0.16);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.096278, -0.16);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.096278, -0.16);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.07, -0.16);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.07, -0.16);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.07, -0.16);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.07, -0.16);
     break;
     case 3:
       // NOTE THIS IS A STABLE 3-leg stance

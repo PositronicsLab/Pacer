@@ -30,7 +30,7 @@ static bool
           WORKSPACE_IDYN      = true,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
-        ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
+        ERROR_FEEDBACK      = false,//"Use error-feedback control?"),
           FEEDBACK_FORCE      = false,//"Apply error-feedback as forces?"),
           FEEDBACK_ACCEL      = false,//"Apply error-feedback as accelerations?"),
           WORKSPACE_FEEDBACK  = true;//"Use error-feedback in workspace frame?");
@@ -52,7 +52,7 @@ std::vector<double>
         goto_command = std::vector<double>();
 
 // -- IDYN OPTIONS --
-double STEP_SIZE = 0.01;
+double STEP_SIZE = 0.001;
 
 // ============================================================================
 // ============================================================================
@@ -296,7 +296,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
   }
 
-  // -------------Kinematic (Sticking Stabilization)----------------------------
+  // -------------Kinematic (Sticking) Stabilization----------------------------
   // EXPERIMENTAL
   if(TRUNK_STABILIZATION){
     Ravelin::VectorNd id(NUM_JOINTS);
@@ -375,7 +375,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       // EXPERIMENTAL
       vb_w.set_zero(Rw.rows());
       Ravelin::SVector6d go_to_global(Ravelin::Pose3d::transform_vector(Moby::GLOBAL,go_to.get_upper()),go_to.get_lower());
-      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,0,STEP_SIZE,vb_w);
+      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e-2,STEP_SIZE,vb_w);
 
       workspace_inverse_dynamics(vel,vb_w,M,fext,dt,MU,id,cf);
     } else {
@@ -608,22 +608,22 @@ void Quadruped::init(){
 
   // Maximum torques
   std::map<std::string, double> torque_limits_;
-  torque_limits_["BODY_JOINT"]=  2.60;
-  torque_limits_["LF_HIP_AA"] =  2.60;
-  torque_limits_["LF_HIP_FE"] =  2.60;
-  torque_limits_["LF_LEG_FE"] =  2.60;
+  torque_limits_["BODY_JOINT"]=  6.00;
+  torque_limits_["LF_HIP_AA"] =  6.00;
+  torque_limits_["LF_HIP_FE"] =  6.00;
+  torque_limits_["LF_LEG_FE"] =  6.00;
 
-  torque_limits_["RF_HIP_AA"] =  2.60;
-  torque_limits_["RF_HIP_FE"] =  2.60;
-  torque_limits_["RF_LEG_FE"] =  2.60;
+  torque_limits_["RF_HIP_AA"] =  6.00;
+  torque_limits_["RF_HIP_FE"] =  6.00;
+  torque_limits_["RF_LEG_FE"] =  6.00;
 
-  torque_limits_["LH_HIP_AA"] =  2.60;
+  torque_limits_["LH_HIP_AA"] =  6.00;
   torque_limits_["LH_HIP_FE"] =  6.00;
-  torque_limits_["LH_LEG_FE"] =  2.60;
+  torque_limits_["LH_LEG_FE"] =  6.00;
 
-  torque_limits_["RH_HIP_AA"] =  2.60;
+  torque_limits_["RH_HIP_AA"] =  6.00;
   torque_limits_["RH_HIP_FE"] =  6.00;
-  torque_limits_["RH_LEG_FE"] =  2.60;
+  torque_limits_["RH_LEG_FE"] =  6.00;
 
   // push into robot
   torque_limits_l.resize(NUM_JOINTS);

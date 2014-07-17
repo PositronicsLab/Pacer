@@ -40,8 +40,8 @@
     <Box id="arm" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.11763"/>
     <Box id="uleg" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.13266"/>
     <Box id="lleg" xlen="0.134" ylen="0.01" zlen="0.01" mass="0.04"/>
-    <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>
-<!--    <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.03" mass="0.01"/>-->
+<!--    <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>-->
+    <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.03" mass="0.01"/>
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >

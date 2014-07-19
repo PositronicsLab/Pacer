@@ -97,12 +97,29 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
 #endif
 }
 
+boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2){
+  boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
+  e->mu_viscous = 2.5e1;
+  return e;
+}
+
 void post_step_callback_fn(Moby::Simulator* s){
   new_sim_step = true;
 }
 
 /// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){}
+void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){
+  for(int i=0;i<e.size();i++){
+    // Rigid
+    e[i].contact_depth_penalty = 1e4;
+    e[i].contact_velocity_penalty = 1e2;
+
+    // Soft
+//    e[i].contact_depth_penalty = 5e3;
+//    e[i].contact_velocity_penalty = 1e2;
+
+  }
+}
 
 void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointPtr>& joints){
     for(unsigned m=0,i=0;m< joint_names_.size();m++){

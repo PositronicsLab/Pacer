@@ -193,6 +193,8 @@ void init_cpp(){
 
 }
 /// plugin must be "extern C"
+
+extern boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2);
 extern "C" {
 
 void init(void* separator,
@@ -227,6 +229,7 @@ void init(void* separator,
 #endif
 
   sim->event_post_impulse_callback_fn = &post_event_callback_fn;
+  sim->event_callback_fn = &pre_event_callback_fn;
 
 #ifdef USE_TERRAIN
   unsigned num_spheres = 0;

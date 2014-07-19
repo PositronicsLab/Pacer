@@ -38,10 +38,10 @@ static bool
 // -- LOCOMOTION OPTIONS --
 double
         gait_time   = 0.4,//,"Gait Duration over one cycle."),
-        step_height = 0.00 ,//,""),
-        goto_X      = 0.00,//,"command forward direction"),
+        step_height = 0.01 ,//,""),
+        goto_X      = 0.05,//,"command forward direction"),
         goto_Y      = 0.00,//,"command lateral direction"),
-        goto_GAMMA  = 0.0;//,"command rotation");
+        goto_GAMMA  = 0.2;//,"command rotation");
 
 // Assign Gait to the locomotion controller
 std::string
@@ -524,8 +524,8 @@ void Quadruped::init(){
   eef_names_.push_back("LH_FOOT");
   eef_names_.push_back("RH_FOOT");
 
-  int num_leg_stance = 4;
-  switch(num_leg_stance){
+  int stance = 4;
+  switch(stance){
     case 4:
       eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.07, -0.16);
       eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.07, -0.16);
@@ -533,18 +533,11 @@ void Quadruped::init(){
       eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.07, -0.16);
     break;
     case 3:
-      // NOTE THIS IS A STABLE 3-leg stance
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d(0.18, 0.1275, -0.13);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.14, -0.1075, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.10, 0.06, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.06, -0.04, -0.08);
-      break;
-    case 2:
-      // NOTE THIS IS AN UNSTABLE 2-leg stance
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d(0.14, 0.0775, -0.11);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d(0.14, -0.0775, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.06, 0.07, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.06, -0.04, -0.08);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.09, -0.13);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.09, -0.13);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.09, -0.13);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.09, -0.13);
+
       break;
     default: break;
   }

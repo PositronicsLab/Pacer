@@ -111,12 +111,12 @@ void post_step_callback_fn(Moby::Simulator* s){
 void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){
   for(int i=0;i<e.size();i++){
     // Rigid
-    e[i].contact_depth_penalty = 1e4;
-    e[i].contact_velocity_penalty = 1e2;
+//    e[i].contact_depth_penalty = 1e4;
+//    e[i].contact_velocity_penalty = 1e2;
 
     // Soft
-//    e[i].contact_depth_penalty = 5e3;
-//    e[i].contact_velocity_penalty = 1e2;
+    e[i].contact_depth_penalty = 5e3;
+    e[i].contact_velocity_penalty = 1e2;
 
   }
 }

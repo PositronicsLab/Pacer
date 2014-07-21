@@ -26,8 +26,8 @@ static bool
         WALK                = true,//"Activate Walking?"),
           TRACK_FOOTHOLDS     = false,//"Locate and use footholds?"),// EXPERIMENTAL
         TRUNK_STABILIZATION = false,  // EXPERIMENTAL
-        CONTROL_IDYN        = false,//"Activate IDYN?"),
-          WORKSPACE_IDYN      = false,//"Activate WIDYN?"),// EXPERIMENTAL
+        CONTROL_IDYN        = true,//"Activate IDYN?"),
+          WORKSPACE_IDYN      = true,//"Activate WIDYN?"),// EXPERIMENTAL
           USE_LAST_CFS        = false,//"Use last detected contact forces?"),// EXPERIMENTAL
         FRICTION_EST        = false,  // EXPERIMENTAL
         ERROR_FEEDBACK      = true,//"Use error-feedback control?"),
@@ -267,7 +267,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       foot_vel[i] = Ravelin::Vector3d(0.03*cos(t),0,0,base_frame);
       foot_acc[i] = Ravelin::Vector3d(0.03*-sin(t),0,0,base_frame);
 
-      RRMC(eefs_[i],q,eefs_[i].origin,q_des);
+      RMRC(eefs_[i],q,eefs_[i].origin,q_des);
       Ravelin::VectorNd q_diff;
       (q_diff= q_des) -= q;
       q_diff *= STEP_SIZE;
@@ -527,16 +527,16 @@ void Quadruped::init(){
   int stance = 4;
   switch(stance){
     case 4:
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.07, -0.16);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.07, -0.16);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.07, -0.16);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.07, -0.16);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.08, -0.16);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.08, -0.16);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.08, -0.16);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.08, -0.16);
     break;
     case 3:
-      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.13, 0.09, -0.13);
-      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.13,-0.09, -0.13);
-      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.105, 0.09, -0.13);
-      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.105,-0.09, -0.13);
+      eef_origins_["LF_FOOT"] = Ravelin::Vector3d( 0.11, 0.09, -0.13);
+      eef_origins_["RF_FOOT"] = Ravelin::Vector3d( 0.11,-0.09, -0.13);
+      eef_origins_["LH_FOOT"] = Ravelin::Vector3d(-0.085, 0.09, -0.13);
+      eef_origins_["RH_FOOT"] = Ravelin::Vector3d(-0.085,-0.09, -0.13);
 
       break;
     default: break;
@@ -633,7 +633,7 @@ void Quadruped::init(){
   update();
 
   for(int i=0;i<NUM_EEFS;i++){
-    RRMC(eefs_[i],Ravelin::VectorNd(q_start),eefs_[i].origin,q_start);
+    RMRC(eefs_[i],Ravelin::VectorNd(q_start),eefs_[i].origin,q_start);
     for(int j=0;j<eefs_[i].chain.size();j++){
       (joints_[eefs_[i].chain[j]]->q[0] = q_start[eefs_[i].chain[j]]);
       qd_start[eefs_[i].chain[j]] = 0;

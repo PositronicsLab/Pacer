@@ -50,8 +50,8 @@ Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::Origin3d& x,const EndEffe
   return gk;
 }
 
-/// Resolved Rate Motion Control
-void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
+/// Resolved Motion Rate Control
+void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
   Ravelin::MatrixNd J;
   Ravelin::VectorNd x(foot.chain.size());
   Ravelin::Vector3d step;
@@ -71,7 +71,14 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
-    LA_.solve_fast(J,step);
+    if(J.rows() == J.columns()){
+      LA_.solve_fast(workM_ = J,step);
+    } else //(J.rows() != J.columns())
+    {
+      LA_.pseudo_invert(workM_ = J);
+      workM_.mult(workv_ = step,step);
+    }
+
     Ravelin::VectorNd qstep = step;
     OUTLOG(qstep,"qstep",logDEBUG1);
 

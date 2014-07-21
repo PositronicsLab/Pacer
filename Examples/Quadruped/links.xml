@@ -77,6 +77,7 @@
       </RigidBody>
 
       <FixedJoint id="LF_ANKLE" qd="0" location="0.327962 0.056278 0" inboard-link-id="LF_LLEG" outboard-link-id="LF_FOOT" />
+<!--      <RevoluteJoint id="LF_ANKLE" qd="0" location="0.327962 0.056278 0" inboard-link-id="LF_LLEG" outboard-link-id="LF_FOOT" axis="1 0 0"/>-->
       <RigidBody id="LF_FOOT" position="0.327962 0.056278 0" rpy="0 -0.5 0"  angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" >
         <CollisionGeometry primitive-id="foot" />
         <InertiaFromPrimitive primitive-id="foot" />

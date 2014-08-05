@@ -29,6 +29,9 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
+      // Quit if the body hits the ground, this is a failure condition
+      assert(!( (sb2->id.compare("ABDOMEN") == 0) || (sb1->id.compare("ABDOMEN") == 0) ));
+
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
       //if end effector doesnt exist, check other SB
@@ -41,6 +44,7 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
           std::swap(sb1,sb2);
         }
       }
+
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
@@ -97,12 +101,21 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
 #endif
 }
 
+boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2){
+  boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
+//  e->mu_viscous = 2.5e1;
+
+//  e->mu_viscous = 5.0;
+  return e;
+}
+
 void post_step_callback_fn(Moby::Simulator* s){
   new_sim_step = true;
 }
 
 /// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){}
+void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){
+}
 
 void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointPtr>& joints){
     for(unsigned m=0,i=0;m< joint_names_.size();m++){

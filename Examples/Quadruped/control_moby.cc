@@ -5,8 +5,8 @@
 
 std::string
 // LOG_TYPE("ERROR");  // Only major failures from the system
- LOG_TYPE("INFO");     // Normal print out
-// LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
+// LOG_TYPE("INFO");     // Normal print out
+ LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
 //  LOG_TYPE("DEBUG1"); // all function parameters and results
 
 bool new_sim_step = true;
@@ -192,6 +192,9 @@ void init_cpp(){
   OUT_LOG(logDEBUG1) << "logDEBUG1";
 
 }
+
+extern boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2);
+
 /// plugin must be "extern C"
 extern "C" {
 
@@ -219,7 +222,7 @@ void init(void* separator,
 
 #ifdef SET_KINEMATICS
   // This will force us to updtae the robot state instead of Moby
-  abrobot->set_kinematic(true);
+//  abrobot->set_kinematic(true);
 #endif
 #ifdef CONTACT_CALLBACK
   // Set a random friction value in Moby for each contact made
@@ -227,6 +230,7 @@ void init(void* separator,
 #endif
 
   sim->event_post_impulse_callback_fn = &post_event_callback_fn;
+  sim->event_callback_fn = &pre_event_callback_fn;
 
 #ifdef USE_TERRAIN
   unsigned num_spheres = 0;

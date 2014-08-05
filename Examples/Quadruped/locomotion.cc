@@ -82,17 +82,20 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
 
 /// Generate a bunch of random points at z = 0 around the COM
 void Quadruped::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
+  footholds.clear();
   double rad = 0.2;
-  for(int i=0;i<num_footholds;i++)
-    footholds.push_back(
-          Ravelin::Pose3d::transform_point(
-            base_frame,
-            Ravelin::Vector3d(
-              center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,0.001
-              ,Moby::GLOBAL
-            )
-          )
-        );
+  if(NC>0) center_of_contact.active = true;
+  if(!center_of_contact.active) return;
+  for(int i=0;i<num_footholds;i++){
+    Ravelin::Vector3d fh(
+      center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,0
+      ,Moby::GLOBAL
+    );
+    if(center_of_contact.normal.norm() > Moby::NEAR_ZERO)
+      fh[2] = Utility::get_z_plane(fh[0],fh[1],center_of_contact.normal,center_of_contact.point);
+
+    footholds.push_back(Ravelin::Pose3d::transform_point(base_frame,fh));
+  }
 }
 
 void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh){
@@ -114,9 +117,25 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //  v_bar.set_sub_vec(NUM_EEFS*3,vel.get_sub_vec(NUM_JOINTS,NUM_JOINTS+6,workv_));
   v_bar.set_sub_vec(NUM_EEFS*3,v_base);
 #ifdef VISUALIZE_MOBY
-  visualize_ray(center_of_mass_x + center_of_mass_xd,
+//  visualize_ray(center_of_mass_x + center_of_mass_xd,
+    visualize_ray(center_of_mass_x + Ravelin::Pose3d::transform_vector(environment_frame,links_[0]->get_velocity().get_linear()),
                 center_of_mass_x,
                 Ravelin::Vector3d(1,0,0),
+                sim);
+    // tippyness
+    Ravelin::Vector3d ang = links_[0]->get_velocity().get_angular();
+    ang[2] = ang[1];
+    ang[1] = ang[0];
+    ang[0] = ang[2];
+    ang[2] = 0;
+    visualize_ray(center_of_mass_x + Ravelin::Pose3d::transform_vector(environment_frame,ang),
+                center_of_mass_x,
+                Ravelin::Vector3d(0,0,1),
+                sim);
+
+  visualize_ray(center_of_mass_x + Ravelin::Pose3d::transform_vector(environment_frame, v_base.get_upper()),
+                center_of_mass_x,
+                Ravelin::Vector3d(0,1,0),
                 sim);
 #endif
 //  Ravelin::Vector3d base_correct = beta/dt * ( goal_base_pose - center_of_mass_x);
@@ -135,6 +154,7 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
                       foot_vel_wrt_base = foot_vel[i] + foot_acc[i]*dt;
     v_bar.set_sub_vec(i*3,foot_vel_wrt_base + pos_correct);
 #ifdef VISUALIZE_MOBY
+    if(false){
     OUTLOG(foot_vel_wrt_base,eefs_[i].id + "_des_vel",logERROR);
     OUTLOG(foot_vel[i],eefs_[i].id + "_vel",logERROR);
 
@@ -157,6 +177,7 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
            + Ravelin::Pose3d::transform_vector(Moby::GLOBAL,foot_vel_wrt_base + pos_correct),
           Ravelin::Pose3d::transform_point(Moby::GLOBAL,pos),
           Ravelin::Vector3d(1,0,1), sim);
+    }
 #endif
   }
 }
@@ -340,6 +361,9 @@ void Quadruped::walk_toward(
     double left_in_phase;
     bool replan_path = false;
     if(inited){
+      // Set liftoff feet
+//      if(eefs_[i].active && stance_phase[i])
+//        eefs_[i].active = false;
       for(int d=0; d<3;d++){
         OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
         replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
@@ -432,6 +456,7 @@ void Quadruped::walk_toward(
         // velocity correction
         // FEEDBACK CAPTURE POINT
 //        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
+//        OUT_LOG(logERROR) << "Getting " << links_[3+i]->id << " pose";
 //        double eta = 1.2,
 //               height = hip_pos[2];
 //        Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
@@ -449,9 +474,9 @@ void Quadruped::walk_toward(
           control_points.push_back(x0 + foot_goal);
         } else {
           Ravelin::Origin3d x_fh;
-          select_foothold(footholds,x0+foot_goal,x_fh);
+          select_foothold(footholds,Ravelin::Pose3d::transform_point(environment_frame, Ravelin::Vector3d((x0+foot_goal).data(),base_frame)).data(),x_fh);
           // Reach new foothold, account for movement of robot during step
-          control_points.push_back(x_fh - foot_goal + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(x_fh.data(),environment_frame)).data()) - foot_goal + Ravelin::Origin3d(0,0,step_height));
           control_points.push_back(x_fh - foot_goal);
         }
       }
@@ -459,8 +484,15 @@ void Quadruped::walk_toward(
         OUT_LOG(logDEBUG) << "\tPlanning Stance phase (phase < 0)...";
 
         // STANCE
-
         foot_goal /= -duty_factor[i];
+        OUTLOG( foot_goal," foot_goal_old",logDEBUG);
+
+        // project foot goal 'a' onto walking plane (defined by normal 'b')
+        // x = v{||} - w{_|_}
+        // w = b * (a.a / b.b)
+//        if(center_of_contact.active)
+//          foot_goal = foot_goal - center_of_contact.normal * (Ravelin::Vector3d(foot_goal.data(),Moby::GLOBAL).dot(center_of_contact.normal) / center_of_contact.normal.dot(center_of_contact.normal));
+//        OUTLOG( foot_goal," foot_goal_new",logDEBUG);
 
         // all stance phase cases
         control_points.push_back(Ravelin::Origin3d(x));
@@ -469,6 +501,18 @@ void Quadruped::walk_toward(
         OUT_LOG(logDEBUG) << "\tthrowing assertion (phase == 0) ...";
         assert(false);
       }
+
+      // Plane walking Terrain abstraction (3 lowest feet form the plane)
+      //  plane X + Y + c = z
+
+//      if(NC > 0){
+//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
+//        center_of_contact.point[2] = 0.13;
+//        double ground_z = Utility::get_z_plane(hip_pos[0],hip_pos[1],center_of_contact.normal,center_of_contact.point);
+//        Ravelin::Vector3d ground_offset(0,0,ground_z - center_of_contact.point[2],environment_frame);
+//        OUTLOG(ground_offset,"ground_offset",logERROR);
+//        (*control_points.rbegin())[2] -= Ravelin::Pose3d::transform_vector(base_horizontal_frame,ground_offset)[2];
+//      }
 
       // create new spline!!
       // copy last spline to history erasing oldest spline
@@ -509,6 +553,7 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
+  if(false){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);
@@ -550,6 +595,7 @@ void Quadruped::walk_toward(
 //    visualize_ray(    p, p,   Ravelin::Vector3d(0,1,0), sim);
 //    visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
 //    visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
+  }
   }
 #endif
 

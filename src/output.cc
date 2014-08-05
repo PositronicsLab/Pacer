@@ -12,6 +12,18 @@ void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
 #endif
 }
 
+void OUTLOG(const Ravelin::SharedConstMatrixNd& M, std::string name,TLogLevel LL){
+#ifndef NDEBUG
+  std::ostringstream str;
+    for(int i=0;i<M.rows();i++){
+        for(int j=0;j<M.columns();j++)
+            str << std::setprecision(9) << M(i,j) << " ";
+        if(i+1 != M.rows()) str << ";" << std::endl;
+    }
+    OUT_LOG(LL) << name << " = [ %"  << M.rows() << "x" << M.columns() << "\n" << str.str() << "];";
+#endif
+}
+
 void OUTLOG(const Ravelin::Matrix3d& M, std::string name,TLogLevel LL){
 #ifndef NDEBUG
   std::ostringstream str;

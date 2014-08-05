@@ -63,7 +63,14 @@ class Robot {
                              const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
                              Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
-  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVelocityd& vel_des, Ravelin::VectorNd& ufb);
+  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
+  /** FUNCTIONAL
+   *  Applys *compresssive* forces and unlimited tangential forces
+   * to correct the [p; v] state of the robot base
+   * acording to Kp and Kv Respectively
+  **/
+  void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::VectorNd& Kp,const Ravelin::VectorNd& Kv,
+                                   const Ravelin::SVector6d& pos_des, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
   void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
   bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
@@ -120,7 +127,7 @@ class Robot {
     Ravelin::VectorNd qdd_des, qdd;
     Ravelin::MatrixNd N,D,M,R,Rw;
     Ravelin::VectorNd fext;
-    Ravelin::VectorNd vel, gc, acc,vel_w;
+    Ravelin::VectorNd vel, gc, acc;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;

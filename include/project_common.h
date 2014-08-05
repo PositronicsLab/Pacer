@@ -72,6 +72,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
  void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::SharedConstMatrixNd& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);

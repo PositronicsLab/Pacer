@@ -20,9 +20,9 @@ bool new_sim_step = true;
  boost::shared_ptr<Quadruped> quad_ptr;
  std::vector<std::string> joint_names_;
 
-void post_event_callback_fn(const std::vector<Moby::Event>& e,
+void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                                    boost::shared_ptr<void> empty);
-void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty);
+void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty);
 void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointPtr>& joints);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -193,8 +193,7 @@ void init_cpp(){
 
 }
 
-extern boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2);
-
+extern boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2);
 /// plugin must be "extern C"
 extern "C" {
 
@@ -224,13 +223,11 @@ void init(void* separator,
   // This will force us to updtae the robot state instead of Moby
 //  abrobot->set_kinematic(true);
 #endif
-#ifdef CONTACT_CALLBACK
-  // Set a random friction value in Moby for each contact made
-  sim->get_contact_parameters_callback_fn = cp_callback;
-#endif
 
-  sim->event_post_impulse_callback_fn = &post_event_callback_fn;
-  sim->event_callback_fn = &pre_event_callback_fn;
+  sim->get_contact_parameters_callback_fn = get_contact_parameters;
+
+//  sim->constraint_callback_fn = &pre_event_callback_fn;
+  sim->constraint_post_callback_fn = &post_event_callback_fn;
 
 #ifdef USE_TERRAIN
   unsigned num_spheres = 0;

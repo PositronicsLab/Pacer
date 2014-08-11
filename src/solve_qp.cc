@@ -57,7 +57,7 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,1,-19,-1.0,zero_tol))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,1,0,-1.0,zero_tol))
 //  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else

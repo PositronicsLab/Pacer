@@ -100,7 +100,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
-
+//#define COLLECT_DATA
 #ifdef COLLECT_DATA   // record all input vars
     // generate a unique filename
     std::ostringstream fname;
@@ -148,6 +148,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     out  << "CtT_invM_Ct = T'*iM*T" << std::endl;
     out.close();
 #endif
+
   // compute j and k
   // [E,D]
   Ravelin::MatrixNd ED(E.rows(),E.columns()+D.columns());
@@ -208,6 +209,8 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     x /= h;
     return true;
   }
+
+  OUTLOG(R,"R",logDEBUG1);
 
   /////////////////////////////////////////////////////////////////////////////
   ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////

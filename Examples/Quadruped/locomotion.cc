@@ -195,10 +195,11 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
   for(int i=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
 
+
     // POSITION
-    OUT_LOG(logDEBUG1) << "\t" << foot.id << "_x =" << foot_pos[i];
+    OUTLOG( foot_pos[i],foot.id + "_x",logDEBUG);
     RRMC(foot,q,foot_pos[i],q_des);
-    OUT_LOG(logDEBUG1) << "\t" << foot.id << "_q =" << q_des.select(foot.chain_bool,workv_);
+    OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
 
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J;
@@ -209,13 +210,13 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
 
     Ravelin::Vector3d qd_foot,qdd_foot;
     // VELOCITY & ACCELERATION
-    OUT_LOG(logDEBUG1) << "\t" << foot.id << "_xd =" << foot_vel[i];
+    OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG);
     LA_.solve_fast((workM_ = J),(qd_foot = foot_vel[i]));
-    OUT_LOG(logDEBUG1) << "\t" << foot.id << "_qd =" << qd_foot;
+    OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
 
-    OUT_LOG(logDEBUG1) << "\t" << foot.id << "_xdd =" << foot_acc[i];
+    OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG);
     LA_.solve_fast((workM_ = J),(qdd_foot = foot_acc[i]));
-    OUT_LOG(logDEBUG1) << "\t" << foot.id << "_qdd =" << qdd_foot;
+    OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
 
     for(int j=0;j<foot.chain.size();j++){
       qd_des[foot.chain[j]] = qd_foot[j];
@@ -537,8 +538,8 @@ void Quadruped::walk_toward(
 
         for(int j=0;j<n;j++)
           X[j] = control_points[j][d];
-        OUTLOG(T,"T",logERROR);
-        OUTLOG(X,"X",logERROR);
+        OUTLOG(T,"T",logDEBUG1);
+        OUTLOG(X,"X",logDEBUG1);
 
         Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_velocity[d]),coefs);
 

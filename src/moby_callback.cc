@@ -6,7 +6,7 @@ extern boost::shared_ptr<Robot> robot_ptr;
 extern std::vector<std::string> joint_names_;
 extern bool new_sim_step;
 
-void post_event_callback_fn(const std::vector<Moby::Event>& e,
+void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
   unsigned NC = 0;
@@ -22,7 +22,7 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
 #ifndef FAKE_CONTACTS
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].event_type == Moby::Event::eContact)
+    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
       bool MIRROR_FLAG = false;
 
@@ -77,11 +77,11 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
         eefs_[index].tan1 = e[i].contact_tan1;
         eefs_[index].tan2 = e[i].contact_tan2;
       }
-      eefs_[index].event = boost::shared_ptr<const Moby::Event>(new Moby::Event(e[i]));
+      eefs_[index].event = boost::shared_ptr<const Moby::UnilateralConstraint>(new Moby::UnilateralConstraint(e[i]));
     }
   }
 #else
-  // PROCESS CONTACTS
+  // PROCESS FAKE CONTACTS
   for(unsigned index=0;index<4;index++){
     Ravelin::Pose3d foot_pose = *eefs_[index].link->get_pose();
     foot_pose.update_relative_pose(Moby::GLOBAL);
@@ -101,11 +101,15 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
 #endif
 }
 
-boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2){
+boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
-//  e->mu_viscous = 2.5e1;
 
-//  e->mu_viscous = 5.0;
+  if(geom1->get_single_body())
+  e->penalty_Kp = 1e4;
+  e->penalty_Kv = 1e2;
+  //  e->mu_viscous = 2.5e1;
+  e->mu_coulomb = 1.0;
+  e->mu_viscous = 0.0;
   return e;
 }
 
@@ -114,7 +118,10 @@ void post_step_callback_fn(Moby::Simulator* s){
 }
 
 /// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){
+void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
+  for(int i=0;i< e.size();i++){
+    OUT_LOG(logDEBUG1) << e[i] << std::endl;
+  }
 }
 
 void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointPtr>& joints){

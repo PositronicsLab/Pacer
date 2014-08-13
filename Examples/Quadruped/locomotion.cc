@@ -186,8 +186,6 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                               Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
   ////////////////////// IK CONTROL ////////////////////////
-  OUT_LOG(logDEBUG) << "Resulting Controls:";
-
   Ravelin::VectorNd q = q_des,
                     qd = qd_des,
                     qdd = qdd_des;
@@ -197,7 +195,7 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
 
 
     // POSITION
-    OUTLOG( foot_pos[i],foot.id + "_x",logDEBUG);
+    OUTLOG( foot_pos[i],foot.id + "_x",logDEBUG1);
     RRMC(foot,q,foot_pos[i],q_des);
     OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
 
@@ -210,11 +208,11 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
 
     Ravelin::Vector3d qd_foot,qdd_foot;
     // VELOCITY & ACCELERATION
-    OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG);
+    OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG1);
     LA_.solve_fast((workM_ = J),(qd_foot = foot_vel[i]));
     OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
 
-    OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG);
+    OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG1);
     LA_.solve_fast((workM_ = J),(qdd_foot = foot_acc[i]));
     OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
 
@@ -363,8 +361,8 @@ void Quadruped::walk_toward(
     bool replan_path = false;
     if(inited){
       // Set liftoff feet
-//      if(eefs_[i].active && stance_phase[i])
-//        eefs_[i].active = false;
+      if(eefs_[i].active && stance_phase[i])
+        eefs_[i].active = false;
       for(int d=0; d<3;d++){
         OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
         replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);

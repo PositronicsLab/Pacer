@@ -108,7 +108,7 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
   e->penalty_Kp = 1e4;
   e->penalty_Kv = 1e2;
   //  e->mu_viscous = 2.5e1;
-  e->mu_coulomb = 1.0;
+  e->mu_coulomb = 0.25;
   e->mu_viscous = 0.0;
   return e;
 }

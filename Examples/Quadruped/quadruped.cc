@@ -34,7 +34,7 @@ static bool
         ERROR_FEEDBACK      = true,   //  "Use error-feedback control?"
           FEEDBACK_ACCEL      = CONTROL_IDYN, //    "Apply error-feedback as accelerations?"
           JOINT_FEEDBACK      = true, //    "Apply error-feedback as forces?"
-          WORKSPACE_FEEDBACK  = !CONTROL_IDYN;//    "Use error-feedback in workspace frame?"
+          WORKSPACE_FEEDBACK  = false;//!CONTROL_IDYN;//    "Use error-feedback in workspace frame?"
 
 // -- LOCOMOTION OPTIONS --
 double
@@ -95,7 +95,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   OUTLOG(lead,"LEAD_g",logDEBUG);
 
-  ((qdd = qd)-=qd_last)/=STEP_SIZE;
+  ((qdd = qd)-=qd_last)/=0.001;
 
 #  ifdef VISUALIZE_MOBY
   for(int i=0;i<NUM_EEFS;i++){
@@ -238,11 +238,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
     walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 
     // Recalculate contact jacobians based on desired lift-off feet
-//    NC = 0;
-//    for (unsigned i=0; i< NUM_EEFS;i++)
-//      if(eefs_[i].active)
-//        NC++;
-//    calc_contact_jacobians(N,D,R);
+    if(!USE_LAST_CFS){
+      NC = 0;
+      for (unsigned i=0; i< NUM_EEFS;i++)
+        if(eefs_[i].active)
+          NC++;
+      calc_contact_jacobians(N,D,R);
+    }
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
@@ -476,7 +478,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
   }
 
-   ((workv_ = qd)-=qd_last)/=STEP_SIZE;
    OUT_LOG(logINFO) <<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
    for(unsigned i=0;i< NUM_JOINTS;i++)
      OUT_LOG(logINFO)<< joints_[i]->id

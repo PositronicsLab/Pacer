@@ -26,9 +26,10 @@
 <!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
     <DynamicBody dynamic-body-id="links" />
     <DynamicBody dynamic-body-id="ground" />
-<!--    <DynamicBody dynamic-body-id="ball" />-->
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0" mu-viscous="0" epsilon="0.0"/>
-<!--    <ContactParameters object1-id="ball" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.25"/>-->
+    <!--    <DynamicBody dynamic-body-id="ball" />-->
+    <DynamicBody dynamic-body-id="hurdle" />
+    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="hurdle" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
   </EventDrivenSimulator>
 
 
@@ -44,7 +45,11 @@
 <!--    <Box id="foot" xlen="0.01" ylen="0.03" zlen="0.04" mass="0.01"/>-->
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
+<<<<<<< HEAD
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
+=======
+      fdyn-algorithm-frame="link" rotate="0.0 -0.0 0.0" translate="0,0,0.20" >
+>>>>>>> hurdle is a static bar, shins have collision.  When hurdle is enabled Moby crashes.  When shin and feet come into (self collision) within Links robot Moby crashes.  When robot steps on Hurdle, large interpenetration occurs and moby crashes
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" compliant="false">
         <CollisionGeometry primitive-id="abdomen" />
@@ -72,7 +77,7 @@
 
       <RevoluteJoint id="LF_LEG_FE" qd="0" location="0.193962 0.056278 0" inboard-link-id="LF_ULEG" outboard-link-id="LF_LLEG" axis="0 1 0" />
       <RigidBody id="LF_LLEG" position="0.261962 0.056278 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="lleg">
-<!--        <CollisionGeometry primitive-id="lleg" />-->
+        <CollisionGeometry primitive-id="lleg" />
         <InertiaFromPrimitive primitive-id="lleg" />
       </RigidBody>
 
@@ -98,7 +103,7 @@
 
       <RevoluteJoint id="RF_LEG_FE" qd="0" location="0.193962 -0.056278 0" inboard-link-id="RF_ULEG" outboard-link-id="RF_LLEG" axis="0 -1 0" />
       <RigidBody id="RF_LLEG" position="0.261962 -0.056278 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="lleg">
-<!--        <CollisionGeometry primitive-id="lleg" />-->
+        <CollisionGeometry primitive-id="lleg" />
         <InertiaFromPrimitive primitive-id="lleg" />
       </RigidBody>
 
@@ -124,7 +129,7 @@
 
       <RevoluteJoint id="LH_LEG_FE" qd="0" location="-0.202316 0.0495 0" inboard-link-id="LH_ULEG" outboard-link-id="LH_LLEG" axis="0 1 0" />
       <RigidBody id="LH_LLEG" position="-0.261962 0.0495 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="lleg">
-<!--        <CollisionGeometry primitive-id="lleg" />-->
+        <CollisionGeometry primitive-id="lleg" />
         <InertiaFromPrimitive primitive-id="lleg" />
       </RigidBody>
 
@@ -150,7 +155,7 @@
 
       <RevoluteJoint id="RH_LEG_FE" qd="0" location="-0.202316 -0.0495 0" inboard-link-id="RH_ULEG" outboard-link-id="RH_LLEG" axis="0 -1 0" />
       <RigidBody id="RH_LLEG" position="-0.261962 -0.0495 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="lleg">
-<!--      <CollisionGeometry primitive-id="lleg" />-->
+      <CollisionGeometry primitive-id="lleg" />
         <InertiaFromPrimitive primitive-id="lleg" />
       </RigidBody>
 
@@ -180,6 +185,15 @@
     position="0.0 -0.05 0.2" visualization-id="foot" compliant="false">
     <CollisionGeometry primitive-id="foot" />
     <InertiaFromPrimitive primitive-id="foot" />
+  </RigidBody>
+
+
+  <Box id="smallwall" xlen="0.01" ylen="0.3" zlen="0.01" mass="0.2"/>
+
+  <RigidBody id="hurdle" enabled="false"
+    position="0.13 0.0 0.05" visualization-id="smallwall" compliant="false">
+    <CollisionGeometry primitive-id="smallwall" />
+    <InertiaFromPrimitive primitive-id="smallwall" />
   </RigidBody>
 
   </MOBY>

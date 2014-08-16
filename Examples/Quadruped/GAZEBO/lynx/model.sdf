@@ -1,5 +1,5 @@
-<?xml version='1.0'?>
 <sdf version="1.5">
+  <world>
   <model name="lynx">
     <static>0</static>
     <pose>0 0 0.3 0 0 0</pose>
@@ -835,9 +835,9 @@
       </axis>
     </joint>
 
-    </link>
     <plugin name='ros_control' filename='libLINKSgazebo.so'>
       <namespace>/lynx</namespace>
     </plugin>
   </model>
+  </world>
 </sdf>

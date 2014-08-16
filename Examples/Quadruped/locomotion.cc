@@ -48,7 +48,7 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
   // EEF POSITION
   for(int i=0;i<NUM_EEFS;i++){
     OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_x =" << foot_poses[i];
-    RRMC(eefs_[i],q_des,foot_poses[i],q_des);
+    RMRC(eefs_[i],q_des,foot_poses[i],q_des);
     OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_q =" << foot_poses[i];
   }
   // Foot goal Velocity
@@ -155,7 +155,7 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
 
     // POSITION
     OUT_LOG(logDEBUG1) << "\t" << foot.id << "_x =" << foot_pos[i];
-    RRMC(foot,q,foot_pos[i],q_des);
+    RMRC(foot,q,foot_pos[i],q_des);
     OUT_LOG(logDEBUG1) << "\t" << foot.id << "_q =" << q_des.select(foot.chain_bool,workv_);
 
     // Calc jacobian for AB at this EEF

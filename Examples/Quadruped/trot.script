@@ -1,0 +1,7 @@
+qd.locomotion.active  = 1
+qd.locomotion.command = [ 0.1 0.0 0.0 0.0 0.0 0.0 ]
+qd.locomotion.point = [ 10 0 0 ]
+qd.locomotion.step_height = 0.015
+qd.locomotion.gait_time = 0.5
+qd.locomotion.gait_type = trot
+qd.locomotion.duty_factor = [0.6 0.6 0.6 0.6]

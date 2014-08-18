@@ -26,7 +26,7 @@ public:
     std::vector<bool> chain_bool;
     // Contact Data
 
-    boost::shared_ptr<const Moby::Event> event;
+    boost::shared_ptr<const Moby::UnilateralConstraint> event;
     Ravelin::Vector3d     point,normal,tan1,tan2;
     std::vector<Ravelin::Vector3d> contacts;
     std::vector<Ravelin::Vector3d> contact_impulses;
@@ -63,15 +63,23 @@ class Robot {
                              const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
                              Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
-  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVelocityd& vel_des, Ravelin::VectorNd& ufb);
+  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
+  /** FUNCTIONAL
+   *  Applys *compresssive* forces and unlimited tangential forces
+   * to correct the [p; v] state of the robot base
+   * acording to Kp and Kv Respectively
+  **/
+  void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::VectorNd& Kp,const Ravelin::VectorNd& Kv,
+                                   const Ravelin::SVector6d& pos_des, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
   void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
   bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                         double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
   bool workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z);
-  void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+  void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
   void calc_base_jacobian(Ravelin::MatrixNd& R);
-  void calc_workspace_jacobian(Ravelin::MatrixNd& Rw);
+
+  void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<Ravelin::Pose3d> frame);
   void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
 //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
@@ -118,9 +126,9 @@ class Robot {
     Ravelin::Vector2d zero_moment_point;
     Ravelin::VectorNd uff, ufb;
     Ravelin::VectorNd qdd_des, qdd;
-    Ravelin::MatrixNd N,D,M,ST,R,Rw;
+    Ravelin::MatrixNd N,D,M,R,Rw;
     Ravelin::VectorNd fext;
-    Ravelin::VectorNd vel, gc, acc,vel_w;
+    Ravelin::VectorNd vel, gc, acc;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;

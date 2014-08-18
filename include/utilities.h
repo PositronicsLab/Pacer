@@ -6,6 +6,7 @@
 class Utility{
   public:
   static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
+  static Ravelin::Vector3d& quat2TaitBryan(const Ravelin::Quatd& q_, Ravelin::Vector3d& ypr);
   static Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
   static Ravelin::Quatd& aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q);
   static Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R);
@@ -30,6 +31,23 @@ class Utility{
                    std::vector<Ravelin::Vector3d>& trajectory,
                    std::vector<Ravelin::Vector3d> & dtrajectory,
                    std::vector<Ravelin::Vector3d> & ddtrajectory);
+
+  static double get_z_plane(double x, double y,const Ravelin::Vector3d& N, const Ravelin::Vector3d& P){
+    static std::vector<double> gp(4);
+    // N(X - P) = a(x - px) + b(y - py) + c(z - pz) = 0
+    // ax + by + cz + N.-P = 0
+    // ax + by + cz = d
+    // N = [a b c]
+    gp[0] = N[0];
+    gp[1] = N[1];
+    gp[2] = N[2];
+    // d = N.P
+    gp[3] = N.dot(P);
+
+    // gp is a,b,c,d
+    // z = d/c + a/-c X + b/-c Y
+    return (gp[3]/gp[2] + x*gp[0]/-gp[2] + y*gp[1]/-gp[2]);
+  }
 
   static Ravelin::Vector3d slerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t);
   static Ravelin::Vector3d lerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t);

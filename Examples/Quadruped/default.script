@@ -1,0 +1,9 @@
+qd.locomotion.active  = 1
+qd.locomotion.command =  [ 0 0 0 0 0 0 ]
+qd.locomotion.step_height = 0.0
+qd.locomotion.gait_time = 0.5
+qd.idyn = 0
+qd.error-feedback.active = 1
+qd.error-feedback.joint = 1
+qd.error-feedback.workspace = 1
+qd.error-feedback.accel = 0

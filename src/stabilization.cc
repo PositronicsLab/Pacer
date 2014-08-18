@@ -7,7 +7,7 @@ using namespace Ravelin;
 void Robot::zmp_stabilizer(const Ravelin::MatrixNd& J,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb){
   Ravelin::Matrix2d Kz(1,0,
                        0,1);
-  Kz *= 1e10;
+  Kz *= 1e-1;
 
   Ravelin::Vector2d zfb;
   Kz.mult(zmp_goal - zero_moment_point,zfb);
@@ -24,7 +24,7 @@ void Robot::zmp_stabilizer(const Ravelin::MatrixNd& J,const Ravelin::Vector2d& z
 }
 
 
-void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::SVelocityd& vel_des, Ravelin::VectorNd& ufb){
+void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
 
@@ -69,7 +69,7 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
   Kv[4] = 1e4;
   Kv[5] = 0;
 
-  Ravelin::SVelocityd vel_base;
+  Ravelin::VectorNd vel_base(6);
   vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
 
   vel_base -= vel_des;
@@ -89,13 +89,13 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
                       b(0),
                       qd_err,
                       w(J_star.columns());
-    qd_err.set_zero(active_dofs.size());
+    qd_err.set_zero(active_dofs.size()+6);
     qd_err.set_sub_vec(active_dofs.size()-6,vel_base);
     OUTLOG(qd_err,"qd_err",logDEBUG);
 
     J_star.transpose_mult(J_star,Q);
-    K.transpose_mult(J_star,workM_).transpose_mult(qd_err,c);
-
+//    K.transpose_mult(J_star,workM_).transpose_mult(qd_err,c);
+    J_star.transpose_mult(qd_err,c);
     solve_qp(Q,c,A,b,w);
 
     // tY = J* w
@@ -108,6 +108,50 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
   for(int i=0;i<NC*3;i++)
     ufb[active_dofs[i]] += tY[i];
 }
+
+void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::VectorNd& Kp,const Ravelin::VectorNd& Kv,const Ravelin::SVector6d& pos_des,const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb){
+  static Ravelin::VectorNd workv_;
+  static Ravelin::MatrixNd workM_;
+
+  if(NC == 0) return;
+
+  Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINTS,NDOFS,0,N.columns()*3);
+  Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINTS,0,N.columns()*3);
+
+  OUTLOG(Jb,"Jb",logDEBUG1);
+  OUTLOG(Jq,"Jq",logDEBUG1);
+
+  Ravelin::VectorNd vel_base(6), base_correct(6);
+  vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
+  OUTLOG(vel_base,"vel_base",logDEBUG1);
+  OUTLOG(vel_des,"vel_des",logDEBUG1);
+
+  for(int i=0;i<6;i++){
+    base_correct[i] = (vel_des[i] - vel_base[i])*Kv[i];
+    if(i >= 3) // orientation des = 0.0
+      base_correct[i] += (pos_des[i] - roll_pitch_yaw[i-3])*Kp[i];
+//    else // position of COM
+//      base_correct[i] += (0.0 - 0.0)*Kp[i];
+  }
+
+  OUTLOG(base_correct,"base_correct",logDEBUG);
+
+  Ravelin::VectorNd ws_correct,js_correct;
+  Jb.transpose_mult(base_correct,ws_correct,-1.0,0);
+  OUTLOG(ws_correct,"ws_correct",logDEBUG1);
+
+  // Remove non-compressive elements
+  for(int i=0;i<N.columns();i++)
+    if(ws_correct[i] < 0.0)
+      ws_correct[i] = 0.0;
+
+  Jq.mult(ws_correct,js_correct);
+  OUTLOG(js_correct,"js_correct",logDEBUG);
+
+  for(int i=0;i<NUM_JOINTS;i++)
+    ufb[i] += js_correct[i];
+}
+
 
 void Robot::calc_com(){
   center_of_mass_x.set_zero();
@@ -157,11 +201,11 @@ void Robot::calc_com(){
 
 #ifdef VISUALIZE_MOBY
   // ZMP and COM
-  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
-//  visualize_ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
+  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.13,environment_frame);
+  visualize_ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
 //  visualize_ray(center_of_mass_x + center_of_mass_xd,center_of_mass_x,Ravelin::Vector3d(0.5,0,1),sim);
 //  visualize_ray(center_of_mass_x + center_of_mass_xd + center_of_mass_xdd,center_of_mass_x + center_of_mass_xd,Ravelin::Vector3d(1,0,1),sim);
-//  visualize_ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,environment_frame),CoM_2D,Ravelin::Vector3d(0,0,1),sim);
+  visualize_ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,environment_frame),CoM_2D,Ravelin::Vector3d(0,0,1),sim);
 #endif
 
 }

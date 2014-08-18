@@ -57,7 +57,7 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,1,0,-1.0,zero_tol))
 //  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
@@ -165,7 +165,7 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   bool SOLVE_FLAG = true;
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,20,-1.0,zero_tol))
 //  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
@@ -214,6 +214,38 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
 #endif
   bool SOLVE_FLAG = true;
   /*SOLVE_FLAG = */as_.qp_activeset(Q,c,lb,ub,A,b,Ravelin::MatrixNd::zero(0,c.rows()),Ravelin::VectorNd::zero(0),x);
+
+#ifndef NDEBUG
+  OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;
+  OUTLOG(x,"xx",logDEBUG1);
+  OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
+#endif
+  return SOLVE_FLAG;
+}
+
+bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b,const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& x)
+{
+  const int n = Q.rows();
+  const int m = A.rows();
+  Ravelin::VectorNd lb = lb_;
+  Ravelin::VectorNd ub = ub_;
+  if(lb.rows() == 0)
+    lb.set_one(Q.columns()) *= -1e29;
+  if(ub.rows() == 0)
+    ub.set_one(Q.columns()) *= 1e29;
+
+#ifndef NDEBUG
+  OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;
+  OUT_LOG(logDEBUG1)  << "%QP variables" << std::endl;
+  OUTLOG(Q,"Q",logDEBUG1);
+  OUTLOG(c,"c",logDEBUG1);
+  OUTLOG(A,"AA",logDEBUG1);
+  OUTLOG(b,"bb",logDEBUG1);
+  OUTLOG(lb,"lb",logDEBUG1);
+  OUTLOG(ub,"ub",logDEBUG1);
+#endif
+  bool SOLVE_FLAG = true;
+  /*SOLVE_FLAG = */as_.qp_activeset(Q,c,lb,ub,A,b,M,q,x);
 
 #ifndef NDEBUG
   OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;

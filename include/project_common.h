@@ -64,7 +64,7 @@ const double M_PI_16  = 0.19634954084;
 #ifdef VISUALIZE_MOBY
 extern boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim );
+extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
 #endif
 
 // ----------------------------------------------------------------------------
@@ -72,6 +72,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
  void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
+ void OUTLOG(const Ravelin::SharedConstMatrixNd& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
@@ -80,6 +81,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
  void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
  void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL);
+ void OUTLOG(double x, std::string name,TLogLevel LL);
 extern std::string LOG_TYPE;
 // ----------------------------------------------------------------------------
 

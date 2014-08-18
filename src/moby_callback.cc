@@ -99,17 +99,32 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       eefs_[index].tan2 = Ravelin::Vector3d(0,1,0);;
     }
 #endif
+  std::cout << "cfs_moby = [";
+  for(int i=0, ii = 0;i<eefs_.size();i++){
+    if(eefs_[i].active){
+      assert(eefs_[i].contact_impulses.size() == 1);
+      std::cout << " " << eefs_[i].contact_impulses[0];
+      ii++;
+    } else {
+      std::cout << " " << 0;
+    }
+  }
+  std::cout << "]';" << std::endl;
 }
+extern double
+              SIM_MU_COULOMB,
+              SIM_MU_VISCOSE,
+              SIM_PENALTY_KV,
+              SIM_PENALTY_KP;
 
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
 
   if(geom1->get_single_body())
-  e->penalty_Kp = 1e4;
-  e->penalty_Kv = 1e2;
-  //  e->mu_viscous = 2.5e1;
-  e->mu_coulomb = 0.25;
-  e->mu_viscous = 0.0;
+  e->penalty_Kp = SIM_PENALTY_KP;
+  e->penalty_Kv = SIM_PENALTY_KV;
+  e->mu_coulomb = SIM_MU_COULOMB;
+  e->mu_viscous = SIM_MU_VISCOSE;
   return e;
 }
 

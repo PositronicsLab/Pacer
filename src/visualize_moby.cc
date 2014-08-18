@@ -230,16 +230,17 @@ void init_glconsole(){
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowPosition (800, 50);
   glutInitWindowSize (600, 200);
-  glutCreateWindow("GLConsole Demo");
+  glutCreateWindow("Locomotion Console");
+//  glutHideWindow();
 
 //   standard GL init
-  glShadeModel(GL_SMOOTH);
-  glClearColor(0.0f, 0.0f, 1.0f, 0.5f);
-  glClearDepth(1.0f);
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LEQUAL);
-  glEnable ( GL_COLOR_MATERIAL );
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+//  glShadeModel(GL_SMOOTH);
+//  glClearColor(0.0f, 0.0f, 1.0f, 0.5f);
+//  glClearDepth(1.0f);
+//  glEnable(GL_DEPTH_TEST);
+//  glDepthFunc(GL_LEQUAL);
+//  glEnable ( GL_COLOR_MATERIAL );
+//  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
   glutReshapeFunc (reshape);
   glutDisplayFunc (display);

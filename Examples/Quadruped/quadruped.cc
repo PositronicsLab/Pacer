@@ -23,26 +23,30 @@ extern bool new_sim_step;
 GLConsole theConsole;
 #endif
 
-static bool
-        WALK                = true,   //  "Activate Walking?"
+ bool
+        WALK                = false,   //  "Activate Walking?"
           TRACK_FOOTHOLDS     = false,//    EXPERIMENTAL -- "Locate and use footholds?"
         CONTROL_IDYN        = false,   //  "Activate IDYN?"
           WORKSPACE_IDYN      = false,//    EXPERIMENTAL -- "Activate WIDYN?"
           USE_LAST_CFS        = false,//    EXPERIMENTAL -- "Use last detected contact forces?"
         FRICTION_EST        = false,  //  EXPERIMENTAL
-        TRUNK_STABILIZATION = true,   //  Balance Pitch (D) and Roll (PD) or robot base with compressive forces
-        ERROR_FEEDBACK      = true,   //  "Use error-feedback control?"
-          FEEDBACK_ACCEL      = CONTROL_IDYN, //    "Apply error-feedback as accelerations?"
-          JOINT_FEEDBACK      = true, //    "Apply error-feedback as forces?"
-          WORKSPACE_FEEDBACK  = false;//!CONTROL_IDYN;//    "Use error-feedback in workspace frame?"
+        TRUNK_STABILIZATION = false,   //  Balance Pitch (D) and Roll (PD) or robot base with compressive forces
+        ERROR_FEEDBACK      = false,   //  "Use error-feedback control?"
+          FEEDBACK_ACCEL      = false, //    "Apply error-feedback as accelerations?"
+          JOINT_FEEDBACK      = false, //    "Apply error-feedback as forces?"
+          WORKSPACE_FEEDBACK  = false;//    "Use error-feedback in workspace frame?"
 
 // -- LOCOMOTION OPTIONS --
 double
-        gait_time   = 0.4,//,"Gait Duration over one cycle."),
-        step_height = 0.015,//,""),
-        goto_X      = 0.10,//,"command forward direction"),
-        goto_Y      = 0.00,//,"command lateral direction"),
-        goto_GAMMA  = 0.0;//,"command rotation");
+        gait_time   = 0.0,//,"Gait Duration over one cycle."),
+        step_height = 0.0,//,""),
+        goto_X      = 0.0,//,"command forward direction"),
+        goto_Y      = 0.0,//,"command lateral direction"),
+        goto_GAMMA  = 0.0,//,"command rotation");
+        SIM_MU_COULOMB = 0,
+        SIM_MU_VISCOSE = 0,
+        SIM_PENALTY_KV = 0,
+        SIM_PENALTY_KP = 0;
 
 // Assign Gait to the locomotion controller
 std::string
@@ -72,20 +76,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   OUT_LOG(logINFO)<< "time = "<< t ;
 
-//  std::vector<double> new_command = boost::assign::list_of(0.05)(0)(0)(0)(0)(0).convert_to_container<std::vector<double> >();
-////      CVarUtils::GetCVarRef<std::vector<double> >("qd.locomotion.command");
-//  bool perform_walk = CVarUtils::GetCVar<bool>("qd.locomotion.active");
-//  std::cout << "Walk: " << perform_walk << std::endl;
-//  CVarUtils::SetCVar<bool>("qd.locomotion.active",true);
-
-
-  //  std::cout << new_command.size() << std::endl;
-
-//  perform_walk = true;
-
-//    OUTLOG(new_command,"goto_command",logERROR);
-//  CVarUtils::SetCVar<std::vector<double> >("qd.locomotion.command",new_command);
-//  OUTLOG(goto_command,"goto_command",logERROR);
+    if(SIMULATION_TIME == 0.0){
+      theConsole.ScriptLoad("startup.script");
+    }
 
   // ----------------------------------------------------------------
   Ravelin::Vector3d lead(known_leading_force[3],
@@ -204,15 +197,15 @@ Ravelin::VectorNd& Quadruped::control(double t,
     for(int i=0;i<6;i++)
       go_to[i] = goto_command[i];
 
-    Ravelin::Vector3d goto_direction =
-        Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
-        - Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
-    goto_direction = Ravelin::Pose3d::transform_vector(base_frame,goto_direction);
-    goto_direction.normalize();
+    if(goto_point.size() == 3){
+      Ravelin::Vector3d goto_direction =
+          Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
+          - Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
+      goto_direction = Ravelin::Pose3d::transform_vector(base_frame,goto_direction);
+      goto_direction.normalize();
 
-//    go_to[0] = goto_direction[0];
-//    go_to[1] = goto_direction[1];
-    go_to[5] = goto_direction[1]*0.5;
+      go_to[5] = goto_direction[1]*0.5;
+    }
 
     // Robot attempts to align base with force and then walk along force axis
     go_to[0] += lead_base_force[0];
@@ -238,13 +231,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
     walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 
     // Recalculate contact jacobians based on desired lift-off feet
-    if(!USE_LAST_CFS){
-      NC = 0;
-      for (unsigned i=0; i< NUM_EEFS;i++)
-        if(eefs_[i].active)
-          NC++;
-      calc_contact_jacobians(N,D,R);
-    }
+//    if(!USE_LAST_CFS){
+//      NC = 0;
+//      for (unsigned i=0; i< NUM_EEFS;i++)
+//        if(eefs_[i].active)
+//          NC++;
+//      calc_contact_jacobians(N,D,R);
+//    }
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
@@ -554,12 +547,10 @@ void Quadruped::init(){
   unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
   known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
   known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-  goto_point = boost::assign::list_of(10)(0)(0).convert_to_container<std::vector<double> >();
+//  goto_point = boost::assign::list_of(10)(0)(0).convert_to_container<std::vector<double> >();
+  duty_factor = boost::assign::list_of(0.75)(0.75)(0.75)(0.75).convert_to_container<std::vector<double> >();
+  goto_command = boost::assign::list_of(goto_X)(goto_Y)(0)(0)(0)(goto_GAMMA).convert_to_container<std::vector<double> >();
 #ifdef VISUALIZE_MOBY
-//  CVarUtils::ExecuteFunction()
-//  CVarUtils::ProcessCommand("qd.locomotion.command")
-//      ("qd.locomotion.timed_walk",&timed_walk,"Perform a walk from $1 to $2 ");
-
   CVarUtils::AttachCVar<std::vector<double> >( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
   CVarUtils::AttachCVar<std::vector<double> >( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");
   CVarUtils::AttachCVar<std::vector<double> >( "qd.known_leading_force",&known_leading_force,"Apply a constant [3 pt{base_frame}][3 linear] force to robot base, the robot can sense the applied force and will follow it");
@@ -586,7 +577,12 @@ void Quadruped::init(){
   // -- IDYN OPTIONS --
   CVarUtils::AttachCVar<double>( "qd.dt",&STEP_SIZE,"value for dt (also h) used in IDYN and other functions");
 
-//   tglc = new std::thread(init_glconsole);
+  CVarUtils::AttachCVar<double>( "sim.mu_coulomb",&SIM_MU_COULOMB,"Coulomb Friction for all contact");
+  CVarUtils::AttachCVar<double>( "sim.mu_viscous",&SIM_MU_VISCOSE,"Viscous Friction for all contact");
+  CVarUtils::AttachCVar<double>( "sim.penalty_kv",&SIM_PENALTY_KV,"Spring term for compliant contact");
+  CVarUtils::AttachCVar<double>( "sim.penalty_kp",&SIM_PENALTY_KP,"Damper term for compliant contact");
+
+   tglc = new std::thread(init_glconsole);
 #endif
   // Set up joint references
 #ifdef FIXED_BASE
@@ -721,9 +717,6 @@ void Quadruped::init(){
   abrobot_->update_link_poses();
 
   {
-//    duty_factor = boost::assign::list_of(0.6)(0.6)(0.6)(0.6).convert_to_container<std::vector<double> >();
-    duty_factor = boost::assign::list_of(0.75)(0.75)(0.75)(0.75).convert_to_container<std::vector<double> >();
-    goto_command = boost::assign::list_of(goto_X)(goto_Y)(0)(0)(0)(goto_GAMMA).convert_to_container<std::vector<double> >();
     // Trotting gait 50/50 duty cycle
     gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
 

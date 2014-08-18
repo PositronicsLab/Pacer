@@ -78,6 +78,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   OUT_LOG(logINFO)<< "time = "<< t ;
 
     if(SIMULATION_TIME == 0.0){
+      theConsole.PrintAllCVars();
       theConsole.ScriptLoad("startup.script");
     }
 

@@ -90,7 +90,7 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
   A(2,2) = T[0];
   A(2,3) = 1;
   // start Virtual constraints
-  double tv0 = T[0] + 1e-8;
+  double tv0 = T[0] + (T[1]-T[0])/1000.0;
   // xddd
 //  A(3,0) = 6;
 //  A(3,4) = -6;
@@ -118,7 +118,7 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::
 
   // End Virtual Constraints
   // Virtual constraints
-  double tvN = T[N-1] - 1e-8;
+  double tvN = T[N-1] - (T[N-1]-T[N-2])/1000.0;
   // xddd
 //  A(A.rows()-6,A.columns()-8) = 6;
 //  A(A.rows()-6,A.columns()-4) = -6;

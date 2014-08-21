@@ -102,7 +102,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   std::cout << "cfs_moby = [";
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
-      assert(eefs_[i].contact_impulses.size() == 1);
+//      assert(eefs_[i].contact_impulses.size() == 1);
       std::cout << " " << eefs_[i].contact_impulses[0];
       ii++;
     } else {

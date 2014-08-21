@@ -59,6 +59,10 @@ void Robot::compile(){
 
   // Set up link references
   links_ = abrobot_->get_links();
+
+  environment_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(Moby::GLOBAL));
+  environment_frame->x = Ravelin::Origin3d(0,0,0);
+  environment_frame->q.set_identity();
 }
 
 void EndEffector::init(){
@@ -159,7 +163,7 @@ void Robot::update(){
          for(int i=0;i<NC;i++){
            visualize_ray(active_eefs[i]->point + Ravelin::Vector3d(0,0,0.001),
                          active_eefs[(i+1)%NC]->point  + Ravelin::Vector3d(0,0,0.001),
-                         Ravelin::Vector3d(1,1,0),
+                         Ravelin::Vector3d(0.5,0.5,1),
                          sim);
          }
          // Draw all Contacts

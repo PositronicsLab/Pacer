@@ -20,16 +20,19 @@ using namespace Ravelin;
 extern double SIMULATION_TIME;
 const double VIBRANCY = 1;
 
-/// Draws a ray directed from a contact point along the contact normal
 void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
+  visualize_ray(point,vec,c,0.1,sim);
+}
+
+/// Draws a ray directed from a contact point along the contact normal
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c,double point_radius, boost::shared_ptr<EventDrivenSimulator> sim ) {
 
   // random color for this contact visualization
   double r = c[0] * VIBRANCY;
   double g = c[1] * VIBRANCY;
   double b = c[2] * VIBRANCY;
-  osg::Vec4 color = osg::Vec4( r, g, b, 1.0 );
+  osg::Vec4 color = osg::Vec4( r, g, b, 1.0/point_radius );
 
-  const double point_radius = 0.25;
   const double point_scale = 0.01;
 
   // the osg node this event visualization will attach to

@@ -222,8 +222,8 @@ void init(void* separator,
   quad_ptr = boost::shared_ptr<Quadruped>(new Quadruped(abrobot));
 
 #ifdef SET_KINEMATICS
-  // This will force us to updtae the robot state instead of Moby
-//  abrobot->set_kinematic(true);
+  // This will force us to update the robot state instead of Moby
+  abrobot->set_kinematic(true);
 #endif
 
   sim->get_contact_parameters_callback_fn = get_contact_parameters;

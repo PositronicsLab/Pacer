@@ -407,7 +407,9 @@ void Quadruped::walk_toward(
         }
       }
 
-      Ravelin::Origin3d x0 = Ravelin::Origin3d(foot_origin[i]);
+      Ravelin::Vector3d com_robot = Ravelin::Pose3d::transform_point(base_frame,center_of_mass_x);
+      com_robot[2] = 0;//foot_origin[i][2];
+      Ravelin::Origin3d x0 = Ravelin::Origin3d(foot_origin[i] - com_robot);
 
       // Calculate foot-step info
       // Determine linear portion of step
@@ -494,8 +496,24 @@ void Quadruped::walk_toward(
 //        OUTLOG( foot_goal," foot_goal_new",logDEBUG);
 
         // all stance phase cases
-        control_points.push_back(Ravelin::Origin3d(x));
-        control_points.push_back(Ravelin::Origin3d(x) + foot_goal) ;
+//        double num_points = floor(foot_goal.norm()*100.0);
+//        if(num_points < 1.0) num_points = 1.0;
+        control_points.resize(3);
+        control_points[0] = Ravelin::Origin3d(x);
+        control_points[2] = Ravelin::Origin3d(x) + foot_goal;
+        control_points[1] = (control_points[2] + control_points[0])/2.0;
+        control_points[1].normalize();
+        control_points[1] *= (control_points[2].norm() + control_points[0].norm())/2.0;
+        if( (control_points[2] - control_points[1]).norm() < Moby::NEAR_ZERO)
+          control_points.pop_back();
+        for(int i=0;i<3;i++)
+          OUTLOG(control_points[i],"cp",logERROR);
+
+//        for(double pt=1.0;pt<=num_points;pt+=1.0){
+//          Ravelin::Origin3d segment = Ravelin::Origin3d(x) + foot_goal*pt/num_points;
+//          segment.normalize();
+//          control_points.push_back(segment * x0.norm()) ;
+//        }
       } else {
         OUT_LOG(logDEBUG) << "\tthrowing assertion (phase == 0) ...";
         assert(false);
@@ -578,19 +596,19 @@ void Quadruped::walk_toward(
       }
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
       Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+//      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
       visualize_ray(    p, p,   Ravelin::Vector3d(0,1,0), sim);
       visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
-      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
+//      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
     }
 
-    Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
-    for(int d=0;d<3;d++){
-      Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
-    }
-    Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-    Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-    Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+//    Ravelin::Vector3d x(base_frame),xd(base_frame),xdd(base_frame);
+//    for(int d=0;d<3;d++){
+//      Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+//    }
+//    Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
+//    Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+//    Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
 //    visualize_ray(    p, p,   Ravelin::Vector3d(0,1,0), sim);
 //    visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
 //    visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);

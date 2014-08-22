@@ -26,7 +26,7 @@ double
 
 // Assign Gait to the locomotion controller
 std::string
-       gait_type   = "trot"; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+       gait_type   = ""; //,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
 
 std::vector<double>
        duty_factor    = std::vector<double>(),
@@ -37,6 +37,7 @@ std::vector<double>
        base_start     = std::vector<double>(),
        torque_limits  = std::vector<double>(),
        joints_start   = std::vector<double>(),
+       other_gait     = std::vector<double>(),
        eefs_start     = std::vector<double>();
 
 std::vector<int>

@@ -184,11 +184,8 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 
 
 void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
-                              Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
+                              const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
   ////////////////////// IK CONTROL ////////////////////////
-  Ravelin::VectorNd q = q_des,
-                    qd = qd_des,
-                    qdd = qdd_des;
 
   for(int i=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];

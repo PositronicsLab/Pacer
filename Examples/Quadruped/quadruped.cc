@@ -124,7 +124,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 
-  q_des = q;
   Ravelin::SVector6d go_to(0,0,0,0,0,0,base_frame);
   Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
   std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS), foot_pos(NUM_EEFS), foot_acc(NUM_EEFS);
@@ -283,7 +282,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
       (q_des = q) += q_diff;
     }
   }
-  trajectory_ik(foot_pos,foot_vel, foot_acc,q_des,qd_des,qdd_des);
+
+  trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
@@ -609,6 +609,7 @@ void Quadruped::init(){
 
   CVarUtils::AttachCVar<std::vector<std::string> >( "qd.init.joint_names",&joint_names,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
   CVarUtils::AttachCVar<std::vector<double> >( "qd.init.joint_q",&joints_start,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
+  CVarUtils::AttachCVar<std::vector<int> >( "qd.init.passive_joints",&passive_joints,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
 
   CVarUtils::AttachCVar<std::vector<std::string> >( "qd.init.foot_names",&eef_names,"Cycle between (x,y,gamma) waypoints");
   CVarUtils::AttachCVar<std::vector<double> >( "qd.init.foot_x",&eefs_start,"Cycle between (x,y,gamma) waypoints");
@@ -693,7 +694,7 @@ void Quadruped::init(){
   // ================= INIT ROBOT ==========================
 
   eef_names_ = eef_names;
-
+  passive_joints_ = passive_joints;
   // set up initial stance if it exists
   NUM_JOINTS = joints_.size() - NUM_FIXED_JOINTS;
   NUM_LINKS = links_.size();

@@ -71,13 +71,13 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
-    if(J.rows() == J.columns()){
+//    if(J.rows() == J.columns()){
       LA_.solve_fast(workM_ = J,step);
-    } else //(J.rows() != J.columns())
-    {
-      LA_.pseudo_invert(workM_ = J);
-      workM_.mult(workv_ = step,step);
-    }
+//    } else //(J.rows() != J.columns())
+//    {
+//      LA_.pseudo_invert(workM_ = J);
+//      workM_.mult(workv_ = step,step);
+//    }
 
     Ravelin::VectorNd qstep = step;
     OUTLOG(qstep,"qstep",logDEBUG1);

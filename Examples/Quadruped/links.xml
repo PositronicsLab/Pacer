@@ -19,8 +19,8 @@
     <StokesDragForce id="drag" drag-b="0.1" drag-b-ang=".00" />
 
 <!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
-<!--<EventDrivenSimulator integrator-id="rk4" max-event-time="inf">-->
-<TimeSteppingSimulator integrator-id="rk4" max-event-time="inf">
+<EventDrivenSimulator integrator-id="rk4" max-event-time="inf">
+<!--<TimeSteppingSimulator integrator-id="rk4" max-event-time="inf">-->
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
@@ -31,8 +31,8 @@
     <DynamicBody dynamic-body-id="hurdle" />
     <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
     <ContactParameters object1-id="hurdle" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
-<!--  </EventDrivenSimulator>-->
-  </TimeSteppingSimulator>
+  </EventDrivenSimulator>
+<!--  </TimeSteppingSimulator>-->
 
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
@@ -186,13 +186,14 @@
   </RigidBody>
 
 
-  <Box id="smallwall" xlen="0.01" ylen="0.3" zlen="0.01" mass="0.2"/>
+  <Box id="bar" xlen="0.01" ylen="0.3" zlen="0.01" mass="0.2"/>
 
   <RigidBody id="hurdle" enabled="false"
-    position="0.13 0.0 0.05" visualization-id="smallwall" compliant="false">
-    <CollisionGeometry primitive-id="smallwall" />
-    <InertiaFromPrimitive primitive-id="smallwall" />
+    position="0.13 0.0 0.03" visualization-id="bar" compliant="false">
+    <CollisionGeometry primitive-id="bar" />
+    <InertiaFromPrimitive primitive-id="bar" />
   </RigidBody>
+
 
   </MOBY>
 </XML>

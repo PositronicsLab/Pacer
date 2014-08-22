@@ -263,11 +263,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
                     sim
                   );
 #endif
+    std::vector<double>& this_gait = (gait_type.empty())? other_gait : gait[gait_type];
 
-    OUTLOG(gait[gait_type],gait_type,logINFO);
+    OUTLOG(this_gait,gait_type + "_gait",logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
 
-    walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
@@ -586,67 +587,6 @@ void Quadruped::init(){
 
   // ================= INIT ROBOT ==========================
 
-#ifdef VISUALIZE_MOBY
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.known_leading_force",&known_leading_force,"Apply a constant [3 pt{base_frame}][3 linear] force to robot base, the robot can sense the applied force and will follow it");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.point",&goto_point,"Walk toward this point in environment [ (x,y) {environment_frame}]");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.patrol",&patrol_points,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
-
-  CVarUtils::AttachCVar<bool>( "qd.locomotion.active",&WALK,"Activate Walking?");
-  CVarUtils::AttachCVar<bool>( "qd.locomotion.track_footholds",&TRACK_FOOTHOLDS,"Locate and use footholds?");// EXPERIMENTAL
-  CVarUtils::AttachCVar<bool>( "qd.idyn",&CONTROL_IDYN,"Activate IDYN?");
-  CVarUtils::AttachCVar<bool>( "qd.widyn",&WORKSPACE_IDYN,"Activate WIDYN?");// EXPERIMENTAL
-  CVarUtils::AttachCVar<bool>( "qd.use_cfs",&USE_LAST_CFS,"Use last detected contact forces?");// EXPERIMENTAL
-  CVarUtils::AttachCVar<bool>( "qd.error-feedback.active",&ERROR_FEEDBACK,"Use error-feedback control?");
-  CVarUtils::AttachCVar<bool>( "qd.error-feedback.joint",&JOINT_FEEDBACK,"Apply error-feedback to the joints?");
-  CVarUtils::AttachCVar<bool>( "qd.error-feedback.accel",&FEEDBACK_ACCEL,"Apply error-feedback as accelerations?");
-  CVarUtils::AttachCVar<bool>( "qd.error-feedback.workspace",&WORKSPACE_FEEDBACK,"Use error-feedback in workspace frame?");
-  CVarUtils::AttachCVar<bool>( "qd.stabilization.viip",&TRUNK_STABILIZATION,"Balance Pitch (D) and Roll (PD) or robot base with compressive forces");
-  CVarUtils::AttachCVar<bool>( "qd.locomotion.holonomic",&HOLONOMIC,"Balance Pitch (D) and Roll (PD) or robot base with compressive forces");
-
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.base_x",&base_start,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
-
-  CVarUtils::AttachCVar<std::vector<std::string> >( "qd.init.joint_names",&joint_names,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.joint_q",&joints_start,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
-
-  CVarUtils::AttachCVar<std::vector<std::string> >( "qd.init.foot_names",&eef_names,"Cycle between (x,y,gamma) waypoints");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.foot_x",&eefs_start,"Cycle between (x,y,gamma) waypoints");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.torque_limits",&torque_limits,"Cycle between (x,y,gamma) waypoints");
-
-
-  // -- LOCOMOTION OPTIONS --
-  CVarUtils::AttachCVar<double>( "qd.locomotion.gait_time",&gait_time,"Gait Duration over one cycle.");
-  CVarUtils::AttachCVar<double>( "qd.locomotion.step_height",&step_height,"Height of a step");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.command",&goto_command,"Base command differential");
-
-  // Assign Gait to the locomotion controller
-  CVarUtils::AttachCVar<std::string>( "qd.locomotion.gait_type",&gait_type,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
-  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.duty_factor",&duty_factor,"duty_factor");
-  // -- IDYN OPTIONS --
-  CVarUtils::AttachCVar<double>( "qd.dt",&STEP_SIZE,"value for dt (also h) used in IDYN and other functions");
-
-  CVarUtils::AttachCVar<double>( "sim.mu_coulomb",&SIM_MU_COULOMB,"Coulomb Friction for all contact");
-  CVarUtils::AttachCVar<double>( "sim.mu_viscous",&SIM_MU_VISCOSE,"Viscous Friction for all contact");
-  CVarUtils::AttachCVar<double>( "sim.penalty_kv",&SIM_PENALTY_KV,"Spring term for compliant contact");
-  CVarUtils::AttachCVar<double>( "sim.penalty_kp",&SIM_PENALTY_KP,"Damper term for compliant contact");
-
-   tglc = new std::thread(init_glconsole);
-
-   sleep(2);
-   // ================= BUILD ROBOT ==========================
-
-#endif
-  // Set up joint references
-#ifdef FIXED_BASE
-  NSPATIAL = 0;
-  NEULER = 0;
-#else
-  NSPATIAL = 6;
-  NEULER = 7;
-#endif
-  compile();
-
   // ================= INIT DATA VECTORS =========================
   unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
   known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
@@ -684,6 +624,94 @@ void Quadruped::init(){
 //                                       ( 6)( 6)( 6)
 //                                       ( 6)( 6)( 6)
 //                                       ( 6)( 6)( 6).convert_to_container<std::vector<double> >();
+
+  /// Use this space to initialize some gaits
+  {
+    // Trotting gait 50/50 duty cycle
+    gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
+
+    // walk lf,rf,lh,rh
+    gait["walk"] = boost::assign::list_of(0.25)(0.75)(0.0)(0.5).convert_to_container<std::vector<double> >();
+
+    // pace
+    gait["pace"] = boost::assign::list_of(0.0)(0.5)(0.0)(0.5).convert_to_container<std::vector<double> >();
+
+    // bound
+    gait["bound"] = boost::assign::list_of(0.5)(0.5)(0.0)(0.0).convert_to_container<std::vector<double> >();
+
+    // transverse gallop
+    gait["tgallop"] = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
+
+    // Rotary gallop
+    gait["rgallop"] = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
+
+    other_gait = boost::assign::list_of(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  }
+
+  // ================= INIT VARIABLES ==========================
+
+#ifdef VISUALIZE_MOBY
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.known_leading_force",&known_leading_force,"Apply a constant [3 pt{base_frame}][3 linear] force to robot base, the robot can sense the applied force and will follow it");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.point",&goto_point,"Walk toward this point in environment [ (x,y) {environment_frame}]");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.patrol",&patrol_points,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
+
+  CVarUtils::AttachCVar<bool>( "qd.locomotion.active",&WALK,"Activate Walking?");
+  CVarUtils::AttachCVar<bool>( "qd.locomotion.track_footholds",&TRACK_FOOTHOLDS,"Locate and use footholds?");// EXPERIMENTAL
+  CVarUtils::AttachCVar<bool>( "qd.idyn",&CONTROL_IDYN,"Activate IDYN?");
+  CVarUtils::AttachCVar<bool>( "qd.widyn",&WORKSPACE_IDYN,"Activate WIDYN?");// EXPERIMENTAL
+  CVarUtils::AttachCVar<bool>( "qd.use_cfs",&USE_LAST_CFS,"Use last detected contact forces?");// EXPERIMENTAL
+  CVarUtils::AttachCVar<bool>( "qd.error-feedback.active",&ERROR_FEEDBACK,"Use error-feedback control?");
+  CVarUtils::AttachCVar<bool>( "qd.error-feedback.joint",&JOINT_FEEDBACK,"Apply error-feedback to the joints?");
+  CVarUtils::AttachCVar<bool>( "qd.error-feedback.accel",&FEEDBACK_ACCEL,"Apply error-feedback as accelerations?");
+  CVarUtils::AttachCVar<bool>( "qd.error-feedback.workspace",&WORKSPACE_FEEDBACK,"Use error-feedback in workspace frame?");
+  CVarUtils::AttachCVar<bool>( "qd.stabilization.viip",&TRUNK_STABILIZATION,"Balance Pitch (D) and Roll (PD) or robot base with compressive forces");
+  CVarUtils::AttachCVar<bool>( "qd.locomotion.holonomic",&HOLONOMIC,"Balance Pitch (D) and Roll (PD) or robot base with compressive forces");
+
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.base_x",&base_start,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
+
+  CVarUtils::AttachCVar<std::vector<std::string> >( "qd.init.joint_names",&joint_names,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.joint_q",&joints_start,"Cycle between (x,y,gamma) waypoints");// EXPERIMENTAL
+
+  CVarUtils::AttachCVar<std::vector<std::string> >( "qd.init.foot_names",&eef_names,"Cycle between (x,y,gamma) waypoints");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.foot_x",&eefs_start,"Cycle between (x,y,gamma) waypoints");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.init.torque_limits",&torque_limits,"Cycle between (x,y,gamma) waypoints");
+
+
+  // -- LOCOMOTION OPTIONS --
+  CVarUtils::AttachCVar<double>( "qd.locomotion.gait_time",&gait_time,"Gait Duration over one cycle.");
+  CVarUtils::AttachCVar<double>( "qd.locomotion.step_height",&step_height,"Height of a step");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.command",&goto_command,"Base command differential");
+
+  // Assign Gait to the locomotion controller
+  CVarUtils::AttachCVar<std::string>( "qd.locomotion.gait_type",&gait_type,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.duty_factor",&duty_factor,"duty_factor");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.gait",&other_gait,"gait if gait_type == 'other'");
+  // -- IDYN OPTIONS --
+  CVarUtils::AttachCVar<double>( "qd.dt",&STEP_SIZE,"value for dt (also h) used in IDYN and other functions");
+
+  CVarUtils::AttachCVar<double>( "sim.mu_coulomb",&SIM_MU_COULOMB,"Coulomb Friction for all contact");
+  CVarUtils::AttachCVar<double>( "sim.mu_viscous",&SIM_MU_VISCOSE,"Viscous Friction for all contact");
+  CVarUtils::AttachCVar<double>( "sim.penalty_kv",&SIM_PENALTY_KV,"Spring term for compliant contact");
+  CVarUtils::AttachCVar<double>( "sim.penalty_kp",&SIM_PENALTY_KP,"Damper term for compliant contact");
+
+   tglc = new std::thread(init_glconsole);
+
+   sleep(2);
+   // ================= BUILD ROBOT ==========================
+
+#endif
+  // Set up joint references
+#ifdef FIXED_BASE
+  NSPATIAL = 0;
+  NEULER = 0;
+#else
+  NSPATIAL = 6;
+  NEULER = 7;
+#endif
+  compile();
+
 
   // ================= LOAD SCRIPT DATA ==========================
 
@@ -783,25 +811,4 @@ void Quadruped::init(){
     abrobot_->update_link_poses();
   }
   update();
-
-  /// Use this space to initialize some gaits
-  {
-    // Trotting gait 50/50 duty cycle
-    gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
-
-    // walk lf,rf,lh,rh
-    gait["walk"] = boost::assign::list_of(0.25)(0.75)(0.0)(0.5).convert_to_container<std::vector<double> >();
-
-    // pace
-    gait["pace"] = boost::assign::list_of(0.0)(0.5)(0.0)(0.5).convert_to_container<std::vector<double> >();
-
-    // bound
-    gait["bound"] = boost::assign::list_of(0.5)(0.5)(0.0)(0.0).convert_to_container<std::vector<double> >();
-
-    // transverse gallop
-    gait["tgallop"] = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
-
-    // Rotary gallop
-    gait["rgallop"] = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
-  }
 }

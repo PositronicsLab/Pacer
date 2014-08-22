@@ -19,7 +19,8 @@
     <StokesDragForce id="drag" drag-b="0.1" drag-b-ang=".00" />
 
 <!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
-  <EventDrivenSimulator integrator-id="rk4" max-event-time="inf">
+<!--<EventDrivenSimulator integrator-id="rk4" max-event-time="inf">-->
+<TimeSteppingSimulator integrator-id="rk4" max-event-time="inf">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
@@ -30,7 +31,8 @@
     <DynamicBody dynamic-body-id="hurdle" />
     <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
     <ContactParameters object1-id="hurdle" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
-  </EventDrivenSimulator>
+<!--  </EventDrivenSimulator>-->
+  </TimeSteppingSimulator>
 
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
@@ -45,11 +47,7 @@
 <!--    <Box id="foot" xlen="0.01" ylen="0.03" zlen="0.04" mass="0.01"/>-->
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-<<<<<<< HEAD
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
-=======
-      fdyn-algorithm-frame="link" rotate="0.0 -0.0 0.0" translate="0,0,0.20" >
->>>>>>> hurdle is a static bar, shins have collision.  When hurdle is enabled Moby crashes.  When shin and feet come into (self collision) within Links robot Moby crashes.  When robot steps on Hurdle, large interpenetration occurs and moby crashes
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" compliant="false">
         <CollisionGeometry primitive-id="abdomen" />

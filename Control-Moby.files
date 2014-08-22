@@ -72,3 +72,13 @@ Examples/Exoskeleton/control_moby.cc
 Examples/Exoskeleton/exo.xml
 src/splines.cc
 ThirdParty/
+Examples/Quadruped/variables.h
+Examples/Quadruped/startup.script
+Examples/Quadruped/trot.script
+Examples/Quadruped/default.script
+Examples/Quadruped/idyn-c.script
+Examples/Quadruped/idyn-e.script
+Examples/Quadruped/initial.script
+Examples/Quadruped/pid.script
+Examples/Quadruped/GAZEBO/lynx/model.sdf
+Examples/Quadruped/GAZEBO/lynx/model.config

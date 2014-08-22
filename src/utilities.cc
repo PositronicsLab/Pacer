@@ -2,6 +2,24 @@
 #include <utilities.h>
 #include <pid.h>
 
+Ravelin::Vector3d& Utility::quat2TaitBryan(const Ravelin::Quatd& q_, Ravelin::Vector3d& rpy){
+
+  Ravelin::VectorNd q(4);
+  q[0] = q_.w;
+  q[1] = q_.x;
+  q[2] = q_.y;
+  q[3] = q_.z;
+
+  // Singularity Condition 2(q1q3 + q0q2) == +/- 1
+  assert(fabs(2*(q[1]*q[3] + q[0]*q[2])) < (1.0 - Moby::NEAR_ZERO) || fabs(2*(q[1]*q[3] + q[0]*q[2])) > (1.0 + Moby::NEAR_ZERO));
+
+  // (3-2-1) z-y-x Tait-Bryan rotation
+  rpy[0] = atan2((q[2]*q[3] + q[0]*q[1]),0.5-(q[1]*q[1] + q[2]*q[2]));
+  rpy[1] = -asin(-2*(q[1]*q[3] + q[0]*q[2]));
+  rpy[2] = atan2((q[1]*q[2] + q[0]*q[3]),0.5-(q[2]*q[2] + q[3]*q[3]));
+  return rpy;
+}
+
 
 Ravelin::Vector3d& Utility::R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
   if(R(0,0) == 0 || R(2,2) == 0)

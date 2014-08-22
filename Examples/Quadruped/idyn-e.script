@@ -1,0 +1,8 @@
+qd.idyn = 1
+qd.widyn = 0
+qd.use_cfs = 0
+qd.dt = 0.005
+qd.error-feedback.active = 1
+qd.error-feedback.joint = 1
+qd.error-feedback.workspace = 0
+qd.error-feedback.accel = 1

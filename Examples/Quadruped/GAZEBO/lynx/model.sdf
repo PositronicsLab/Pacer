@@ -1,9 +1,13 @@
+<!-- This work is licensed under a Creative Commons Attribution 3.0 License. -->
 <?xml version='1.0'?>
 <sdf version="1.5">
+  <world>
   <model name="lynx">
     <static>0</static>
     <pose>0 0 0.3 0 0 0</pose>
 
+    <!-- This is a 30cm tall stand for the lynx model, equating to a fixed base -->
+    <!-- REMOVE THIS LINE FOR FIXED BASE
     <joint name='/lynx/STAND' type='revolute'>
       <parent>world</parent>
       <child>/lynx/ABDOMEN</child>
@@ -15,7 +19,7 @@
         <xyz>0 0 1</xyz>
       </axis>
     </joint>
-
+    REVOME LINE FOR FIXED BASE -->
     <link name="/lynx/ABDOMEN">
       <pose>-0.037175 0 0 0 0 0</pose>
       <inertial>
@@ -53,6 +57,7 @@
       <self_collide>0</self_collide>
     </link>
 
+    <!-- to give the robot an articulated spine, increase limits -->
     <joint name="/lynx/BODY_JOINT" type="revolute">
       <parent>/lynx/ABDOMEN</parent>
       <child>/lynx/THORAX</child>
@@ -835,9 +840,9 @@
       </axis>
     </joint>
 
-    </link>
     <plugin name='ros_control' filename='libLINKSgazebo.so'>
       <namespace>/lynx</namespace>
     </plugin>
   </model>
+  </world>
 </sdf>

@@ -50,8 +50,8 @@ Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::Origin3d& x,const EndEffe
   return gk;
 }
 
-/// Resolved Rate Motion Control
-void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
+/// Resolved Motion Rate Control
+void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
   Ravelin::MatrixNd J;
   Ravelin::VectorNd x(foot.chain.size());
   Ravelin::Vector3d step;
@@ -71,7 +71,14 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
-    LA_.solve_fast(J,step);
+    if(J.rows() == J.columns()){
+      LA_.solve_fast(workM_ = J,step);
+    } else //(J.rows() != J.columns())
+    {
+      LA_.pseudo_invert(workM_ = J);
+      workM_.mult(workv_ = step,step);
+    }
+
     Ravelin::VectorNd qstep = step;
     OUTLOG(qstep,"qstep",logDEBUG1);
 
@@ -121,12 +128,18 @@ void Robot::RRMC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
 :%s/y/X[1]/g
 :%s/z/X[2]/g
 */
-void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
+
+/// Calculate contact-frame jacobians,
+/* oriented to the contact normal and 2 orthogonal directions
+ * N = [n1 n2 .. nN]
+ * D = [S T -S -T] : S = [s1 s2 .. sN]
+ * R = [N D];
+ */
+void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
 
   N.set_zero(NDOFS,NC);
-  ST.set_zero(NDOFS,NC*2);
   D.set_zero(NDOFS,NC*NK);
   R.set_zero(NDOFS,NC*5);
   if(NC==0) return;
@@ -157,15 +170,12 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& ST,Ra
 
     // 1st tangent
     J.transpose_mult(tan1,workv_);
-    ST.set_column(ii,workv_);
-
     D.set_column(ii,workv_);
     workv_.negate();
     D.set_column(NC*2+ii,workv_);
 
     // 2nd tangent
     J.transpose_mult(tan2,workv_);
-    ST.set_column(NC+ii,workv_);
     D.set_column(NC+ii,workv_);
     workv_.negate();
     D.set_column(NC*3+ii,workv_);
@@ -198,15 +208,21 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
   }
 }
 
-void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
+/// Claculate Jacobians oriented to operational space at each foot
+/* Goes from Minimal coords [v,q]' -> workspace coords [x1,x2,..,xN]'
+ *
+ */
+void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_ptr<Ravelin::Pose3d> workspace){
   Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
+//  Rw.set_zero(NUM_EEFS*3, NUM_JOINTS + 6);
   Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(workspace));
 
   // [x y z alpha beta gamma]_ environment_frame
-  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
-  Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,base_stability_offset);
-  for(int i=0,ii=0;i<NUM_EEFS;i++){
+//  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
+//  Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,base_stability_offset);
+  Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,Ravelin::MatrixNd::identity(6));
+  for(int i=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
 
 //    [j;b] -> [f;b]
@@ -215,7 +231,7 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
     // swing foot jacobian
     // [x y z]_ base_frame
     // at center of foot
-    event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+    event_frame->x = Ravelin::Pose3d::transform_point(workspace,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
 
     dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
     workM_.get_sub_mat(0,3,0,NDOFS,J);
@@ -224,6 +240,10 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
     Rw.set_row(3*i+2,J.row(2));
 
   }
+
+//  Rw.set_sub_mat(0,NUM_JOINTS,Rw.get_sub_mat(0,NUM_EEFS*3,NUM_JOINTS,NUM_JOINTS+6,workM_).negate());
+  Rw.set_sub_mat(0,NUM_JOINTS,Ravelin::MatrixNd::zero(NUM_EEFS*3,6));
+
 }
 
 /*

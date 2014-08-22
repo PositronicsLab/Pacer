@@ -1,0 +1,5 @@
+qd.idyn = 0
+qd.error-feedback.active = 1
+qd.error-feedback.joint = 1
+qd.error-feedback.workspace = 1
+qd.error-feedback.accel = 0

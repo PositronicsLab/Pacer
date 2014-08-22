@@ -6,7 +6,7 @@ extern boost::shared_ptr<Robot> robot_ptr;
 extern std::vector<std::string> joint_names_;
 extern bool new_sim_step;
 
-void post_event_callback_fn(const std::vector<Moby::Event>& e,
+void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
   unsigned NC = 0;
@@ -22,12 +22,15 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
 #ifndef FAKE_CONTACTS
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].event_type == Moby::Event::eContact)
+    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
       bool MIRROR_FLAG = false;
 
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
+
+      // Quit if the body hits the ground, this is a failure condition
+      assert(!( (sb2->id.compare("ABDOMEN") == 0) || (sb1->id.compare("ABDOMEN") == 0) ));
 
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
@@ -41,6 +44,7 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
           std::swap(sb1,sb2);
         }
       }
+
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
@@ -73,11 +77,11 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
         eefs_[index].tan1 = e[i].contact_tan1;
         eefs_[index].tan2 = e[i].contact_tan2;
       }
-      eefs_[index].event = boost::shared_ptr<const Moby::Event>(new Moby::Event(e[i]));
+      eefs_[index].event = boost::shared_ptr<const Moby::UnilateralConstraint>(new Moby::UnilateralConstraint(e[i]));
     }
   }
 #else
-  // PROCESS CONTACTS
+  // PROCESS FAKE CONTACTS
   for(unsigned index=0;index<4;index++){
     Ravelin::Pose3d foot_pose = *eefs_[index].link->get_pose();
     foot_pose.update_relative_pose(Moby::GLOBAL);
@@ -95,6 +99,33 @@ void post_event_callback_fn(const std::vector<Moby::Event>& e,
       eefs_[index].tan2 = Ravelin::Vector3d(0,1,0);;
     }
 #endif
+  std::cout << "cfs_moby = [";
+  for(int i=0, ii = 0;i<eefs_.size();i++){
+    if(eefs_[i].active){
+//      assert(eefs_[i].contact_impulses.size() == 1);
+      std::cout << " " << eefs_[i].contact_impulses[0];
+      ii++;
+    } else {
+      std::cout << " " << 0;
+    }
+  }
+  std::cout << "]';" << std::endl;
+}
+extern double
+              SIM_MU_COULOMB,
+              SIM_MU_VISCOSE,
+              SIM_PENALTY_KV,
+              SIM_PENALTY_KP;
+
+boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
+  boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
+
+  if(geom1->get_single_body())
+  e->penalty_Kp = SIM_PENALTY_KP;
+  e->penalty_Kv = SIM_PENALTY_KV;
+  e->mu_coulomb = SIM_MU_COULOMB;
+  e->mu_viscous = SIM_MU_VISCOSE;
+  return e;
 }
 
 boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2){
@@ -108,18 +139,9 @@ void post_step_callback_fn(Moby::Simulator* s){
 }
 
 /// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(std::vector<Moby::Event>& e, boost::shared_ptr<void> empty){
-  for(int i=0;i<e.size();i++){
-    // Rigid
-    #ifdef CONTACT_CALLBACK
-    e[i].contact_depth_penalty = 1e4;
-    e[i].contact_velocity_penalty = 1e2;
-    #endif
-
-    // Soft
-//    e[i].contact_depth_penalty = 5e3;
-//    e[i].contact_velocity_penalty = 1e2;
-
+void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
+  for(int i=0;i< e.size();i++){
+    OUT_LOG(logDEBUG1) << e[i] << std::endl;
   }
 }
 

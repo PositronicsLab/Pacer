@@ -12,6 +12,18 @@ void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
 #endif
 }
 
+void OUTLOG(const Ravelin::SharedConstMatrixNd& M, std::string name,TLogLevel LL){
+#ifndef NDEBUG
+  std::ostringstream str;
+    for(int i=0;i<M.rows();i++){
+        for(int j=0;j<M.columns();j++)
+            str << std::setprecision(9) << M(i,j) << " ";
+        if(i+1 != M.rows()) str << ";" << std::endl;
+    }
+    OUT_LOG(LL) << name << " = [ %"  << M.rows() << "x" << M.columns() << "\n" << str.str() << "];";
+#endif
+}
+
 void OUTLOG(const Ravelin::Matrix3d& M, std::string name,TLogLevel LL){
 #ifndef NDEBUG
   std::ostringstream str;
@@ -43,7 +55,7 @@ void OUTLOG(const Ravelin::VectorNd& z, std::string name,TLogLevel LL){
     std::ostringstream str;
     for(int i=0;i<z.rows();i++)
         str << std::setprecision(9) << z[i] << " ";
-//    OUT_LOG(LL) << name << " = [ %"  << z.rows() << "\n" << str.str() << "]';" << std::endl;
+//    OUT_LOG(LL) << name << " %{"  << z.size() << "%} = [" << str.str() << "]';" << std::endl;
     OUT_LOG(LL) << name << " = [" << str.str() << "]';";
 #endif
 }
@@ -53,8 +65,8 @@ void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL){
     std::ostringstream str;
     for(int i=0;i<z.size();i++)
         str << std::setprecision(9) << z[i] << " ";
-//    OUT_LOG(LL) << name << " = [ %"  << z.size() << "\n" << str.str() << "]';" << std::endl;
-    OUT_LOG(LL) << name << " = [" << str.str() << "]';";
+    OUT_LOG(LL) << name << " %{"  << z.size() << "%} = [" << str.str() << "]';" << std::endl;
+//    OUT_LOG(LL) << name << " = [" << str.str() << "]';";
 #endif
 }
 
@@ -63,8 +75,8 @@ void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL){
     std::ostringstream str;
     for(int i=0;i<z.rows();i++)
         str << std::setprecision(9) << z[i] << " ";
-//    OUT_LOG(LL) << name << " = [ %"  << z.rows() << "\n" << str.str() << "]';" << std::endl;
-    OUT_LOG(LL) << name << " = [" << str.str() << "]';";
+    OUT_LOG(LL) << name << " %{"  << z.size() << "%} = [" << str.str() << "]';" << std::endl;
+//    OUT_LOG(LL) << name << " = [" << str.str() << "]';";
 #endif
 }
 
@@ -109,5 +121,11 @@ void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL){
     OUT_LOG(LL) << std::setprecision(9)
                 << name << " = <"
                 << z.x << " " << z.y << " " << z.z << "> (" << z.angle << ");";
+#endif
+}
+
+void OUTLOG(double x, std::string name,TLogLevel LL){
+#ifndef NDEBUG
+    OUT_LOG(LL) << name << " = " << x << ";" << std::endl;
 #endif
 }

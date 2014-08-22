@@ -31,7 +31,8 @@
     <DynamicBody dynamic-body-id="hurdle" />
     <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
     <ContactParameters object1-id="hurdle" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>
-  </EventDrivenSimulator>
+<!--  </EventDrivenSimulator>-->
+  </TimeSteppingSimulator>
 
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
@@ -46,7 +47,7 @@
     <Box id="foot" xlen="0.02" ylen="0.02" zlen="0.02" mass="0.01"/>
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
-      fdyn-algorithm-frame="link" rotate="0.0 -0.0 0.0" translate="0,0,0.20" >
+      fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
       <!-- the body -->
       <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" compliant="false">
         <CollisionGeometry primitive-id="abdomen" />

@@ -17,9 +17,15 @@ extern bool new_sim_step;
 // ======================= USER DEFINED PARAMETERS ============================
 
 #ifdef VISUALIZE_MOBY
+#ifdef APPLE
 # include <OpenGL/gl.h>
 # include <OpenGL/glu.h>
 # include <GLUT/glut.h>
+#else
+# include <GL/gl.h>
+# include <GL/glu.h>
+# include <GL/glut.h>
+#endif
 GLConsole theConsole;
 #endif
 
@@ -656,7 +662,7 @@ void Quadruped::init(){
   duty_factor = boost::assign::list_of(0.75)(0.75)(0.75)(0.75).convert_to_container<std::vector<double> >();
   goto_command = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
 
-//  base_start = boost::assign::list_of(0.0)(0.0)(0.19)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  base_start = boost::assign::list_of(0.0)(0.0)(0.19)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
 
 //  eef_names = boost::assign::list_of("LF_FOOT")
 //                                    ("RF_FOOT")
@@ -688,8 +694,10 @@ void Quadruped::init(){
 
   // ================= LOAD SCRIPT DATA ==========================
 
-  theConsole.PrintAllCVars();
+  #ifdef VISUALIZE_MOBY
+//  theConsole.PrintAllCVars();
   theConsole.ScriptLoad("startup.script");
+  #endif
 
   // ================= INIT ROBOT ==========================
 

@@ -100,6 +100,7 @@ class Robot {
     // End Effector data
     std::vector<std::string>          eef_names_;
     std::vector<EndEffector>          eefs_;
+    std::vector<int>                  passive_joints_;
 
     unsigned                          NUM_FIXED_JOINTS;
     unsigned                          NUM_EEFS;

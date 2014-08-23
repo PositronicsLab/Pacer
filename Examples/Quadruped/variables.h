@@ -39,6 +39,10 @@ std::vector<double>
        joints_start   = std::vector<double>(),
        eefs_start     = std::vector<double>();
 
+std::vector<int>
+      passive_joints = std::vector<int>();
+
+
 std::vector<std::string>
         joint_names = std::vector<std::string>(),
         eef_names = std::vector<std::string>();

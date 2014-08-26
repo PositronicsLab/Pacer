@@ -134,12 +134,6 @@ void Robot::update(){
     center_of_contact.normal = Ravelin::Vector3d(0,0,1,environment_frame);
     center_of_contact.active = false;
   }
-
-  center_of_feet_x.set_zero();
-  center_of_feet_x.pose = environment_frame;
-  for(int i=0;i<NUM_EEFS;i++)
-     center_of_feet_x += Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()))/NUM_EEFS;
-
 #ifdef VISUALIZE_MOBY
   draw_pose(*base_frame,sim,0.8);
   draw_pose(*base_horizontal_frame,sim,1.5);

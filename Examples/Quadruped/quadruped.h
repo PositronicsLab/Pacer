@@ -18,11 +18,25 @@ class Quadruped : public Robot{
                                Ravelin::VectorNd& u);
 
     void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt);
-    void cpg_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt);
+    bool gait_phase(double touchdown,double duty_factor,double gait_progress);
+    double gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase);
+    void cpg_trot(
+        const Ravelin::SVector6d& command,
+        const std::vector<double>& touchdown,
+        const std::vector<double>& duty_factor,
+        double gait_duration,
+        double step_height,
+        // MODEL
+        const std::vector<Ravelin::Vector3d>& foot_origin,
+        double t,
+        // OUT
+        std::vector<Ravelin::Vector3d>& foot_pos,
+        std::vector<Ravelin::Vector3d>& foot_vel,
+        std::vector<Ravelin::Vector3d>& foot_acc);
 
     std::vector<Ravelin::Vector3d>& foot_oscilator(
       const std::vector<Ravelin::Vector3d>& x0,  const std::vector<Ravelin::Vector3d>& x, const Ravelin::MatrixNd& C,
-      double Ls,const Ravelin::VectorNd& Hs,double Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd);
+      double Ls,const Ravelin::VectorNd& Hs,    const std::vector<double>& Df,double Vf,double bp,std::vector<Ravelin::Vector3d>& xd);
 
     void init();
 
@@ -39,7 +53,7 @@ class Quadruped : public Robot{
 
     /// Walks while trying to match COM velocity "command" in base_frame
      void walk_toward(const Ravelin::SVector6d& command,const std::vector<double>& touchdown,const std::vector<Ravelin::Vector3d>& footholds,
-                                const std::vector<double> duty_factor, double gait_duration, double step_height,
+                                const std::vector<double>& duty_factor, double gait_duration, double step_height,
                                 const std::vector<Ravelin::Vector3d>& foot_origin, double t, const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,const Ravelin::VectorNd& qdd,
                                 std::vector<Ravelin::Vector3d>& foot_pos, std::vector<Ravelin::Vector3d>& foot_vel, std::vector<Ravelin::Vector3d>& foot_acc);
 

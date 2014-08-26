@@ -153,8 +153,18 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     // Foot Locations
     std::vector<Ravelin::Vector3d> foot_origin;
-    for(unsigned i=0;i< NUM_EEFS;i++)
+    for(unsigned i=0;i< NUM_EEFS;i++){
       foot_origin.push_back(eefs_[i].origin);
+      foot_origin[i].pose = base_frame;
+#ifdef VISUALIZE_MOBY
+      visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+                      Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+                      Ravelin::Vector3d(1,0,0),
+                      0.1,
+                      sim
+                    );
+#endif
+    }
 
     for(int i=0;i<6;i++)
       go_to[i] = goto_command[i];
@@ -262,12 +272,37 @@ Ravelin::VectorNd& Quadruped::control(double t,
                     sim
                   );
 #endif
+
     std::vector<double>& this_gait = (gait_type.empty())? other_gait : gait[gait_type];
 
     OUTLOG(this_gait,gait_type + "_gait",logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
 
+    center_of_feet_x.set_zero();
+    center_of_feet_x.pose = environment_frame;
+    int num_stance_feet = 0;
+    for(int i=0;i<NUM_EEFS;i++){
+      double gait_progress = t/gait_time;
+      gait_progress = gait_progress - (double) ((int) gait_progress);
+      if(gait_phase(this_gait[i],duty_factor[i],gait_progress)){
+        num_stance_feet += 1;
+        center_of_feet_x += Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+      }
+    }
+    center_of_feet_x /= (double)num_stance_feet;
+
+#ifdef VISUALIZE_MOBY
+    visualize_ray(  center_of_feet_x,
+                    center_of_feet_x,
+                    Ravelin::Vector3d(1,0.5,0),
+                    0.1,
+                    sim
+                  );
+#endif
+
+
     walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+//    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
@@ -326,7 +361,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
         // P gains
         Kp.set_zero(6);
         Kp[3] = 5e4;
-        Kp[4] = 1e3;
+        Kp[4] = 5e4;
       }
       contact_jacobian_stabilizer(R,Kp,Kv,pb_des,vb_des,qdd_des);
     }else{
@@ -334,12 +369,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
       if(Kv.rows() == 0){
         // D gains
         Kv.set_zero(6);
-        Kv[3] = 3e0;
-        Kv[4] = 3e0;
+        Kv[3] = 3e1;
+        Kv[4] = 3e1;
         // P gains
         Kp.set_zero(6);
-        Kp[3] = 1e3;
-        Kp[4] = 1e1;
+        Kp[3] = 5e3;
+        Kp[4] = 5e3;
       }
       contact_jacobian_stabilizer(R,Kp,Kv,pb_des,vb_des,ufb);
     }
@@ -704,19 +739,22 @@ void Quadruped::init(){
 
 #endif
   // Set up joint references
-#ifdef FIXED_BASE
-  NSPATIAL = 0;
-  NEULER = 0;
-#else
-  NSPATIAL = 6;
-  NEULER = 7;
-#endif
-  compile();
+
+
+//   if(q_start.rows() > NUM_JOINTS){
+//     NSPATIAL = 0;
+//     NEULER = 0;
+//   }else{
+     NSPATIAL = 6;
+     NEULER = 7;
+//   }
+
+compile();
 
 
   // ================= LOAD SCRIPT DATA ==========================
 
-  theConsole.PrintAllCVars();
+//  theConsole.PrintAllCVars();
   theConsole.ScriptLoad("startup.script");
 
   // ================= INIT ROBOT ==========================
@@ -727,6 +765,9 @@ void Quadruped::init(){
   NUM_JOINTS = joints_.size() - NUM_FIXED_JOINTS;
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
+
+  Ravelin::VectorNd q_start;
+
 
   NK = 4;
 
@@ -757,7 +798,6 @@ void Quadruped::init(){
   }
 
   // Set Initial State
-  Ravelin::VectorNd q_start;
 
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
 

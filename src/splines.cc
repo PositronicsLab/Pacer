@@ -56,6 +56,31 @@ void Utility::bezierCurve(const std::vector<Ravelin::Vector3d>& control_points, 
   }
 }
 
+bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
+                       double& X, double& Xd, double& Xdd){
+  // Find Spline in which to evaluate t
+  int j=0,k=0;
+  while(t >= t_limits[j][k+1]){
+    k++;
+    if(k == t_limits[j].rows()-1){
+      j++;
+      k=0;
+      if(j == t_limits.size())
+        // t is not valid in any of the spline intervals
+        return false;
+    }
+  }
+  // Spline always evaluates from t[0] = 0 in interval
+  // offset t to start of interval to find t in spline
+  t -= t_limits[j][0];
+
+  X    = t*t*t*coefs[j][k*4] + t*t*coefs[j][k*4+1] + t*coefs[j][k*4+2] + coefs[j][k*4+3];
+  Xd   = 3*t*t*coefs[j][k*4] + 2*t*coefs[j][k*4+1] +   coefs[j][k*4+2];
+  Xdd  =   6*t*coefs[j][k*4] +   2*coefs[j][k*4+1] ;
+
+  return true;
+}
+
 
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T_,const Ravelin::VectorNd& X,
                                            const Ravelin::Vector2d& Xd, Ravelin::VectorNd& B){
@@ -210,31 +235,6 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T_,const Ravelin:
   workv_.get_sub_vec(4,workv_.size()-4,B);
 }
 
-bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
-                       double& X, double& Xd, double& Xdd){
-  // Find Spline in which to evaluate t
-  int j=0,k=0;
-  while(t >= t_limits[j][k+1]){
-    k++;
-    if(k == t_limits[j].rows()-1){
-      j++;
-      k=0;
-      if(j == t_limits.size())
-        // t is not valid in any of the spline intervals
-        return false;
-    }
-  }
-  // Spline always evaluates from t[0] = 0 in interval
-  // offset t to start of interval to find t in spline
-  t -= t_limits[j][0];
-
-  X    = t*t*t*coefs[j][k*4] + t*t*coefs[j][k*4+1] + t*coefs[j][k*4+2] + coefs[j][k*4+3];
-  Xd   = 3*t*t*coefs[j][k*4] + 2*t*coefs[j][k*4+1] +   coefs[j][k*4+2];
-  Xdd  =   6*t*coefs[j][k*4] +   2*coefs[j][k*4+1] ;
-
-  return true;
-}
-
 bool eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,double t,
                        double& X, double& Xd, double& Xdd){
  int k=0;
@@ -282,6 +282,7 @@ int test_spline(){
   double pos,vel,acc;
   for(double t=0;t<2;t += 0.01){
     eval_cubic_spline(coefs,t_limits,t,pos,vel,acc);
+    printf("%f, %f, %f\n",pos,vel,acc);
     // now pos,vel,acc are your desired velocities on the trajectory at time t.
     // You may track these using a PD controller on pos & vel
     // or an inverse dynamics controller on acc

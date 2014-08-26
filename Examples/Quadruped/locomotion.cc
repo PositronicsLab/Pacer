@@ -220,7 +220,7 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
   }
 }
 
-bool gait_phase(double touchdown,double duty_factor,double gait_progress){
+bool Quadruped::gait_phase(double touchdown,double duty_factor,double gait_progress){
   double liftoff = touchdown + duty_factor,left_in_phase = 0;
   liftoff = liftoff - (double) ((int) liftoff);
 
@@ -242,7 +242,7 @@ bool gait_phase(double touchdown,double duty_factor,double gait_progress){
 
 }
 
-double gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
+double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
   double liftoff = touchdown + duty_factor,left_in_phase = 0;
   liftoff = liftoff - (double) ((int) liftoff);
 
@@ -291,7 +291,7 @@ void Quadruped::walk_toward(
     const Ravelin::SVector6d& command,
     const std::vector<double>& touchdown,
     const std::vector<Ravelin::Vector3d>& footholds,
-    const std::vector<double> duty_factor,
+    const std::vector<double>& duty_factor,
     double gait_duration,
     double step_height,
     // MODEL
@@ -567,7 +567,7 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
-  if(false){
+  if(true){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);

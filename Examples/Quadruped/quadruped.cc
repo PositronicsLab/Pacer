@@ -762,17 +762,44 @@ void Quadruped::init(){
   #endif
 
   // ================= INIT ROBOT ==========================
-  compile();
 
   eef_names_ = eef_names;
   passive_joints_ = passive_joints;
+  
+  compile();
+  
+  /// SET UP END EFFECTORS
+  if(!eefs_start.empty())
+    for(int i=0;i<eef_names_.size();i++)
+      eef_origins_[eef_names_[i]] = Ravelin::Vector3d( eefs_start[i*3], eefs_start[i*3+1], eefs_start[i*3+2],base_link_frame);
+
+  // Initialize Foot Structures
+  OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
+  for(unsigned j=0;j<eef_names_.size();j++){
+    for(unsigned i=0;i<links_.size();i++){
+      if(eef_names_[j].compare(links_[i]->id) == 0){
+        OUT_LOG(logINFO)<< eef_names_[j] << " FOUND!";
+        if(eefs_start.empty())
+          eef_origins_[links_[i]->id] = Ravelin::Pose3d::transform_point(base_link_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_pose()));
+        OUTLOG(eef_origins_[links_[i]->id],"origin",logINFO);
+        eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id],joint_names_));
+        break;
+      }
+    }
+  }
+
+  NUM_EEFS = eefs_.size();
+
+  OUT_LOG(logINFO)<< NUM_EEFS << " end effectors:" ;
+  for(unsigned j=0;j<NUM_EEFS;j++){
+    OUT_LOG(logINFO)<< eefs_[j].id ;
+  }
   // set up initial stance if it exists
   NUM_JOINTS = joints_.size() - NUM_FIXED_JOINTS;
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
 
   Ravelin::VectorNd q_start;
-
 
   NK = 4;
 
@@ -818,32 +845,6 @@ void Quadruped::init(){
   abrobot_->update_link_velocities();
   update();
 
-  /// SET UP END EFFECTORS
-  if(!eefs_start.empty())
-    for(int i=0;i<eef_names_.size();i++)
-      eef_origins_[eef_names_[i]] = Ravelin::Vector3d( eefs_start[i*3], eefs_start[i*3+1], eefs_start[i*3+2],base_link_frame);
-
-  // Initialize Foot Structures
-  OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
-  for(unsigned j=0;j<eef_names_.size();j++){
-    for(unsigned i=0;i<links_.size();i++){
-      if(eef_names_[j].compare(links_[i]->id) == 0){
-        OUT_LOG(logINFO)<< eef_names_[j] << " FOUND!";
-        if(eefs_start.empty())
-          eef_origins_[links_[i]->id] = Ravelin::Pose3d::transform_point(base_link_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_pose()));
-        OUTLOG(eef_origins_[links_[i]->id],"origin",logINFO);
-        eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id],joint_names_));
-        break;
-      }
-    }
-  }
-
-  NUM_EEFS = eefs_.size();
-
-  OUT_LOG(logINFO)<< NUM_EEFS << " end effectors:" ;
-  for(unsigned j=0;j<NUM_EEFS;j++){
-    OUT_LOG(logINFO)<< eefs_[j].id ;
-  }
 
   if(!eefs_start.empty()){
     assert(eefs_start.size() == eef_names_.size()*3);

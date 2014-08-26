@@ -831,7 +831,7 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 //      Solves the linear program:  min c'x
 //                     subject to:  Ax = b
 //                                  Mx >= q
-    if(!Opt::LP::lp_simplex(params,x1,LP_RESULT_FLAG)){
+    if(!/*Opt::LP::lp_simplex(params,x1,LP_RESULT_FLAG)*/ true){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn LP! : " << LP_RESULT_FLAG ;
       x = tau;
       return false;

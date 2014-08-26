@@ -159,8 +159,18 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     // Foot Locations
     std::vector<Ravelin::Vector3d> foot_origin;
-    for(unsigned i=0;i< NUM_EEFS;i++)
+    for(unsigned i=0;i< NUM_EEFS;i++){
       foot_origin.push_back(eefs_[i].origin);
+      foot_origin[i].pose = base_frame;
+#ifdef VISUALIZE_MOBY
+      visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+                      Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+                      Ravelin::Vector3d(1,0,0),
+                      0.1,
+                      sim
+                    );
+#endif
+    }
 
     for(int i=0;i<6;i++)
       go_to[i] = goto_command[i];
@@ -269,10 +279,36 @@ Ravelin::VectorNd& Quadruped::control(double t,
                   );
 #endif
 
-    OUTLOG(gait[gait_type],gait_type,logINFO);
+    std::vector<double>& this_gait = (gait_type.empty())? other_gait : gait[gait_type];
+
+    OUTLOG(this_gait,gait_type + "_gait",logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
 
-    walk_toward(go_to,gait[gait_type],footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    center_of_feet_x.set_zero();
+    center_of_feet_x.pose = environment_frame;
+    int num_stance_feet = 0;
+    for(int i=0;i<NUM_EEFS;i++){
+      double gait_progress = t/gait_time;
+      gait_progress = gait_progress - (double) ((int) gait_progress);
+      if(gait_phase(this_gait[i],duty_factor[i],gait_progress)){
+        num_stance_feet += 1;
+        center_of_feet_x += Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+      }
+    }
+    center_of_feet_x /= (double)num_stance_feet;
+
+#ifdef VISUALIZE_MOBY
+    visualize_ray(  center_of_feet_x,
+                    center_of_feet_x,
+                    Ravelin::Vector3d(1,0.5,0),
+                    0.1,
+                    sim
+                  );
+#endif
+
+
+    walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+//    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
   }
   else {
     for(int i=0;i<NUM_EEFS;i++){
@@ -331,7 +367,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
         // P gains
         Kp.set_zero(6);
         Kp[3] = 5e4;
-        Kp[4] = 1e3;
+        Kp[4] = 5e4;
       }
       contact_jacobian_stabilizer(R,Kp,Kv,pb_des,vb_des,qdd_des);
     }else{
@@ -339,12 +375,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
       if(Kv.rows() == 0){
         // D gains
         Kv.set_zero(6);
-        Kv[3] = 3e0;
-        Kv[4] = 3e0;
+        Kv[3] = 3e1;
+        Kv[4] = 3e1;
         // P gains
         Kp.set_zero(6);
-        Kp[3] = 1e3;
-        Kp[4] = 1e1;
+        Kp[3] = 5e3;
+        Kp[4] = 5e3;
       }
       contact_jacobian_stabilizer(R,Kp,Kv,pb_des,vb_des,ufb);
     }
@@ -592,6 +628,69 @@ void Quadruped::init(){
 
   // ================= INIT ROBOT ==========================
 
+  // ================= INIT DATA VECTORS =========================
+  unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+//  goto_point = boost::assign::list_of(10)(0).convert_to_container<std::vector<double> >();
+  duty_factor = boost::assign::list_of(0.75)(0.75)(0.75)(0.75).convert_to_container<std::vector<double> >();
+  goto_command = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+
+//  base_start = boost::assign::list_of(0.0)(0.0)(0.19)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+
+//  eef_names = boost::assign::list_of("LF_FOOT")
+//                                    ("RF_FOOT")
+//                                    ("LH_FOOT")
+//                                    ("RH_FOOT").convert_to_container<std::vector<std::string> >();
+
+//  eefs_start = boost::assign::list_of( 0.13)( 0.096278)(-0.16)
+//                                     ( 0.13)(-0.096278)(-0.16)
+//                                     (-0.09)( 0.096278)(-0.16)
+//                                     (-0.09)(-0.096278)(-0.16).convert_to_container<std::vector<double> >();
+
+//  joint_names = boost::assign::list_of/*("BODY_JOINT")*/
+//                                      ("LF_HIP_AA")("LF_HIP_FE")("LF_LEG_FE")
+//                                      ("RF_HIP_AA")("RF_HIP_FE")("RF_LEG_FE")
+//                                      ("LH_HIP_AA")("LH_HIP_FE")("LH_LEG_FE")
+//                                      ("RH_HIP_AA")("RH_HIP_FE")("RH_LEG_FE").convert_to_container<std::vector<std::string> >();
+
+//  joints_start = boost::assign::list_of/*(0.0)*/
+//                                       ( M_PI_8)( M_PI_4)( M_PI_2)
+//                                       (-M_PI_8)(-M_PI_4)(-M_PI_2)
+//                                       (-M_PI_8)(-M_PI_4)(-M_PI_2)
+//                                       ( M_PI_8)( M_PI_4)( M_PI_2).convert_to_container<std::vector<double> >();
+
+//  torque_limits = boost::assign::list_of/*(0.0)*/
+//                                       ( 6)( 6)( 6)
+//                                       ( 6)( 6)( 6)
+//                                       ( 6)( 6)( 6)
+//                                       ( 6)( 6)( 6).convert_to_container<std::vector<double> >();
+
+  /// Use this space to initialize some gaits
+  {
+    // Trotting gait 50/50 duty cycle
+    gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
+
+    // walk lf,rf,lh,rh
+    gait["walk"] = boost::assign::list_of(0.25)(0.75)(0.0)(0.5).convert_to_container<std::vector<double> >();
+
+    // pace
+    gait["pace"] = boost::assign::list_of(0.0)(0.5)(0.0)(0.5).convert_to_container<std::vector<double> >();
+
+    // bound
+    gait["bound"] = boost::assign::list_of(0.5)(0.5)(0.0)(0.0).convert_to_container<std::vector<double> >();
+
+    // transverse gallop
+    gait["tgallop"] = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
+
+    // Rotary gallop
+    gait["rgallop"] = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
+
+    other_gait = boost::assign::list_of(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
+  }
+
+  // ================= INIT VARIABLES ==========================
+
 #ifdef VISUALIZE_MOBY
   CVarUtils::AttachCVar<std::vector<double> >( "qd.known_base_perturbation",&known_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can sense the applied force");
   CVarUtils::AttachCVar<std::vector<double> >( "qd.unknown_base_perturbation",&unknown_base_perturbation,"Apply a constant [3 linear,3 angular] force to robot base, the robot can NOT sense the applied force");
@@ -630,6 +729,7 @@ void Quadruped::init(){
   // Assign Gait to the locomotion controller
   CVarUtils::AttachCVar<std::string>( "qd.locomotion.gait_type",&gait_type,"Gait type [trot,walk,pace,bount,rgallop,tgallop]");
   CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.duty_factor",&duty_factor,"duty_factor");
+  CVarUtils::AttachCVar<std::vector<double> >( "qd.locomotion.gait",&other_gait,"gait if gait_type == 'other'");
   // -- IDYN OPTIONS --
   CVarUtils::AttachCVar<double>( "qd.dt",&STEP_SIZE,"value for dt (also h) used in IDYN and other functions");
 
@@ -645,52 +745,14 @@ void Quadruped::init(){
 
 #endif
   // Set up joint references
-#ifdef FIXED_BASE
-  NSPATIAL = 0;
-  NEULER = 0;
-#else
-  NSPATIAL = 6;
-  NEULER = 7;
-#endif
-  compile();
 
-  // ================= INIT DATA VECTORS =========================
-  unknown_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-  known_base_perturbation = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-  known_leading_force = boost::assign::list_of(0.13)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-//  goto_point = boost::assign::list_of(10)(0).convert_to_container<std::vector<double> >();
-  duty_factor = boost::assign::list_of(0.75)(0.75)(0.75)(0.75).convert_to_container<std::vector<double> >();
-  goto_command = boost::assign::list_of(0.0)(0.0)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-
-  base_start = boost::assign::list_of(0.0)(0.0)(0.19)(0.0)(0.0)(0.0)(0.0).convert_to_container<std::vector<double> >();
-
-//  eef_names = boost::assign::list_of("LF_FOOT")
-//                                    ("RF_FOOT")
-//                                    ("LH_FOOT")
-//                                    ("RH_FOOT").convert_to_container<std::vector<std::string> >();
-
-//  eefs_start = boost::assign::list_of( 0.13)( 0.096278)(-0.16)
-//                                     ( 0.13)(-0.096278)(-0.16)
-//                                     (-0.09)( 0.096278)(-0.16)
-//                                     (-0.09)(-0.096278)(-0.16).convert_to_container<std::vector<double> >();
-
-//  joint_names = boost::assign::list_of/*("BODY_JOINT")*/
-//                                      ("LF_HIP_AA")("LF_HIP_FE")("LF_LEG_FE")
-//                                      ("RF_HIP_AA")("RF_HIP_FE")("RF_LEG_FE")
-//                                      ("LH_HIP_AA")("LH_HIP_FE")("LH_LEG_FE")
-//                                      ("RH_HIP_AA")("RH_HIP_FE")("RH_LEG_FE").convert_to_container<std::vector<std::string> >();
-
-//  joints_start = boost::assign::list_of/*(0.0)*/
-//                                       ( M_PI_8)( M_PI_4)( M_PI_2)
-//                                       (-M_PI_8)(-M_PI_4)(-M_PI_2)
-//                                       (-M_PI_8)(-M_PI_4)(-M_PI_2)
-//                                       ( M_PI_8)( M_PI_4)( M_PI_2).convert_to_container<std::vector<double> >();
-
-//  torque_limits = boost::assign::list_of/*(0.0)*/
-//                                       ( 6)( 6)( 6)
-//                                       ( 6)( 6)( 6)
-//                                       ( 6)( 6)( 6)
-//                                       ( 6)( 6)( 6).convert_to_container<std::vector<double> >();
+//   if(q_start.rows() > NUM_JOINTS){
+//     NSPATIAL = 0;
+//     NEULER = 0;
+//   }else{
+     NSPATIAL = 6;
+     NEULER = 7;
+//   }
 
   // ================= LOAD SCRIPT DATA ==========================
 
@@ -700,6 +762,7 @@ void Quadruped::init(){
   #endif
 
   // ================= INIT ROBOT ==========================
+  compile();
 
   eef_names_ = eef_names;
   passive_joints_ = passive_joints;
@@ -707,6 +770,9 @@ void Quadruped::init(){
   NUM_JOINTS = joints_.size() - NUM_FIXED_JOINTS;
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
+
+  Ravelin::VectorNd q_start;
+
 
   NK = 4;
 
@@ -737,7 +803,6 @@ void Quadruped::init(){
   }
 
   // Set Initial State
-  Ravelin::VectorNd q_start;
 
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
 
@@ -792,25 +857,4 @@ void Quadruped::init(){
     abrobot_->update_link_poses();
   }
   update();
-
-  /// Use this space to initialize some gaits
-  {
-    // Trotting gait 50/50 duty cycle
-    gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
-
-    // walk lf,rf,lh,rh
-    gait["walk"] = boost::assign::list_of(0.25)(0.75)(0.0)(0.5).convert_to_container<std::vector<double> >();
-
-    // pace
-    gait["pace"] = boost::assign::list_of(0.0)(0.5)(0.0)(0.5).convert_to_container<std::vector<double> >();
-
-    // bound
-    gait["bound"] = boost::assign::list_of(0.5)(0.5)(0.0)(0.0).convert_to_container<std::vector<double> >();
-
-    // transverse gallop
-    gait["tgallop"] = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
-
-    // Rotary gallop
-    gait["rgallop"] = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
-  }
 }

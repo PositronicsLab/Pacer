@@ -82,3 +82,5 @@ Examples/Quadruped/initial.script
 Examples/Quadruped/pid.script
 Examples/Quadruped/GAZEBO/lynx/model.sdf
 Examples/Quadruped/GAZEBO/lynx/model.config
+Examples/Quadruped/cubic_spline_solver/splines.cpp
+Examples/Quadruped/cubic_spline_solver/LICENSE

@@ -131,8 +131,8 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin
     base_correct[i] = (vel_des[i] - vel_base[i])*Kv[i];
     if(i >= 3) // orientation des = 0.0
       base_correct[i] += (pos_des[i] - roll_pitch_yaw[i-3])*Kp[i];
-    else // position of COM
-      base_correct[i] += (center_of_feet_x[i] - center_of_mass_x[i])*Kp[i];
+//    else // position of COM
+//      base_correct[i] += (center_of_feet_x[i] - center_of_mass_x[i])*Kp[i];
   }
 
   OUTLOG(base_correct,"base_correct",logDEBUG);
@@ -141,7 +141,7 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin
   Jb.transpose_mult(base_correct,ws_correct,-1.0,0);
   OUTLOG(ws_correct,"ws_correct",logDEBUG1);
 
-  // Remove non-compressive elements (NOTE: negated)
+  // Remove non-compressive elements (NOE: Negated)
   for(int i=0;i<N.columns();i++)
     if(ws_correct[i] > 0.0)
       ws_correct[i] = 0.0;

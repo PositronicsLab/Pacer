@@ -329,6 +329,11 @@ void Quadruped::walk_toward(
   OUT_LOG(logDEBUG) << "\tprog : " << gait_progress;
   OUT_LOG(logDEBUG) << "\ttime : " << t;
 
+  Ravelin::Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
+
+  boost::shared_ptr< Ravelin::Pose3d> turning_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+  turning_frame->x = Ravelin::Origin3d(center_of_mass_x + Ravelin::Pose3d::transform_vector(environment_frame,turn_origin));
+
   // (Re)Populate spline vectors
   if(!inited){
     for(int i=0;i<NUM_EEFS;i++){
@@ -404,36 +409,32 @@ void Quadruped::walk_toward(
         }
       }
 
-      Ravelin::Vector3d com_robot = Ravelin::Pose3d::transform_point(base_frame,center_of_mass_x);
-      com_robot[2] = 0;//foot_origin[i][2];
-      Ravelin::Origin3d x0 = Ravelin::Origin3d(foot_origin[i] - com_robot);
-
       // Calculate foot-step info
       // Determine linear portion of step
-      Ravelin::Origin3d from_com(x0[0],x0[1],0),
-                        yaw_step,
-                        foot_goal = Ravelin::Origin3d(command[0],command[1],command[2]);
+      boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+      foot_frame->x = Ravelin::Pose3d::transform_point(environment_frame,foot_origin[i]);
+      Ravelin::Origin3d x0 = foot_origin[i].data();
+      Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
-      // Determine shape of step needed to yaw robot
-      Ravelin::Origin3d rotation_axis = Ravelin::Origin3d(0,0,1);
-//      if(command[0] != 0 && command[1] != 0 && command[2] != 0){
-//        rotation_axis = Ravelin::Origin3d::cross(Ravelin::Origin3d(command[0],0,command[2]),Ravelin::Origin3d(0,command[1],command[2]));
-//        rotation_axis /= rotation_axis.norm();
-//      }
-      Ravelin::AAngled aa_gamma(Ravelin::Vector3d(rotation_axis,base_frame),command[5] *  left_in_phase*gait_duration);
-      OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
-      Ravelin::Matrix3d R_gamma;
-      R_gamma = aa_gamma;
-      OUTLOG(R_gamma,"R_gamma",logDEBUG);
-      // yaw_step = R(gamma)*r_com - r_com
-      R_gamma.mult(from_com, yaw_step) -= from_com;
-      OUTLOG( yaw_step," yaw_step",logDEBUG);
+      if(fabs(command[5]) > Moby::NEAR_ZERO){
+
+        // Determine shape of step needed to yaw robot
+        Ravelin::Origin3d rotation_axis = Ravelin::Origin3d(0,0,1);
+        Ravelin::AAngled aa_gamma(Ravelin::Vector3d(rotation_axis,turning_frame),command[5] *  left_in_phase*gait_duration);
+        OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
+        Ravelin::Matrix3d R_gamma;
+        R_gamma = aa_gamma;
+        OUTLOG(R_gamma,"R_gamma",logDEBUG);
+        // yaw_step = R(gamma)*r_com - r_com
+        R_gamma.mult(Ravelin::Pose3d::transform_point(turning_frame, foot_goal), workv3_);
+        workv3_.pose = turning_frame;
+        foot_goal = Ravelin::Pose3d::transform_point(foot_frame, workv3_);
+//        OUTLOG( yaw_step," yaw_step",logDEBUG);
+
+      }
 
       // scale step length by interval duration
       foot_goal *=  left_in_phase*gait_duration;
-
-      // Combine x, y, and yaw to for full step
-      foot_goal +=  yaw_step;
 
       // All steps wrt to x0
       foot_goal /= 2;
@@ -468,14 +469,14 @@ void Quadruped::walk_toward(
           control_points.push_back(Ravelin::Origin3d(x));
           control_points.push_back(Ravelin::Origin3d(x) + Ravelin::Origin3d(0,0,step_height));
         if(footholds.empty()){
-          control_points.push_back(x0 + foot_goal + Ravelin::Origin3d(0,0,step_height));
-          control_points.push_back(x0 + foot_goal);
+          control_points.push_back(x0 + Ravelin::Origin3d(foot_goal) + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(x0 + Ravelin::Origin3d(foot_goal));
         } else {
           Ravelin::Origin3d x_fh;
-          select_foothold(footholds,Ravelin::Pose3d::transform_point(environment_frame, Ravelin::Vector3d((x0+foot_goal).data(),base_frame)).data(),x_fh);
+          select_foothold(footholds,Ravelin::Pose3d::transform_point(environment_frame, Ravelin::Vector3d((x0+Ravelin::Origin3d(foot_goal)).data(),base_frame)).data(),x_fh);
           // Reach new foothold, account for movement of robot during step
-          control_points.push_back(Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(x_fh.data(),environment_frame)).data()) - foot_goal + Ravelin::Origin3d(0,0,step_height));
-          control_points.push_back(x_fh - foot_goal);
+          control_points.push_back(Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(x_fh.data(),environment_frame)).data()) - Ravelin::Origin3d(foot_goal) + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(x_fh - Ravelin::Origin3d(foot_goal));
         }
       }
       else if(stance_phase[i]){
@@ -497,7 +498,7 @@ void Quadruped::walk_toward(
 //        if(num_points < 1.0) num_points = 1.0;
         control_points.resize(3);
         control_points[0] = Ravelin::Origin3d(x);
-        control_points[2] = Ravelin::Origin3d(x) + foot_goal;
+        control_points[2] = Ravelin::Origin3d(x) + Ravelin::Origin3d(foot_goal);
         control_points[1] = (control_points[2] + control_points[0])/2.0;
         control_points[1].normalize();
         control_points[1] *= (control_points[2].norm() + control_points[0].norm())/2.0;
@@ -536,7 +537,7 @@ void Quadruped::walk_toward(
         spline_t[i][j] = spline_t[i][j+1];
       }
 
-      Ravelin::Vector3d foot_velocity = Ravelin::Vector3d(foot_goal +  yaw_step,base_frame);
+//      Ravelin::Vector3d foot_velocity = Ravelin::Vector3d(foot_goal +  yaw_step,base_frame);
       // create spline using set of control points, place at back of history
       int n = control_points.size();
 
@@ -554,7 +555,7 @@ void Quadruped::walk_toward(
         OUTLOG(T,"T",logDEBUG1);
         OUTLOG(X,"X",logDEBUG1);
 
-        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_velocity[d]),coefs);
+        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_goal[d]),coefs);
 
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
@@ -567,6 +568,8 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
+  Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,turning_frame));
+  visualize_ray(    p, center_of_mass_x,   Ravelin::Vector3d(1,1,0),0.05, sim);
   if(true){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);

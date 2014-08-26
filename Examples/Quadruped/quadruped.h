@@ -53,7 +53,7 @@ class Quadruped : public Robot{
 
     /// Walks while trying to match COM velocity "command" in base_frame
      void walk_toward(const Ravelin::SVector6d& command,const std::vector<double>& touchdown,const std::vector<Ravelin::Vector3d>& footholds,
-                                const std::vector<double>& duty_factor, double gait_duration, double step_height,
+                                const std::vector<double>& duty_factor, double gait_duration,double step_height,
                                 const std::vector<Ravelin::Vector3d>& foot_origin, double t, const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,const Ravelin::VectorNd& qdd,
                                 std::vector<Ravelin::Vector3d>& foot_pos, std::vector<Ravelin::Vector3d>& foot_vel, std::vector<Ravelin::Vector3d>& foot_acc);
 

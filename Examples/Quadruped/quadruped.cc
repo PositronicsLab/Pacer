@@ -749,15 +749,13 @@ void Quadruped::init(){
      NEULER = 7;
 //   }
 
-compile();
-
-
   // ================= LOAD SCRIPT DATA ==========================
 
 //  theConsole.PrintAllCVars();
   theConsole.ScriptLoad("startup.script");
 
   // ================= INIT ROBOT ==========================
+  compile();
 
   eef_names_ = eef_names;
   passive_joints_ = passive_joints;

@@ -362,9 +362,15 @@ void Quadruped::walk_toward(
     double left_in_phase;
     bool replan_path = false;
     if(inited){
-      // Set liftoff feet
-      if(eefs_[i].active && stance_phase[i])
+      // Set liftoff feet (opposite of stance_phase variable)
+      if(stance_phase[i]){
         eefs_[i].active = false;
+      }
+//      else {
+//        eefs_[i].active = true;
+//        eefs_[i].normal = Ravelin::Vector3d(0,0,1,Moby::GLOBAL);
+//        eefs_[i].point = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+//      }
       for(int d=0; d<3;d++){
         OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
         replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
@@ -569,8 +575,8 @@ void Quadruped::walk_toward(
 
 #ifdef VISUALIZE_MOBY
   Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,turning_frame));
-  visualize_ray(    p, center_of_mass_x,   Ravelin::Vector3d(1,1,0),0.05, sim);
-  if(true){
+//  visualize_ray(    p, center_of_mass_x,   Ravelin::Vector3d(1,1,0),0.05, sim);
+  if(false){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);

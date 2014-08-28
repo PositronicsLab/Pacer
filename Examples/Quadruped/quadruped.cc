@@ -1,5 +1,6 @@
 #include <quadruped.h>
 #include <utilities.h>
+#include<map>
 // -----------------------------------------------------------------------------
 using namespace Ravelin;
 //using namespace Moby;
@@ -375,12 +376,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
       if(Kv.rows() == 0){
         // D gains
         Kv.set_zero(6);
-        Kv[3] = 3e1;
-        Kv[4] = 3e1;
+        Kv[3] = 5e1;
+        Kv[4] = 5e1;
         // P gains
         Kp.set_zero(6);
-        Kp[3] = 5e3;
-        Kp[4] = 5e3;
+        Kp[3] = 0;
+        Kp[4] = 0;
       }
       contact_jacobian_stabilizer(R,Kp,Kv,pb_des,vb_des,ufb);
     }
@@ -765,9 +766,9 @@ void Quadruped::init(){
 
   eef_names_ = eef_names;
   passive_joints_ = passive_joints;
-  
+
   compile();
-  
+
   /// SET UP END EFFECTORS
   if(!eefs_start.empty())
     for(int i=0;i<eef_names_.size();i++)

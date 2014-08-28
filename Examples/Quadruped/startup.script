@@ -13,7 +13,8 @@ qd.init.joint_names = [ LF_HIP_AA LF_HIP_FE LF_LEG_FE RF_HIP_AA RF_HIP_FE RF_LEG
 qd.init.joint_q = [ 0.3927 0.7854 1.5708 -0.3927 -0.7854 -1.5708 -0.3927 -0.7854 -1.5708 0.3927 0.7854 1.5708 ]
 qd.init.foot_names = [ LF_FOOT RF_FOOT LH_FOOT RH_FOOT ]
 #qd.init.foot_x = [ 0.13 0.096278 -0.16 0.13 -0.096278 -0.16 -0.09 0.096278 -0.16 -0.09 -0.096278 -0.16 ]
-qd.init.foot_x = [ 0.12 0.096278 -0.16 0.12 -0.096278 -0.16 -0.1 0.096278 -0.16 -0.1 -0.096278 -0.16 ]
+#qd.init.foot_x = [ 0.11 0.096278 -0.16 0.11 -0.096278 -0.16 -0.11 0.096278 -0.16 -0.11 -0.096278 -0.16 ]
+qd.init.foot_x = [ 0.11 0.11 -0.14 0.11 -0.11 -0.14 -0.11 0.11 -0.14 -0.11 -0.11 -0.14 ]
 qd.init.torque_limits = [ 4 4 4  4 4 4  4 4 4  4 4 4 ]
 
 # set up normal robot standing
@@ -24,19 +25,21 @@ qd.locomotion.point = [  ]
 qd.locomotion.gait_time = 0.5
 
 qd.error-feedback.active = 1
-qd.error-feedback.joint = 1
+qd.error-feedback.joint = 0
 qd.error-feedback.workspace = 1
 qd.stabilization.viip = 1
+# SET THIS UP: qd.stabilization.des_base_v = [ 0 0 0 0 0 0 ]
+# SET THIS UP: qd.stabilization.des_base_x = [ 0 0 0 0 0 0 ]
 
 qd.error-feedback.accel = 0
 qd.idyn = 1
 #qd.widyn = 1
-#qd.dt = 0.005
+qd.dt = 0.005
 
-qd.locomotion.command = [ 0.1 0 0 0 0 0]
-qd.locomotion.step_height = 0.04
+qd.locomotion.command = [ 0.08 0 0 0 0 0]
+qd.locomotion.step_height = 0.02
 #qd.locomotion.patrol = [ 0.5 0 -0.5 0 ]
-qd.locomotion.gait_time = 0.7
+qd.locomotion.gait_time = 0.8
 qd.locomotion.holonomic = 0
 
 qd.locomotion.gait_type = trot

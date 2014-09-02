@@ -129,7 +129,7 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
 
 boost::shared_ptr<Moby::ContactParameters> cp_callback(Moby::CollisionGeometryPtr g1, Moby::CollisionGeometryPtr g2){
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
-  e->mu_viscous = 2.5e1;
+  e->mu_viscous = SIM_MU_VISCOSE;
   return e;
 }
 

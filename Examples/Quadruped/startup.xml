@@ -1,6 +1,6 @@
 <XML>
   <sim>
-    <mu_viscous type="double">1e2</mu_viscous>
+    <mu_viscous type="double">0.0</mu_viscous>
     <mu_coulomb type="double">0.5</mu_coulomb>
     <penalty_kp type="double">1e2</penalty_kp>
     <penalty_kv type="double">1e4</penalty_kv>

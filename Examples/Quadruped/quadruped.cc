@@ -475,18 +475,23 @@ Ravelin::VectorNd& Quadruped::control(double t,
       if(!inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf))
         cf.set_zero(NC*5);
 
+#ifndef NDEBUG
         OUTLOG(cf,"cf",logDEBUG);
 
-        std::cout << "cfs = [";
+        OUT_LOG(logDEBUG1) << "cfs = [";
         for(int i=0, ii = 0;i<NUM_EEFS;i++){
           if(eefs_[i].active){
-            std::cout << " " << cf[ii];
+            Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
+                                   eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
+                                   eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
+            OUT_LOG(logDEBUG1) << " " << R_foot.transpose_mult(Ravelin::Vector3d(cf[ii],cf[NC+ii]-cf[NC*3+ii],cf[NC*2+ii]-cf[NC*4+ii]),workv3_);
             ii++;
           } else {
-            std::cout << " " << 0;
+            OUT_LOG(logDEBUG1) << " [0, 0, 0] " ;
           }
         }
-        std::cout << "]';" << std::endl;
+        OUT_LOG(logDEBUG1) << "]';" << std::endl;
+#endif
     }
     uff += (id*=alpha);
   }

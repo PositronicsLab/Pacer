@@ -331,7 +331,7 @@ void Quadruped::walk_toward(
 
   Ravelin::Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
 
-  boost::shared_ptr< Ravelin::Pose3d> turning_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+  boost::shared_ptr< Ravelin::Pose3d> turning_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame.get()));
   turning_frame->x = Ravelin::Origin3d(center_of_mass_x + Ravelin::Pose3d::transform_vector(environment_frame,turn_origin));
 
   // (Re)Populate spline vectors
@@ -574,8 +574,6 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
-  Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,turning_frame));
-//  visualize_ray(    p, center_of_mass_x,   Ravelin::Vector3d(1,1,0),0.05, sim);
   if(false){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);

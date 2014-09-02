@@ -95,7 +95,7 @@ set(SOURCES ../../src/output.cc
 
 if(VISUALIZE_MOBY)
   set(SOURCES ${SOURCES} ../../src/visualize_moby.cc)
-  set(VISUALIZE_LIBS  glut osg osgDB GLU cvars ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
+  set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
 endif(VISUALIZE_MOBY)
 
 if(USE_TERRAIN)
@@ -108,6 +108,7 @@ set(SOURCES2 control_moby.cc
              locomotion.cc
              wcpg.cc
              stabilization.cc
+             variables.cc
             )
 
 set(THIRDPARTY
@@ -115,7 +116,7 @@ set(THIRDPARTY
 
 add_library(${PROJECT_NAME} MODULE ${SOURCES} ${SOURCES2} ${THIRDPARTY})
 
-target_link_libraries(${PROJECT_NAME} Moby Ravelin OpenThreads ${VISUALIZE_LIBS})
+target_link_libraries(${PROJECT_NAME} Moby Ravelin OpenThreads cvars ${VISUALIZE_LIBS})
 
 if(DYNAMIXEL)
   target_link_libraries(${PROJECT_NAME} dxl)

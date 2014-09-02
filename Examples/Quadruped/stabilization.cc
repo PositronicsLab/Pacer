@@ -37,7 +37,7 @@ void Quadruped::fk_stance_adjustment(double dt){
 }
 
 // Parallel Stiffness Controller
-void Quadruped::eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W,double Kp, double Kv, double Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb){
+void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& fb){
 
   for(unsigned i=0;i< NUM_JOINTS;i++){
     joints_[i]->q[0]  = q[i];
@@ -52,6 +52,7 @@ void Quadruped::eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W,double 
     for(int i=0;i<NUM_EEFS;i++)
       p_err_sum[i] = Ravelin::Origin3d(0,0,0);
   }
+
   for(int i=0;i<NUM_EEFS;i++){
     boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(x_des[i].pose));
     EndEffector& foot = eefs_[i];
@@ -68,11 +69,12 @@ void Quadruped::eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W,double 
 
     // Positional Correction
     Ravelin::Vector3d x_err  = x_des[i] - Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    J.transpose_mult(W[i].mult(x_err,workv3_,Kp,0),u);
+    x_err = Ravelin::Vector3d(x_err[0]*Kp[i*3],x_err[1]*Kp[i*3+1],x_err[2]*Kp[i*3+2]);
+    J.transpose_mult(x_err,u);
 
     // Integrative Correction
     p_err_sum[i] += Ravelin::Origin3d(x_err.data());
-    J.transpose_mult(W[i].mult(p_err_sum[i],workv3_,Ki,0),u,1,1);
+    J.transpose_mult(Ravelin::Vector3d(p_err_sum[i][0]*Ki[i*3],p_err_sum[i][1]*Ki[i*3+1],p_err_sum[i][2]*Ki[i*3+2]),u,1,1);
 
     // Remove portion of foot velocity that can't be affected by corrective forces
     event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
@@ -84,10 +86,11 @@ void Quadruped::eef_stiffness_fb(const std::vector<Ravelin::Matrix3d>& W,double 
 
     // Velocity Correction
     Ravelin::Vector3d xd_err = xd_des[i] - (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
-    J.transpose_mult(W[i].mult(xd_err,workv3_,Kv,0),u,1,1);
+    xd_err = Ravelin::Vector3d(xd_err[0]*Kv[i*3],xd_err[1]*Kv[i*3+1],xd_err[2]*Kv[i*3+2]);
+    J.transpose_mult(xd_err,u,1,1);
 
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
-      ufb[foot.chain[k]] += u[k];
+      fb[foot.chain[k]] += u[k];
   }
 }
 

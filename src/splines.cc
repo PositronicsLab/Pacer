@@ -287,4 +287,5 @@ int test_spline(){
     // You may track these using a PD controller on pos & vel
     // or an inverse dynamics controller on acc
   }
+  return 0;
 }

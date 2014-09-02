@@ -20,7 +20,7 @@
 
 <!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
 <EventDrivenSimulator integrator-id="rk4" max-event-time="inf">
-<!--<TimeSteppingSimulator integrator-id="rk4" max-event-time="inf">-->
+<!--<TimeSteppingSimulator integrator-id="rk4" >-->
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="links" object2-id="links"/>
@@ -167,13 +167,13 @@
 
   <!-- setup the platform rigid body; it is not active -->
 <!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->
-<!--     <Box id="ground-primitive-viz" rpy="0 -0.0 0"  xlen="10" ylen="10" zlen="0.001" />-->
-<!--     <Plane id="ground-primitive" rpy="1.5708 0 0" />-->
+     <Box id="ground-primitive-viz" rpy="0 -0.0 0"  xlen="10" ylen="10" zlen="0.001" />
+     <Plane id="ground-primitive" rpy="1.5708 0 0" />
 <!--     <Plane id="ground-primitive" rpy="1.5708 -0.0 0" />-->
-<Heightmap id="ground-primitive" filename="MATLAB/heightmap.mat" width="1" depth="1" rpy="1.571 0 0"/>
+<!--<Heightmap id="ground-primitive" filename="MATLAB/heightmap.mat" width="1" depth="1" rpy="1.571 0 0"/>-->
 <!--<Sphere id="ground-primitive" radius="100" />-->
   <RigidBody id="ground" enabled="false"
-  position="0 0 -0.0"  compliant="false">
+  position="0 0 -0.0" visualization-id="ground-primitive-viz" compliant="false">
 <!--  position="0 0 -100" visualization-id="ground-primitive">-->
     <CollisionGeometry primitive-id="ground-primitive" />
   </RigidBody>

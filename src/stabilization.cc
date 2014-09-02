@@ -23,7 +23,6 @@ void Robot::zmp_stabilizer(const Ravelin::MatrixNd& J,const Ravelin::Vector2d& z
   J.transpose_mult(zfb6,ufb);
 }
 
-
 void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
@@ -109,7 +108,7 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
     ufb[active_dofs[i]] += tY[i];
 }
 
-void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::VectorNd& Kp,const Ravelin::VectorNd& Kv,const Ravelin::SVector6d& pos_des,const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb){
+void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos_des,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
 
@@ -122,22 +121,23 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin
   OUTLOG(Jb,"Jb",logDEBUG1);
   OUTLOG(Jq,"Jq",logDEBUG1);
 
-  Ravelin::VectorNd vel_base(6), base_correct(6);
+  Ravelin::VectorNd vel_base(6), pos_base(6), base_correct(6);
   vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
+  pos_base.set_sub_vec(0,center_of_mass_x);
+  pos_base.set_sub_vec(3,roll_pitch_yaw);
   OUTLOG(vel_base,"vel_base",logDEBUG1);
   OUTLOG(vel_des,"vel_des",logDEBUG1);
-
+  static Ravelin::VectorNd sum_p_err = Ravelin::VectorNd::zero(6);
   for(int i=0;i<6;i++){
-    base_correct[i] = (vel_des[i] - vel_base[i])*Kv[i];
-    if(i >= 3) // orientation des = 0.0
-      base_correct[i] += (pos_des[i] - roll_pitch_yaw[i-3])*Kp[i];
-//    else // position of COM
-//      base_correct[i] += (center_of_feet_x[i] - center_of_mass_x[i])*Kp[i];
+    sum_p_err[i] += (pos_des[i] - pos_base[i]);
+    base_correct[i] = (vel_des[i] - vel_base[i])*Kv[i]
+                      + (pos_des[i] - pos_base[i])*Kp[i]
+                      + sum_p_err[i]*Ki[i];
   }
 
   OUTLOG(base_correct,"base_correct",logDEBUG);
 
-  Ravelin::VectorNd ws_correct,js_correct;
+  Ravelin::VectorNd ws_correct;
   Jb.transpose_mult(base_correct,ws_correct);
   OUTLOG(ws_correct,"ws_correct",logDEBUG);
 
@@ -152,11 +152,7 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);
-
-  for(int i=0;i<NUM_JOINTS;i++)
-    ufb[i] += js_correct[i];
 }
-
 
 void Robot::calc_com(){
   center_of_mass_x.set_zero();
@@ -214,3 +210,4 @@ void Robot::calc_com(){
 #endif
 
 }
+

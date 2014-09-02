@@ -4,9 +4,10 @@
 #include <quadruped.h>
 
 std::string
+ LOG_TYPE("NONE");
 // LOG_TYPE("ERROR");  // Only major failures from the system
 // LOG_TYPE("INFO");     // Normal print out
- LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
+// LOG_TYPE("DEBUG");  // Basic Outline of progress with additinal vectors
 //  LOG_TYPE("DEBUG1"); // all function parameters and results
 
 bool new_sim_step = true;
@@ -18,7 +19,6 @@ bool new_sim_step = true;
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
  boost::shared_ptr<Robot> robot_ptr;
  boost::shared_ptr<Quadruped> quad_ptr;
- std::vector<std::string> joint_names_;
 
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                                    boost::shared_ptr<void> empty);
@@ -36,7 +36,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 
   std::vector<EndEffector>& eefs_ = robot_ptr->get_end_effectors();
   std::vector<Moby::JointPtr>& joints_ = robot_ptr->get_joints();
-  joint_names_ = robot_ptr->get_joint_names();
+  std::vector<std::string>& joint_names_ = robot_ptr->get_joint_names();
   Moby::RCArticulatedBodyPtr abrobot = robot_ptr->get_articulated_body();
   unsigned num_joints = joint_names_.size();
 

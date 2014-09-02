@@ -84,3 +84,6 @@ Examples/Quadruped/GAZEBO/lynx/model.sdf
 Examples/Quadruped/GAZEBO/lynx/model.config
 Examples/Quadruped/cubic_spline_solver/splines.cpp
 Examples/Quadruped/cubic_spline_solver/LICENSE
+Examples/Quadruped/variables.cc
+Examples/Quadruped/startup.xml
+Examples/Quadruped/orphaned_code.cc

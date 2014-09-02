@@ -99,17 +99,16 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       eefs_[index].tan2 = Ravelin::Vector3d(0,1,0);;
     }
 #endif
-  std::cout << "cfs_moby = [";
+  OUT_LOG(logDEBUG)<< "cfs_moby = [";
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
-//      assert(eefs_[i].contact_impulses.size() == 1);
-      std::cout << " " << eefs_[i].contact_impulses[0];
+     OUT_LOG(logDEBUG) << " " << eefs_[i].contact_impulses[0];
       ii++;
     } else {
-      std::cout << " " << 0;
+      OUT_LOG(logDEBUG) << " [0.0, 0.0, 0.0] ";
     }
   }
-  std::cout << "]';" << std::endl;
+  OUT_LOG(logDEBUG) << "]';" << std::endl;
 }
 extern double
               SIM_MU_COULOMB,
@@ -146,8 +145,8 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 }
 
 void apply_simulation_forces(const Ravelin::MatrixNd& u,std::vector<Moby::JointPtr>& joints){
-    for(unsigned m=0,i=0;m< joint_names_.size();m++){
-        if(joints[m]->q.size() == 0) continue;
+    for(unsigned m=0,i=0;m< joints.size();m++){
+        if(joints[m]->num_dof() == 0) continue;
         // reset motor torque
         Ravelin::VectorNd row;
         joints[m]->reset_force();

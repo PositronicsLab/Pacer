@@ -69,8 +69,8 @@ class Robot {
    * to correct the [p; v] state of the robot base
    * acording to Kp and Kv Respectively
   **/
-  void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::VectorNd& Kp,const Ravelin::VectorNd& Kv,
-                                   const Ravelin::SVector6d& pos_des, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
+  void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,
+                                   const std::vector<double>& pos_des, const std::vector<double>& vel_des, Ravelin::VectorNd& ufb);
   void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
   bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                         const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,

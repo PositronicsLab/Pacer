@@ -5,7 +5,7 @@
 
 struct Gains
 {
-  double perr_sum;
+  double perr_sum = 0;
   double kp;
   double kv;
   double ki;

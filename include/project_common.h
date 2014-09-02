@@ -45,16 +45,10 @@
   // Get these from https://github.com/arpg/GLConsole.git
   //include this header for CVars and GLConsole
   #include <GLConsole/GLConsole.h>
-  //A CVar version of std::vector
-  #include <CVars/CVarVectorIO.h>
-  //A CVar version of std::map
-  #include <CVars/CVarMapIO.h>
   // Single global instance so glut can get access
   extern GLConsole theConsole;
-
-  using CVarUtils::operator<<;
-  using CVarUtils::operator>>;
 #endif
+
 // ----------------------------------------------------------------------------
 
 const double grav     = 9.8; // M/s.s

@@ -55,7 +55,7 @@ inline TLogLevel& Log::ReportingLevel()
 
 inline std::string Log::ToString(TLogLevel level)
 {
-    static const char* const buffer[] = {"ERROR", "WARNING", "INFO", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
+    static const char* const buffer[] = {"NONE","ERROR", "WARNING", "INFO", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
     return buffer[level];
 }
 
@@ -77,6 +77,8 @@ inline TLogLevel Log::FromString(const std::string& level)
         return logWARNING;
     if (level == "ERROR")
         return logERROR;
+    if (level == "NONE")
+        return logNONE;
     Log().Get(logWARNING) << "Unknown logging level '" << level << "'. Using INFO level as default.";
     return logINFO;
 }

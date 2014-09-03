@@ -102,8 +102,7 @@ if(USE_TERRAIN)
   set(SOURCES ${SOURCES} ../../src/terrain.cc)
 endif(USE_TERRAIN)
 
-set(SOURCES2 control_moby.cc
-             quadruped.cc
+set(SOURCES2 quadruped.cc
              inverse_kinematics.cc
              locomotion.cc
              wcpg.cc
@@ -114,11 +113,10 @@ set(SOURCES2 control_moby.cc
 set(THIRDPARTY
                 )
 
-add_library(${PROJECT_NAME} MODULE ${SOURCES} ${SOURCES2} ${THIRDPARTY})
+add_library(${PROJECT_NAME} ${SOURCES} ${SOURCES2} ${THIRDPARTY})
 
 target_link_libraries(${PROJECT_NAME} Moby Ravelin OpenThreads cvars ${VISUALIZE_LIBS})
 
-if(DYNAMIXEL)
-  target_link_libraries(${PROJECT_NAME} dxl)
-endif(DYNAMIXEL)
+add_library(${PROJECT_NAME}Plugin MODULE control_moby.cc)
+target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
 

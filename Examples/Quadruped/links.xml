@@ -1,6 +1,3 @@
-<!-- A box just sitting on the ground.  -->
-<!-- The Links(Lynx) robot -->
-
 <XML>
   <DRIVER>
     <camera position="0.35 -0.55 0.5" target="0 0 0" up="0 0 1" />
@@ -16,24 +13,14 @@
     <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
-    <StokesDragForce id="drag" drag-b="0.1" drag-b-ang=".00" />
 
-<!--  <EventDrivenSimulator integrator-id="bs" max-event-time="0.01" min-advance="1e-2" Euler-step="1e-3">-->
-<EventDrivenSimulator integrator-id="rk4" max-event-time="inf">
-<!--<TimeSteppingSimulator integrator-id="rk4" >-->
-    <RecurrentForce recurrent-force-id="gravity" />
-<!--    <RecurrentForce recurrent-force-id="drag" />-->
-    <DisabledPair object1-id="links" object2-id="links"/>
-<!--    <DisabledPair object1-id="links" object2-id="ball"/>-->
-    <DynamicBody dynamic-body-id="links" />
-    <DynamicBody dynamic-body-id="ground" />
-    <!--    <DynamicBody dynamic-body-id="ball" />-->
-<!--    <DynamicBody dynamic-body-id="hurdle" />-->
-    <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
-<!--    <ContactParameters object1-id="hurdle" object2-id="ground" mu-coulomb="1" mu-viscous="0" epsilon="0.0"/>-->
-  </EventDrivenSimulator>
-<!--  </TimeSteppingSimulator>-->
-
+    <EventDrivenSimulator integrator-id="rk4" max-event-time="inf">
+      <RecurrentForce recurrent-force-id="gravity" />
+      <DisabledPair object1-id="links" object2-id="links"/>
+      <DynamicBody dynamic-body-id="links" />
+      <DynamicBody dynamic-body-id="ground" />
+      <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
+    </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
     <Box id="abdomen" xlen="0.0840" ylen="0.122" zlen="0.0356" mass="0.23801"/>
@@ -44,7 +31,6 @@
     <Box id="uleg" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.13266"/>
     <Box id="lleg" xlen="0.134" ylen="0.01" zlen="0.01" mass="0.04"/>
     <Sphere id="foot" radius="0.01" mass="0.01" points="1"/>
-<!--    <Box id="foot" xlen="0.02" ylen="0.02" zlen="0.02" mass="0.01"/>-->
 
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
@@ -54,7 +40,6 @@
         <InertiaFromPrimitive primitive-id="abdomen" />
       </RigidBody>
       <FixedJoint id="BODY_JOINT" qd="0" location="0 0 0" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />
-<!--      <RevoluteJoint id="BODY_JOINT" qd="0" location="0 0 0" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />-->
       <RigidBody id="THORAX" position="0.037764 0 0.0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="thorax">
 <!--        <CollisionGeometry primitive-id="thorax" />-->
         <InertiaFromPrimitive primitive-id="thorax" />
@@ -169,31 +154,10 @@
 <!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->
      <Box id="ground-primitive-viz" rpy="0 -0.0 0"  xlen="10" ylen="10" zlen="0.001" />
      <Plane id="ground-primitive" rpy="1.5708 0 0" />
-<!--     <Plane id="ground-primitive" rpy="1.5708 -0.0 0" />-->
 <!--<Heightmap id="ground-primitive" filename="MATLAB/heightmap.mat" width="1" depth="1" rpy="1.571 0 0"/>-->
-<!--<Sphere id="ground-primitive" radius="100" />-->
   <RigidBody id="ground" enabled="false"
   position="0 0 -0.0" visualization-id="ground-primitive-viz" compliant="false">
-<!--  position="0 0 -100" visualization-id="ground-primitive">-->
     <CollisionGeometry primitive-id="ground-primitive" />
   </RigidBody>
-
-
-  <RigidBody id="ball" enabled="true"
-    position="0.0 -0.05 0.2" visualization-id="foot" compliant="false">
-    <CollisionGeometry primitive-id="foot" />
-    <InertiaFromPrimitive primitive-id="foot" />
-  </RigidBody>
-
-
-  <Box id="bar" xlen="0.01" ylen="0.3" zlen="0.01" mass="0.2"/>
-
-  <RigidBody id="hurdle" enabled="false"
-    position="0.13 0.0 0.03" visualization-id="bar" compliant="false">
-    <CollisionGeometry primitive-id="bar" />
-    <InertiaFromPrimitive primitive-id="bar" />
-  </RigidBody>
-
-
   </MOBY>
 </XML>

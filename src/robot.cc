@@ -1,8 +1,6 @@
 #include <robot.h>
 #include <utilities.h>
 
-extern bool new_sim_step;
-
 double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   // Potential Energy
   double PE = 0;
@@ -26,12 +24,15 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
 void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
    M.resize(NDOFS,NDOFS);
    fext.resize(NDOFS);
-   if(new_sim_step)
-    abrobot_->get_generalized_inertia(M);
+   abrobot_->get_generalized_inertia(M);
    abrobot_->get_generalized_forces(fext);
 }
 
 void Robot::compile(){
+
+  NSPATIAL = 6;
+  NEULER = 7;
+
   dbrobot_ = boost::dynamic_pointer_cast<Moby::DynamicBody>(abrobot_);
   std::vector<Moby::JointPtr> joints = abrobot_->get_joints();
   joints_.resize(joints.size());
@@ -196,4 +197,12 @@ void Robot::update_poses(){
 
   for(int i=0;i<NUM_EEFS;i++)
     eefs_[i].origin.pose = base_frame;
+}
+
+void Robot::reset_contact(){
+  for(int i=0;i<eefs_.size();i++){
+    eefs_[i].active = false;
+    eefs_[i].contacts.clear();
+    eefs_[i].contact_impulses.clear();
+  }
 }

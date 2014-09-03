@@ -5,11 +5,11 @@
 
 class Quadruped : public Robot{
   public:
-  Quadruped(){}
-  Quadruped(Moby::RCArticulatedBodyPtr abrobot){
-    abrobot_ = abrobot;
-    init();
-  }
+    Quadruped(){}
+    Quadruped(Moby::RCArticulatedBodyPtr abrobot){
+      abrobot_ = abrobot;
+      init();
+    }
     Ravelin::VectorNd& control(double dt,
                                const Ravelin::VectorNd& q,
                                const Ravelin::VectorNd& qd,
@@ -58,5 +58,21 @@ class Quadruped : public Robot{
                                 std::vector<Ravelin::Vector3d>& foot_pos, std::vector<Ravelin::Vector3d>& foot_vel, std::vector<Ravelin::Vector3d>& foot_acc);
 
     void eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
+    void set_leading_force(const Ravelin::SForced& f){lead_force_ = f;}
+    void set_known_force(const Ravelin::SForced& f){known_force_ = f;}
+
+    static void load_variables(std::string fname);
+
+    static std::vector<double>& get_variable(const char* tag,std::vector<double>& val);
+    static double& get_variable(const char* tag,double& val);
+
+    static std::vector<std::string>& get_variable(const char* tag,std::vector<std::string>& val);
+    static std::string& get_variable(const char* tag,std::string& val);
+
+    static std::vector<int>& get_variable(const char* tag,std::vector<int>& val);
+    static int& get_variable(const char* tag,int& val);
+  private:
+    Ravelin::SForced lead_force_;
+    Ravelin::SForced known_force_;
 };
 #endif // CONTROL_H

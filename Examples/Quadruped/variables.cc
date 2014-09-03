@@ -1,4 +1,5 @@
-#include <variables.h>
+#include <quadruped.h>
+#include <CVars/CVar.h>
 
 #include <Moby/XMLTree.h>
 #include <Moby/XMLReader.h>
@@ -102,14 +103,31 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
     }
 }
 
-void load_variables(std::string fname){
+void Quadruped::load_variables(std::string fname){
     shared_ptr<const XMLTree> root_tree = XMLTree::read_from_xml(fname);
     process_tag("",root_tree);
 }
 
-double
-       SIM_MU_COULOMB = 0,
-       SIM_MU_VISCOSE = 0,
-       SIM_PENALTY_KV = 0,
-       SIM_PENALTY_KP = 0;
+//template<class T> T& Quadruped::get_variable(std::string tag){
+//  return CVarUtils::GetCVarRef<T>(tag.c_str());
+//}
+
+std::vector<double>& Quadruped::get_variable(const char* tag,std::vector<double>& val){
+  return (val = CVarUtils::GetCVar<std::vector<double>>(tag));
+}
+double& Quadruped::get_variable(const char* tag,double& val){
+  return (val = CVarUtils::GetCVar<double>(tag));
+}
+std::vector<std::string>& Quadruped::get_variable(const char* tag,std::vector<std::string>& val){
+  return (val = CVarUtils::GetCVar<std::vector<std::string>>(tag));
+}
+std::string& Quadruped::get_variable(const char* tag,std::string& val){
+  return (val = CVarUtils::GetCVar<std::string>(tag));
+}
+std::vector<int>& Quadruped::get_variable(const char* tag,std::vector<int>& val){
+  return (val = CVarUtils::GetCVar<std::vector<int>>(tag));
+}
+int& Quadruped::get_variable(const char* tag,int& val){
+  return (val = CVarUtils::GetCVar<int>(tag));
+}
 

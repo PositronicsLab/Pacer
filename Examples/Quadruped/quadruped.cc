@@ -1,21 +1,7 @@
 #include <quadruped.h>
 #include <utilities.h>
-#include<map>
-// -----------------------------------------------------------------------------
-using namespace Ravelin;
-//using namespace Moby;
 
-extern Ravelin::VectorNd STAGE1, STAGE2;
-extern int N_SYSTEMS;
-double SIMULATION_TIME = 0;
-std::map<std::string , std::vector<double> > gait;
-
-// TODO: This should be extern double to moby's (nominal) STEP_SIZE
-
-extern bool new_sim_step;
-
-// ============================================================================
-// ======================= USER DEFINED PARAMETERS ============================
+#include <CVars/CVar.h>
 
 #ifdef VISUALIZE_MOBY
 #ifdef APPLE
@@ -27,15 +13,13 @@ extern bool new_sim_step;
 # include <GL/glu.h>
 # include <GL/glut.h>
 #endif
+#include <GLConsole/GLConsole.h>
 GLConsole theConsole;
 #endif
 
-
-#include <variables.h>
-
 // ============================================================================
+// =========================== Begin Robot Controller =========================
 // ============================================================================
-#include <random>
 
 Ravelin::VectorNd& Quadruped::control(double t,
                                       const Ravelin::VectorNd& q,
@@ -44,6 +28,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                       Ravelin::VectorNd& qd_des,
                                       Ravelin::VectorNd& u){
   static Ravelin::VectorNd qd_last = qd;
+  static double SIMULATION_TIME = -0.001;
 
   double dt = t - SIMULATION_TIME;
 
@@ -53,17 +38,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 
   // ----------------------------------------------------------------
-  static std::vector<double>
-      &unknown_base_perturbation = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.unknown-base-perturbation"),
-      &known_base_perturbation = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.known-base-perturbation"),
-      &known_leading_force = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.known-leading-force");
-
-  Ravelin::Vector3d lead(known_leading_force[3],
-                         known_leading_force[4],
-                         known_leading_force[5],
-                         Moby::GLOBAL);
-
-  OUTLOG(lead,"LEAD_g",logDEBUG);
 
   ((qdd = qd)-=qd_last)/=0.001;
 
@@ -77,49 +51,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   update_poses();
 
-  Ravelin::Vector3d point_on_robot(known_leading_force[0],
-                                   known_leading_force[1],
-                                   known_leading_force[2],
-                                   base_link_frame);
-  boost::shared_ptr<Ravelin::Pose3d> lead_transform =
-      boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(
-        Ravelin::Quatd::identity(),
-        Ravelin::Origin3d(
-          Ravelin::Pose3d::transform_point(Moby::GLOBAL,point_on_robot)
-        )
-      ));
-
-  Ravelin::SForced lead_force = Ravelin::Pose3d::transform(
-                                   Moby::GLOBAL,
-                                   Ravelin::SForced(lead,Ravelin::Vector3d(0,0,0),lead_transform)
-                                 );
-  OUTLOG(lead,"LEAD_bt",logDEBUG);
-
-#ifndef SET_KINEMATICS
-  Ravelin::VectorNd perturbation(NUM_JOINTS+6);
-  perturbation.set_zero();
-
-  for(int i=0;i<6;i++){
-    perturbation[NUM_JOINTS+i] += ( unknown_base_perturbation[i]
-                                   + known_base_perturbation[i]
-                                   + lead_force[i]);
-    if(t > 0.5 && t < 0.6){
-      Ravelin::SVector6d push(0,20.0,0,0,0,0,environment_frame);
-//      perturbation[NUM_JOINTS+i] += push[i];
-    }
-  }
-  abrobot_->add_generalized_force(perturbation);
-  // ----------------------------------------------------------------
-
   update();
-#endif
-
-  // Subtract unknown perturbations from fext vector
-  // ----------------------------------------------------------------
-  for(int i=0;i<6;i++)
-    fext[NUM_JOINTS+i] -= unknown_base_perturbation[i];
-  // ----------------------------------------------------------------
-
 
   OUT_LOG(logINFO)<< "num_contacts = " << NC ;
 
@@ -155,9 +87,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
         &goto_command = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.command"),
         &goto_point = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.point"),
         &duty_factor = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.duty-factor"),
-        &other_gait = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.gait");
+        &this_gait = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.gait");
     static int &HOLONOMIC = CVarUtils::GetCVarRef<int>("quadruped.locomotion.holonomic");
-    static std::string &gait_type = CVarUtils::GetCVarRef<std::string>("quadruped.locomotion.gait-type");
     static double &gait_time = CVarUtils::GetCVarRef<double>("quadruped.locomotion.gait-duration");
     static double &step_height = CVarUtils::GetCVarRef<double>("quadruped.locomotion.step-height");
     static std::vector<Ravelin::Vector3d> footholds(0);
@@ -181,52 +112,52 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
     }
 
-
+#ifdef EXPERIMENTAL_CODE
     /// HANDLE WAYPOINTS
-//    if(patrol_points.size() >= 4){
-//      int num_waypoints = patrol_points.size()/2;
-//      static int patrol_index = 0;
-//      static Ravelin::Vector3d next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
-//      next_waypoint[2] = center_of_mass_x[2];
+    if(patrol_points.size() >= 4){
+      int num_waypoints = patrol_points.size()/2;
+      static int patrol_index = 0;
+      static Ravelin::Vector3d next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
+      next_waypoint[2] = center_of_mass_x[2];
 
-//      double distance_to_wp = (next_waypoint - center_of_mass_x).norm();
+      double distance_to_wp = (next_waypoint - center_of_mass_x).norm();
 
-//      if( distance_to_wp < 0.025){
-//        OUT_LOG(logERROR) << "waypoint reached, incrementing waypoint.";
-//        OUTLOG(next_waypoint,"this_wp",logERROR);
-//        OUTLOG(next_waypoint,"center_of_mass_x",logERROR);
+      if( distance_to_wp < 0.025){
+        OUT_LOG(logERROR) << "waypoint reached, incrementing waypoint.";
+        OUTLOG(next_waypoint,"this_wp",logERROR);
+        OUTLOG(next_waypoint,"center_of_mass_x",logERROR);
 
-//        patrol_index = (patrol_index+1) % num_waypoints;
+        patrol_index = (patrol_index+1) % num_waypoints;
 
-//        next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
-//      }
-//#ifdef VISUALIZE_MOBY
-//      OUT_LOG(logERROR) << "num_wps = " << num_waypoints;
-//      OUT_LOG(logERROR) << "distance_to_wp = " << distance_to_wp;
-//      OUT_LOG(logERROR) << "patrol_index = " << patrol_index;
-//    visualize_ray(  next_waypoint,
-//                    center_of_mass_x,
-//                    Ravelin::Vector3d(1,0.5,0),
-//                    sim
-//                  );
-//    OUTLOG(next_waypoint,"next_wp",logERROR);
+        next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
+      }
+# ifdef VISUALIZE_MOBY
+      OUT_LOG(logERROR) << "num_wps = " << num_waypoints;
+      OUT_LOG(logERROR) << "distance_to_wp = " << distance_to_wp;
+      OUT_LOG(logERROR) << "patrol_index = " << patrol_index;
+    visualize_ray(  next_waypoint,
+                    center_of_mass_x,
+                    Ravelin::Vector3d(1,0.5,0),
+                    sim
+                  );
+    OUTLOG(next_waypoint,"next_wp",logERROR);
 
-//    for(int i=0;i<num_waypoints;i++){
-//      Ravelin::Vector3d wp(patrol_points[i*2],patrol_points[i*2+1],next_waypoint[2],environment_frame);
-//      OUTLOG(wp,"wp",logERROR);
-//      visualize_ray(  wp,
-//                      wp,
-//                      Ravelin::Vector3d(1,0.5,0),
-//                      1.0,
-//                      sim
-//                    );
-//    }
-//#endif
-//      goto_point.resize(2);
-//      goto_point[0] = next_waypoint[0];
-//      goto_point[1] = next_waypoint[1];
-//    }
-
+    for(int i=0;i<num_waypoints;i++){
+      Ravelin::Vector3d wp(patrol_points[i*2],patrol_points[i*2+1],next_waypoint[2],environment_frame);
+      OUTLOG(wp,"wp",logERROR);
+      visualize_ray(  wp,
+                      wp,
+                      Ravelin::Vector3d(1,0.5,0),
+                      1.0,
+                      sim
+                    );
+    }
+# endif
+      goto_point.resize(2);
+      goto_point[0] = next_waypoint[0];
+      goto_point[1] = next_waypoint[1];
+    }
+#endif
     if(goto_point.size() == 2){
       Ravelin::Vector3d goto_direction =
           Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
@@ -262,9 +193,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 
     // Robot attempts to align base with force and then walk along force axis
-    Ravelin::Vector3d lead_base = Ravelin::Pose3d::transform_vector(base_link_frame,lead);
-    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force);
-    OUTLOG(lead_base,"LEAD_base",logDEBUG);
+    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force_);
 
     go_to[0] += lead_base_force[0];
     go_to[1] += lead_base_force[1];
@@ -272,20 +201,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     OUTLOG(go_to,"go_to",logDEBUG);
 
-#ifdef VISUALIZE_MOBY
-    visualize_ray(  Ravelin::Vector3d(lead_transform->x.data()),
-                    Ravelin::Vector3d(lead_transform->x.data())
-                     + Ravelin::Vector3d(known_leading_force[3],
-                                         known_leading_force[4],
-                                         known_leading_force[5]),
-                    Ravelin::Vector3d(1,0,1),
-                    sim
-                  );
-#endif
-
-    std::vector<double>& this_gait = (gait_type.empty())? other_gait : gait[gait_type];
-
-    OUTLOG(this_gait,gait_type + "_gait",logINFO);
+    OUTLOG(this_gait,"this_gait",logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
 
     center_of_feet_x.set_zero();
@@ -313,40 +229,39 @@ Ravelin::VectorNd& Quadruped::control(double t,
     goto_6d.pose = base_frame;
     walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
+    trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
   }
   else {
-    for(int i=0;i<NUM_EEFS;i++){
-      eefs_[i].origin.pose = base_frame;
-      foot_pos[i] = eefs_[i].origin;
-      foot_vel[i] = Ravelin::Vector3d(0,0,0,base_frame);
-      foot_acc[i] = Ravelin::Vector3d(0,0,0,base_frame);
-    }
+    static std::vector<double>
+       &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q");
+    q_des = Ravelin::VectorNd(joints_start.size(),&joints_start[0]);
+    qd_des.set_zero();
+    qdd_des.set_zero();
   }
-  trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
 
   static Ravelin::MatrixNd MU;
   MU.set_zero(NC,NK/2);
 
+#ifdef EXPERIMENTAL_CODE
   // --------------------------- FRICTION ESTIMATION ---------------------------
-  // EXPERIMENTAL
-  if(false){
+  {
     Ravelin::VectorNd cf;
     double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
     OUT_LOG(logINFO)<< "err (friction estimation): " << err << std::endl;
     OUTLOG(MU,"MU",logDEBUG);
     OUTLOG(cf,"contact_forces",logDEBUG);
-  } else {
-    for(int i=0,ii=0;i<NUM_EEFS;i++){
-      if(eefs_[i].active){
-        for(int k=0;k<NK/2;k++)
-          MU(ii,k) = (eefs_[i].event->compliance == Moby::UnilateralConstraint::eRigid)? eefs_[i].event->contact_mu_coulomb : 0.01;
-        ii++;
-      }
+  }
+#else
+  for(int i=0,ii=0;i<NUM_EEFS;i++){
+    if(eefs_[i].active){
+      for(int k=0;k<NK/2;k++)
+        MU(ii,k) = (eefs_[i].event->compliance == Moby::UnilateralConstraint::eRigid)? eefs_[i].event->contact_mu_coulomb : 0.01;
+      ii++;
     }
   }
+#endif
 
-  // -------------Kinematic (Sticking) Stabilization----------------------------
-  // EXPERIMENTAL
+  // ----------------------------- STABILIZATION -------------------------------
   static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("quadruped.stabilization.active");
   if(USE_STABILIZATION){
     static int &USE_VIIP = CVarUtils::GetCVarRef<int>("quadruped.stabilization.viip.active");
@@ -374,6 +289,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   static int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.active");
   if (ERROR_FEEDBACK){
+    // --------------------------- JOINT FEEDBACK ------------------------------
     static int &JOINT_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.configuration-space.active");
     if(JOINT_FEEDBACK){
       static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.configuration-space.accel");
@@ -398,6 +314,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       else
         ufb = fb;
     }
+    // --------------------------- WORKSPACE FEEDBACK --------------------------
     static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.operational-space.active");
     if(WORKSPACE_FEEDBACK){
       // CURRENTLY THIS IS ONLY FORCE
@@ -463,8 +380,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
       OUTLOG(cf,"cf z",logDEBUG);
     }
 
+    // ------------------------ WORKSPACE INVERSE DYNAMICS ---------------------
     static int &WORKSPACE_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.operational-space");
-
     if(WORKSPACE_IDYN){
       vb_w.set_zero(Rw.rows());
       Ravelin::SVector6d go_to_global(go_to);
@@ -496,7 +413,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     uff += (id*=alpha);
   }
 
-  // -----------------------------------------------------------------------------
+  // ------------------------- PROCESS FB AND FF FORCES ------------------------
 
   Utility::check_finite(ufb);
   Utility::check_finite(uff);
@@ -504,21 +421,24 @@ Ravelin::VectorNd& Quadruped::control(double t,
   u = ufb;
   u += uff;
 
-  // -----------------------------------------------------------------------------
+  // -------------------------- LIMIT TORQUES ----------------------------
 
   for(unsigned i=0;i< NUM_JOINTS;i++){
     if(u[i] > torque_limits_u[i])
       u[i] = torque_limits_u[i];
     if(u[i] < torque_limits_l[i])
       u[i] = torque_limits_l[i];
+  }
 
+#ifndef NDEBUG
+  for(unsigned i=0;i< NUM_JOINTS;i++){
     joints_[i]->q[0]  = q[i];
     joints_[i]->qd[0]  = qd[i];
   }
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 
-  if(LOG_TYPE.compare("DEBUG") == 0){
+  if(Log::ToString(Log::ReportingLevel()).compare("DEBUG") == 0){
     Ravelin::MatrixNd Jf;
     for(int i=0;i<NUM_EEFS;i++){
       boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(foot_pos[i].pose));
@@ -577,6 +497,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
    OUTLOG(uff,"uff",logINFO);
    OUTLOG(ufb,"ufb",logINFO);
    // -----------------------------------------------------------------------------
+#endif
 
    // Deactivate all contacts
    NC = 0;
@@ -585,27 +506,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
    qd_last = qd;
 
-//   moving average u
-   bool MOVING_AVERAGE= false;
-   if(MOVING_AVERAGE){
-       static Ravelin::VectorNd total_u(0);
-       if(total_u.rows() == 0)
-         total_u.set_zero(u.rows());
-
-       total_u += u;
-
-       static std::deque<Ravelin::VectorNd> u_list;
-
-       u_list.push_back(u);
-       if(u_list.size() > 2){
-          total_u -= u_list.at(0);
-          u_list.pop_front();
-       }
-
-       return (u = total_u) /= u_list.size();
-    } else {
-       return u;
-    }
+   return u;
 }
 
 
@@ -620,64 +521,48 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
 
 void Quadruped::init(){
-
-  // ================= INIT DATA VECTORS =========================
-  /// Use this space to initialize some gaits
-  {
-    // Trotting gait 50/50 duty cycle
-    gait["trot"] = boost::assign::list_of(0.0)(0.5)(0.5)(0.0).convert_to_container<std::vector<double> >();
-
-    // walk lf,rf,lh,rh
-    gait["walk"] = boost::assign::list_of(0.25)(0.75)(0.0)(0.5).convert_to_container<std::vector<double> >();
-
-    // pace
-    gait["pace"] = boost::assign::list_of(0.0)(0.5)(0.0)(0.5).convert_to_container<std::vector<double> >();
-
-    // bound
-    gait["bound"] = boost::assign::list_of(0.5)(0.5)(0.0)(0.0).convert_to_container<std::vector<double> >();
-
-    // transverse gallop
-    gait["tgallop"] = boost::assign::list_of(0.8)(0.9)(0.3)(0.4).convert_to_container<std::vector<double> >();
-
-    // Rotary gallop
-    gait["rgallop"] = boost::assign::list_of(0.7)(0.6)(0.0)(0.1).convert_to_container<std::vector<double> >();
-  }
-
-  // ================= INIT VARIABLES ==========================
-
 #ifdef VISUALIZE_MOBY
    tglc = new std::thread(init_glconsole);
 
    // Wait fro console thread to start
    sleep(2);
 #endif
-   NSPATIAL = 6;
-   NEULER = 7;
-
   // ================= LOAD SCRIPT DATA ==========================
-
   load_variables("startup.xml");
-  // ================= SIM VARIABLES ==========================
-  SIM_MU_COULOMB = CVarUtils::GetCVar<double>("sim.mu_coulomb");
-  SIM_MU_VISCOSE = CVarUtils::GetCVar<double>("sim.mu_viscous");
-  SIM_PENALTY_KV = CVarUtils::GetCVar<double>("sim.penalty_kv");
-  SIM_PENALTY_KP = CVarUtils::GetCVar<double>("sim.penalty_kp");
 
-//  CVarUtils::AttachCVar<double>("sim.mu_coulomb",&SIM_MU_COULOMB,"");
+  // ================= SETUP LOGGING ==========================
+
+  std::string LOG_TYPE = CVarUtils::GetCVarRef<std::string>("logging");
+
+  std::cerr << LOG_TYPE << std::endl;
+  FILELog::ReportingLevel() =
+      FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
+
+  OUT_LOG(logERROR) << "Log Type : " << LOG_TYPE;
+  OUT_LOG(logERROR) << "logERROR";
+  OUT_LOG(logINFO) << "logINFO";
+  OUT_LOG(logDEBUG) << "logDEBUG";
+  OUT_LOG(logDEBUG1) << "logDEBUG1";
 
   // ================= BUILD ROBOT ==========================
-
   eef_names_ = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
+
   std::vector<double>
-        &eefs_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x");
-//  passive_joints_ ;
+        eefs_start = CVarUtils::CVarExists("quadruped.init.end-effector.x")?
+                        CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x")
+                      : std::vector<double>();
+//  passive_joints_  = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.passive");
 
   compile();
 
-  /// SET UP END EFFECTORS
+  // ================= SET UP END EFFECTORS ==========================
+
   if(!eefs_start.empty())
     for(int i=0;i<eef_names_.size();i++)
       eef_origins_[eef_names_[i]] = Ravelin::Vector3d( eefs_start[i*3], eefs_start[i*3+1], eefs_start[i*3+2],base_link_frame);
+  else
+    for(int i=0;i<eef_names_.size();i++)
+      eef_origins_[eef_names_[i]] = Ravelin::Vector3d(0,0,0,base_link_frame);
 
   // Initialize Foot Structures
   OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
@@ -693,6 +578,8 @@ void Quadruped::init(){
       }
     }
   }
+
+  // ================= INIT VARIABLES ==========================
 
   NUM_EEFS = eefs_.size();
 
@@ -720,20 +607,21 @@ void Quadruped::init(){
   OUT_LOG(logINFO)<< "NK: " << NK ;
 
 
-
- std::vector<std::string> joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
-std::vector<double>
+ static std::vector<std::string>
+     joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+ static std::vector<double>
     &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
     &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
     &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
 
+ // MAKE SURE DATA PARSED PROPERLY
+ assert(joint_names.size() == joints_.size());
+ assert(joint_names.size() == joints_start.size());
+ assert(joint_names.size() == torque_limits.size());
 
-  assert(joint_names.size() == joints_start.size());
-  for(int i=0;i<joint_names.size();i++)
+ for(int i=0;i<joint_names.size();i++)
     q0_[joint_names[i]] = joints_start[i];
 
-  /// SET MAXIMUM TORQUES
-  assert(joint_names.size() == torque_limits.size());
   std::map<std::string, double> torque_limits_;
   for(int i=0;i<joint_names.size();i++)
     torque_limits_[joint_names[i]] = torque_limits[i];
@@ -746,8 +634,7 @@ std::vector<double>
     torque_limits_u[i] = torque_limits_[joints_[i]->id];
   }
 
-  // Set Initial State
-
+  // ================= INIT ROBOT STATE ==========================
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
 
   for(unsigned i=0;i< NUM_JOINTS;i++)
@@ -763,9 +650,9 @@ std::vector<double>
   update();
 
 
+  // ============ INIT ROBOT STATE (given EEF start position) ==================
   if(!eefs_start.empty()){
     assert(eefs_start.size() == eef_names_.size()*3);
-
     for(int i=0;i<NUM_EEFS;i++){
       RMRC(eefs_[i],Ravelin::VectorNd(q_start),eefs_[i].origin,q_start);
       for(int j=0;j<eefs_[i].chain.size();j++){

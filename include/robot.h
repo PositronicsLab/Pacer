@@ -48,46 +48,50 @@ class Robot {
                                Ravelin::VectorNd& q_des,
                                Ravelin::VectorNd& qd_des,
                                Ravelin::VectorNd& u) = 0;
-  void compile();
-  void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext);
-  double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
-  void calc_com();
-  std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
-  std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
-  std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
-  std::vector<std::string>& get_joint_names()  { return joint_names_; }
-  Moby::RCArticulatedBodyPtr& get_articulated_body()  { return abrobot_; }
-  Moby::DynamicBodyPtr& get_dynamic_body()  { return dbrobot_; }
-  double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext,
-                             double dt, const Ravelin::MatrixNd& N,
-                             const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
-                             Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
+    void reset_contact();
+    std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
+    std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
+    std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
+    std::vector<std::string>& get_joint_names()  { return joint_names_; }
+    Moby::RCArticulatedBodyPtr& get_articulated_body()  { return abrobot_; }
+    Moby::DynamicBodyPtr& get_dynamic_body()  { return dbrobot_; }
+    boost::shared_ptr<Ravelin::Pose3d>& get_base_link_frame(){return base_link_frame;}
 
-  void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
-  /** FUNCTIONAL
-   *  Applys *compresssive* forces and unlimited tangential forces
-   * to correct the [p; v] state of the robot base
-   * acording to Kp and Kv Respectively
-  **/
-  void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,
-                                   const std::vector<double>& pos_des, const std::vector<double>& vel_des, Ravelin::VectorNd& ufb);
-  void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
-  bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
-                        const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
-                        double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
-  bool workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z);
-  void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
-  void calc_base_jacobian(Ravelin::MatrixNd& R);
+  protected:
+    void compile();
+    void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext);
+    double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
+    void calc_com();
+    double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext,
+                               double dt, const Ravelin::MatrixNd& N,
+                               const Ravelin::MatrixNd& ST, const Ravelin::MatrixNd& M,
+                               Ravelin::MatrixNd& MU, Ravelin::VectorNd& cf);
 
-  void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<Ravelin::Pose3d> frame);
-  void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+    void contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R, const Ravelin::SVector6d& vel_des, Ravelin::VectorNd& ufb);
+    /** FUNCTIONAL
+     *  Applys *compresssive* forces and unlimited tangential forces
+     * to correct the [p; v] state of the robot base
+     * acording to Kp and Kv Respectively
+    **/
+    void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,
+                                     const std::vector<double>& pos_des, const std::vector<double>& vel_des, Ravelin::VectorNd& ufb);
+    void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
+    bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
+                          const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
+                          double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
+    bool workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z);
+    void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+    void calc_base_jacobian(Ravelin::MatrixNd& R);
 
-//  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
-  Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
-  Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
-  Ravelin::MatrixNd& foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
-  void update();
-  void update_poses();
+    void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<Ravelin::Pose3d> frame);
+    void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+
+  //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+    Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+    Ravelin::MatrixNd& foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
+    void update();
+    void update_poses();
   protected:
     // Robot Dynamics Datastructures
     Moby::RCArticulatedBodyPtr        abrobot_;

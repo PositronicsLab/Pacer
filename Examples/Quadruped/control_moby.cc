@@ -154,8 +154,9 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       if(iter  == eef_names_.end()){
         iter = std::find(eef_names_.begin(), eef_names_.end(), sb2->id);
         if(iter  == eef_names_.end())
-          continue;
+          continue;  // Contact doesn't include an end-effector
         else{
+          // contact is upside-down, mark for negation
           MIRROR_FLAG = true;
           std::swap(sb1,sb2);
         }

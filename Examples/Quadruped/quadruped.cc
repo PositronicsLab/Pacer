@@ -499,10 +499,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 void Quadruped::init(){
 
 #ifdef VISUALIZE_MOBY
-//   tglc = new std::thread(init_glconsole);
-
-   // Wait fro console thread to start
-//   sleep(2);
+   tglc = new std::thread(init_glconsole);
 #endif
   // ================= LOAD SCRIPT DATA ==========================
   load_variables("startup.xml");

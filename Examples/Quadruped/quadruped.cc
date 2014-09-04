@@ -22,24 +22,26 @@ GLConsole theConsole;
 // ============================================================================
 
 Ravelin::VectorNd& Quadruped::control(double t,
-                                      const Ravelin::VectorNd& q,
-                                      const Ravelin::VectorNd& qd,
+                                      const Ravelin::VectorNd& generalized_q,
+                                      const Ravelin::VectorNd& generalized_qd,
+                                      const Ravelin::VectorNd& generalized_qdd,
+                                      const Ravelin::VectorNd& generalized_fext,
                                       Ravelin::VectorNd& q_des,
                                       Ravelin::VectorNd& qd_des,
+                                      Ravelin::VectorNd& qdd_des,
                                       Ravelin::VectorNd& u){
-  static Ravelin::VectorNd qd_last = qd;
-  static double SIMULATION_TIME = -0.001;
 
-  double dt = t - SIMULATION_TIME;
+  // Import Robot Data
+  static double last_time = -0.001;
+  double dt = t - last_time;
+  last_time = t;
+  this->generalized_q = generalized_q;
+  this->generalized_qd = generalized_qd;
+  this->generalized_qdd = generalized_qdd;
+  this->generalized_fext = generalized_fext;
 
-  SIMULATION_TIME = t;
-
-  OUT_LOG(logINFO)<< "time = "<< t ;
-
-
-  // ----------------------------------------------------------------
-
-  ((qdd = qd)-=qd_last)/=0.001;
+  // Set Robot Data in robot
+  update();
 
 #  ifdef VISUALIZE_MOBY
   for(int i=0;i<NUM_EEFS;i++){
@@ -49,12 +51,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 #  endif
 
-  update_poses();
-
-  update();
-
-  OUT_LOG(logINFO)<< "num_contacts = " << NC ;
-
+  Ravelin::VectorNd uff, ufb;
   uff.set_zero(NUM_JOINTS);
   ufb.set_zero(NUM_JOINTS);
   u.set_zero(NUM_JOINTS);
@@ -63,21 +60,22 @@ Ravelin::VectorNd& Quadruped::control(double t,
   qd_des.set_zero(NUM_JOINTS);
   q_des.set_zero(NUM_JOINTS);
 
-  for(unsigned i=0;i< NUM_JOINTS;i++){
-    joints_[i]->q[0]  = q[i];
-    joints_[i]->qd[0]  = qd[i];
-  }
-  abrobot_->update_link_poses();
-  abrobot_->update_link_velocities();
-
   Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
   std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS), foot_pos(NUM_EEFS), foot_acc(NUM_EEFS);
 
   for(unsigned i=0;i< NUM_EEFS;i++){
     foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    OUTLOG(foot_pos[i],eefs_[i].id+"_pos",logERROR);
+    OUTLOG(eefs_[i].origin,eefs_[i].id+"_origin",logERROR);
     foot_vel[i].set_zero();
     foot_acc[i].set_zero();
     foot_pos[i].pose = foot_vel[i].pose = foot_acc[i].pose = base_frame;
+#  ifdef VISUALIZE_MOBY
+    workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,1,0),0.5,sim);
+    workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin);
+    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,0,0),0.5,sim);
+#  endif
   }
   Ravelin::VectorNd go_to(6);
   static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("quadruped.locomotion.active");
@@ -232,9 +230,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
     trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
   }
   else {
-    static std::vector<double>
-       &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q");
-    q_des = Ravelin::VectorNd(joints_start.size(),&joints_start[0]);
+    static Ravelin::VectorNd q_start = q;
+    q_des = q_start;
     qd_des.set_zero();
     qdd_des.set_zero();
   }
@@ -387,9 +384,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
       Ravelin::SVector6d go_to_global(go_to);
       workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e1,dt,vb_w);
 
-      workspace_inverse_dynamics(vel,vb_w,M,fext,dt,MU,id,cf);
+      workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf);
     } else {
-      if(!inverse_dynamics(vel,qdd_des,M,N,D,fext,dt,MU,id,cf))
+      if(!inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf))
         cf.set_zero(NC*5);
 
 #ifndef NDEBUG
@@ -431,6 +428,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 
 #ifndef NDEBUG
+  OUT_LOG(logINFO)<< "time = "<< t ;
+  OUT_LOG(logINFO)<< "num_contacts = " << NC ;
+
   for(unsigned i=0;i< NUM_JOINTS;i++){
     joints_[i]->q[0]  = q[i];
     joints_[i]->qd[0]  = qd[i];
@@ -455,7 +455,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       event_frame->x = Ravelin::Pose3d::transform_point(foot_pos[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
       dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
       Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-      Ravelin::SharedConstVectorNd vb = vel.segment(NUM_JOINTS,NDOFS);
+      Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
       Jb.mult(vb,workv3_);
       workv3_.pose = foot_pos[i].pose;
 
@@ -492,20 +492,14 @@ Ravelin::VectorNd& Quadruped::control(double t,
    OUTLOG(q_des,"q_des",logDEBUG);
    OUTLOG(qd_des,"qd_des",logDEBUG);
    OUTLOG(qdd_des,"qdd_des",logDEBUG);
-   OUTLOG(fext,"fext",logDEBUG);
+   OUTLOG(generalized_fext,"fext",logDEBUG);
 
    OUTLOG(uff,"uff",logINFO);
    OUTLOG(ufb,"ufb",logINFO);
    // -----------------------------------------------------------------------------
 #endif
 
-   // Deactivate all contacts
-   NC = 0;
-   for(int i=0;i<eefs_.size();i++)
-     eefs_[i].active = false;
-
-   qd_last = qd;
-
+   reset_contact();
    return u;
 }
 
@@ -520,12 +514,15 @@ Ravelin::VectorNd& Quadruped::control(double t,
   std::thread * tglc;
 #endif
 
+#include <Moby/XMLReader.h>
+
 void Quadruped::init(){
+
 #ifdef VISUALIZE_MOBY
-   tglc = new std::thread(init_glconsole);
+//   tglc = new std::thread(init_glconsole);
 
    // Wait fro console thread to start
-   sleep(2);
+//   sleep(2);
 #endif
   // ================= LOAD SCRIPT DATA ==========================
   load_variables("startup.xml");
@@ -545,17 +542,29 @@ void Quadruped::init(){
   OUT_LOG(logDEBUG1) << "logDEBUG1";
 
   // ================= BUILD ROBOT ==========================
+  /// The map of objects read from the simulation XML file
+  std::map<std::string, Moby::BasePtr> READ_MAP;
+  READ_MAP = Moby::XMLReader::read(std::string("links.xml"));
+  for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
+       i !=READ_MAP.end(); i++)
+  {
+    // find the robot reference
+    if (!abrobot_)
+    {
+      abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+    }
+  }
+
+  compile();
+
+  // ================= SET UP END EFFECTORS ==========================
+
   eef_names_ = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
 
   std::vector<double>
         eefs_start = CVarUtils::CVarExists("quadruped.init.end-effector.x")?
                         CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x")
                       : std::vector<double>();
-//  passive_joints_  = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.passive");
-
-  compile();
-
-  // ================= SET UP END EFFECTORS ==========================
 
   if(!eefs_start.empty())
     for(int i=0;i<eef_names_.size();i++)
@@ -594,8 +603,6 @@ void Quadruped::init(){
   NUM_LINKS = links_.size();
   NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
 
-  Ravelin::VectorNd q_start;
-
   NK = 4;
 
   OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS ;
@@ -615,6 +622,7 @@ void Quadruped::init(){
     &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
 
  // MAKE SURE DATA PARSED PROPERLY
+
  assert(joint_names.size() == joints_.size());
  assert(joint_names.size() == joints_start.size());
  assert(joint_names.size() == torque_limits.size());
@@ -633,33 +641,4 @@ void Quadruped::init(){
     torque_limits_l[i] = -torque_limits_[joints_[i]->id];
     torque_limits_u[i] = torque_limits_[joints_[i]->id];
   }
-
-  // ================= INIT ROBOT STATE ==========================
-  abrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
-
-  for(unsigned i=0;i< NUM_JOINTS;i++)
-    q_start[i] = q0_[joints_[i]->id];
-  for(unsigned i=NUM_JOINTS;i<q_start.rows();i++)
-    q_start[i] = base_start[i-NUM_JOINTS];
-
-  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
-
-  OUTLOG(q_start,"q_start",logINFO);
-  abrobot_->update_link_poses();
-  abrobot_->update_link_velocities();
-  update();
-
-
-  // ============ INIT ROBOT STATE (given EEF start position) ==================
-  if(!eefs_start.empty()){
-    assert(eefs_start.size() == eef_names_.size()*3);
-    for(int i=0;i<NUM_EEFS;i++){
-      RMRC(eefs_[i],Ravelin::VectorNd(q_start),eefs_[i].origin,q_start);
-      for(int j=0;j<eefs_[i].chain.size();j++){
-        (joints_[eefs_[i].chain[j]]->q[0] = q_start[eefs_[i].chain[j]]);
-      }
-    }
-    abrobot_->update_link_poses();
-  }
-  update();
 }

@@ -40,13 +40,18 @@ public:
 
 class Robot {
   public:
+  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+
     Robot(){}
     // This is the Simplest Controller (policy is determined within fn)
     virtual Ravelin::VectorNd& control(double dt,
-                               const Ravelin::VectorNd& q,
-                               const Ravelin::VectorNd& qd,
+                               const Ravelin::VectorNd& generalized_q,
+                               const Ravelin::VectorNd& generalized_qd,
+                               const Ravelin::VectorNd& generalized_qdd,
+                               const Ravelin::VectorNd& generalized_fext,
                                Ravelin::VectorNd& q_des,
                                Ravelin::VectorNd& qd_des,
+                               Ravelin::VectorNd& qdd_des,
                                Ravelin::VectorNd& u) = 0;
     void reset_contact();
     std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
@@ -55,7 +60,9 @@ class Robot {
     std::vector<std::string>& get_joint_names()  { return joint_names_; }
     Moby::RCArticulatedBodyPtr& get_articulated_body()  { return abrobot_; }
     Moby::DynamicBodyPtr& get_dynamic_body()  { return dbrobot_; }
-    boost::shared_ptr<Ravelin::Pose3d>& get_base_link_frame(){return base_link_frame;}
+    boost::shared_ptr<const Ravelin::Pose3d>& get_base_link_frame(){return base_link_frame;}
+    std::map<int, int>& get_joint_map()  { return joint_map_; }
+    std::map<std::string, double>& get_q0()  { return q0_; }
 
   protected:
     void compile();
@@ -83,13 +90,13 @@ class Robot {
     void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
     void calc_base_jacobian(Ravelin::MatrixNd& R);
 
-    void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<Ravelin::Pose3d> frame);
+    void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<const Ravelin::Pose3d> frame);
     void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
   //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
     Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
-    Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
-    Ravelin::MatrixNd& foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
+    Ravelin::Vector3d& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk);
+    Ravelin::MatrixNd& foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
     void update();
     void update_poses();
   protected:
@@ -114,10 +121,10 @@ class Robot {
     // wrt: base_frame
     std::map<std::string, Ravelin::Vector3d> eef_origins_;
     // Useful Stored Data
-    boost::shared_ptr<Ravelin::Pose3d>   base_horizontal_frame,
-                                         base_frame,
-                                         environment_frame,
-                                         base_link_frame;
+    boost::shared_ptr<const Ravelin::Pose3d>   base_horizontal_frame,
+                                               base_frame,
+                                               environment_frame,
+                                               base_link_frame;
 
     Ravelin::MatrixNd                    base_stability_offset;
 
@@ -129,11 +136,9 @@ class Robot {
                       center_of_feet_x,
                       roll_pitch_yaw;
     Ravelin::Vector2d zero_moment_point;
-    Ravelin::VectorNd uff, ufb;
-    Ravelin::VectorNd qdd_des, qdd;
+    Ravelin::VectorNd q,qd,qdd,generalized_q,generalized_qd,generalized_qdd;
     Ravelin::MatrixNd N,D,M,R,Rw;
-    Ravelin::VectorNd fext;
-    Ravelin::VectorNd vel, gc, acc;
+    Ravelin::VectorNd generalized_fext;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;
@@ -144,6 +149,7 @@ class Robot {
 
   // PHYSICAL ROBOT LIMITS AND VARIABLES
     std::map<std::string, double>     q0_;
+    std::map<int, int>     joint_map_;
     Ravelin::VectorNd     torque_limits_l,torque_limits_u;
 
   // All Names, vectors and, maps must be aligned,

@@ -108,10 +108,6 @@ void Quadruped::load_variables(std::string fname){
     process_tag("",root_tree);
 }
 
-//template<class T> T& Quadruped::get_variable(std::string tag){
-//  return CVarUtils::GetCVarRef<T>(tag.c_str());
-//}
-
 std::vector<double>& Quadruped::get_variable(const char* tag,std::vector<double>& val){
   return (val = CVarUtils::GetCVar<std::vector<double>>(tag));
 }

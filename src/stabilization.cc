@@ -69,7 +69,7 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
   Kv[5] = 0;
 
   Ravelin::VectorNd vel_base(6);
-  vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
+  generalized_qd.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
 
   vel_base -= vel_des;
 //  vel_base = (Ravelin::VectorNd::diag_mult(Kv,))
@@ -122,7 +122,7 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
   OUTLOG(Jq,"Jq",logDEBUG1);
 
   Ravelin::VectorNd vel_base(6), pos_base(6), base_correct(6);
-  vel.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
+  generalized_qd.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
   pos_base.set_sub_vec(0,center_of_mass_x);
   pos_base.set_sub_vec(3,roll_pitch_yaw);
   OUTLOG(vel_base,"vel_base",logDEBUG1);
@@ -202,11 +202,11 @@ void Robot::calc_com(){
 
 #ifdef VISUALIZE_MOBY
   // ZMP and COM
-  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.13,environment_frame);
-//  visualize_ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
-//  visualize_ray(CoM_2D + center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1),sim);
+  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.10,environment_frame);
+  visualize_ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
+  visualize_ray(CoM_2D + center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1),sim);
 //  visualize_ray(center_of_mass_x + center_of_mass_xd + center_of_mass_xdd,center_of_mass_x + center_of_mass_xd,Ravelin::Vector3d(1,0,1),sim);
-//  visualize_ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,0,1),sim);
+  visualize_ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0),sim);
 #endif
 
 }

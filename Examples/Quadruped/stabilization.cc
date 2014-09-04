@@ -80,7 +80,7 @@ void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vecto
     event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
     dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
     Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-    Ravelin::SharedConstVectorNd vb = vel.segment(NUM_JOINTS,NDOFS);
+    Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
     Jb.mult(vb,workv3_);
     workv3_.pose = x_des[i].pose;
 

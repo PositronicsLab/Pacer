@@ -5,16 +5,21 @@
 
 class Quadruped : public Robot{
   public:
-    Quadruped(){}
+    Quadruped(){
+      init();
+    }
     Quadruped(Moby::RCArticulatedBodyPtr abrobot){
       abrobot_ = abrobot;
       init();
     }
     Ravelin::VectorNd& control(double dt,
-                               const Ravelin::VectorNd& q,
-                               const Ravelin::VectorNd& qd,
+                               const Ravelin::VectorNd& generalized_q,
+                               const Ravelin::VectorNd& generalized_qd,
+                               const Ravelin::VectorNd& generalized_qdd,
+                               const Ravelin::VectorNd& generalized_fext,
                                Ravelin::VectorNd& q_des,
                                Ravelin::VectorNd& qd_des,
+                               Ravelin::VectorNd& qdd_des,
                                Ravelin::VectorNd& u);
 
     void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt);

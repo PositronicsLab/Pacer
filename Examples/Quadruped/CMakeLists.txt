@@ -90,7 +90,6 @@ set(SOURCES ../../src/output.cc
             ../../src/splines.cc
             ../../src/solve_qp.cc
             ../../src/Solvers.cpp
-            ../../src/moby_callback.cc
            )
 
 if(VISUALIZE_MOBY)
@@ -111,12 +110,10 @@ set(SOURCES2 quadruped.cc
             )
 
 set(THIRDPARTY
-                )
+              )
 
 add_library(${PROJECT_NAME} ${SOURCES} ${SOURCES2} ${THIRDPARTY})
-
 target_link_libraries(${PROJECT_NAME} Moby Ravelin OpenThreads cvars ${VISUALIZE_LIBS})
 
 add_library(${PROJECT_NAME}Plugin MODULE control_moby.cc)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
-

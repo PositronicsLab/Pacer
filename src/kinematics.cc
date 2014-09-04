@@ -22,7 +22,7 @@ Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEf
 
 /// Working kinematics function [y] = f(x,foot,pt,y,J)
 /// evaluated in foot link frame
-Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk){
+Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::Vector3d& fk, Ravelin::MatrixNd& gk){
   foot_jacobian(x.data(),foot,frame,gk);
   fk = Ravelin::Pose3d::transform_vector(frame,Ravelin::Pose3d::transform_point(
          foot.link->get_pose(),goal));
@@ -30,7 +30,7 @@ Ravelin::Vector3d& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEf
   return fk;
 }
 
-Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot,const boost::shared_ptr<Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk){
+Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::Origin3d& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk){
   for(int i=0;i<foot.chain.size();i++)
     joints_[foot.chain[i]]->q[0] = x[i];
   abrobot_->update_link_poses();
@@ -212,7 +212,7 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
 /* Goes from Minimal coords [v,q]' -> workspace coords [x1,x2,..,xN]'
  *
  */
-void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_ptr<Ravelin::Pose3d> workspace){
+void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_ptr<const Ravelin::Pose3d> workspace){
   Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
 //  Rw.set_zero(NUM_EEFS*3, NUM_JOINTS + 6);
   Ravelin::MatrixNd J(3,NDOFS);

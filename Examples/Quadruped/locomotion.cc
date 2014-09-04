@@ -381,6 +381,8 @@ void Quadruped::walk_toward(
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
+      OUTLOG(foot_origin[i],"foot_origin_" + eefs_[i].id,logERROR);
+
       // What phase of the gait is the controller in?
       // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
       // truncates t/gait_duration at decimal; gait_progress \in [0,1)
@@ -485,7 +487,7 @@ void Quadruped::walk_toward(
           control_points.push_back(x_fh - Ravelin::Origin3d(foot_goal));
         }
       }
-      else if(stance_phase[i]){
+      else {
         OUT_LOG(logDEBUG) << "\tPlanning Stance phase (phase < 0)...";
 
         // STANCE
@@ -510,19 +512,13 @@ void Quadruped::walk_toward(
         control_points[1] *= (control_points[2].norm() + control_points[0].norm())/2.0;
         if( (control_points[2] - control_points[1]).norm() < Moby::NEAR_ZERO)
           control_points.pop_back();
-        for(int i=0;i<3;i++)
-          OUTLOG(control_points[i],"cp",logERROR);
 
 //        for(double pt=1.0;pt<=num_points;pt+=1.0){
 //          Ravelin::Origin3d segment = Ravelin::Origin3d(x) + foot_goal*pt/num_points;
 //          segment.normalize();
 //          control_points.push_back(segment * x0.norm()) ;
 //        }
-      } else {
-        OUT_LOG(logDEBUG) << "\tthrowing assertion (phase == 0) ...";
-        assert(false);
       }
-
       // Plane walking Terrain abstraction (3 lowest feet form the plane)
       //  plane X + Y + c = z
 
@@ -537,6 +533,10 @@ void Quadruped::walk_toward(
 
       // create new spline!!
       // copy last spline to history erasing oldest spline
+
+      for(int i=0;i<control_points.size();i++)
+        OUTLOG(control_points[i],"control_point",logDEBUG1);
+
       for(int j=0;j<spline_plan_length-1;j++){
         for(int d=0; d<3;d++)
           spline_coef[i][d][j] = spline_coef[i][d][j+1];
@@ -574,7 +574,7 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
-  if(false){
+  if(true){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);

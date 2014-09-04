@@ -136,7 +136,6 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   std::vector<std::string>& eef_names_ = quad_ptr->get_end_effector_names();
 
   quad_ptr->reset_contact();
-
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
@@ -163,43 +162,53 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       }
 
       size_t index = std::distance(eef_names_.begin(), iter);
-      eefs_[index].contacts.push_back(e[i].contact_point);
-      if(MIRROR_FLAG){
-        eefs_[index].contact_impulses.push_back(-e[i].contact_impulse.get_linear());
-      } else {
-        eefs_[index].contact_impulses.push_back(e[i].contact_impulse.get_linear());
-      }
 
+
+      // Only accept 1 contact per foot
       if (eefs_[index].active)
         continue;
-
-      Ravelin::Pose3d foot_pose = *eefs_[index].link->get_pose();
-      foot_pose.update_relative_pose(Moby::GLOBAL);
-
-      // Increment number of active contacts
-      NC++;
+      else {
+        // convert impulses to a single impulse at first contact point
+        if(MIRROR_FLAG){
+          eefs_[index].impulse += Ravelin::Pose3d::transform(eefs_[index].point.pose,-e[i].contact_impulse).get_linear();
+        } else {
+          eefs_[index].impulse += Ravelin::Pose3d::transform(eefs_[index].point.pose,e[i].contact_impulse).get_linear();
+        }
+      }
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
       eefs_[index].point = e[i].contact_point;
       if(MIRROR_FLAG){
+        eefs_[index].impulse= -e[i].contact_impulse.get_linear();
         eefs_[index].normal = -e[i].contact_normal;
         eefs_[index].tan1   = -e[i].contact_tan1;
         eefs_[index].tan2   = -e[i].contact_tan2;
 
       } else {
+        eefs_[index].impulse= e[i].contact_impulse.get_linear();
         eefs_[index].normal = e[i].contact_normal;
         eefs_[index].tan1   = e[i].contact_tan1;
         eefs_[index].tan2   = e[i].contact_tan2;
       }
-      eefs_[index].event = boost::shared_ptr<const Moby::UnilateralConstraint>(new Moby::UnilateralConstraint(e[i]));
+      eefs_[index].mu_coulomb = e[i].contact_mu_coulomb;
+      eefs_[index].mu_viscous = e[i].contact_mu_viscous;
+      eefs_[index].impulse.pose = eefs_[index].point.pose;
     }
   }
 
   OUT_LOG(logDEBUG)<< "cfs_moby = [";
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
-     OUT_LOG(logDEBUG) << " " << eefs_[i].contact_impulses[0];
+      OUT_LOG(logDEBUG) << " " << eefs_[i].impulse;
+#ifdef VISUALIZE_MOBY
+      visualize_ray(  eefs_[i].point,
+                      eefs_[i].point + eefs_[i].impulse*10.0,
+                      Ravelin::Vector3d(1,0.5,0),
+                      0.1,
+                      sim
+                    );
+#endif
       ii++;
     } else {
       OUT_LOG(logDEBUG) << " [0.0, 0.0, 0.0] ";
@@ -270,9 +279,9 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   quad_ptr->sim = sim;
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
-  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
+//  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
   // CONTACT CALLBACK
-  sim->constraint_callback_fn             = &pre_event_callback_fn;
+//  sim->constraint_callback_fn             = &pre_event_callback_fn;
   sim->constraint_post_callback_fn        = &post_event_callback_fn;
   // CONTROLLER CALLBACK
   abrobot->controller                     = &controller_callback;

@@ -26,13 +26,13 @@ public:
     std::vector<bool> chain_bool;
     // Contact Data
 
-    boost::shared_ptr<const Moby::UnilateralConstraint> event;
-    Ravelin::Vector3d     point,normal,tan1,tan2;
-    std::vector<Ravelin::Vector3d> contacts;
-    std::vector<Ravelin::Vector3d> contact_impulses;
+    Ravelin::Vector3d     point,
+                          normal,tan1,tan2,
+                          impulse;
 
     bool                  active;
-
+    double                mu_viscous,
+                          mu_coulomb;
   private:
     std::vector<std::string> joint_names_;
     void init();

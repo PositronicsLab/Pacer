@@ -19,7 +19,7 @@
       <DisabledPair object1-id="links" object2-id="links"/>
       <DynamicBody dynamic-body-id="links" />
       <DynamicBody dynamic-body-id="ground" />
-      <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.25" mu-viscous="0" epsilon="0.0"/>
+      <ContactParameters object1-id="links" object2-id="ground" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>
     </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->

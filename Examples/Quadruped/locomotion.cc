@@ -381,7 +381,7 @@ void Quadruped::walk_toward(
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
-      OUTLOG(foot_origin[i],"foot_origin_" + eefs_[i].id,logERROR);
+      OUTLOG(foot_origin[i],"foot_origin_" + eefs_[i].id,logDEBUG);
 
       // What phase of the gait is the controller in?
       // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
@@ -574,7 +574,7 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
-  if(true){
+  if(false){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);

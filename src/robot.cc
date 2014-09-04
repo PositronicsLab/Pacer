@@ -205,9 +205,8 @@ void Robot::update_poses(){
 }
 
 void Robot::reset_contact(){
+  NC = 0;
   for(int i=0;i<eefs_.size();i++){
     eefs_[i].active = false;
-    eefs_[i].contacts.clear();
-    eefs_[i].contact_impulses.clear();
   }
 }

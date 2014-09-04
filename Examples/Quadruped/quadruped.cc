@@ -65,16 +65,14 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   for(unsigned i=0;i< NUM_EEFS;i++){
     foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    OUTLOG(foot_pos[i],eefs_[i].id+"_pos",logERROR);
-    OUTLOG(eefs_[i].origin,eefs_[i].id+"_origin",logERROR);
     foot_vel[i].set_zero();
     foot_acc[i].set_zero();
     foot_pos[i].pose = foot_vel[i].pose = foot_acc[i].pose = base_frame;
 #  ifdef VISUALIZE_MOBY
     workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,1,0),0.5,sim);
+    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,1,0),0.2,sim);
     workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin);
-    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,0,0),0.5,sim);
+    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,0,0),0.2,sim);
 #  endif
   }
   Ravelin::VectorNd go_to(6);
@@ -252,7 +250,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     if(eefs_[i].active){
       for(int k=0;k<NK/2;k++)
-        MU(ii,k) = (eefs_[i].event->compliance == Moby::UnilateralConstraint::eRigid)? eefs_[i].event->contact_mu_coulomb : 0.01;
+        MU(ii,k) = eefs_[i].mu_coulomb;
       ii++;
     }
   }
@@ -358,10 +356,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active) continue;
-        Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
-                               eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
-                               eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
-        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].contact_impulses[0],workv3_)*(dt/0.001));
+        Ravelin::Matrix3d R_foot( eefs_[i].normal[0], eefs_[i].normal[1], eefs_[i].normal[2],
+                                    eefs_[i].tan1[0],   eefs_[i].tan1[1],   eefs_[i].tan1[2],
+                                    eefs_[i].tan2[0],   eefs_[i].tan2[1],   eefs_[i].tan2[2]);
+        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].impulse,workv3_)*((t-last_time)/dt));
         cf[ii] = contact_impulse[0];
         if(contact_impulse[1] >= 0)
           cf[NC+ii] = contact_impulse[1];
@@ -388,24 +386,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
     } else {
       if(!inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf))
         cf.set_zero(NC*5);
-
-#ifndef NDEBUG
-        OUTLOG(cf,"cf",logDEBUG);
-
-        OUT_LOG(logDEBUG1) << "cfs = [";
-        for(int i=0, ii = 0;i<NUM_EEFS;i++){
-          if(eefs_[i].active){
-            Ravelin::Matrix3d R_foot(             eefs_[i].normal[0],              eefs_[i].normal[1],              eefs_[i].normal[2],
-                                   eefs_[i].event->contact_tan1[0], eefs_[i].event->contact_tan1[1], eefs_[i].event->contact_tan1[2],
-                                   eefs_[i].event->contact_tan2[0], eefs_[i].event->contact_tan2[1], eefs_[i].event->contact_tan2[2]);
-            OUT_LOG(logDEBUG1) << " " << R_foot.transpose_mult(Ravelin::Vector3d(cf[ii],cf[NC+ii]-cf[NC*3+ii],cf[NC*2+ii]-cf[NC*4+ii]),workv3_);
-            ii++;
-          } else {
-            OUT_LOG(logDEBUG1) << " [0, 0, 0] " ;
-          }
-        }
-        OUT_LOG(logDEBUG1) << "]';" << std::endl;
-#endif
     }
     uff += (id*=alpha);
   }

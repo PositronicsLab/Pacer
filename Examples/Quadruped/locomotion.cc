@@ -425,7 +425,6 @@ void Quadruped::walk_toward(
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
       if(fabs(command[5]) > Moby::NEAR_ZERO){
-
         // Determine shape of step needed to yaw robot
         Ravelin::Origin3d rotation_axis = Ravelin::Origin3d(0,0,1);
         Ravelin::AAngled aa_gamma(Ravelin::Vector3d(rotation_axis,turning_frame),command[5] *  left_in_phase*gait_duration);
@@ -437,8 +436,6 @@ void Quadruped::walk_toward(
         R_gamma.mult(Ravelin::Pose3d::transform_point(turning_frame, foot_goal), workv3_);
         workv3_.pose = turning_frame;
         foot_goal = Ravelin::Pose3d::transform_point(foot_frame, workv3_);
-//        OUTLOG( yaw_step," yaw_step",logDEBUG);
-
       }
 
       // scale step length by interval duration
@@ -460,15 +457,15 @@ void Quadruped::walk_toward(
         foot_goal /= (1-duty_factor[i]);
         OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
 
-        // velocity correction
-        // FEEDBACK CAPTURE POINT
+//        // velocity correction
+//        // FEEDBACK CAPTURE POINT
 //        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
 //        OUT_LOG(logERROR) << "Getting " << links_[3+i]->id << " pose";
 //        double eta = 1.2,
 //               height = hip_pos[2];
 //        Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
 //                                     -  Ravelin::Origin3d(
-//                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, vel.get_sub_vec(NUM_JOINTS,NUM_JOINTS+3,workv3_))
+//                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINTS,NUM_JOINTS+3,workv3_))
 //                                        )
 //                                     ) * sqrt(height/grav);
 //        rfb[2] = 0;
@@ -533,7 +530,6 @@ void Quadruped::walk_toward(
 
       // create new spline!!
       // copy last spline to history erasing oldest spline
-
       for(int i=0;i<control_points.size();i++)
         OUTLOG(control_points[i],"control_point",logDEBUG1);
 
@@ -543,7 +539,6 @@ void Quadruped::walk_toward(
         spline_t[i][j] = spline_t[i][j+1];
       }
 
-//      Ravelin::Vector3d foot_velocity = Ravelin::Vector3d(foot_goal +  yaw_step,base_frame);
       // create spline using set of control points, place at back of history
       int n = control_points.size();
 
@@ -561,7 +556,7 @@ void Quadruped::walk_toward(
         OUTLOG(T,"T",logDEBUG1);
         OUTLOG(X,"X",logDEBUG1);
 
-        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],foot_goal[d]),coefs);
+        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],xd[d]),coefs);
 
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
@@ -584,7 +579,7 @@ void Quadruped::walk_toward(
 
     for(int i=0;i<eefs_[i].chain.size();i++)
       joints_[eefs_[i].chain[i]]->q[0] = q[eefs_[i].chain[i]];
-    abrobot_->update_link_poses();
+    update_link_poses();
 
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
 

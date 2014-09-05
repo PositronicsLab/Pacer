@@ -140,7 +140,7 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
   static Ravelin::MatrixNd workM_;
 
   N.set_zero(NDOFS,NC);
-  D.set_zero(NDOFS,NC*NK);
+  D.set_zero(NDOFS,NC*4);
   R.set_zero(NDOFS,NC*5);
   if(NC==0) return;
   // Contact Jacobian [GLOBAL frame]

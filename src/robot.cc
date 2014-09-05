@@ -61,6 +61,13 @@ void Robot::compile(){
   // Set up link references
   links_ = abrobot_->get_links();
 
+  // set up initial stance if it exists
+  for(int i=0;i<NUM_FIXED_JOINTS;i++)
+    joints_.pop_back();
+  NUM_JOINTS = joints_.size();
+  NUM_LINKS = links_.size();
+  NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
+
   environment_frame = boost::shared_ptr<const Ravelin::Pose3d>( new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Origin3d(0,0,0),Moby::GLOBAL));
 //  environment_frame->x = Ravelin::Origin3d(0,0,0);
 //  environment_frame->q.set_identity();

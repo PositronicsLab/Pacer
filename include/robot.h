@@ -33,6 +33,7 @@ public:
     bool                  active;
     double                mu_viscous,
                           mu_coulomb;
+    int                   nk;
   private:
     std::vector<std::string> joint_names_;
     void init();
@@ -118,8 +119,6 @@ class Robot {
     unsigned                          NUM_JOINTS;
     unsigned                          NUM_LINKS;
 
-    // wrt: base_frame
-    std::map<std::string, Ravelin::Vector3d> eef_origins_;
     // Useful Stored Data
     boost::shared_ptr<const Ravelin::Pose3d>   base_horizontal_frame,
                                                base_frame,
@@ -143,7 +142,6 @@ class Robot {
     unsigned                          NDOFS;
     unsigned                          NSPATIAL;
     unsigned                          NEULER;
-    unsigned                          NK;
 
     Ravelin::VectorNd BASE_ORIGIN;
 

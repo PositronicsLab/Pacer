@@ -98,21 +98,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     // Foot Locations
     std::vector<Ravelin::Vector3d> foot_origin;
-    for(unsigned i=0;i< NUM_EEFS;i++){
-      foot_origin.push_back(eefs_[i].origin);
-      foot_origin[i][0] += go_to[0]*-0.1;
-      foot_origin[i][1] += go_to[1]*-0.1;
-//      foot_origin[i][1] += go_to[5]*-0.01;
-      foot_origin[i].pose = base_frame;
-#ifdef VISUALIZE_MOBY
-      visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
-                      Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
-                      Ravelin::Vector3d(1,0,0),
-                      0.1,
-                      sim
-                    );
-#endif
-    }
 
     /// HANDLE WAYPOINTS
     if(patrol_points.size() >= 4){
@@ -200,6 +185,25 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     OUTLOG(go_to,"go_to",logDEBUG);
 
+    // Lean into turns
+    for(unsigned i=0;i< NUM_EEFS;i++){
+      foot_origin.push_back(eefs_[i].origin);
+      // Robot leans into movement
+      foot_origin[i][0] += go_to[0]*-0.2;
+      foot_origin[i][1] += go_to[1]*-0.2;
+//      foot_origin[i][1] += go_to[5]*-0.01;
+      foot_origin[i].pose = base_frame;
+#ifdef VISUALIZE_MOBY
+      visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+                      Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+                      Ravelin::Vector3d(1,0,0),
+                      0.1,
+                      sim
+                    );
+#endif
+    }
+
+
     OUTLOG(this_gait,"this_gait",logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
 
@@ -238,7 +242,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 
   static Ravelin::MatrixNd MU;
-  MU.set_zero(NC,NK/2);
+  MU.set_zero(NC,2);
 
 #ifdef EXPERIMENTAL_CODE
   // --------------------------- FRICTION ESTIMATION ---------------------------
@@ -252,7 +256,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #else
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     if(eefs_[i].active){
-      for(int k=0;k<NK/2;k++)
+      for(int k=0;k<2;k++)
         MU(ii,k) = eefs_[i].mu_coulomb;
       ii++;
     }
@@ -403,10 +407,11 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   // -------------------------- LIMIT TORQUES ----------------------------
 
+  // Enforce torque limits
   for(unsigned i=0;i< NUM_JOINTS;i++){
     if(u[i] > torque_limits_u[i])
       u[i] = torque_limits_u[i];
-    if(u[i] < torque_limits_l[i])
+    else if(u[i] < torque_limits_l[i])
       u[i] = torque_limits_l[i];
   }
 
@@ -539,19 +544,11 @@ void Quadruped::init(){
 
   // ================= SET UP END EFFECTORS ==========================
 
-  eef_names_ = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
+  eef_names_
+      = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
 
-  std::vector<double>
-        eefs_start = CVarUtils::CVarExists("quadruped.init.end-effector.x")?
-                        CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x")
-                      : std::vector<double>();
-
-  if(!eefs_start.empty())
-    for(int i=0;i<eef_names_.size();i++)
-      eef_origins_[eef_names_[i]] = Ravelin::Vector3d( eefs_start[i*3], eefs_start[i*3+1], eefs_start[i*3+2],base_link_frame);
-  else
-    for(int i=0;i<eef_names_.size();i++)
-      eef_origins_[eef_names_[i]] = Ravelin::Vector3d(0,0,0,base_link_frame);
+  std::vector<double> &eefs_start
+      = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x");
 
   // Initialize Foot Structures
   OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
@@ -559,31 +556,13 @@ void Quadruped::init(){
     for(unsigned i=0;i<links_.size();i++){
       if(eef_names_[j].compare(links_[i]->id) == 0){
         OUT_LOG(logINFO)<< eef_names_[j] << " FOUND!";
-        if(eefs_start.empty())
-          eef_origins_[links_[i]->id] = Ravelin::Pose3d::transform_point(base_link_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_pose()));
-        OUTLOG(eef_origins_[links_[i]->id],"origin",logINFO);
-        eefs_.push_back(EndEffector(links_[i],eef_origins_[links_[i]->id],joint_names_));
+        workv3_ = Ravelin::Vector3d(eefs_start[j*3],eefs_start[j*3+1],eefs_start[j*3+2],base_link_frame);
+        eefs_.push_back(EndEffector(links_[i],workv3_,joint_names_));
         break;
       }
     }
   }
-
-  // ================= INIT VARIABLES ==========================
-
   NUM_EEFS = eefs_.size();
-
-  OUT_LOG(logINFO)<< NUM_EEFS << " end effectors:" ;
-  for(unsigned j=0;j<NUM_EEFS;j++){
-    OUT_LOG(logINFO)<< eefs_[j].id ;
-  }
-  // set up initial stance if it exists
-  for(int i=0;i<NUM_FIXED_JOINTS;i++)
-    joints_.pop_back();
-  NUM_JOINTS = joints_.size();
-  NUM_LINKS = links_.size();
-  NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
-
-  NK = 4;
 
   OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS ;
   OUT_LOG(logINFO)<< "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS ;
@@ -591,7 +570,6 @@ void Quadruped::init(){
   OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
   OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
-  OUT_LOG(logINFO)<< "NK: " << NK ;
 
 
  static std::vector<std::string>

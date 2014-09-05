@@ -5,13 +5,11 @@
 
 class Quadruped : public Robot{
   public:
-    Quadruped(){
+    Quadruped(){}
+    Quadruped(std::string name) : Robot(name){
       init();
     }
-    Quadruped(Moby::RCArticulatedBodyPtr abrobot){
-      abrobot_ = abrobot;
-      init();
-    }
+
     Ravelin::VectorNd& control(double dt,
                                const Ravelin::VectorNd& generalized_q,
                                const Ravelin::VectorNd& generalized_qd,
@@ -66,16 +64,16 @@ class Quadruped : public Robot{
     void set_leading_force(const Ravelin::SForced& f){lead_force_ = f;}
     void set_known_force(const Ravelin::SForced& f){known_force_ = f;}
 
-    static void load_variables(std::string fname);
+    void load_variables(std::string fname);
 
-    static std::vector<double>& get_variable(const char* tag,std::vector<double>& val);
-    static double& get_variable(const char* tag,double& val);
+    std::vector<double>& get_variable(const char* tag,std::vector<double>& val);
+    double& get_variable(const char* tag,double& val);
 
-    static std::vector<std::string>& get_variable(const char* tag,std::vector<std::string>& val);
-    static std::string& get_variable(const char* tag,std::string& val);
+    std::vector<std::string>& get_variable(const char* tag,std::vector<std::string>& val);
+    std::string& get_variable(const char* tag,std::string& val);
 
-    static std::vector<int>& get_variable(const char* tag,std::vector<int>& val);
-    static int& get_variable(const char* tag,int& val);
+    std::vector<int>& get_variable(const char* tag,std::vector<int>& val);
+    int& get_variable(const char* tag,int& val);
   private:
     Ravelin::SForced lead_force_;
     Ravelin::SForced known_force_;

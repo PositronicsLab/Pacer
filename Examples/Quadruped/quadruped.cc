@@ -230,6 +230,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
     Ravelin::SVector6d goto_6d = go_to;
     goto_6d.pose = base_frame;
+
     walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
@@ -497,7 +498,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 // ============================================================================
 
 #ifdef VISUALIZE_MOBY
-# include <thread>
   extern void init_glconsole();
   std::thread * tglc;
 #endif
@@ -570,7 +570,6 @@ void Quadruped::init(){
   OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
   OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
-
 
  static std::vector<std::string>
     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");

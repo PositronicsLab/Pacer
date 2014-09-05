@@ -131,10 +131,56 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
 
 /// Calculate contact-frame jacobians,
 /* oriented to the contact normal and 2 orthogonal directions
- * N = [n1 n2 .. nN]
- * D = [S T -S -T] : S = [s1 s2 .. sN]
+ * N = [n1 n2 .. nNC]
+ * D = [S T -S -T] : S = [s1 s2 .. sNC]
  * R = [N D];
  */
+
+#ifdef MULTITHREADED
+void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,int i,int nc,const EndEffector& foot,boost::shared_ptr<const Ravelin::Pose3d> environment_frame,const boost::shared_ptr<Moby::DynamicBody> dbrobot){
+  // Contact Jacobian [GLOBAL frame]
+  Ravelin::MatrixNd workM_;
+
+  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(environment_frame));
+  event_frame->x = foot.point;
+  dbrobot->calc_jacobian(event_frame,foot.link,workM_);
+  Ravelin::SharedMatrixNd J_linear = workM_.block(0,3,0,workM_.columns());
+  N.column(i)      = J_linear.transpose_mult(foot.normal,workv_);
+  D.column(i)      = J_linear.transpose_mult(foot.tan1,workv_);
+  D.column(nc*2+i) = workv_.negate();
+  D.column(nc+i)   = J_linear.transpose_mult(foot.tan2,workv_);
+  D.column(nc*3+i) = workv_.negate();
+//  copy(S.begin(),S.end(),nS.begin());
+//  copy(T.begin(),T.end(),nT.begin());
+//  nS.negate();
+//  nT.negate();
+}
+
+# include <thread>
+void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
+  static Ravelin::VectorNd workv_;
+  static Ravelin::MatrixNd workM_;
+
+  N.set_zero(NDOFS,NC);
+  D.set_zero(NDOFS,NC*4);
+  R.set_zero(NDOFS,NC*5);
+  if(NC==0) return;
+
+
+  std::vector<std::thread * > t;
+  for(int i=0,ii=0;i<NUM_EEFS;i++){
+    if(!eefs_[i].active)
+      continue;
+    t.push_back(new std::thread(::calc_contact_jacobians,N,D,ii,NC,eefs_[i],environment_frame,dbrobot_));
+    ii++;
+  }
+  OUTLOG(N,"N",logERROR);
+  OUTLOG(D,"D",logERROR);
+
+  R.block(0,N.rows(),0,N.columns()) = N;
+  R.block(0,D.rows(),N.columns(),N.columns()+D.columns()) = D;
+}
+#else
 void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
@@ -186,7 +232,7 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
   R.set_sub_mat(0,0,N);
   R.set_sub_mat(0,NC,D);
 }
-
+#endif
 void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
   int ndofs = NUM_EEFS*3;
 

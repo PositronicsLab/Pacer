@@ -42,8 +42,8 @@ public:
 class Robot {
   public:
   boost::shared_ptr<Moby::EventDrivenSimulator> sim;
-
     Robot(){}
+    Robot(std::string name) : robot_name_(name){}
     // This is the Simplest Controller (policy is determined within fn)
     virtual Ravelin::VectorNd& control(double dt,
                                const Ravelin::VectorNd& generalized_q,
@@ -89,6 +89,7 @@ class Robot {
                           double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
     bool workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z);
     void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+    void calc_contact_jacobians2(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
     void calc_base_jacobian(Ravelin::MatrixNd& R);
 
     void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<const Ravelin::Pose3d> frame);
@@ -101,6 +102,7 @@ class Robot {
     void update();
     void update_poses();
   protected:
+    std::string                       robot_name_;
     // Robot Dynamics Datastructures
     Moby::RCArticulatedBodyPtr        abrobot_;
     Moby::DynamicBodyPtr              dbrobot_;
@@ -124,8 +126,6 @@ class Robot {
                                                base_frame,
                                                environment_frame,
                                                base_link_frame;
-
-    Ravelin::MatrixNd                    base_stability_offset;
 
     unsigned          NC;
     EndEffector       center_of_contact;
@@ -153,8 +153,5 @@ class Robot {
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that
 };
-
-extern boost::shared_ptr<Moby::EventDrivenSimulator> sim;
-extern boost::shared_ptr<Robot> robot_ptr;
 
 #endif // ROBOT_H

@@ -16,14 +16,9 @@ FIND_PACKAGE( OpenGL REQUIRED )
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
 # these are the setting for the in-source compiler flow control
-option(DYNAMIXEL "Use Dynamixels?" OFF)
-option(SET_KINEMATICS "Control Robot Kinematics?" OFF)
-option(CONTACT_CALLBACK "Use contact parameter callback?" OFF)
 option(VISUALIZE_MOBY "Display Moby Visualizations?" OFF)
-option(COLLECT_DATA "Output Matlab Data?" OFF)
-option(USE_TERRAIN "Add Terrain to the world?" OFF)
 option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
-option(PERTURB_CONTACT_DATA "Perturb Contact Data to simulate inaccurate sensors?" OFF)
+option(LOGGING "Logging" on)
 
 # you may have to add additional includes in here...
 add_definitions(-DBUILD_DOUBLE)
@@ -31,37 +26,17 @@ add_definitions(-DUSE_OSG)
 add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
-if(USE_TERRAIN)
-add_definitions( -DUSE_TERRAIN )
-endif(USE_TERRAIN)
-
-if(PERTURB_CONTACT_DATA)
-  add_definitions( -DPERTURB_CONTACT_DATA )
-endif(PERTURB_CONTACT_DATA)
+if(LOGGING)
+add_definitions( -DLOGGING )
+endif(LOGGING)
 
 if(SPLITTING_METHOD)
 add_definitions( -DSPLITTING_METHOD )
 endif(SPLITTING_METHOD)
 
-if(SET_KINEMATICS)
-add_definitions( -DSET_KINEMATICS )
-endif(SET_KINEMATICS)
-
 if(VISUALIZE_MOBY)
 add_definitions( -DVISUALIZE_MOBY )
 endif(VISUALIZE_MOBY)
-
-if(COLLECT_DATA)
-add_definitions( -DCOLLECT_DATA )
-endif(COLLECT_DATA)
-
-if(CONTACT_CALLBACK)
-  add_definitions( -DCONTACT_CALLBACK )
-endif(CONTACT_CALLBACK)
-
-if(DYNAMIXEL)
-  add_definitions( -DUSE_ROBOT )
-endif(DYNAMIXEL)
 
 include_directories(
                     .
@@ -96,10 +71,6 @@ if(VISUALIZE_MOBY)
   set(SOURCES ${SOURCES} ../../src/visualize_moby.cc)
   set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
 endif(VISUALIZE_MOBY)
-
-if(USE_TERRAIN)
-  set(SOURCES ${SOURCES} ../../src/terrain.cc)
-endif(USE_TERRAIN)
 
 set(SOURCES2 quadruped.cc
              inverse_kinematics.cc

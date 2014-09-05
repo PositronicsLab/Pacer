@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">ERROR</logging>
+  <logging type="string">DEBUG1</logging>
 
   <sim>
     <mu-viscous type="double">0.0</mu-viscous>
@@ -27,7 +27,7 @@
       <end-effector>
        <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
        <!-- the [X Y Z] of end-effector ids respectively -->
-       <x type="double">0.11 0.11 -0.14    0.11 -0.11 -0.14    -0.11 0.11 -0.14    -0.11 -0.11 -0.14</x>
+       <x type="double">0.10 0.10 -0.14    0.10 -0.10 -0.14    -0.10 0.10 -0.14    -0.10 -0.10 -0.14</x>
       </end-effector>
     </init>
 
@@ -83,7 +83,7 @@
     </inverse-dynamics>
 
     <locomotion>
-      <active type="bool">true</active>
+      <active type="bool">false</active>
       <holonomic type="bool">false</holonomic>
       <step-height type="double">0.015</step-height>
       <gait-duration type="double">0.7</gait-duration>
@@ -91,9 +91,9 @@
       <gait type="double">0.0  0.5  0.5  0.0</gait>
       <!--walk-->
 <!--      <gait type="double">0.25  0.75  0.0  0.5</gait>-->
-      <command type="double">0.05 0 0   0 0 0</command>
-<!--      <patrol type="double">0.5 0.0   -0.5 0.0</patrol>-->
-      <point type="double">10 0</point>
+      <command type="double">0 0 0   0 0 0</command>
+      <patrol type="double">0 0</patrol>
+      <point type="double">0 0 0</point>
       <duty-factor type="double">0.75 0.75 0.75 0.75</duty-factor>
     </locomotion>
 

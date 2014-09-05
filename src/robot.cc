@@ -72,7 +72,7 @@ void EndEffector::init(){
   OUT_LOG(logDEBUG) << id ;
   chain_bool.resize(joint_names_.size());
   rb_ptr = joint_ptr->get_inboard_link();
-  while (rb_ptr->id.compare("ABDOMEN") != 0 && rb_ptr->id.compare("THORAX") != 0 && rb_ptr->id.compare("BASE") != 0){
+  while (rb_ptr->id.compare("ABDOMEN") != 0){
     OUT_LOG(logDEBUG) << rb_ptr->id ;
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j]) == 0){

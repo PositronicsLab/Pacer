@@ -574,7 +574,7 @@ void Quadruped::walk_toward(
   }
 
 #ifdef VISUALIZE_MOBY
-  if(false){
+  if(true){
   for(int i=0;i<footholds.size();i++){
     Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
     visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);

@@ -21,15 +21,15 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
    * bf    : the transition rate between phases
    */
   // a/b/c : affect the convergence rate of the limit cycle
-  double a = 100,
+  double a = 10,
          b = -1,
-         c = 100;
+         c = 10;
 
   // Stepping Filter params
   // depth of step phase where touchdown occurs (fraction of Hs)
   double ztd = 0.0;
   // speed at which behavior changes (arbitrary scale)
-  double bf = 10000;
+  double bf = 1000;
 
   std::vector<Ravelin::Vector3d> xb(NUM_EEFS);
   for(int i=0;i<NUM_EEFS;i++)

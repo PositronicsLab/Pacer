@@ -79,7 +79,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("quadruped.locomotion.active");
   if(USE_LOCOMOTION){
     static std::vector<double>
-//        &patrol_points = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.command"),
+        &patrol_points = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.patrol"),
         &goto_command = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.command"),
         &goto_point = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.point"),
         &duty_factor = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.duty-factor"),
@@ -97,6 +97,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
     std::vector<Ravelin::Vector3d> foot_origin;
     for(unsigned i=0;i< NUM_EEFS;i++){
       foot_origin.push_back(eefs_[i].origin);
+      foot_origin[i][0] += go_to[0]*-0.1;
+      foot_origin[i][1] += go_to[1]*-0.1;
+//      foot_origin[i][1] += go_to[5]*-0.01;
       foot_origin[i].pose = base_frame;
 #ifdef VISUALIZE_MOBY
       visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
@@ -108,7 +111,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
     }
 
-#ifdef EXPERIMENTAL_CODE
     /// HANDLE WAYPOINTS
     if(patrol_points.size() >= 4){
       int num_waypoints = patrol_points.size()/2;
@@ -153,7 +155,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       goto_point[0] = next_waypoint[0];
       goto_point[1] = next_waypoint[1];
     }
-#endif
+
     if(goto_point.size() == 2){
       Ravelin::Vector3d goto_direction =
           Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
@@ -163,7 +165,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
       double angle_to_goal = atan2(goto_direction[1],goto_direction[0]);
       if(fabs(angle_to_goal) < M_PI_8){
-
         if(HOLONOMIC){
           go_to[1] = goto_direction[1]*goto_command[0];
           // goal-centric coords
@@ -185,7 +186,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
           go_to[2] = goto_direction[0]*goto_command[1];
         }
       }
-
     }
 
     // Robot attempts to align base with force and then walk along force axis

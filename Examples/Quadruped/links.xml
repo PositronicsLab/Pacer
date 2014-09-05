@@ -23,8 +23,7 @@
     </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
-    <Box id="abdomen" xlen="0.0840" ylen="0.122" zlen="0.0356" mass="0.23801"/>
-    <Box id="thorax" xlen="0.073" ylen="0.135" zlen="0.0356" mass="0.20488"/>
+    <Box id="abdomen" xlen="0.15" ylen="0.122" zlen="0.0356" mass="0.23801"/>
     <Box id="shoulder" xlen="0.056" ylen="0.0355" zlen="0.0356" mass="0.08028"/>
     <Box id="hip" xlen="0.066" ylen="0.0355" zlen="0.0356" mass="0.14318"/>
     <Box id="arm" xlen="0.09" ylen="0.0355" zlen="0.0356" mass="0.11763"/>
@@ -35,18 +34,13 @@
     <RCArticulatedBody id="links" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
       <!-- the body -->
-      <RigidBody id="ABDOMEN" position="-0.037175 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" compliant="false">
+      <RigidBody id="ABDOMEN" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="abdomen" compliant="false">
         <CollisionGeometry primitive-id="abdomen" />
         <InertiaFromPrimitive primitive-id="abdomen" />
       </RigidBody>
-      <FixedJoint id="BODY_JOINT" qd="0" location="0 0 0" inboard-link-id="ABDOMEN" outboard-link-id="THORAX" axis="0 1 0" />
-      <RigidBody id="THORAX" position="0.037764 0 0.0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="thorax">
-<!--        <CollisionGeometry primitive-id="thorax" />-->
-        <InertiaFromPrimitive primitive-id="thorax" />
-      </RigidBody>
 
       <!-- LF leg -->
-      <RevoluteJoint id="LF_HIP_AA" qd="0" location="0.075528 0.056278 0" inboard-link-id="THORAX" outboard-link-id="LF_HIP" axis="1 0 0" />
+      <RevoluteJoint id="LF_HIP_AA" qd="0" location="0.075528 0.056278 0" inboard-link-id="ABDOMEN" outboard-link-id="LF_HIP" axis="1 0 0" />
       <RigidBody id="LF_HIP" position="0.103528 0.056278 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="shoulder">
 <!--        <CollisionGeometry primitive-id="shoulder" />-->
         <InertiaFromPrimitive primitive-id="shoulder" />
@@ -72,7 +66,7 @@
       </RigidBody>
 
       <!-- RF leg -->
-      <RevoluteJoint id="RF_HIP_AA" qd="0" location="0.075528 -0.056278 0" inboard-link-id="THORAX" outboard-link-id="RF_HIP" axis="1 0 0" />
+      <RevoluteJoint id="RF_HIP_AA" qd="0" location="0.075528 -0.056278 0" inboard-link-id="ABDOMEN" outboard-link-id="RF_HIP" axis="1 0 0" />
       <RigidBody id="RF_HIP" position="0.103528 -0.056278 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="shoulder">
 <!--        <CollisionGeometry primitive-id="shoulder" />-->
         <InertiaFromPrimitive primitive-id="shoulder" />

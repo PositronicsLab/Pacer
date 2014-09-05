@@ -62,6 +62,17 @@
    abrobot->add_generalized_force(perturbation);
  }
 
+ Ravelin::VectorNd& remap_values(const std::map<int,int>& value_map,const Ravelin::VectorNd v1,Ravelin::VectorNd& v2,bool reverse = false){
+   v2 = v1;
+   for(int i=0;i<value_map.size();i++){
+     if(reverse)
+       v2[i] = v1[value_map.at(i)];
+     else
+       v2[value_map.at(i)] = v1[i];
+   }
+    return v2;
+ }
+
  // ============================================================================
  // ================================ CONTROLLER ================================
  // ============================================================================
@@ -70,24 +81,18 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
   std::vector<Moby::JointPtr> joints_quad = quad_ptr->get_joints();
   std::vector<Moby::JointPtr> joints = abrobot->get_joints();
-  bool init_index_fix = false;
-  for(int i=0;i<joints.size();i++){
-    if(joints[i]->num_dof() == 0) continue;
-    for(int j=0;j<joints_quad.size();j++){
-      if(joints_quad[j]->num_dof() == 0) continue;
-      if(joints_quad[j]->id.compare(joints[i]->id) == 0){
-        if(joints_quad[j]->get_coord_index() == joints[j]->get_coord_index()) continue;
-        OUT_LOG(logDEBUG1)<< "Sim and robot joint indicies not in agreement,"
-                             "fixing sim...\n Will skip this controller step" << std::endl;
-        OUT_LOG(logDEBUG1)<< joints_quad[j]->id << "-rob : " << joints_quad[j]->get_coord_index() << std::endl;
-        OUT_LOG(logDEBUG1)<< joints[i]->id << "-sim : " << joints[i]->get_coord_index() << std::endl;
-        joints[i]->set_coord_index(joints_quad[j]->get_coord_index());
-        OUT_LOG(logDEBUG1)<< joints_quad[j]->id << "-rob NEW : " << joints_quad[j]->get_coord_index() << std::endl;
-        OUT_LOG(logDEBUG1)<< joints[i]->id << "-sim NEW : " << joints[i]->get_coord_index() << std::endl;
+
+  std::map<int,int> joint_map;
+  if(joint_map.empty())
+    for(int i=0;i<joints.size();i++){
+      if(joints[i]->num_dof() == 0) continue;
+      for(int j=0;j<joints_quad.size();j++){
+        if(joints_quad[j]->num_dof() == 0) continue;
+        if(joints_quad[j]->id.compare(joints[i]->id) == 0){
+          joint_map[joints[i]->get_coord_index()] = joints_quad[j]->get_coord_index();
+        }
       }
     }
-  }
-  if(init_index_fix) return;
 
   Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
   int num_joints = joints_quad.size();
@@ -95,15 +100,21 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   double dt = t - last_time;
   last_time = t;
 
-  abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
-  abrobot->get_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
+  // Re-map state simulation->robot joints
+  {
+    abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
+    generalized_q = remap_values(joint_map,generalized_q,workv_);
+    abrobot->get_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
+    generalized_qd = remap_values(joint_map,generalized_qd,workv_);
+    abrobot->get_generalized_forces(generalized_fext);
+    generalized_fext = remap_values(joint_map,generalized_fext,workv_);
+  }
 
   static Ravelin::VectorNd  generalized_qd_last = generalized_qd;
   //NOTE: Pre-contact    abrobot->get_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
   ((generalized_qdd = generalized_qd) -= generalized_qd_last) /= dt;
   generalized_qd_last = generalized_qd;
 
-  abrobot->get_generalized_forces(generalized_fext);
 
   Ravelin::VectorNd q_des(num_joints),
                     qd_des(num_joints),
@@ -112,11 +123,18 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 
   quad_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
 
+  // Re-map goals robot->simulation joints
+  {
+    q_des = remap_values(joint_map,q_des,workv_,true);
+    qd_des = remap_values(joint_map,qd_des,workv_,true);
+    qdd_des = remap_values(joint_map,qdd_des,workv_,true);
+    u = remap_values(joint_map,u,workv_,true);
+  }
+
   apply_sim_perturbations();
   for(int i=0;i<joints.size();i++){
     if(joints[i]->num_dof() == 0) continue;
     static Ravelin::VectorNd U(1);
-//    std::cout<< joints[i]->get_coord_index() << " = " << u[joints[i]->get_coord_index()] << std::endl;
     U[0] = u[joints[i]->get_coord_index()];
     joints[i]->add_force(U);
   }

@@ -132,7 +132,7 @@
 
       <RevoluteJoint id="RH_LEG_FE" qd="0" location="-0.202316 -0.0495 0" inboard-link-id="RH_ULEG" outboard-link-id="RH_LLEG" axis="0 -1 0" />
       <RigidBody id="RH_LLEG" position="-0.261962 -0.0495 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="lleg">
-<!--      <CollisionGeometry primitive-id="lleg" />-->
+      <CollisionGeometry primitive-id="lleg" />
         <InertiaFromPrimitive primitive-id="lleg" />
       </RigidBody>
 

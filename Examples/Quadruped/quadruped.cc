@@ -40,6 +40,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
   this->generalized_qdd = generalized_qdd;
   this->generalized_fext = generalized_fext;
 
+  OUTLOG(generalized_q,"generalized_q",logDEBUG);
+  OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
+
   // Set Robot Data in robot
   update();
 
@@ -592,11 +595,14 @@ void Quadruped::init(){
 
 
  static std::vector<std::string>
-     joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+    &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
  static std::vector<double>
     &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
     &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
     &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
+
+ OUTLOG(joint_names,"joint_names",logERROR);
+ OUTLOG(joints_start,"joints_start",logERROR);
 
  // MAKE SURE DATA PARSED PROPERLY
 

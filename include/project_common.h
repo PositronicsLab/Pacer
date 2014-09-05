@@ -77,6 +77,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
  void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
  void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL);
  void OUTLOG(double x, std::string name,TLogLevel LL);
+ void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
 extern std::string LOG_TYPE;
 // ----------------------------------------------------------------------------
 

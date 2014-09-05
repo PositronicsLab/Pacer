@@ -13,19 +13,19 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   }
   M.mult(v, workv_);
   double KE = workv_.dot(v)*0.5;
-#ifndef NDEBUG
-//  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
-//  std::cout << "Total Energy = " << (KE + PE) << std::endl;
-#endif
+//#ifndef NDEBUG
+  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
+  std::cout << "Total Energy = " << (KE + PE) << std::endl;
+//#endif
   return (KE + PE);
   // Kinetic Energy
 }
 
 void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
    M.resize(NDOFS,NDOFS);
-   fext.resize(NDOFS);
+//   fext.resize(NDOFS);
    abrobot_->get_generalized_inertia(M);
-   abrobot_->get_generalized_forces(fext);
+//   abrobot_->get_generalized_forces(fext);
 }
 
 void Robot::compile(){
@@ -99,13 +99,13 @@ void Robot::update(){
   generalized_qd.get_sub_vec(0,NUM_JOINTS,qd);
   generalized_qdd.get_sub_vec(0,NUM_JOINTS,qdd);
 
-  abrobot_->reset_accumulators();
+//  abrobot_->reset_accumulators();
   abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
   abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 //  abrobot_->set_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
-  abrobot_->add_generalized_force(generalized_fext);
+//  abrobot_->add_generalized_force(generalized_fext);
 
   update_poses();
 
@@ -118,12 +118,11 @@ void Robot::update(){
   calc_contact_jacobians(N,D,R);
   calc_workspace_jacobian(Rw,base_link_frame);
 
-  // Cn * M * v = iM * fext
-  //      M * v = iM * fext * h
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
+  // SRZ: updating generalized_fext disabled (for now)
   calculate_dyn_properties(M,generalized_fext);
-//  calc_energy(vel,M);
+//  calc_energy(generalized_qd,M);
   calc_com();
 
   if(NC != 0) {

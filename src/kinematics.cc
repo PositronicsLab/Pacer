@@ -191,15 +191,13 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
   if(NC==0) return;
   // Contact Jacobian [GLOBAL frame]
   Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(environment_frame));
 
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
     if(!foot.active)
       continue;
 
-    event_frame->x = foot.point;
-    dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
+    dbrobot_->calc_jacobian(foot.impulse_frame,foot.link,workM_);
     workM_.get_sub_mat(0,3,0,NDOFS,J);
 
     Vector3d
@@ -239,14 +237,12 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
   R.set_zero(6,ndofs);
   Ravelin::MatrixNd J;
 
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(base_frame));
   for(int ii=0,i=0;ii<NUM_EEFS;i++,ii++){
     while(!eefs_[ii].active) ii++;
 
     // J: Jacobian, _point@link ^frame
     // calculate J_f^base : [vb,qd] -> [vf]
-    event_frame->x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    dbrobot_->calc_jacobian(event_frame,eefs_[i].link,J);
+    dbrobot_->calc_jacobian(eefs_[i].frame_robot_base,eefs_[i].link,J);
 
     for(int c=0;c<eefs_[i].chain.size();c++)
       for(int r=0;r<6;r++)
@@ -258,11 +254,10 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
 /* Goes from Minimal coords [v,q]' -> workspace coords [x1,x2,..,xN]'
  *
  */
-void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_ptr<const Ravelin::Pose3d> workspace){
+void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
   Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
 //  Rw.set_zero(NUM_EEFS*3, NUM_JOINTS + 6);
   Ravelin::MatrixNd J(3,NDOFS);
-  boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(workspace));
 
   // [x y z alpha beta gamma]_ environment_frame
 //  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
@@ -277,9 +272,8 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw, const boost::shared_p
     // swing foot jacobian
     // [x y z]_ base_frame
     // at center of foot
-    event_frame->x = Ravelin::Pose3d::transform_point(workspace,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
 
-    dbrobot_->calc_jacobian(event_frame,foot.link,workM_);
+    dbrobot_->calc_jacobian(foot.frame_robot_base,foot.link,workM_);
     workM_.get_sub_mat(0,3,0,NDOFS,J);
     Rw.set_row(3*i,J.row(0));
     Rw.set_row(3*i+1,J.row(1));

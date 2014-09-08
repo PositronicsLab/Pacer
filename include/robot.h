@@ -23,9 +23,8 @@ public:
     Moby::RigidBodyPtr    link;
     // kinematic chain indexing data
     std::vector<unsigned> chain;
-    std::vector<bool> chain_bool;
+    std::vector<bool>     chain_bool;
     // Contact Data
-
     Ravelin::Vector3d     point,
                           normal,tan1,tan2,
                           impulse;
@@ -34,8 +33,13 @@ public:
     double                mu_viscous,
                           mu_coulomb;
     int                   nk;
+    boost::shared_ptr<const Ravelin::Pose3d>
+                          impulse_frame,
+                          frame_environment,
+                          frame_robot_base;
   private:
-    std::vector<std::string> joint_names_;
+    std::vector<std::string>
+                          joint_names_;
     void init();
 };
 
@@ -92,7 +96,7 @@ class Robot {
     void calc_contact_jacobians2(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
     void calc_base_jacobian(Ravelin::MatrixNd& R);
 
-    void calc_workspace_jacobian(Ravelin::MatrixNd& Rw,const boost::shared_ptr<const Ravelin::Pose3d> frame);
+    void calc_workspace_jacobian(Ravelin::MatrixNd& Rw);
     void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
   //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);

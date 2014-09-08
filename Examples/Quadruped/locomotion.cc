@@ -579,7 +579,7 @@ void Quadruped::walk_toward(
 
     for(int i=0;i<eefs_[i].chain.size();i++)
       joints_[eefs_[i].chain[i]]->q[0] = q[eefs_[i].chain[i]];
-    update_link_poses();
+    abrobot_->update_link_poses();
 
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
 

@@ -108,13 +108,27 @@ void Robot::update(){
 
 //  abrobot_->reset_accumulators();
   abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
+
   abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
-//  abrobot_->set_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
-//  abrobot_->add_generalized_force(generalized_fext);
-
   update_poses();
+
+//    abrobot_->set_generalized_acceleration(generalized_qdd);
+    for(int i=0;i<NUM_JOINTS;i++)
+      joints_[i]->qdd[0] = generalized_qdd[joints_[i]->get_coord_index()];
+    abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(generalized_qdd.segment(NUM_JOINTS,NDOFS)));
+
+//  abrobot_->add_generalized_force(generalized_fext);
+  for(int i = 0;i<NUM_EEFS;i++){
+    EndEffector& foot =  eefs_[i];
+    foot.impulse_frame = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),foot.point.data(),environment_frame));
+    foot.frame_environment = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),environment_frame));
+    foot.frame_robot_base = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),base_frame));
+    ////    foot.link->apply_impulse(Ravelin::SMomentumd(foot.impulse,Ravelin::Vector3d(0,0,0),foot.impulse_frame));
+//    foot.link->add_force(Ravelin::SForced(foot.impulse/0.001,Ravelin::Vector3d(0,0,0),foot.impulse_frame));
+  }
+//  abrobot_->calc_fwd_dyn();
 
   NC = 0;
   for (unsigned i=0; i< NUM_EEFS;i++)
@@ -123,7 +137,7 @@ void Robot::update(){
 
   // fetch robot state vectors
   calc_contact_jacobians(N,D,R);
-  calc_workspace_jacobian(Rw,base_link_frame);
+  calc_workspace_jacobian(Rw);
 
   // Get robot dynamics state
   // SRZ: Very Heavy Computation

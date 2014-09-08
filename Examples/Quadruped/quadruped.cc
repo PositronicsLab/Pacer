@@ -96,9 +96,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     // FOOTHOLDS
 
-    // Foot Locations
-    std::vector<Ravelin::Vector3d> foot_origin;
-
     /// HANDLE WAYPOINTS
     if(patrol_points.size() >= 4){
       int num_waypoints = patrol_points.size()/2;
@@ -185,12 +182,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     OUTLOG(go_to,"go_to",logDEBUG);
 
-    // Lean into turns
+    // Edit foot origins to Lean into turns
+    std::vector<Ravelin::Vector3d> foot_origin;
     for(unsigned i=0;i< NUM_EEFS;i++){
       foot_origin.push_back(eefs_[i].origin);
       // Robot leans into movement
       foot_origin[i][0] += go_to[0]*-0.2;
       foot_origin[i][1] += go_to[1]*-0.2;
+      // lean forward on front feet if moving forward
+      if(foot_origin[i][0] > 0 && go_to[0] > 0)
+        foot_origin[i][2] += go_to[0]*0.2;
 //      foot_origin[i][1] += go_to[5]*-0.01;
       foot_origin[i].pose = base_frame;
 #ifdef VISUALIZE_MOBY
@@ -498,6 +499,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 // ============================================================================
 
 #ifdef VISUALIZE_MOBY
+#include <thread>
   extern void init_glconsole();
   std::thread * tglc;
 #endif

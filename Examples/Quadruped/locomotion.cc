@@ -294,6 +294,7 @@ void Quadruped::walk_toward(
     const std::vector<double>& duty_factor,
     double gait_duration,
     double step_height,
+    bool STANCE_ON_CONTACT,
     // MODEL
     const std::vector<Ravelin::Vector3d>& foot_origin,
     double t,
@@ -305,12 +306,14 @@ void Quadruped::walk_toward(
     std::vector<Ravelin::Vector3d>& foot_vel,
     std::vector<Ravelin::Vector3d>& foot_acc)
 {
+
   OUT_LOG(logDEBUG) << " -- Quadruped::walk_toward() entered";
   const boost::shared_ptr<const Ravelin::Pose3d>& base_frame = command.pose;
   static bool inited = false;
-  static int spline_plan_length = 2,
-             NUM_EEFS = foot_pos.size();
+  static int spline_plan_length = 1,
+             NUM_EEFS = foot_origin.size();
   static double last_time = t;
+  static std::vector<bool> last_eefs_active(NUM_EEFS);
 
   if(t-last_time > gait_duration* (*std::min_element(duty_factor.begin(),duty_factor.end())) )
     inited = false;
@@ -337,6 +340,7 @@ void Quadruped::walk_toward(
   // (Re)Populate spline vectors
   if(!inited){
     for(int i=0;i<NUM_EEFS;i++){
+      last_eefs_active[i] = false;
       stance_phase[i] = gait_phase(touchdown[i],duty_factor[i],gait_progress);
       spline_coef[i].resize(3);
       for(int d=0; d<3;d++){
@@ -363,19 +367,15 @@ void Quadruped::walk_toward(
     bool replan_path = false;
     if(inited){
       // Set liftoff feet (opposite of stance_phase variable)
-      if(stance_phase[i]){
-        eefs_[i].active = false;
-      }
-//      else {
-//        eefs_[i].active = true;
-//        eefs_[i].normal = Ravelin::Vector3d(0,0,1,Moby::GLOBAL);
-//        eefs_[i].point = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-//      }
-      for(int d=0; d<3;d++){
-        OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
-        replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
-        if(replan_path)
-          break;
+      if(stance_phase[i] && eefs_[i].active && !last_eefs_active[i] && STANCE_ON_CONTACT){
+        replan_path = true;
+      } else {
+        for(int d=0; d<3;d++){
+          OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
+          replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+          if(replan_path)
+            break;
+        }
       }
     }
 
@@ -408,13 +408,19 @@ void Quadruped::walk_toward(
         xd.set_zero();
         xdd.set_zero();
       } else {
+        if(STANCE_ON_CONTACT && t < *(spline_t[i].rbegin()->end()-1)){
+          t0 = t;
+          x = foot_pos[i];
+          xd = foot_vel[i];
+          xdd = foot_acc[i];
+        } else {
         // continue off of the end of the last spline
         t0 = *(spline_t[i].rbegin()->end()-1) - Moby::NEAR_ZERO;
-
         for(int d=0; d<3;d++){
           bool pass = Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x[d],xd[d],xdd[d]);
           assert(pass);
         }
+       }
       }
 
       // Calculate foot-step info
@@ -564,6 +570,10 @@ void Quadruped::walk_toward(
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
       }
       stance_phase[i] = !stance_phase[i];
+    }
+    last_eefs_active[i] = eefs_[i].active;
+    if(stance_phase[i]){
+      eefs_[i].active = false;
     }
     x.pose =  xd.pose = xdd.pose = base_frame;
   }

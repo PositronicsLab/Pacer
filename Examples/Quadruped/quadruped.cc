@@ -232,7 +232,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
     Ravelin::SVector6d goto_6d = go_to;
     goto_6d.pose = base_frame;
 
-    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
+    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
   }

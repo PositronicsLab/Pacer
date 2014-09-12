@@ -121,10 +121,26 @@ void Robot::update(){
 
 //  abrobot_->add_generalized_force(generalized_fext);
   for(int i = 0;i<NUM_EEFS;i++){
+    Ravelin::Pose3d * fp;
     EndEffector& foot =  eefs_[i];
-    foot.impulse_frame = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),foot.point.data(),environment_frame));
-    foot.frame_environment = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),environment_frame));
-    foot.frame_robot_base = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),base_frame));
+
+    // Impulse is always in global orientation
+    foot.impulse_frame = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),foot.point.data(),Moby::GLOBAL));
+    fp = new Ravelin::Pose3d(
+           Ravelin::Quatd::identity(),
+           Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
+           environment_frame
+         );
+    fp->update_relative_pose(Moby::GLOBAL);
+    foot.frame_environment = boost::shared_ptr<const Ravelin::Pose3d>(fp);
+
+    fp = new Ravelin::Pose3d(
+           Ravelin::Quatd::identity(),
+           Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
+           base_frame
+         );
+    fp->update_relative_pose(Moby::GLOBAL);
+    foot.frame_robot_base = boost::shared_ptr<const Ravelin::Pose3d>(fp);
     ////    foot.link->apply_impulse(Ravelin::SMomentumd(foot.impulse,Ravelin::Vector3d(0,0,0),foot.impulse_frame));
 //    foot.link->add_force(Ravelin::SForced(foot.impulse/0.001,Ravelin::Vector3d(0,0,0),foot.impulse_frame));
   }

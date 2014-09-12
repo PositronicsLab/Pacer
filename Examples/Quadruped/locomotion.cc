@@ -269,6 +269,57 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
   return left_in_phase;
 }
 
+//void Quadruped::walk_to(const Ravelin::SVector6d& command,
+//                        const std::vector<double>& goto_point,
+//                        std::vector<Ravelin::Vector3d>& foot_pos,
+//                        std::vector<Ravelin::Vector3d>& foot_vel,
+//                        std::vector<Ravelin::Vector3d>& foot_acc,
+//                        const std::vector<std::vector<double>>& heightmap)
+//{
+//  Ravelin::SVector6d go_to(Ravelin::VectorNd(command.size(),&command[0]),base_horizontal_frame);
+//  Ravelin::Vector3d goto_direction =
+//      Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
+//      - Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
+//  goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
+//  goto_direction.normalize();
+
+//  double angle_to_goal = atan2(goto_direction[1],goto_direction[0]);
+//  if(fabs(angle_to_goal) < M_PI_8){
+//    if(HOLONOMIC){
+//      go_to[1] = goto_direction[1]*command[0];
+//      // goal-centric coords
+//      go_to[0] =-goto_direction[1]*command[1];
+//      go_to[2] = goto_direction[0]*command[1];
+//    }
+//    go_to[0] = goto_direction[0]*command[0];
+//    go_to[5] = angle_to_goal/gait_time;
+//  } else {
+//    go_to[5] = Utility::sign(angle_to_goal)*0.75;
+//    if(!HOLONOMIC){
+//      go_to[0] = 0;
+//      go_to[1] = 0;
+//    } else {
+//      go_to[0] = goto_direction[0]*command[0];
+//      go_to[1] = goto_direction[1]*command[0];
+//      // goal-centric coords
+//      go_to[0] =-goto_direction[1]*command[1];
+//      go_to[2] = goto_direction[0]*command[1];
+//    }
+//  }
+//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+//}
+
+
+//void Quadruped::walk_toward(const Ravelin::SVector6d& command,const
+//                            std::vector<Ravelin::Vector3d>& foot_pos,
+//                            std::vector<Ravelin::Vector3d>& foot_vel,
+//                            std::vector<Ravelin::Vector3d>& foot_acc,
+//                            std::vector<std::vector<double>>& heightmap)
+//{
+
+//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+//}
+
 /**
  * @brief Quadruped::walk_toward : OSRF Locomotion System Implementation
  * @param command : 6x1 vector of goal base velocity differential
@@ -297,6 +348,7 @@ void Quadruped::walk_toward(
     bool STANCE_ON_CONTACT,
     // MODEL
     const std::vector<Ravelin::Vector3d>& foot_origin,
+    const Ravelin::SVector6d& base_velocity,
     double t,
     const Ravelin::VectorNd& q,
     const Ravelin::VectorNd& qd,
@@ -306,7 +358,6 @@ void Quadruped::walk_toward(
     std::vector<Ravelin::Vector3d>& foot_vel,
     std::vector<Ravelin::Vector3d>& foot_acc)
 {
-
   OUT_LOG(logDEBUG) << " -- Quadruped::walk_toward() entered";
   const boost::shared_ptr<const Ravelin::Pose3d>& base_frame = command.pose;
   static bool inited = false;

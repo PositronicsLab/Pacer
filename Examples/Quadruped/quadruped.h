@@ -2,6 +2,7 @@
 #define CONTROL_H
 
 #include <robot.h>
+#include <CVars/CVar.h>
 
 class Quadruped : public Robot{
   public:
@@ -57,8 +58,9 @@ class Quadruped : public Robot{
     /// Walks while trying to match COM velocity "command" in base_frame
      void walk_toward(const Ravelin::SVector6d& command, const std::vector<double>& touchdown, const std::vector<Ravelin::Vector3d>& footholds,
                                 const std::vector<double>& duty_factor, double gait_duration, double step_height, bool STANCE_ON_CONTACT,
-                                const std::vector<Ravelin::Vector3d>& foot_origin, double t, const Ravelin::VectorNd& q, const Ravelin::VectorNd& qd, const Ravelin::VectorNd& qdd,
+                                const std::vector<Ravelin::Vector3d>& foot_origin, const Ravelin::SVector6d &base_velocity, double t, const Ravelin::VectorNd& q, const Ravelin::VectorNd& qd, const Ravelin::VectorNd& qdd,
                                 std::vector<Ravelin::Vector3d>& foot_pos, std::vector<Ravelin::Vector3d>& foot_vel, std::vector<Ravelin::Vector3d>& foot_acc);
+     void walk_toward(const Ravelin::SVector6d& command,const std::vector<std::vector<double>>& heightmap  = std::vector<std::vector<double>>());
 
     void eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
     void set_leading_force(const Ravelin::SForced& f){lead_force_ = f;}

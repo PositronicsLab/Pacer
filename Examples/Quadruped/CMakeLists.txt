@@ -18,7 +18,8 @@ option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 # these are the setting for the in-source compiler flow control
 option(VISUALIZE_MOBY "Display Moby Visualizations?" OFF)
 option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
-option(LOGGING "Logging" on)
+option(LOGGING "Logging" ON)
+option(CONSOLE "GLConsole" OFF)
 
 # you may have to add additional includes in here...
 add_definitions(-DBUILD_DOUBLE)
@@ -26,16 +27,20 @@ add_definitions(-DUSE_OSG)
 add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
+if(CONSOLE)
+  add_definitions( -DUSE_GLCONSOL)
+endif(CONSOLE)
+
 if(LOGGING)
-add_definitions( -DLOGGING )
+  add_definitions( -DLOGGING )
 endif(LOGGING)
 
 if(SPLITTING_METHOD)
-add_definitions( -DSPLITTING_METHOD )
+  add_definitions( -DSPLITTING_METHOD )
 endif(SPLITTING_METHOD)
 
 if(VISUALIZE_MOBY)
-add_definitions( -DVISUALIZE_MOBY )
+  add_definitions( -DVISUALIZE_MOBY )
 endif(VISUALIZE_MOBY)
 
 include_directories(
@@ -84,7 +89,7 @@ set(THIRDPARTY
               )
 
 add_library(${PROJECT_NAME} ${SOURCES} ${SOURCES2} ${THIRDPARTY})
-target_link_libraries(${PROJECT_NAME} Moby Ravelin OpenThreads cvars ${VISUALIZE_LIBS})
+target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
 
 add_library(${PROJECT_NAME}Plugin MODULE control_moby.cc)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)

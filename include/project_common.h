@@ -36,19 +36,6 @@
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
-//#ifdef SET_KINEMATICS
-//  #define NDEBUG
-//#endif
-
-// ----------------------------------------------------------------------------
-#ifdef VISUALIZE_MOBY
-  // Get these from https://github.com/arpg/GLConsole.git
-  //include this header for CVars and GLConsole
-  #include <GLConsole/GLConsole.h>
-  // Single global instance so glut can get access
-  extern GLConsole theConsole;
-#endif
-
 // ----------------------------------------------------------------------------
 
 const double grav     = 9.8; // M/s.s

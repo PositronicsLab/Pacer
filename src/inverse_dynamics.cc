@@ -721,7 +721,7 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     x.set_zero(NVARS);
     bool RESULT_FLAG = false;
-#define LCP_METHOD
+//#define LCP_METHOD
 #ifdef LCP_METHOD
     Ravelin::MatrixNd lcpA(Aeq.rows()*2 + qpA.rows() + NC*5,NVARS);
     lcpA.set_zero();

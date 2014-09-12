@@ -1,8 +1,6 @@
 #include <quadruped.h>
 #include <utilities.h>
 
-#include <CVars/CVar.h>
-
 #ifdef VISUALIZE_MOBY
 #ifdef APPLE
 # include <OpenGL/gl.h>
@@ -13,8 +11,6 @@
 # include <GL/glu.h>
 # include <GL/glut.h>
 #endif
-#include <GLConsole/GLConsole.h>
-GLConsole theConsole;
 #endif
 
 // ============================================================================
@@ -233,7 +229,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     goto_6d.pose = base_frame;
 
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
-    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
   }
@@ -493,14 +489,19 @@ Ravelin::VectorNd& Quadruped::control(double t,
    reset_contact();
    return u;
 }
-
-
-// ============================================================================
 // ===========================  END CONTROLLER  ===============================
 // ============================================================================
 
-#ifdef VISUALIZE_MOBY
-#include <thread>
+
+
+
+
+// ============================================================================
+// ===========================  BEGIN ROBOT INIT  =============================
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+# include <thread>
+# include <GLConsole/GLConsole.h>
+  GLConsole theConsole;
   extern void init_glconsole();
   std::thread * tglc;
 #endif
@@ -509,7 +510,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 void Quadruped::init(){
 
-#ifdef VISUALIZE_MOBY
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
    tglc = new std::thread(init_glconsole);
 #endif
   // ================= LOAD SCRIPT DATA ==========================

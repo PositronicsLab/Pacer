@@ -34,7 +34,7 @@
     <error-feedback>
       <active type="bool">true</active>
       <configuration-space>
-        <active type="bool">true</active>
+        <active type="bool">false</active>
         <accel type="bool">false</accel>
         <!-- Gains are for the q of joint ids respectively -->
         <gains>
@@ -78,12 +78,13 @@
       <dt type="double">0.005</dt>
       <alpha type="double">1.0</alpha>
       <last-cfs type="bool">false</last-cfs>
-      <des-contact type="bool">true</des-contact>
-      <operational-space type="bool">false</operational-space>
+      <des-contact type="bool">false</des-contact>
+      <operational-space type="bool">true</operational-space>
     </inverse-dynamics>
 
     <locomotion>
       <active type="bool">true</active>
+      <stance-on-contact type="bool">false</stance-on-contact>
       <holonomic type="bool">false</holonomic>
       <step-height type="double">0.015</step-height>
       <gait-duration type="double">0.7</gait-duration>

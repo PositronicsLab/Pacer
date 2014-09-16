@@ -429,11 +429,8 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   return true;
 }
 //#define LCP_METHOD
-bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar_, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
+bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& vw_bar, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
   static Ravelin::VectorNd tau;
-  Ravelin::VectorNd fext = fext_;
-  Ravelin::VectorNd v_bar = v_bar_;
-//  fext.negate();
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
@@ -460,12 +457,14 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
   F.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
   F *= h;
 
-  // v_err
-  Ravelin::VectorNd dvw = v_bar;
-  // dvw = v_bar - vel_w
-  Rw.mult(v,dvw,-1,1);
-
-  OUTLOG(v_bar,"v_bar",logERROR);
+  OUTLOG(vw_bar,"vw_bar",logERROR);
+  Ravelin::VectorNd dvw;
+  // dvw = vw_bar - vw
+  // vw = Rw*v
+  Rw.mult(v,dvw,-1,0);
+  OUTLOG(dvw,"vw",logERROR);
+  dvw += vw_bar;
+  OUTLOG(dvw,"dvw",logERROR);
 
   Ravelin::MatrixNd qpQ,qpA(NC*2,NC*5+nq);
   Ravelin::VectorNd qpc,qpb(NC*2);
@@ -503,13 +502,13 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     //////////////////////// LP PHASE /////////////////////////
     /* OBJECTIVE
-     * Min workspace deviation from v_bar
+     * Min workspace deviation from dvw
      * min_{x = [z,T,s]'}
      *   [0,0,1] x
      * s.t.
-     *   -[A,",-I] x   >= -v_bar              // operational space goal l1-norm
-     *   [A,",-I] x    >=  v_bar              // "
-     *   N*iM*[R' F,0] x >= -N(h*iM*fext + v)   // Interpenetration
+     *   -[ C ,-I] x   >= -dvw              // operational space goal l1-norm
+     *   [ C ,-I] x    >=  dvw              //
+     *   [ N'*A ,0] x >= -N(h*iM*fext + v)   // Interpenetration
      *   [CF,0,0] x      >=  0                  // coulomb friction
      *   z >= 0                                 // compressive force
      *   T+ >= T >= T-                          // torque limits
@@ -555,11 +554,15 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     Ravelin::MatrixNd C = JiMRTF;
     assert(WS_DOFS == C.rows());
 
+    // C x - d <=  s
+    // C x - d >= -s
+    //        [-C  I;
+    //          C -I]
     lpA.set_sub_mat(0,0,C);
     lpA.set_sub_mat(C.rows(),0,(workM_ = C).negate());
     workM1 = Ravelin::MatrixNd::identity(C.rows());
-    workM1.negate();
     lpA.set_sub_mat(       0,C.columns(),workM1);
+    workM1.negate();
     lpA.set_sub_mat(C.rows(),C.columns(),workM1);
 
     Ravelin::VectorNd d;
@@ -772,8 +775,8 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
       workv_ -= beq;
       OUTLOG(workv_,"feas_eq_0",logDEBUG);
 
-      x.get_sub_vec(0,NC*5,workv2);
-      OUTLOG(workv2,"cfs",logDEBUG);
+      x.get_sub_vec(0,NC*5,z);
+      OUTLOG(z,"cfs",logDEBUG);
       (workv1 = x).get_sub_vec(NC*5,NVARS,x);
     } else {
       x = tau;

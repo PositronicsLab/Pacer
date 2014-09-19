@@ -113,7 +113,9 @@ void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,
 
 void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                                           double beta, double dt, Ravelin::VectorNd& v_bar){
-  v_bar.set_sub_vec(NUM_EEFS*3,v_base);
+//  v_bar.set_sub_vec(NUM_EEFS*3,v_base);
+//  v_bar.set_zero(NUM_EEFS*3+6);
+  v_bar.set_sub_vec(NUM_EEFS*3,generalized_qd.segment(NUM_JOINTS,NDOFS));
 //  v_bar[NUM_EEFS*3]   += base_correct[0];
 //  v_bar[NUM_EEFS*3+1] += base_correct[1];
 //  v_bar[NUM_EEFS*3+2] += base_correct[2];

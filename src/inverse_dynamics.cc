@@ -531,7 +531,7 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     lpc.set_zero(nq+NC*5+WS_DOFS);
     lpc.set_sub_vec(nq+NC*5,Ravelin::VectorNd::one(WS_DOFS));
-#define IGNORE_BASE
+//#define IGNORE_BASE
 #ifdef IGNORE_BASE
     lpc.set_sub_vec(nq+NC*5+WS_DOFS-6,(workv_ = Ravelin::VectorNd::zero(6)));
 #endif

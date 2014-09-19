@@ -775,14 +775,14 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 #endif
     // ------------------------------------------------------------------------
     // ---------------- CHECK FEASIBILITY OF RESULT ---------------------------
-      OUTLOG(x,"x = [z,tau]",logDEBUG);
+      OUTLOG(x2,"x = [z,tau]",logDEBUG);
 
-      qpA.mult(x,workv_);
+      qpA.mult(x2,workv_);
       workv_ -= qpb;
       OUTLOG(workv_,"feas_geq_0",logDEBUG);
 
 
-      Aeq.mult(x,workv_);
+      Aeq.mult(x2,workv_);
       workv_ -= beq;
       OUTLOG(workv_,"feas_eq_0",logDEBUG);
 

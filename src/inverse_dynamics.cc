@@ -531,9 +531,9 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     lpc.set_zero(nq+NC*5+WS_DOFS);
     lpc.set_sub_vec(nq+NC*5,Ravelin::VectorNd::one(WS_DOFS));
-//#define IGNORE_BASE
+#define IGNORE_BASE
 #ifdef IGNORE_BASE
-    lpc.set_sub_vec(nq+NC*5+WS_DOFS-6,(workv_ = Ravelin::VectorNd::zeros(6)));
+    lpc.set_sub_vec(nq+NC*5+WS_DOFS-6,(workv_ = Ravelin::VectorNd::zero(6)));
 #endif
 
 //    C = J*iM*[R F]
@@ -626,11 +626,11 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     // Lower Torque Limit
     std::fill(ll.begin(), ll.end(), -1e30);
     ll.set_sub_vec(0,Ravelin::VectorNd::zero(NC*5));
-    ll.set_sub_vec(NC*5,torque_limits_l);
+    //ll.set_sub_vec(NC*5,torque_limits_l);
 
     // Upper Torque Limit
     std::fill(ul.begin(), ul.end(), 1e30);
-    ul.set_sub_vec(NC*5,torque_limits_u);
+    //ul.set_sub_vec(NC*5,torque_limits_u);
 
     x1.set_zero(lpc.rows());
     OUTLOG(lpA,"lpA",logDEBUG1);
@@ -739,10 +739,6 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     OUTLOG(Aeq,"Aeq",logDEBUG1);
     OUTLOG(beq,"beq",logDEBUG1);
 
-    // A*x <= b
-    qpA.set_zero();
-    qpb.set_zero();
-
     x2 = x1;
     bool RESULT_FLAG = false;
 //#define LCP_METHOD
@@ -775,13 +771,8 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     if(!(RESULT_FLAG = solve_qp(qpQ,qpc,lcpA,lcpb,x))){
 #else
-    if(!(RESULT_FLAG = solve_qp(qpQ,qpc,ll,ul,Aeq,beq,qpA,qpb,x2))){
+    solve_qp(qpQ,qpc,ll,ul,Aeq,beq,qpA,qpb,x2);
 #endif
-      OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
-      x = tau;
-      OUTLOG(x,"tau",logDEBUG);
-      return false;
-    } else{
     // ------------------------------------------------------------------------
     // ---------------- CHECK FEASIBILITY OF RESULT ---------------------------
       OUTLOG(x,"x = [z,tau]",logDEBUG);
@@ -798,7 +789,6 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
       x2.get_sub_vec(0,NC*5,z);
       OUTLOG(z,"cfs",logDEBUG);
       (workv1 = x2).get_sub_vec(NC*5,NVARS,x);
-    }
   }
   tau = x;
   return true;

@@ -256,12 +256,10 @@ void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){
  */
 void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
   Rw.set_zero(NUM_EEFS*3 + 6, NUM_JOINTS + 6);
-//  Rw.set_zero(NUM_EEFS*3, NUM_JOINTS + 6);
   Ravelin::MatrixNd J(3,NDOFS);
 
   // [x y z alpha beta gamma]_ environment_frame
 //  Ravelin::Pose3d::spatial_transform_to_matrix2(base_link_frame,environment_frame,base_stability_offset);
-//  Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,base_stability_offset);
   Rw.set_sub_mat(NUM_EEFS*3,NUM_JOINTS,Ravelin::MatrixNd::identity(6));
   for(int i=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
@@ -281,7 +279,7 @@ void Robot::calc_workspace_jacobian(Ravelin::MatrixNd& Rw){
 
   }
 
-//  Rw.set_sub_mat(0,NUM_JOINTS,Rw.get_sub_mat(0,NUM_EEFS*3,NUM_JOINTS,NUM_JOINTS+6,workM_).negate());
+  // Remove effects of base mevement on foot velocity from jacobian (foot vel is set realitive to base)
   Rw.set_sub_mat(0,NUM_JOINTS,Ravelin::MatrixNd::zero(NUM_EEFS*3,6));
 
 }

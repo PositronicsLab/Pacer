@@ -176,7 +176,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     go_to[1] += lead_base_force[1];
     go_to[5] += lead_base_force[5]*100.0;
 
-    OUTLOG(go_to,"go_to",logDEBUG);
+    OUTLOG(go_to,"go_to",logINFO);
 
     // Edit foot origins to Lean into turns
     std::vector<Ravelin::Vector3d> foot_origin;
@@ -388,12 +388,14 @@ Ravelin::VectorNd& Quadruped::control(double t,
       Ravelin::SVector6d go_to_global(go_to);
       workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e1,dt,vb_w);
 
-      workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf);
+      if(workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf))
+        uff += (id*=alpha);
     } else {
       if(!inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf))
         cf.set_zero(NC*5);
+      else
+        uff += (id*=alpha);
     }
-    uff += (id*=alpha);
   }
 
   // ------------------------- PROCESS FB AND FF FORCES ------------------------

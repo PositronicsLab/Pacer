@@ -556,41 +556,36 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 //          ]
 
     // Linear Constraints FOR BOTH OPTIMIZATIONS
-    // A*x <= b
-    //    A = [ -[eye(nc).*mu -eye(nc) -eye(nc) -eye(nc) -eye(nc)] zeros(nc,nq)
-    //          -N'*iM*[R F]
+    // A*x >= b
+    //    A = [ [eye(nc).*mu -eye(nc) -eye(nc) -eye(nc) -eye(nc)] zeros(nc,nq)
+    //          N'*iM*[R F]
     //        ]
     //    b = [  zeros(nc,1)
-    //           N'*(v)
+    //           -N'*(v)
     //        ]
     qpA.set_zero();
     qpb.set_zero();
     //  -- Coulomb Friction --
-    CF.negate();
     qpA.set_sub_mat(0,0,CF);
     qpb.set_sub_vec(0,Ravelin::VectorNd::zero(NC));
 
     //  -- Interpenetration --
-    // -N'*iM*[R F]
-    N.transpose_mult(iMRTF,workM2,-1,0);
+    // N'*iM*[R F]
+    N.transpose_mult(iMRTF,workM2,1,0);
     qpA.set_sub_mat(NC,0,workM2);
 
     // external forces are reduced to 0 as dt->0 --< N'*(v+iM*f) >--
 //    iM.mult(fext,workv1,h,0);
 //    workv1 += v;
 //    N.transpose_mult(workv1,workv2);
-    // N'*(v)
-    N.transpose_mult(v,workv2);
+    // -N'*(v)
+    N.transpose_mult(v,workv2,1,0);
     qpb.set_sub_vec(NC,workv2);
 
     lpA.set_sub_mat(WS_DOFS*2,0,qpA);
     lpb.set_sub_vec(WS_DOFS*2,qpb);
 
-    // NOTE: LP SOLVER USES A*x >= b, QP SOLVER USES A*x <= b
-    lpA.negate();
-    lpb.negate();
-
-    // Special LP constraint
+    ///////  Special LP constraint
     // -- operational space goal l1-norm --
     //    C = J*iM*[R F]
     //    d = dvw-J*iM*f
@@ -670,23 +665,23 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     OUTLOG(x1,"LP: [z,T]",logDEBUG);
     x1.get_sub_vec(NC*3,NC*3+nq,x);
 
-    OUTLOG(dvw,"dv_os__old",logINFO);
-
     // new dvw ( will be variable d = J*inv(M)*[R' F] x )
 //    iM.mult(fext,workv1,h,0);
 //    Rw.mult(workv1,d);
+    OUTLOG(d,"old_dvw",logINFO);
     C.mult(x1,d);
 
     // New OS goal (found by LP)
     // C*x + fext
-//    OUTLOG(JiMRTF.mult(x1,(workv1 = d),1,1),"dv_os__new",logINFO);
+    OUTLOG(d,"new_dvw",logINFO);
 
 //    (workM1 = C).get_sub_mat(0,NUM_EEFS*3,0,C.columns(),C);
 //    (workv1 = d).get_sub_vec(0,NUM_EEFS*3,d);
 
-//    LA_.nullspace(JiMRTF,P);
-//    unsigned size_null_space = P.columns();
-////    if(size_null_space == 0) return true;
+    LA_.nullspace(JiMRTF,P);
+    unsigned size_null_space = P.columns();
+    if(size_null_space == 0) return true;
+
     ///////////////////////////////////////////////////////////
     //////////////////////// QP PHASE /////////////////////////
     // OBJECTIVE
@@ -709,6 +704,10 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     // J iM [R' F] x == (v*_w - v_w - h J iM fext)
     Aeq = C;
     beq = d;
+
+    // Remove base vel from equaliy constraint
+    Aeq.set_sub_mat(NC*3,NUM_JOINTS,Ravelin::MatrixNd::zero(6,6));
+    beq.set_sub_vec(NC*3,Ravelin::VectorNd::zero(6));
 
     // qpQ = [R' F]'iM [R' F]
     RTF.transpose_mult(iMRTF,qpQ);
@@ -743,8 +742,8 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     bool RESULT_FLAG = false;
 //#define LCP_METHOD
 #ifdef LCP_METHOD
-    Ravelin::MatrixNd lcpA(Aeq.rows()*2 + qpA.rows() + NC*5,NVARS);
-    lcpA.set_zero();
+    Ravelin::MatrixNd lcpA;
+    lcpA.set_zero(Aeq.rows()*2 + qpA.rows() + NC*5,NVARS);
 
     lcpA.set_sub_mat(0,0,Aeq);
 
@@ -755,8 +754,8 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     lcpA.set_sub_mat(Aeq.rows()*2 + qpA.rows(),0,Ravelin::MatrixNd::identity(NC*5));
 
 
-    Ravelin::VectorNd lcpb(beq.rows()*2 + qpA.rows() + NC*5);
-    lcpb.set_zero();
+    Ravelin::VectorNd lcpb;
+    lcpb.set_zero(beq.rows()*2 + qpA.rows() + NC*5);
 
     workv_.set_zero(beq.rows());
     std::fill(workv_.begin(), workv_.end(),-Moby::NEAR_ZERO);
@@ -767,22 +766,35 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     lcpb.set_sub_vec(beq.rows()*2,qpb);
 
-//    lcpb.set_sub_vec(beq.rows()*2 + qpA.rows(),zeros);
+//    lcpb.set_sub_vec(beq.rows()*2 + qpA.rows(),Ravelin::VectorNd::zero(NC*5));
 
-    if(!(RESULT_FLAG = solve_qp(qpQ,qpc,lcpA,lcpb,x))){
+    solve_qp(qpQ,qpc,lcpA,lcpb,x2);
 #else
+    /// Active-set QP algorithm for solving QPs
+    /**
+     * \param H the quadratic term
+     * \param c the linear term
+     * \param lb the lower bound
+     * \param ub the lower bound
+     * \param M the linear inequality constraints (M*z >= q)
+     * \param q the linear inequality bound (M*z >= q)
+     * \param A the linear equality constraint (A*z = b)
+     * \param b the linear equality constraint (A*z = b)
+     * \param z a vector "close" to the solution on input (optional); contains
+     *        the solution on output
+     */
     solve_qp(qpQ,qpc,ll,ul,Aeq,beq,qpA,qpb,x2);
 #endif
     // ------------------------------------------------------------------------
     // ---------------- CHECK FEASIBILITY OF RESULT ---------------------------
-      OUTLOG(x,"x = [z,tau]",logDEBUG);
+      OUTLOG(x2,"x = [z,tau]",logDEBUG);
 
-      qpA.mult(x,workv_);
+      qpA.mult(x2,workv_);
       workv_ -= qpb;
       OUTLOG(workv_,"feas_geq_0",logDEBUG);
 
 
-      Aeq.mult(x,workv_);
+      Aeq.mult(x2,workv_);
       workv_ -= beq;
       OUTLOG(workv_,"feas_eq_0",logDEBUG);
 

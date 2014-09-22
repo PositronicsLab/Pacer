@@ -4,3 +4,4 @@ Examples/Quadruped
 Examples/Monopod
 /usr/include
 ThirdParty/alglib/src
+/Applications/MATLAB_R2013a.app/extern/include

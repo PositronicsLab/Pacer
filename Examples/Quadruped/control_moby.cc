@@ -164,7 +164,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
       // Quit if the body hits the ground, this is a failure condition
-      assert(!( (sb2->id.compare("ABDOMEN") == 0) || (sb1->id.compare("ABDOMEN") == 0) ));
+      assert((sb2->id.substr(0,4).compare("BODY") != 0) && (sb1->id.substr(0,4).compare("BODY") != 0));
 
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);

@@ -53,11 +53,13 @@ include_directories(
                     /opt/local/include
                     /opt/X11/include
                     ../../ThirdParty/alglib/src
+                    /Applications/MATLAB_R2013a.app/extern/include
                     )
 
 link_directories(
                   /usr/local/lib
                   /opt/X11/lib
+/Applications/MATLAB_R2013a.app/extern/lib/maci64
                   )
 
 set(SOURCES ../../src/output.cc
@@ -93,3 +95,6 @@ target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUA
 
 add_library(${PROJECT_NAME}Plugin MODULE control_moby.cc)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
+
+add_executable(render render.cpp)
+target_link_libraries(render osg osgDB osgGA osgViewer OpenThreads)

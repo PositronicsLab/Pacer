@@ -50,7 +50,8 @@ void Robot::compile(){
   }
 
   for(unsigned i=0;i<joints_.size()-NUM_FIXED_JOINTS;i++){
-    if(joints_[i]->q.rows() == 0){
+    OUT_LOG(logINFO)  << joints[i]->id;
+    if(joints_[i]->num_dof() == 0){
       continue;
     }
     joint_names_.push_back(joints_[i]->id);
@@ -79,7 +80,7 @@ void EndEffector::init(){
   OUT_LOG(logDEBUG) << id ;
   chain_bool.resize(joint_names_.size());
   rb_ptr = joint_ptr->get_inboard_link();
-  while (rb_ptr->id.compare("ABDOMEN") != 0){
+  while (rb_ptr->id.substr(0,4).compare("BODY") != 0){
     OUT_LOG(logDEBUG) << rb_ptr->id ;
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j]) == 0){

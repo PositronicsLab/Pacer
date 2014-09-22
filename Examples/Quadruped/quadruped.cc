@@ -30,7 +30,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
   // Import Robot Data
   static double last_time = -0.001;
   double dt = t - last_time;
-  last_time = t;
   this->generalized_q = generalized_q;
   this->generalized_qd = generalized_qd;
   this->generalized_qdd = generalized_qdd;
@@ -87,6 +86,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     static double &gait_time = CVarUtils::GetCVarRef<double>("quadruped.locomotion.gait-duration");
     static double &step_height = CVarUtils::GetCVarRef<double>("quadruped.locomotion.step-height");
     static std::vector<Ravelin::Vector3d> footholds(0);
+    OUTLOG(goto_command ,"goto_command",logINFO);
 
     go_to = Ravelin::VectorNd(goto_command.size(),&goto_command[0]);
 
@@ -170,13 +170,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 
     // Robot attempts to align base with force and then walk along force axis
-    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force_);
+//    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force_);
 
-    go_to[0] += lead_base_force[0];
-    go_to[1] += lead_base_force[1];
-    go_to[5] += lead_base_force[5]*100.0;
+//    go_to[0] += lead_base_force[0];
+//    go_to[1] += lead_base_force[1];
+//    go_to[5] += lead_base_force[5]*100.0;
 
-    OUTLOG(go_to,"go_to",logINFO);
+//    OUTLOG(go_to,"go_to",logINFO);
 
     // Edit foot origins to Lean into turns
     std::vector<Ravelin::Vector3d> foot_origin;
@@ -383,13 +383,20 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     // ------------------------ WORKSPACE INVERSE DYNAMICS ---------------------
     static int &WORKSPACE_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.operational-space");
+    static double &beta = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.beta");
     if(WORKSPACE_IDYN){
       vb_w.set_zero(Rw.rows());
-      Ravelin::SVector6d go_to_global(go_to);
-      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e1,dt,vb_w);
+      Ravelin::SVector6d go_to_global;
+      go_to_global = Ravelin::Pose3d::transform(Moby::GLOBAL,Ravelin::SVelocityd(go_to.data(),base_horizontal_frame));
+      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,beta,dt,vb_w);
 
-      if(workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf))
-        uff += (id*=alpha);
+      if(USE_LAST_CFS){
+        if(workspace_inverse_dynamics(generalized_qd,vb_w,M,R.mult(cf,workv_) += generalized_fext,dt,MU,id))
+          uff += (id*=alpha);
+      }else{
+        if(workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf))
+          uff += (id*=alpha);
+      }
     } else {
       if(!inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf))
         cf.set_zero(NC*5);
@@ -489,6 +496,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
 
    reset_contact();
+   last_time = t;
+
    return u;
 }
 // ===========================  END CONTROLLER  ===============================
@@ -517,6 +526,9 @@ void Quadruped::init(){
 #endif
   // ================= LOAD SCRIPT DATA ==========================
   load_variables("startup.xml");
+  std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
+  std::cerr << "Using Robot: " << robot_start_file << std::endl;
+  load_variables("startup-"+robot_start_file+".xml");
 
   // ================= SETUP LOGGING ==========================
 
@@ -535,7 +547,7 @@ void Quadruped::init(){
   // ================= BUILD ROBOT ==========================
   /// The map of objects read from the simulation XML file
   std::map<std::string, Moby::BasePtr> READ_MAP;
-  READ_MAP = Moby::XMLReader::read(std::string("links.xml"));
+  READ_MAP = Moby::XMLReader::read(std::string(robot_start_file+".xml"));
   for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
        i !=READ_MAP.end(); i++)
   {
@@ -604,7 +616,11 @@ void Quadruped::init(){
   torque_limits_l.resize(NUM_JOINTS);
   torque_limits_u.resize(NUM_JOINTS);
   for(int i=0;i<NUM_JOINTS;i++){
+    OUT_LOG(logINFO)<< "torque_limit: " << joints_[i]->id << " = " <<  torque_limits_[joints_[i]->id];
     torque_limits_l[i] = -torque_limits_[joints_[i]->id];
     torque_limits_u[i] = torque_limits_[joints_[i]->id];
   }
+  OUTLOG(torque_limits_l,"torque_limits_l",logERROR);
+  OUTLOG(torque_limits_u,"torque_limits_u",logERROR);
+
 }

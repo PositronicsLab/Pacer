@@ -36,6 +36,7 @@ Examples/Quadruped/wcpg.cc
 Examples/Quadruped/orphaned_code.cc
 Examples/Quadruped/variables.cc
 Examples/Quadruped/links.xml
+Examples/Quadruped/links1.xml
 Examples/Quadruped/startup.xml
 
 ThirdParty/
@@ -44,3 +45,8 @@ clean_data.sh
 Examples/Quadruped/GAZEBO/lynx/model.config
 Examples/Quadruped/GAZEBO/lynx/model.sdf
 Examples/Quadruped/GAZEBO/lynx/simplemodel.sdf
+src/mmlib.cpp
+Examples/Quadruped/links2.xml
+Examples/Quadruped/startup-links2.xml
+Examples/Quadruped/startup-links1.xml
+Examples/Quadruped/render.cpp

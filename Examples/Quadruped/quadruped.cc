@@ -155,7 +155,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
         go_to[0] = goto_direction[0]*goto_command[0];
         go_to[5] = angle_to_goal/gait_time;
       } else {
-        go_to[5] = Utility::sign(angle_to_goal)*0.75;
+        go_to[5] = Utility::sign(angle_to_goal)*1.5;
         if(!HOLONOMIC){
           go_to[0] = 0;
           go_to[1] = 0;
@@ -183,12 +183,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
     for(unsigned i=0;i< NUM_EEFS;i++){
       foot_origin.push_back(eefs_[i].origin);
       // Robot leans into movement
-      foot_origin[i][0] += go_to[0]*-0.2;
-      foot_origin[i][1] += go_to[1]*-0.2;
+      foot_origin[i][0] += go_to[0]*-0.1;
+      foot_origin[i][1] += go_to[1]*-0.1;
       // lean forward on front feet if moving forward
       if(foot_origin[i][0] > 0 && go_to[0] > 0)
-        foot_origin[i][2] += go_to[0]*0.2;
-//      foot_origin[i][1] += go_to[5]*-0.01;
+        foot_origin[i][2] += go_to[0]*0.1;
+      foot_origin[i][1] += go_to[5]*-0.01;
       foot_origin[i].pose = base_frame;
 #ifdef VISUALIZE_MOBY
       visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),

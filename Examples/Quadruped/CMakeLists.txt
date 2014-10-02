@@ -95,6 +95,3 @@ target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUA
 
 add_library(${PROJECT_NAME}Plugin MODULE control_moby.cc)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
-
-add_executable(render render.cpp)
-target_link_libraries(render osg osgDB osgGA osgViewer OpenThreads)

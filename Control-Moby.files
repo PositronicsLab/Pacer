@@ -50,3 +50,9 @@ Examples/Quadruped/links2.xml
 Examples/Quadruped/startup-links2.xml
 Examples/Quadruped/startup-links1.xml
 Examples/Quadruped/render.cpp
+Examples/Quadruped/SCRIPTS/render_movie.sh
+Examples/Quadruped/SCRIPTS/parse_all_data.bash
+Examples/Quadruped/SCRIPTS/parse_data.bash
+Examples/Quadruped/SCRIPTS/run_all_test.bash
+Examples/Quadruped/SCRIPTS/run_test.bash
+Examples/Quadruped/SCRIPTS/clean_data.sh

@@ -245,10 +245,10 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
       &SIM_MU_COULOMB = quad_ptr->get_variable("sim.mu-coulomb",workd),
       &SIM_MU_VISCOUS = quad_ptr->get_variable("sim.mu-viscous",workd);
 
-  e->penalty_Kp = SIM_PENALTY_KP;
-  e->penalty_Kv = SIM_PENALTY_KV;
-  e->mu_coulomb = SIM_MU_COULOMB;
-  e->mu_viscous = SIM_MU_VISCOUS;
+//  e->penalty_Kp = SIM_PENALTY_KP;
+//  e->penalty_Kv = SIM_PENALTY_KV;
+//  e->mu_coulomb = SIM_MU_COULOMB;
+//  e->mu_viscous = SIM_MU_VISCOUS;
   return e;
 }
 

@@ -19,14 +19,6 @@ Ravelin::VectorNd STAGE1, STAGE2;
 bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
 
-#ifdef COLLECT_DATA   // record all input vars
-  { // TODO: REMOVE THIS, FOR IROS PAPER
-    STAGE1.set_zero(NUM_JOINTS);
-    STAGE2.set_zero(NUM_JOINTS);
-    STAGE1 *= NAN;
-    STAGE2 *= NAN;
-  }
-#endif
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
@@ -100,54 +92,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
-//#define COLLECT_DATA
-#ifdef COLLECT_DATA   // record all input vars
-    // generate a unique filename
-    std::ostringstream fname;
-    fname << "data/idyn_system" << (N_SYSTEMS) << ".m";
-
-    // open the file
-    std::ofstream out(fname.str().c_str());
-
-    out  << "nc = " << nc << std::endl;
-    out  << "nq = " << nq << std::endl;
-    out  << "n = " << n << std::endl;
-    out  << "h = " << h << std::endl;
-
-    out  << "v = " <<v << std::endl;
-    out  << "v = v';" << std::endl;
-    out  << "a = " << qdd << std::endl;
-    out  << "a = [a';zeros(6,1)]" << std::endl;
-
-    out  << "vqstar = " <<vqstar << std::endl;
-    out  << "vqstar = vqstar';" << std::endl;
-    out  << "fext = " <<fext << std::endl;
-    out  << "fext = fext';" << std::endl;
-
-    out  <<  "N = [" <<N << "]"<< std::endl;
-    out  << "ST = [" <<ST<< "]" << std::endl;
-    out  << "S = ST(:,1:nc)" << std::endl;
-    out  << "T = ST(:,nc+1:nc*2)" << std::endl;
-    out  <<  "A = [" <<A << "]"<< std::endl;
-    out  <<  "B = [" <<B << "]"<< std::endl;
-    out  <<  "C = [" <<C << "]"<< std::endl;
-    out  << "M = [C B';B A];" << std::endl;
-    out  <<  "D = [" <<D << "]"<< std::endl;
-    out  <<  "E = [" <<E << "]"<< std::endl;
-    out  <<  "F = [" <<F << "]"<< std::endl;
-    out  << "iM = [F E';E D];" << std::endl;
-
-    out  << "MU = [" <<MU<< "]" << std::endl;
-    out  <<  "R = [" <<R << "]"<< std::endl;
-
-    out  << "CnT_invM_Cn = N'*iM*N" << std::endl;
-    out  << "CnT_invM_Cs = N'*iM*S" << std::endl;
-    out  << "CnT_invM_Ct = N'*iM*T" << std::endl;
-    out  << "CsT_invM_Cs = S'*iM*S" << std::endl;
-    out  << "CsT_invM_Ct = S'*iM*T" << std::endl;
-    out  << "CtT_invM_Ct = T'*iM*T" << std::endl;
-    out.close();
-#endif
 
   // compute j and k
   // [E,D]
@@ -322,19 +266,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // push z into output vector
   cf = z;
-#ifdef COLLECT_DATA   // record all input vars
-  { // TODO: REMOVE THIS, FOR IROS PAPER
-    // return the inverse dynamics forces
-    // x = iF*(vqstar - k - FET*R*(cf))/h
-    x = vqstar;
-    x -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
-    STAGE1 = x;
-  }
-#endif
 
   /////////////////////////////////////////////////////////////////////////////
   ///////////////// Stage 2 optimization: command smoothing ///////////////////
@@ -406,20 +337,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
     // qM2 = N'*[zeros(nq,nvars_null);Z*P];
     // qq2 = N'*[Z*z + p];
-//    Ravelin::MatrixNd ZP(6+nq,size_null_space);
-//    ZP.set_zero();
-//    ZP.set_sub_mat(nq,0,Z.mult(P,workM1));
-
-//    workv2.set_zero(n);
-//    workv1 = p;
-//    Z.mult(z,workv1,1,1);
-//    workv2.set_sub_vec(nq,workv1);
-//    workv2.set_sub_vec(0,vqstar);
-
-//    N.transpose_mult(ZP,qM2);
-//    N.transpose_mult(workv2,qq2);
-//    qq2.negate(); // TODO: Fix This
-
 
     // Coulomb Friction Polygon:
     nvars = P.columns();
@@ -470,15 +387,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
     qq.set_sub_vec(0,qq1);
     qq.set_sub_vec(qq1.rows(),qq3);
 
-//    qM.set_zero(qM1.rows()+qM2.rows()+qM3.rows(),qM1.columns());
-//    qq.set_zero(qM1.rows()+qM2.rows()+qM3.rows());
-//    qM.set_sub_mat(0,0,qM1);
-//    qM.set_sub_mat(qM1.rows(),0,qM2);
-//    qM.set_sub_mat(qM1.rows()+qM2.rows(),0,qM3);
-//    qq.set_sub_vec(0,qq1);
-//    qq.set_sub_vec(qM1.rows(),qq2);
-//    qq.set_sub_vec(qq1.rows()+qM2.rows(),qq3);
-
     // optimize system
     Ravelin::VectorNd w(size_null_space);
     if(!solve_qp(qG,qc,qM,qq,w)){
@@ -502,19 +410,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
       OUTLOG(cf,"z_OP2 =[ % (P*w + z)",logDEBUG);
 
-#ifdef COLLECT_DATA   // record all input vars
-      { // TODO: REMOVE THIS, FOR IROS PAPER
-        // return the inverse dynamics forces
-        // x = iF*(vqstar - k - FET*R*(cf))/h
-        x = vqstar;
-        x -= k;
-        FET.mult(R,workM1);
-        workM1.mult(cf,x,-1,1);
-        LA_.solve_chol_fast(iF,x);
-        x /= h;
-        STAGE2 = x;
-      }
-#endif
     }
   }
 
@@ -531,97 +426,28 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   x /= h;
 
   // Some debugging dialogue
-//#define OUTPUT
-#ifdef OUTPUT
-  {
-    // Zz + p == v + inv(M)(fext*h + R*z)
-//    Z.mult(z,workv1);
-//    workv1 += p;
-//    OUTLOG(workv1,"Z*z + p",logDEBUG);
-
-    // Idyn Result
-    workv1.set_zero(fext.rows());
-    workv1.set_sub_vec(0,x);
-    (workv1 += fext) *= h;
-    R.mult(z,workv1,1,1);
-    iM.mult(workv1,workv2);
-//    OUTLOG(workv2.get_sub_vec(0,nq,workv1),"qdd2 == inv(M)( (fext + [x;0])*h + R*z)",logDEBUG);
-    OUTLOG(workv2.get_sub_vec(0,nq,workv1),"qdd_idyn",logDEBUG);
-    OUTLOG(qdd,"qdd_des_idyn",logDEBUG);
-    workv2 += v;
-    OUTLOG(workv2,"v* == v + inv(M)( (fext + [x;0])*h + R*z)",logDEBUG);
-
-    // N*(v + inv(M)fext*h == N*p
-//    workv1.set_zero(fext.rows());
-//    workv1.set_sub_vec(nq,p);
-//    N.transpose_mult(workv1,workv2);
-//    OUTLOG(workv2,"N'*p",logDEBUG);
-
-//    (workv1 = fext)*=h;
-//    iM.mult(workv1,workv2) += v;
-//    N.transpose_mult(workv2,workv1);
-//    OUTLOG(workv1," == N'*(v + inv(M)*fext*h",logDEBUG);
-
-    // vq* == v + inv(M)(fext + [x; 0])*h
-    OUTLOG(vqstar,"vq*",logDEBUG);
-
-//    workv1.set_zero(fext.rows());
-//    workv1.set_sub_vec(0,x);
-//    (workv1 += fext);
-//    OUTLOG(workv1," (fext + [x; 0])",logDEBUG);
-//    iM.mult(workv1,workv2);
-//    OUTLOG(workv2," inv(M)(fext + [x; 0])",logDEBUG);
-//    (workv2*=h) += v;
-//    OUTLOG(workv2," v + inv(M)(fext + [x; 0])*h",logDEBUG);
-
-//    workv1.set_zero(fext.rows());
-//    workv1.set_sub_vec(0,x);
-//    (workv1 += fext)*=h;
-//    R.mult(cf,workv1,1,1);
-//    iM.mult(workv1,workv2) += v;
-//    OUTLOG(workv1,"qdd == inv(M)(fext + R*z + [x; 0])*h)",logDEBUG);
-
-//    Ravelin::MatrixNd S,T;
-//    ST.get_sub_mat(0,NDOFS,0,nc,S);
-//    ST.get_sub_mat(0,NDOFS,nc,nc*2,T);
-//    N.transpose_mult(iM,workM2);
-//    workM2.mult(N,workM1);
-//    OUTLOG(workM1,"N' * inv(M) * N",logDEBUG);
-
-//    workM2.mult(S,workM1);
-//    OUTLOG(workM1,"N' * inv(M) * S",logDEBUG);
-
-//    workM2.mult(T,workM1);
-//    OUTLOG(workM1,"N' * inv(M) * T",logDEBUG);
-
-//    S.transpose_mult(iM,workM2);
-//    workM2.mult(S,workM1);
-//    OUTLOG(workM1,"S' * inv(M) * S",logDEBUG);
-
-//    workM2.mult(T,workM1);
-//    OUTLOG(workM1,"S' * inv(M) * T",logDEBUG);
-
-//    T.transpose_mult(iM,workM2);
-//    workM2.mult(T,workM1);
-//    OUTLOG(workM1,"T' * inv(M) * T",logDEBUG);
-  }
-#endif
   return true;
 }
+
+
+
 //#define LCP_METHOD
-bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& v_bar_, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
-  static Ravelin::VectorNd tau;
-  Ravelin::VectorNd fext = fext_;
-  Ravelin::VectorNd v_bar = v_bar_;
-//  fext.negate();
+bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& vw_bar_, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& z){
+  static Ravelin::VectorNd tau = x;
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
+  Ravelin::VectorNd vw_bar = vw_bar_;
+
+//   (workM_ = Rw).get_sub_mat(0,NUM_EEFS*3,0,NDOFS,Rw);
+//   (workv_ = vw_bar).get_sub_vec(0,NUM_EEFS*3,vw_bar);
+  OUTLOG(Rw,"Rw",logDEBUG1);
+  OUTLOG(vw_bar,"vw_bar",logDEBUG1);
+
 
   // SRZ: Ground reaction forces are set to zero
   // (they destabilize robot system, why?)
 
-//  OUTLOG(R,"R",logERROR);
   static Ravelin::MatrixNd workM1,workM2;
   static Ravelin::VectorNd workv1, workv2;
 
@@ -641,37 +467,19 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
   F.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
   F *= h;
 
-//#define OUTPUT
-#ifdef OUTPUT
-  OUTLOG(iM,"iM",logERROR);
-  OUTLOG(M,"M",logERROR);
-  OUTLOG(Rw,"J",logERROR);
-  OUTLOG(v,"v",logERROR);
-  OUTLOG(v_bar,"vw",logERROR);
-  OUTLOG(fext,"f",logERROR);
-  OUTLOG(h,"h",logERROR);
-  OUTLOG(MU,"MU",logERROR);
-  OUTLOG(NC,"nc",logERROR);
-  OUTLOG(NUM_EEFS,"ne",logERROR);
-  OUTLOG(NUM_JOINTS,"nq",logERROR);
-  OUTLOG(n,"n",logERROR);
-  OUTLOG(Rw.rows(),"nw",logERROR);
-  OUTLOG(F,"F",logERROR);
-  OUTLOG(R,"R",logERROR);
-  OUTLOG(N,"N",logERROR);
-  assert(NC == 0);
-#endif
-
-  // v_err
-  Ravelin::VectorNd dvw = v_bar;
-  // dvw = v_bar - vel_w
-  Rw.mult(v,dvw,-1,1);
-
-  OUTLOG(v_bar,"v_bar",logERROR);
+  OUTLOG(vw_bar,"vw_bar",logERROR);
+  Ravelin::VectorNd dvw;
+  // dvw = vw_bar - vw
+  // vw = Rw*v
+  Rw.mult(v,dvw,-1,0);
+  OUTLOG(dvw,"vw",logERROR);
+  dvw += vw_bar;
+  OUTLOG(dvw,"dvw",logERROR);
 
   Ravelin::MatrixNd qpQ,qpA(NC*2,NC*5+nq);
   Ravelin::VectorNd qpc,qpb(NC*2);
   {
+
     const int NVARS = NC*5+nq;
     int WS_DOFS = Rw.rows();
 
@@ -703,15 +511,16 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     Ravelin::MatrixNd JiMRTF;
     Rw.mult(iMRTF,JiMRTF);
 
+    ///////////////////////////////////////////////////////////
     //////////////////////// LP PHASE /////////////////////////
     /* OBJECTIVE
-     * Min workspace deviation from v_bar
+     * Min workspace deviation from dvw
      * min_{x = [z,T,s]'}
      *   [0,0,1] x
      * s.t.
-     *   -[A,",-I] x   >= -v_bar              // operational space goal l1-norm
-     *   [A,",-I] x    >=  v_bar              // "
-     *   N*iM*[R' F,0] x >= -N(h*iM*fext + v)   // Interpenetration
+     *   -[ C ,-I] x   >= -dvw              // operational space goal l1-norm
+     *   [ C ,-I] x    >=  dvw              //
+     *   [ N'*A ,0] x >= -N(h*iM*fext + v)   // Interpenetration
      *   [CF,0,0] x      >=  0                  // coulomb friction
      *   z >= 0                                 // compressive force
      *   T+ >= T >= T-                          // torque limits
@@ -721,19 +530,20 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
                       Aeq(0,lpA.columns());
     Ravelin::VectorNd lpb(lpA.rows()),
                       lpc,
-                      x1,
+                      x1,x2,
                       beq(0);
 
     lpA.set_zero();
+    x1.set_zero(NVARS);
+    x2.set_zero(NVARS);
     lpb.set_zero();
 
     lpc.set_zero(nq+NC*5+WS_DOFS);
     lpc.set_sub_vec(nq+NC*5,Ravelin::VectorNd::one(WS_DOFS));
-    lpc.set_sub_vec(nq+NC*5+WS_DOFS-6,(workv_ = Ravelin::VectorNd::one(6)));
 
 //    C = J*iM*[R F]
 //    d = dvw-J*iM*f
-//    A = [ -[eye(nc).*1 -eye(nc) -eye(nc) -eye(nc) -eye(nc)] zeros(nc,nq)
+//    A = [ -[eye(nc).*mu -eye(nc) -eye(nc) -eye(nc) -eye(nc)] zeros(nc,nq)
 //          -N'*iM*[R F]
 //        ]
 //    b = [  zeros(nc,1)
@@ -750,67 +560,78 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 //            b
 //          ]
 
-    // Special LP constraint
+    // Linear Constraints FOR BOTH OPTIMIZATIONS
+    // A*x >= b
+    //    A = [ [eye(nc).*mu -eye(nc) -eye(nc) -eye(nc) -eye(nc)] zeros(nc,nq)
+    //          N'*iM*[R F]
+    //        ]
+    //    b = [  zeros(nc,1)
+    //           -N'*(v)
+    //        ]
+    qpA.set_zero();
+    qpb.set_zero();
+    //  -- Coulomb Friction --
+    qpA.set_sub_mat(0,0,CF);
+    qpb.set_sub_vec(0,Ravelin::VectorNd::zero(NC));
+
+    //  -- Interpenetration --
+    // N'*iM*[R F]
+    N.transpose_mult(iMRTF,workM2,1,0);
+    qpA.set_sub_mat(NC,0,workM2);
+
+    // external forces are reduced to 0 as dt->0 --< N'*(v+iM*f) >--
+//    iM.mult(fext,workv1,h,0);
+//    workv1 += v;
+//    N.transpose_mult(workv1,workv2);
+    // -N'*(v)
+    N.transpose_mult(v,workv2,1,0);
+    qpb.set_sub_vec(NC,workv2);
+
+    lpA.set_sub_mat(WS_DOFS*2,0,qpA);
+    lpb.set_sub_vec(WS_DOFS*2,qpb);
+
+    ///////  Special LP constraint
     // -- operational space goal l1-norm --
     //    C = J*iM*[R F]
     //    d = dvw-J*iM*f
     Ravelin::MatrixNd C = JiMRTF;
     assert(WS_DOFS == C.rows());
 
-    lpA.set_sub_mat(0,0,C);
-    lpA.set_sub_mat(C.rows(),0,(workM_ = C).negate());
-    workM1 = Ravelin::MatrixNd::identity(C.rows());
-    workM1.negate();
-    lpA.set_sub_mat(       0,C.columns(),workM1);
-    lpA.set_sub_mat(C.rows(),C.columns(),workM1);
+    // -C x + d >= -s  <--  C x - d <=  s
+    //  C x - d >= -s
 
-    Ravelin::VectorNd d;
+    // -C x + s >= -d
+    //  C x + s >=  d
 
-    iM.mult(fext,workv1,-h,0);
-    Rw.mult(workv1,d);
-    d += dvw;
+    //
+    //
+    // A =    [-C  I;
+    //          C  I]
+    lpA.set_sub_mat(0,0,(workM_ = C).negate());
+    lpA.set_sub_mat(C.rows(),0,C);
+    lpA.set_sub_mat(       0,C.columns(),Ravelin::MatrixNd::identity(C.rows()));
+    lpA.set_sub_mat(C.rows(),C.columns(),Ravelin::MatrixNd::identity(C.rows()));
 
-    lpb.set_sub_vec(0,d);
-    lpb.set_sub_vec(d.rows(),(workv_ = d).negate());
-
-    // Linear Constraints
-    // A*x <= b
-    //    A = [ -[eye(nc).*mu -eye(nc) -eye(nc) -eye(nc) -eye(nc)] zeros(nc,nq)
-    //          -N'*iM*[R F]
-    //        ]
-    //    b = [  zeros(nc,1)
-    //           N'*(v+iM*f)
-    //        ]
-    qpA.set_zero();
-    qpb.set_zero();
-    //  -- Coulomb Friction --
-    CF.negate();
-    qpA.set_sub_mat(0,0,CF);
-    qpb.set_sub_vec(0,Ravelin::VectorNd::zero(NC));
-
-    //  -- Interpenetration --
-    // -N'*iM*[R F]
-    N.transpose_mult(iMRTF,workM2,-1,0);
-    qpA.set_sub_mat(NC,0,workM2);
-
-    // N'*(v+iM*f)
-    iM.mult(fext,workv1,h,0);
-    workv1 += v;
-    N.transpose_mult(workv1,workv2);
-    qpb.set_sub_vec(NC,workv2);
-
-    lpA.set_sub_mat(WS_DOFS*2,0,qpA);
-    lpb.set_sub_vec(WS_DOFS*2,qpb);
-
+    Ravelin::VectorNd d = dvw;
     Ravelin::VectorNd ll(NVARS+WS_DOFS),ul(NVARS+WS_DOFS);
+#define NO_LP
+#ifndef NO_LP
+    // NOTE: external forces are reduced to 0 as dt->0
+    //    iM.mult(fext,workv1,-h,0);
+    //    Rw.mult(workv1,d);
+    //    d += dvw;
+
+    lpb.set_sub_vec(0,(workv_ = d).negate());
+    lpb.set_sub_vec(d.rows(),d);
+
     // Lower Torque Limit
     std::fill(ll.begin(), ll.end(), -1e30);
     ll.set_sub_vec(0,Ravelin::VectorNd::zero(NC*5));
-    ll.set_sub_vec(NC*5,torque_limits_l);
+    //ll.set_sub_vec(NC*5,torque_limits_l);
 
     // Upper Torque Limit
     std::fill(ul.begin(), ul.end(), 1e30);
-    ul.set_sub_vec(NC*5,torque_limits_u);
+    //ul.set_sub_vec(NC*5,torque_limits_u);
 
     x1.set_zero(lpc.rows());
     OUTLOG(lpA,"lpA",logDEBUG1);
@@ -820,24 +641,25 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     OUTLOG(ul ,"lpu" ,logDEBUG1);
     OUTLOG(x1 ,"lpx0"  ,logDEBUG1);
 
-    // A*x >= b
-    lpA.negate();
-    lpb.negate();
-
     Opt::LPParams params(lpc,Aeq,beq,lpA,lpb,ll,ul);
 //    params.n = lpc.rows();
     unsigned LP_RESULT_FLAG = 0;
 
-//      Solves the linear program:  min c'x
-//                     subject to:  Ax = b
-//                                  Mx >= q
-    if(!/*Opt::LP::lp_simplex(params,x1,LP_RESULT_FLAG)*/ true){
+    /// Solves a linear program using the simplex method
+    /**
+     *  Solves the linear program:  min c'x
+     *                 subject to:  Ax = b
+     *                              Mx >= q
+     * \param the optimal point (if any) on return
+     * \return <b>false</b> if problem infeasible; <b>true</b> otherwise
+     */
+    if(!Opt::LP::lp_simplex(params,x1,LP_RESULT_FLAG)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn LP! : " << LP_RESULT_FLAG ;
       x = tau;
       return false;
     }
 
-    OUTLOG(x1.get_sub_vec(NVARS,NVARS+WS_DOFS,workv1),"LP: [s]",logERROR);
+    OUTLOG(x1.segment(NVARS,NVARS+WS_DOFS),"LP: [s]",logERROR);
     OUT_LOG(logERROR) << "LP: Objective: c' x = " << x1.dot(lpc);
 //    assert(NC != 4);
 
@@ -849,23 +671,24 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     OUTLOG(x1,"LP: [z,T]",logDEBUG);
     x1.get_sub_vec(NC*3,NC*3+nq,x);
 
-    OUTLOG(dvw,"v_os__old",logINFO);
-
     // new dvw ( will be variable d = J*inv(M)*[R' F] x )
-    iM.mult(fext,workv1,h,0);
-    Rw.mult(workv1,d);
-
+//    iM.mult(fext,workv1,h,0);
+//    Rw.mult(workv1,d);
+    OUTLOG(d,"old_dvw",logINFO);
+    C.mult(x1,d);
+#endif
     // New OS goal (found by LP)
     // C*x + fext
-    OUTLOG(JiMRTF.mult(x1,(workv1 = d),1,1),"dv_os__new",logINFO);
+    OUTLOG(d,"new_dvw",logINFO);
 
-    (workM1 = C).get_sub_mat(0,NUM_EEFS*3,0,C.columns(),C);
-    (workv1 = d).get_sub_vec(0,NUM_EEFS*3,d);
+//    (workM1 = C).get_sub_mat(0,NUM_EEFS*3,0,C.columns(),C);
+//    (workv1 = d).get_sub_vec(0,NUM_EEFS*3,d);
 
     LA_.nullspace(JiMRTF,P);
     unsigned size_null_space = P.columns();
-////    if(size_null_space == 0) return true;
+    if(size_null_space == 0) return true;
 
+    ///////////////////////////////////////////////////////////
     //////////////////////// QP PHASE /////////////////////////
     // OBJECTIVE
     // Min energy gain wrt T & z
@@ -897,17 +720,20 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     RTF.transpose_mult(workv1,qpc);
 
     // -- Torque Limits --
-    ll.set_zero(NVARS);
-    ul.set_zero(NVARS);
+    ll.resize(NVARS);
+    ul.resize(NVARS);
 
+    double clamp_val = 1e30;
     // Lower var Limits
-    std::fill(ll.begin(), ll.end(),-1e29);
+    std::fill(ll.begin(), ll.end(),-clamp_val);
     ll.set_sub_vec(0,Ravelin::VectorNd::zero(NC*5));
 //    ll.set_sub_vec(NC*5,torque_limits_l);
 
     // Upper var Limits
-    std::fill(ul.begin(), ul.end(), 1e29);
+    std::fill(ul.begin(), ul.end(), clamp_val);
 //    ul.set_sub_vec(NC*5,torque_limits_u);
+    x2 = x1;
+
     OUTLOG(ll,"qpl",logDEBUG1);
     OUTLOG(ul,"qpu",logDEBUG1);
     OUTLOG(qpA,"qpA",logDEBUG1);
@@ -916,17 +742,13 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
     OUTLOG(qpc,"qpc",logDEBUG1);
     OUTLOG(Aeq,"Aeq",logDEBUG1);
     OUTLOG(beq,"beq",logDEBUG1);
+    OUTLOG(x2,"x0",logDEBUG1);
 
-    // A*x <= b
-    qpA.set_zero();
-    qpb.set_zero();
-
-    x.set_zero(NVARS);
     bool RESULT_FLAG = false;
-#define LCP_METHOD
+//#define LCP_METHOD
 #ifdef LCP_METHOD
-    Ravelin::MatrixNd lcpA(Aeq.rows()*2 + qpA.rows() + NC*5,NVARS);
-    lcpA.set_zero();
+    Ravelin::MatrixNd lcpA;
+    lcpA.set_zero(Aeq.rows()*2 + qpA.rows() + NC*5,NVARS);
 
     lcpA.set_sub_mat(0,0,Aeq);
 
@@ -936,9 +758,9 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     lcpA.set_sub_mat(Aeq.rows()*2 + qpA.rows(),0,Ravelin::MatrixNd::identity(NC*5));
 
+    Ravelin::VectorNd lcpb;
 
-    Ravelin::VectorNd lcpb(beq.rows()*2 + qpA.rows() + NC*5);
-    lcpb.set_zero();
+    lcpb.set_zero(beq.rows()*2 + qpA.rows() + NC*5);
 
     workv_.set_zero(beq.rows());
     std::fill(workv_.begin(), workv_.end(),-Moby::NEAR_ZERO);
@@ -949,41 +771,234 @@ bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin
 
     lcpb.set_sub_vec(beq.rows()*2,qpb);
 
-//    lcpb.set_sub_vec(beq.rows()*2 + qpA.rows(),zeros);
+//    lcpb.set_sub_vec(beq.rows()*2 + qpA.rows(),Ravelin::VectorNd::zero(NC*5));
 
-    if(!(RESULT_FLAG = solve_qp(qpQ,qpc,lcpA,lcpb,x))){
+    solve_qp(qpQ,qpc,lcpA,lcpb,x2);
 #else
-    if(!(RESULT_FLAG = solve_qp(qpQ,qpc,ll,ul,Aeq,beq,qpA,qpb,x))){
+    /// Active-set QP algorithm for solving QPs
+    /**
+     * \param H the quadratic term
+     * \param c the linear term
+     * \param lb the lower bound
+     * \param ub the lower bound
+     * \param M the linear inequality constraints (M*z >= q)
+     * \param q the linear inequality bound (M*z >= q)
+     * \param A the linear equality constraint (A*z = b)
+     * \param b the linear equality constraint (A*z = b)
+     * \param z a vector "close" to the solution on input (optional); contains
+     *        the solution on output
+     */
+    solve_qp(qpQ,qpc,ll,ul,Aeq,beq,qpA,qpb,x2);
 #endif
-      x1.get_sub_vec(NC*3,NC*3+nq,x);
-      OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn!";
-      return false;
-    }
-
     // ------------------------------------------------------------------------
     // ---------------- CHECK FEASIBILITY OF RESULT ---------------------------
-    if(RESULT_FLAG){
-      OUTLOG(x,"x = [z,tau]",logDEBUG);
+      OUTLOG(x2,"x = [z,tau]",logDEBUG);
 
-      qpA.mult(x,workv_);
+      qpA.mult(x2,workv_);
       workv_ -= qpb;
       OUTLOG(workv_,"feas_geq_0",logDEBUG);
 
 
-      Aeq.mult(x,workv_);
+      Aeq.mult(x2,workv_);
       workv_ -= beq;
       OUTLOG(workv_,"feas_eq_0",logDEBUG);
 
-      x.get_sub_vec(0,NC*5,workv2);
-      OUTLOG(workv2,"cfs",logDEBUG);
-      (workv1 = x).get_sub_vec(NC*5,NVARS,x);
-    } else {
-      x = tau;
-      OUTLOG(x,"tau",logDEBUG);
-    }
+      x2.get_sub_vec(0,NC*5,z);
+      OUTLOG(z,"cfs",logDEBUG);
+      (workv1 = x2).get_sub_vec(NC*5,NVARS,x);
   }
   tau = x;
-//  assert(NC == 0);
+  return true;
+}
+
+bool Robot::workspace_inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& vw_bar_, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x){
+  OUT_LOG(logDEBUG) <<  ">> workspace_inverse_dynamics (feedback CFs) entered ";
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  Ravelin::VectorNd vw_bar = vw_bar_;
+
+  OUTLOG(Rw,"Rw",logDEBUG1);
+  OUTLOG(vw_bar,"vw_bar",logDEBUG1);
+
+  static Ravelin::MatrixNd workM1,workM2;
+  static Ravelin::VectorNd workv1, workv2;
+
+  // Invert M -> iM
+  static Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  LA_.factor_chol(iM_chol);
+
+  static Ravelin::MatrixNd iM;
+  iM = Ravelin::MatrixNd::identity(n);
+  LA_.solve_chol_fast(iM_chol,iM);
+
+  Ravelin::MatrixNd F;
+
+  // Actuated joint selection matrix
+  F.set_zero(n,nq);
+  F.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
+  F *= h;
+
+  OUTLOG(vw_bar,"vw_bar",logERROR);
+  Ravelin::VectorNd dvw;
+  // dvw = vw_bar - vw
+  // vw = Rw*v
+  Rw.mult(v,dvw,-1,0);
+  OUTLOG(dvw,"vw",logERROR);
+  dvw += vw_bar;
+  OUTLOG(dvw,"dvw",logERROR);
+
+    const int NVARS = nq;
+    int WS_DOFS = Rw.rows();
+
+    // Do larger "Coupled" optimizations
+    // for torque and cfs
+
+    //////////////////////// COEFS /////////////////////////
+    // iM [F]: [\tau] --> [generalized_xdd]
+    Ravelin::MatrixNd iMF;
+    iM.mult(F,iMF);
+
+    // QP Nullspace
+    Ravelin::MatrixNd P;
+    Ravelin::MatrixNd JiMF;
+    Rw.mult(iMF,JiMF);
+
+    ///////////////////////////////////////////////////////////
+    //////////////////////// LP PHASE /////////////////////////
+    /* OBJECTIVE
+     * Min workspace deviation from dvw
+     * min_{x = [T,s]'}
+     *   [0,1] x
+     * s.t.
+     *   -[ 0 ,-I] x   >= -dvw              // operational space goal l1-norm
+     *   [ 0 ,-I] x    >=  dvw              //
+     *   T+ >= T >= T-                          // torque limits
+     */
+
+    Ravelin::MatrixNd lpA(WS_DOFS*2,nq+WS_DOFS),
+                      Aeq(0,lpA.columns());
+    Ravelin::VectorNd lpb(lpA.rows()),
+                      lpc,
+                      x1,
+                      beq(Aeq.rows());
+
+
+    lpA.set_zero();
+    x1.set_zero(NVARS);
+    lpb.set_zero();
+
+    lpc.set_zero(nq+WS_DOFS);
+    lpc.set_sub_vec(nq,Ravelin::VectorNd::one(WS_DOFS));
+
+//    C = J*iM*[R F]
+//    d = dvw-J*iM*f
+
+//      lpM*x <= lpq
+//    lpM = [ C  -eye(nw)
+//           -C  -eye(nw)  % -dv +s >=  v -vw +fext
+//          ]
+//    lpq = [ d % +dv +s >= -v +vw -fext
+//           -d % -dv +s >=  v -vw +fext
+//          ]
+
+    ///////  Special LP constraint
+    // -- operational space goal l1-norm --
+    //    C = J*iM*[R F]
+    //    d = dvw-J*iM*f
+    Ravelin::MatrixNd C = JiMF;
+    assert(WS_DOFS == C.rows());
+
+    // -C x + d >= -s  <--  C x - d <=  s
+    //  C x - d >= -s
+
+    // -C x + s >= -d
+    //  C x + s >=  d
+
+    //
+    //
+    // A =    [-C  I;
+    //          C  I]
+    lpA.set_sub_mat(0,0,(workM_ = C).negate());
+    lpA.set_sub_mat(C.rows(),0,C);
+    lpA.set_sub_mat(       0,C.columns(),Ravelin::MatrixNd::identity(C.rows()));
+    lpA.set_sub_mat(C.rows(),C.columns(),Ravelin::MatrixNd::identity(C.rows()));
+
+    Ravelin::VectorNd d = dvw;
+    Ravelin::VectorNd ll(NVARS+WS_DOFS),ul(NVARS+WS_DOFS);
+
+    // NOTE: external forces are active on robot (includes contact forces)
+    iM.mult(fext,workv1,h,0);
+    Rw.mult(workv1,d,1,1);
+
+    lpb.set_sub_vec(0,(workv_ = d).negate());
+    lpb.set_sub_vec(d.rows(),d);
+
+    double clamp_val = 1e30;
+    // Lower Torque Limit
+    std::fill(ll.begin(), ll.end(), -clamp_val);
+    ll.set_sub_vec(0,torque_limits_l);
+
+    // Upper Torque Limit
+    std::fill(ul.begin(), ul.end(), clamp_val);
+    ul.set_sub_vec(0,torque_limits_u);
+
+    x1.set_zero(lpc.rows());
+    OUTLOG(lpA,"lpA",logDEBUG1);
+    OUTLOG(lpb,"lpb",logDEBUG1);
+    OUTLOG(lpc,"lpc",logDEBUG1);
+    OUTLOG(ll ,"lpl" ,logDEBUG1);
+    OUTLOG(ul ,"lpu" ,logDEBUG1);
+    OUTLOG(x1 ,"lpx0"  ,logDEBUG1);
+
+    Opt::LPParams params(lpc,Aeq,beq,lpA,lpb,ll,ul);
+//    params.n = lpc.rows();
+    unsigned LP_RESULT_FLAG = 0;
+
+    /// Solves a linear program using the simplex method
+    /**
+     *  Solves the linear program:  min c'x
+     *                 subject to:  Ax = b
+     *                              Mx >= q
+     * \param the optimal point (if any) on return
+     * \return <b>false</b> if problem infeasible; <b>true</b> otherwise
+     */
+    if(!Opt::LP::lp_simplex(params,x1,LP_RESULT_FLAG)){
+      OUT_LOG(logERROR)  << "ERROR: Unable to solve widyn LP! : " << LP_RESULT_FLAG ;
+      return false;
+    }
+    OUTLOG(x1.segment(NVARS,NVARS+WS_DOFS),"LP: [s]",logERROR);
+    OUT_LOG(logERROR) << "LP: Objective: c' x = " << x1.dot(lpc);
+//    assert(NC != 4);
+
+    lpA.mult(x1,workv_);
+    workv_ -= lpb;
+    OUTLOG(workv_,"feas_geq_0",logDEBUG);
+
+    (workv1 = x1).get_sub_vec(0,NVARS,x1);
+    OUTLOG(x1,"LP: [T]",logDEBUG);
+    x = x1.segment(0,nq);
+
+    // new dvw ( will be variable d = J*inv(M)*[R' F] x )
+//    iM.mult(fext,workv1,h,0);
+//    Rw.mult(workv1,d);
+    OUTLOG(d,"old_dvw",logINFO);
+    C.mult(x1,d);
+    iM.mult(fext,workv1,h,0);
+    Rw.mult(workv1,d,1,1);
+
+    // New OS goal (found by LP)
+    // C*x + fext
+    OUTLOG(d,"new_dvw",logINFO);
+
+    LA_.nullspace(JiMF,P);
+    unsigned size_null_space = P.columns();
+//    if(size_null_space == 0) return true;
+
+  ///// Now Find the minimal force to achieve that workspace task
+
+  x = x1.segment(0,nq);
 
   return true;
 }

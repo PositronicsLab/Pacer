@@ -57,7 +57,7 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,1,0,-1.0,zero_tol))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
 //  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
@@ -165,7 +165,7 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   bool SOLVE_FLAG = true;
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,20,-1.0,zero_tol))
+  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
 //  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
     SOLVE_FLAG = false;
   else
@@ -185,4 +185,109 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
 #endif
   return SOLVE_FLAG;
+}
+
+#include <Opt/QPActiveSet.h>
+
+Opt::QPActiveSet as_;
+
+bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
+{
+  const int n = Q.rows();
+  const int m = A.rows();
+  Ravelin::VectorNd lb = lb_;
+  Ravelin::VectorNd ub = ub_;
+  if(lb.rows() == 0)
+    lb.set_one(Q.columns()) *= -1e29;
+  if(ub.rows() == 0)
+    ub.set_one(Q.columns()) *= 1e29;
+
+#ifndef NDEBUG
+  OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;
+  OUT_LOG(logDEBUG1)  << "%QP variables" << std::endl;
+  OUTLOG(Q,"Q",logDEBUG1);
+  OUTLOG(c,"c",logDEBUG1);
+  OUTLOG(A,"AA",logDEBUG1);
+  OUTLOG(b,"bb",logDEBUG1);
+  OUTLOG(lb,"lb",logDEBUG1);
+  OUTLOG(ub,"ub",logDEBUG1);
+#endif
+  bool SOLVE_FLAG = true;
+  SOLVE_FLAG = as_.qp_activeset(Q,c,lb,ub,A,b,Ravelin::MatrixNd::zero(0,c.rows()),Ravelin::VectorNd::zero(0),x);
+
+#ifndef NDEBUG
+  OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;
+  OUTLOG(x,"xx",logDEBUG1);
+  OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
+#endif
+  return SOLVE_FLAG;
+}
+
+#include<Opt/OptParams.h>
+#include<Opt/QP.h>
+//#include<Opt/ConvexOpt.h>
+
+extern void solve_qp_matlab(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b,const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& x);
+
+bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b,const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& x)
+{
+  const int n = Q.rows();
+  const int m = A.rows();
+  Ravelin::VectorNd lb = lb_;
+  Ravelin::VectorNd ub = ub_;
+  if(lb.rows() == 0)
+    lb.set_one(Q.columns()) *= -1e29;
+  if(ub.rows() == 0)
+    ub.set_one(Q.columns()) *= 1e29;
+
+#ifndef NDEBUG
+  OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;
+  OUT_LOG(logDEBUG1)  << "%QP variables" << std::endl;
+  OUTLOG(Q,"Q",logDEBUG1);
+  OUTLOG(c,"c",logDEBUG1);
+  OUTLOG(A,"AA",logDEBUG1);
+  OUTLOG(b,"bb",logDEBUG1);
+  OUTLOG(lb,"lb",logDEBUG1);
+  OUTLOG(ub,"ub",logDEBUG1);
+#endif
+  bool SOLVE_FLAG = true;
+//  SOLVE_FLAG = as_.qp_activeset(Q,c,lb,ub,A,b,M,q,x);
+  static Opt::QP* qp_ = new Opt::QP();
+  static Opt::OptParams* op_ = new Opt::OptParams();
+  op_->A = A;
+  op_->b = b;
+  op_->M = M;
+  op_->q = q;
+  op_->n = Q.rows();
+  op_->m = 0;//M.rows();
+  op_->r = 0;//A.rows();
+  op_->lb = lb;
+  op_->ub = ub;
+  op_->max_iterations = 1000;
+
+  qp_->qp_convex_activeset(Q,c,*op_,x);
+
+//  static Opt::ConvexOpt* qpc_ = new Opt::ConvexOpt();
+//  static Opt::CvxOptParams* cop_ = new Opt::CvxOptParams(*op_);
+//  qpc_->optimize_convex_pd(*cop_, x);
+
+//  if(qp_->make_feasible_qp(A,b,M,q,x))
+//    SOLVE_FLAG = Opt::QP::qp_convex_ip(Q,c,*op_,x);
+
+
+#ifndef NDEBUG
+  OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;
+  OUTLOG(x,"xx",logDEBUG1);
+  OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
+#endif
+  return SOLVE_FLAG;
+}
+
+void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx){
+  if(M.rows() == M.columns())
+    LA_.solve_fast(M,bx);
+  else{
+    LA_.pseudo_invert(workM_ = M);
+    workM_.mult(workv_ = bx,bx);
+  }
 }

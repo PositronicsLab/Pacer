@@ -59,9 +59,9 @@ void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vecto
 
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J,Jf;
-    Ravelin::Origin3d x;
+    Ravelin::VectorNd x(foot.chain.size());
 
-    Ravelin::Vector3d u;
+    Ravelin::VectorNd u;
 
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
       x[k] = q[foot.chain[k]];

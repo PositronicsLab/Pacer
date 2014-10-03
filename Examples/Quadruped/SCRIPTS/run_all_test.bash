@@ -1,12 +1,12 @@
 for var in "$@"
 do
       cd "$var"
-      ~/Projects/Control-Moby/clean_data.sh 
-      cd ~/Projects/Control-Moby/Examples/Quadruped
+      ~/Projects/Locomotion/Examples/Quadruped/SCRIPTS/clean_data.sh
+      cd ~/Projects/Locomotion/Examples/Quadruped
 done
 for var in "$@"
 do
       cd "$var"
-      screen -d -m ~/Projects/Control-Moby/Examples/Quadruped/SCRIPTS/run_test.bash 
-      cd ~/Projects/Control-Moby/Examples/Quadruped
+      screen -d -m ~/Projects/Locomotion/Examples/Quadruped/SCRIPTS/run_test.bash
+      cd ~/Projects/Locomotion/Examples/Quadruped
 done

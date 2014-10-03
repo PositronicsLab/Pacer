@@ -1,8 +1,6 @@
 #include <quadruped.h>
 #include <utilities.h>
 
-#include <CVars/CVar.h>
-
 #ifdef VISUALIZE_MOBY
 #ifdef APPLE
 # include <OpenGL/gl.h>
@@ -13,8 +11,6 @@
 # include <GL/glu.h>
 # include <GL/glut.h>
 #endif
-#include <GLConsole/GLConsole.h>
-GLConsole theConsole;
 #endif
 
 // ============================================================================
@@ -34,7 +30,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
   // Import Robot Data
   static double last_time = -0.001;
   double dt = t - last_time;
-  last_time = t;
   this->generalized_q = generalized_q;
   this->generalized_qd = generalized_qd;
   this->generalized_qdd = generalized_qdd;
@@ -91,6 +86,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     static double &gait_time = CVarUtils::GetCVarRef<double>("quadruped.locomotion.gait-duration");
     static double &step_height = CVarUtils::GetCVarRef<double>("quadruped.locomotion.step-height");
     static std::vector<Ravelin::Vector3d> footholds(0);
+    OUTLOG(goto_command ,"goto_command",logINFO);
 
     go_to = Ravelin::VectorNd(goto_command.size(),&goto_command[0]);
 
@@ -159,7 +155,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
         go_to[0] = goto_direction[0]*goto_command[0];
         go_to[5] = angle_to_goal/gait_time;
       } else {
-        go_to[5] = Utility::sign(angle_to_goal)*0.75;
+        go_to[5] = Utility::sign(angle_to_goal)*1.5;
         if(!HOLONOMIC){
           go_to[0] = 0;
           go_to[1] = 0;
@@ -174,25 +170,25 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 
     // Robot attempts to align base with force and then walk along force axis
-    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force_);
+//    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force_);
 
-    go_to[0] += lead_base_force[0];
-    go_to[1] += lead_base_force[1];
-    go_to[5] += lead_base_force[5]*100.0;
+//    go_to[0] += lead_base_force[0];
+//    go_to[1] += lead_base_force[1];
+//    go_to[5] += lead_base_force[5]*100.0;
 
-    OUTLOG(go_to,"go_to",logDEBUG);
+//    OUTLOG(go_to,"go_to",logINFO);
 
     // Edit foot origins to Lean into turns
     std::vector<Ravelin::Vector3d> foot_origin;
     for(unsigned i=0;i< NUM_EEFS;i++){
       foot_origin.push_back(eefs_[i].origin);
       // Robot leans into movement
-      foot_origin[i][0] += go_to[0]*-0.2;
-      foot_origin[i][1] += go_to[1]*-0.2;
+      foot_origin[i][0] += go_to[0]*-0.1;
+      foot_origin[i][1] += go_to[1]*-0.1;
       // lean forward on front feet if moving forward
       if(foot_origin[i][0] > 0 && go_to[0] > 0)
-        foot_origin[i][2] += go_to[0]*0.2;
-//      foot_origin[i][1] += go_to[5]*-0.01;
+        foot_origin[i][2] += go_to[0]*0.1;
+      foot_origin[i][1] += go_to[5]*-0.01;
       foot_origin[i].pose = base_frame;
 #ifdef VISUALIZE_MOBY
       visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
@@ -233,7 +229,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     goto_6d.pose = base_frame;
 
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
-    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
   }
@@ -387,17 +383,26 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     // ------------------------ WORKSPACE INVERSE DYNAMICS ---------------------
     static int &WORKSPACE_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.operational-space");
+    static double &beta = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.beta");
     if(WORKSPACE_IDYN){
       vb_w.set_zero(Rw.rows());
-      Ravelin::SVector6d go_to_global(go_to);
-      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,1e1,dt,vb_w);
+      Ravelin::SVector6d go_to_global;
+      go_to_global = Ravelin::Pose3d::transform(Moby::GLOBAL,Ravelin::SVelocityd(go_to.data(),base_horizontal_frame));
+      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,beta,dt,vb_w);
 
-      workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf);
+      if(USE_LAST_CFS){
+        if(workspace_inverse_dynamics(generalized_qd,vb_w,M,R.mult(cf,workv_) += generalized_fext,dt,MU,id))
+          uff += (id*=alpha);
+      }else{
+        if(workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf))
+          uff += (id*=alpha);
+      }
     } else {
       if(!inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf))
         cf.set_zero(NC*5);
+      else
+        uff += (id*=alpha);
     }
-    uff += (id*=alpha);
   }
 
   // ------------------------- PROCESS FB AND FF FORCES ------------------------
@@ -491,16 +496,23 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
 
    reset_contact();
+   last_time = t;
+
    return u;
 }
-
-
-// ============================================================================
 // ===========================  END CONTROLLER  ===============================
 // ============================================================================
 
-#ifdef VISUALIZE_MOBY
-#include <thread>
+
+
+
+
+// ============================================================================
+// ===========================  BEGIN ROBOT INIT  =============================
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+# include <thread>
+# include <GLConsole/GLConsole.h>
+  GLConsole theConsole;
   extern void init_glconsole();
   std::thread * tglc;
 #endif
@@ -509,11 +521,14 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 void Quadruped::init(){
 
-#ifdef VISUALIZE_MOBY
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
    tglc = new std::thread(init_glconsole);
 #endif
   // ================= LOAD SCRIPT DATA ==========================
   load_variables("startup.xml");
+  std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
+  std::cerr << "Using Robot: " << robot_start_file << std::endl;
+  load_variables("startup-"+robot_start_file+".xml");
 
   // ================= SETUP LOGGING ==========================
 
@@ -532,7 +547,7 @@ void Quadruped::init(){
   // ================= BUILD ROBOT ==========================
   /// The map of objects read from the simulation XML file
   std::map<std::string, Moby::BasePtr> READ_MAP;
-  READ_MAP = Moby::XMLReader::read(std::string("links.xml"));
+  READ_MAP = Moby::XMLReader::read(std::string(robot_start_file+".xml"));
   for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
        i !=READ_MAP.end(); i++)
   {
@@ -601,7 +616,11 @@ void Quadruped::init(){
   torque_limits_l.resize(NUM_JOINTS);
   torque_limits_u.resize(NUM_JOINTS);
   for(int i=0;i<NUM_JOINTS;i++){
+    OUT_LOG(logINFO)<< "torque_limit: " << joints_[i]->id << " = " <<  torque_limits_[joints_[i]->id];
     torque_limits_l[i] = -torque_limits_[joints_[i]->id];
     torque_limits_u[i] = torque_limits_[joints_[i]->id];
   }
+  OUTLOG(torque_limits_l,"torque_limits_l",logERROR);
+  OUTLOG(torque_limits_u,"torque_limits_u",logERROR);
+
 }

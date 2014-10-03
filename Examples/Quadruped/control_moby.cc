@@ -164,7 +164,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
       // Quit if the body hits the ground, this is a failure condition
-      assert(!( (sb2->id.compare("ABDOMEN") == 0) || (sb1->id.compare("ABDOMEN") == 0) ));
+      assert((sb2->id.substr(0,4).compare("BODY") != 0) && (sb1->id.substr(0,4).compare("BODY") != 0));
 
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
@@ -245,10 +245,10 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
       &SIM_MU_COULOMB = quad_ptr->get_variable("sim.mu-coulomb",workd),
       &SIM_MU_VISCOUS = quad_ptr->get_variable("sim.mu-viscous",workd);
 
-  e->penalty_Kp = SIM_PENALTY_KP;
-  e->penalty_Kv = SIM_PENALTY_KV;
-  e->mu_coulomb = SIM_MU_COULOMB;
-  e->mu_viscous = SIM_MU_VISCOUS;
+//  e->penalty_Kp = SIM_PENALTY_KP;
+//  e->penalty_Kv = SIM_PENALTY_KV;
+//  e->mu_coulomb = SIM_MU_COULOMB;
+//  e->mu_viscous = SIM_MU_VISCOUS;
   return e;
 }
 

@@ -129,6 +129,12 @@ void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator>
  * What to draw each refresh
  * Called by GLUT
  */
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+// Get these from https://github.com/arpg/GLConsole.git
+//include this header for CVars and GLConsole
+#include <GLConsole/GLConsole.h>
+// Single global instance so glut can get access
+extern GLConsole theConsole;
 
 using namespace std;
 
@@ -253,3 +259,4 @@ void init_glconsole(){
 
   glutMainLoop();
 }
+#endif

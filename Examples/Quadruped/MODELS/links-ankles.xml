@@ -132,7 +132,7 @@
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <FixedJoint id="LF_XY_4" location="0.35 0.06 0" inboard-link-id="LF_LEG_3" outboard-link-id="LF_FOOT" axis="1 0 0" axis2="0 1 0" />
+      <FixedJoint id="LF_XY_4" location="0.35 0.06 0" inboard-link-id="LF_LEG_3" outboard-link-id="LF_FOOT" axis="0 0 1" axis2="0 1 0" />
       <RigidBody id="LF_FOOT" color="0.25 0.25 0.25 1" position="0.35 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="hand" compliant="false">
         <CollisionGeometry primitive-id="hand" />
         <InertiaFromPrimitive primitive-id="hand" />
@@ -157,7 +157,7 @@
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <FixedJoint id="RF_XY_4" location="0.35 -0.06 0" inboard-link-id="RF_LEG_3" outboard-link-id="RF_FOOT" axis="1 0 0" axis2="0 1 0"/>
+      <FixedJoint id="RF_XY_4" location="0.35 -0.06 0" inboard-link-id="RF_LEG_3" outboard-link-id="RF_FOOT" axis="0 0 1" axis2="0 1 0"/>
       <RigidBody id="RF_FOOT" position="0.35 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="hand" compliant="false">
         <CollisionGeometry primitive-id="hand" />
         <InertiaFromPrimitive primitive-id="hand" />
@@ -182,7 +182,7 @@
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <UniversalJoint id="LH_XY_4" location="-0.35 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis="1 0 0" axis2="0 1 0"/>
+      <UniversalJoint id="LH_ZY_4" location="-0.35 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis="0 0 1" axis2="0 1 0"/>
       <RigidBody id="LH_FOOT" position="-0.35 0.06 -0.0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
         <CollisionGeometry primitive-id="foot" />
         <InertiaFromPrimitive primitive-id="foot" />
@@ -207,7 +207,7 @@
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <UniversalJoint id="RH_XY_4" location="-0.35 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis="1 0 0" axis2="0 1 0"/>
+      <UniversalJoint id="RH_ZY_4" location="-0.35 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis="0 0 1" axis2="0 1 0"/>
       <RigidBody id="RH_FOOT" position="-0.35 -0.06 -0.0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
         <CollisionGeometry primitive-id="foot" />
         <InertiaFromPrimitive primitive-id="foot" />

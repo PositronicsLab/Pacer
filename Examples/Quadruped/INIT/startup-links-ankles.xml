@@ -7,8 +7,8 @@
       </base>
 
       <joint>
-      <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3 0LH_XY_4 1LH_XY_4   0RH_X_1 0RH_Y_2 0RH_Y_3 0RH_XY_4 1RH_XY_4</id>
-       <q type="double">0.3927 2.3562 -1.5708           -0.3927 -2.3562 1.5708         0 -0.7854 1.5708 0 0         0 0.7854 -1.5708 0 0</q>
+      <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3 0LH_ZY_4 1LH_ZY_4   0RH_X_1 0RH_Y_2 0RH_Y_3 0RH_ZY_4 1RH_ZY_4</id>
+       <q type="double">0.3927 2.3562 -1.5708           -0.3927 -2.3562 1.5708         0 -0.7854 1.5708 0 -0.7         0 0.7854 -1.5708 0 -0.7</q>
        <max-torque type="double">4 4 4   4 4 4   4 4 4 1 1   4 4 4 1 1</max-torque>
       </joint>
 
@@ -16,7 +16,7 @@
       <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
       <foot type="bool">0                 0                   1                       1</foot>
        <!-- the [X Y Z] of end-effector ids respectively -->
-       <x type="double">0.10 0.125 -0.14    0.10 -0.125 -0.14    -0.15 0.125 -0.03    -0.15 -0.125 -0.03</x>
+       <x type="double">0.10 0.125 -0.14    0.10 -0.125 -0.14    -0.3 0.06 -0.0    -0.3 -0.06 -0.0</x>
       </end-effector>
     </init>
 
@@ -28,7 +28,7 @@
         <!-- Gains are for the q of joint ids respectively -->
         <gains>
           <kp type="double">1e1 1e1 1e1      1e1 1e1 1e1       1e1 1e2 1e3 1e1 1e1        1e1 1e2 1e3 1e1 1e1</kp>
-          <kv type="double">1e-1 1e-1 1e-1   1e-1 1e-1 1e-1    1e-1 1e-1 1e-1 1e-1 1e-1   1e-1 1e-1 1e-1 1e-1 1e-1</kv>
+          <kv type="double">1e-1 1e-1 1e-1   1e-1 1e-1 1e-1    1e-1 1e0 1e1 1e-1 1e-1     1e-1 1e0 1e1 1e-1 1e-1</kv>
           <ki type="double">3e-3 3e-3 3e-3   3e-3 3e-3 3e-3    3e-3 3e-3 3e-3 3e-3 3e-3   3e-3 3e-3 3e-3 3e-3 3e-3</ki>
         </gains>
       </configuration-space>
@@ -37,9 +37,9 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
         <gains>
-          <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e3 1e3 1e3     1e3 1e3 1e3</kp>
+          <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e4 1e3 1e3     1e4 1e3 1e3</kp>
           <kv type="double">1e1 1e1 1e1      1e1 1e1 1e1      1e1 1e1 1e1     1e1 1e1 1e1</kv>
-          <ki type="double">1e-2 1e-2 1e-2      1e-2 1e-2 1e-2      1e-2 1e-2 1e-2     1e-2 1e-2 1e-2</ki>
+          <ki type="double">1e-2 1e-2 1e-2   1e-2 1e-2 1e-2   1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
         </gains>
       </operational-space>
     </error-feedback>
@@ -51,8 +51,8 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
-          <kp type="double">0 0 0  1e3 1e3 0</kp>
-          <kv type="double">0 0 0  5e1 5e1 0</kv>
+          <kp type="double">0 0 0  1e3 1e5 0</kp>
+          <kv type="double">0 0 0  5e1 5e2 0</kv>
           <ki type="double">0 0 0  0 0 0</ki>
         </gains>
         <desired>
@@ -76,19 +76,19 @@
       <active type="bool">true</active>
       <stance-on-contact type="bool">false</stance-on-contact>
       <holonomic type="bool">false</holonomic>
-      <step-height type="double">0.015</step-height>
+      <step-height type="double">0.01</step-height>
 <!--      <step-height type="double">0.0</step-height>-->
-      <gait-duration type="double">0.7</gait-duration>
+      <gait-duration type="double">0.5</gait-duration>
       <!--trot-->
-      <gait type="double">0.25  0.75  0.75  0.25</gait>
+      <gait type="double">0.0  0.5</gait>
       <!--walk-->
 <!--      <gait type="double">0.25  0.75  0.0  0.5</gait>-->
-      <command type="double">0.05 0 0   0 0 0</command>
+      <command type="double">0.0 0 0   0 0 0</command>
 <!--      <command type="double">0 0 0   0 0 0</command>-->
 <!--      <patrol type="double">0.25 0   0 0.25   0 -0.25   -0.25 0</patrol>-->
       <patrol type="double">0 0</patrol>
       <point type="double">0 0 0</point>
-      <duty-factor type="double">0.75 0.75 0.75 0.75</duty-factor>
+      <duty-factor type="double">0.75 0.75</duty-factor>
     </locomotion>
 
   </quadruped>

@@ -74,7 +74,7 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
       qd_des[eefs_[i].chain[j]] = foot_vel[i][j];
     }
   }
-  for(int i=0;i<NUM_JOINTS;i++)
+  for(int i=0;i<NUM_JOINT_DOFS;i++)
     qdd[i] = (qd_des[i] - last_qd_des[i])/dt;
 
   last_qd_des = qd_des;
@@ -91,8 +91,8 @@ void Quadruped::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num
       center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,0
       ,Moby::GLOBAL
     );
-    if(center_of_contact.normal.norm() > Moby::NEAR_ZERO)
-      fh[2] = Utility::get_z_plane(fh[0],fh[1],center_of_contact.normal,center_of_contact.point);
+    if(center_of_contact.normal[0].norm() > Moby::NEAR_ZERO)
+      fh[2] = Utility::get_z_plane(fh[0],fh[1],center_of_contact.normal[0],center_of_contact.point[0]);
 
     footholds.push_back(Ravelin::Pose3d::transform_point(base_frame,fh));
   }
@@ -117,7 +117,7 @@ void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, cons
 //  v_bar.set_zero(NUM_EEFS*3+6);
   v_bar.set_zero(NUM_EEFS*3+3);
   v_bar[NUM_EEFS*3] = v_base[0];
-//  v_bar.set_sub_vec(NUM_EEFS*3,generalized_qd.segment(NUM_JOINTS,NDOFS));
+//  v_bar.set_sub_vec(NUM_EEFS*3,generalized_qd.segment(NUM_JOINT_DOFS,NDOFS));
 //  v_bar[NUM_EEFS*3]   += base_correct[0];
 //  v_bar[NUM_EEFS*3+1] += base_correct[1];
 //  v_bar[NUM_EEFS*3+2] += base_correct[2];
@@ -166,12 +166,10 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
     // VELOCITY & ACCELERATION
     OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG1);
     solve((workM_ = J),(qd_foot = foot_vel[i]));
-//    LA_.solve_fast((workM_ = J),(qd_foot = foot_vel[i]));
     OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
 
     OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG1);
     solve((workM_ = J),(qdd_foot = foot_acc[i]));
-//    LA_.solve_fast((workM_ = J),(qdd_foot = foot_acc[i]));
     OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
 
     for(int j=0;j<foot.chain.size();j++){
@@ -267,7 +265,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
 //      go_to[2] = goto_direction[0]*command[1];
 //    }
 //  }
-//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINT_DOFS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //}
 
 
@@ -278,7 +276,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
 //                            std::vector<std::vector<double>>& heightmap)
 //{
 
-//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINT_DOFS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //}
 
 /**
@@ -483,7 +481,7 @@ void Quadruped::walk_toward(
 //               height = hip_pos[2];
 //        Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
 //                                     -  Ravelin::Origin3d(
-//                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINTS,NUM_JOINTS+3,workv3_))
+//                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINT_DOFS,NUM_JOINT_DOFS+3,workv3_))
 //                                        )
 //                                     ) * sqrt(height/grav);
 //        rfb[2] = 0;

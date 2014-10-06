@@ -87,9 +87,11 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
     for(int i=0;i<joints.size();i++){
       if(joints[i]->num_dof() == 0) continue;
       for(int j=0;j<joints_quad.size();j++){
+        if(!joints_quad[j]) continue;
         if(joints_quad[j]->num_dof() == 0) continue;
         if(joints_quad[j]->id.compare(joints[i]->id) == 0){
-          joint_map[joints[i]->get_coord_index()] = joints_quad[j]->get_coord_index();
+          for(int d = 0;d<joints_quad[j]->num_dof();d++)
+            joint_map[joints[i]->get_coord_index()+d] = joints_quad[j]->get_coord_index()+d;
         }
       }
     }
@@ -131,11 +133,11 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
     u = remap_values(joint_map,u,workv_,true);
   }
 
-  apply_sim_perturbations();
+//  apply_sim_perturbations();
   for(int i=0;i<joints.size();i++){
-    if(joints[i]->num_dof() == 0) continue;
-    static Ravelin::VectorNd U(1);
-    U[0] = u[joints[i]->get_coord_index()];
+    Ravelin::VectorNd U(joints[i]->num_dof());
+    for(int j=0;j<joints[i]->num_dof();j++)
+      U[j] = u[joints[i]->get_coord_index()+j];
     joints[i]->add_force(U);
   }
 
@@ -149,7 +151,6 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
-  unsigned NC = 0;
   std::vector<EndEffector>& eefs_ = quad_ptr->get_end_effectors();
   std::vector<std::string>& eef_names_ = quad_ptr->get_end_effector_names();
 
@@ -184,42 +185,43 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
 
       // Only accept 1 contact per foot
-      if (eefs_[index].active)
-        continue;
-      else {
+//      if (eefs_[index].active)
+//        continue;
+//      else {
         // convert impulses to a single impulse at first contact point
         if(MIRROR_FLAG){
-          eefs_[index].impulse += Ravelin::Pose3d::transform(eefs_[index].point.pose,-e[i].contact_impulse).get_linear();
+          eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
         } else {
-          eefs_[index].impulse += Ravelin::Pose3d::transform(eefs_[index].point.pose,e[i].contact_impulse).get_linear();
+          eefs_[index].impulse.push_back( e[i].contact_impulse.get_linear());
         }
-      }
+//      }
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
-      eefs_[index].point = e[i].contact_point;
+      eefs_[index].point.push_back(e[i].contact_point);
       if(MIRROR_FLAG){
-        eefs_[index].impulse= -e[i].contact_impulse.get_linear();
-        eefs_[index].normal = -e[i].contact_normal;
-        eefs_[index].tan1   = -e[i].contact_tan1;
-        eefs_[index].tan2   = -e[i].contact_tan2;
+        eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
+        eefs_[index].normal.push_back(-e[i].contact_normal);
+        eefs_[index].tan1.push_back(-e[i].contact_tan1);
+        eefs_[index].tan2.push_back(-e[i].contact_tan2);
 
       } else {
-        eefs_[index].impulse= e[i].contact_impulse.get_linear();
-        eefs_[index].normal = e[i].contact_normal;
-        eefs_[index].tan1   = e[i].contact_tan1;
-        eefs_[index].tan2   = e[i].contact_tan2;
+        eefs_[index].impulse.push_back(e[i].contact_impulse.get_linear());
+        eefs_[index].normal.push_back(e[i].contact_normal);
+        eefs_[index].tan1.push_back(e[i].contact_tan1);
+        eefs_[index].tan2.push_back(e[i].contact_tan2);
       }
-      eefs_[index].mu_coulomb = e[i].contact_mu_coulomb;
-      eefs_[index].mu_viscous = e[i].contact_mu_viscous;
-      eefs_[index].impulse.pose = eefs_[index].point.pose;
+      eefs_[index].mu_coulomb.push_back(e[i].contact_mu_coulomb);
+      eefs_[index].mu_viscous.push_back(e[i].contact_mu_viscous);
+      eefs_[index].impulse[eefs_[index].impulse.size()-1].pose = eefs_[index].point[eefs_[index].point.size()-1].pose;
     }
   }
 
   OUT_LOG(logDEBUG)<< "cfs_moby = [";
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
-      OUT_LOG(logDEBUG) << " " << eefs_[i].impulse;
+      for(int j=0;j<eefs_[i].point.size();j++){
+      OUT_LOG(logDEBUG) << " " << eefs_[i].impulse[j];
 #ifdef VISUALIZE_MOBY
       visualize_ray(  eefs_[i].point,
                       eefs_[i].point + eefs_[i].impulse*10.0,
@@ -229,6 +231,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                     );
 #endif
       ii++;
+      }
     } else {
       OUT_LOG(logDEBUG) << " [0.0, 0.0, 0.0] ";
     }
@@ -316,15 +319,19 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   Ravelin::VectorNd q_start;
   abrobot->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
+  unsigned NDOFS = abrobot->num_generalized_coordinates(Moby::DynamicBody::eSpatial) - 6;
 
-  for(unsigned i=joints_quad.size();i<q_start.rows();i++)
-    q_start[i] = base_start[i-joints_quad.size()];
+
+  for(unsigned i=NDOFS;i<q_start.rows();i++)
+    q_start[i] = base_start[i-NDOFS];
 
   abrobot->set_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
   abrobot->update_link_poses();
-  for(int i=0;i<joints.size();i++){
-    if(q0.find(joints[i]->id) == q0.end()) continue;
-    joints[i]->q[0] = q0[joints[i]->id];
+  for(int i=0,ii=0;i<joints.size();i++){
+//    if(q0.find(std::to_string(j)+joints[i]->id) == q0.end()) continue;
+    for(int j=0;j<joints[i]->num_dof();j++,ii++){
+      joints[i]->q[j] = q0[std::to_string(j)+joints[i]->id];
+    }
   }
   abrobot->update_link_poses();
 }

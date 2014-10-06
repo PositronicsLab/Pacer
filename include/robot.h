@@ -3,17 +3,18 @@
 
 #include <project_common.h>
 #include <pid.h>
+class Robot;
 
 class EndEffector{
 public:
 
     EndEffector(){    }
-    EndEffector(Moby::RigidBodyPtr l,Ravelin::Vector3d& o,std::vector<std::string>& jn){
+    EndEffector(Moby::RigidBodyPtr l,Ravelin::Vector3d& o,std::vector<std::string>& jn,Robot* robot){
       link = l;
       id = link->id;
       origin = o;
       joint_names_ = jn;
-      init();
+      init(robot);
     }
 
     // permanent data
@@ -25,22 +26,21 @@ public:
     std::vector<unsigned> chain;
     std::vector<bool>     chain_bool;
     // Contact Data
-    Ravelin::Vector3d     point,
-                          normal,tan1,tan2,
-                          impulse;
+    std::vector<Ravelin::Vector3d>    point,
+                                      normal,tan1,tan2,
+                                      impulse;
 
     bool                  active;
-    double                mu_viscous,
+    std::vector<double>   mu_viscous,
                           mu_coulomb;
     int                   nk;
     boost::shared_ptr<const Ravelin::Pose3d>
-                          impulse_frame,
                           frame_environment,
                           frame_robot_base;
   private:
     std::vector<std::string>
                           joint_names_;
-    void init();
+    void init(Robot* robot);
 };
 
 class Robot {
@@ -68,8 +68,10 @@ class Robot {
     boost::shared_ptr<const Ravelin::Pose3d>& get_base_link_frame(){return base_link_frame;}
     std::map<int, int>& get_joint_map()  { return joint_map_; }
     std::map<std::string, double>& get_q0()  { return q0_; }
+    std::map<std::string,bool>& get_active_joints()  { return active_joints_; }
 
   protected:
+
     void compile();
     void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext);
     double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
@@ -106,6 +108,8 @@ class Robot {
     Ravelin::MatrixNd& foot_jacobian(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
     void update();
     void update_poses();
+    void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
+
   protected:
     std::string                       robot_name_;
     // Robot Dynamics Datastructures
@@ -119,7 +123,8 @@ class Robot {
     // End Effector data
     std::vector<std::string>          eef_names_;
     std::vector<EndEffector>          eefs_;
-    std::vector<int>                  passive_joints_;
+    std::map<std::string,bool>        active_joints_;
+
 
     unsigned                          NUM_FIXED_JOINTS;
     unsigned                          NUM_EEFS;
@@ -144,7 +149,7 @@ class Robot {
     Ravelin::MatrixNd N,D,M,R,Rw;
     Ravelin::VectorNd generalized_fext;
     // NDFOFS for forces, accel, & velocities
-    unsigned                          NDOFS;
+    unsigned                          NDOFS,NUM_JOINT_DOFS;
     unsigned                          NSPATIAL;
     unsigned                          NEULER;
 

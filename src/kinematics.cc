@@ -71,13 +71,7 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
-//    if(J.rows() == J.columns()){
       solve(workM_ = J,step);
-//    } else //(J.rows() != J.columns())
-//    {
-//      LA_.pseudo_invert(workM_ = J);
-//      workM_.mult(workv_ = step,step);
-//    }
 
     Ravelin::VectorNd qstep = step;
     OUTLOG(qstep,"qstep",logDEBUG1);
@@ -187,48 +181,56 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
 
   N.set_zero(NDOFS,NC);
   D.set_zero(NDOFS,NC*4);
-  R.set_zero(NDOFS,NC*5);
   if(NC==0) return;
   // Contact Jacobian [GLOBAL frame]
   Ravelin::MatrixNd J(3,NDOFS);
-
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     EndEffector& foot = eefs_[i];
     if(!foot.active)
       continue;
 
-    dbrobot_->calc_jacobian(foot.impulse_frame,foot.link,workM_);
-    workM_.get_sub_mat(0,3,0,NDOFS,J);
+    for(int j=0;j<foot.point.size();j++){
+      Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
+                                  eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
+                                  eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
 
-    Vector3d
-      normal  = foot.normal,
-      tan1    = foot.tan1,
-      tan2    = foot.tan2;
+      boost::shared_ptr<const Ravelin::Pose3d> impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd(R_foot),foot.point[j].data(),Moby::GLOBAL));
 
-    // TODO: TEST FOR BAD TANGENTS BEFORE DOIGN THIS
-    Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);
+      dbrobot_->calc_jacobian(impulse_frame,foot.link,workM_);
+      workM_.get_sub_mat(0,3,0,NDOFS,J);
 
-    // Normal direction
-    J.transpose_mult(normal,workv_);
-    N.set_column(ii,workv_);
+      Vector3d
+        normal  = foot.normal[j],
+        tan1    = foot.tan1[j],
+        tan2    = foot.tan2[j];
 
-    // 1st tangent
-    J.transpose_mult(tan1,workv_);
-    D.set_column(ii,workv_);
-    workv_.negate();
-    D.set_column(NC*2+ii,workv_);
+      // TODO: TEST FOR BAD TANGENTS BEFORE DOIGN THIS
+      Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);
 
-    // 2nd tangent
-    J.transpose_mult(tan2,workv_);
-    D.set_column(NC+ii,workv_);
-    workv_.negate();
-    D.set_column(NC*3+ii,workv_);
+      // Normal direction
+      J.transpose_mult(normal,workv_);
+      N.set_column(ii,workv_);
 
-    ii++;
+      // 1st tangent
+      J.transpose_mult(tan1,workv_);
+      D.set_column(ii,workv_);
+      workv_.negate();
+      D.set_column(NC*2+ii,workv_);
+
+      // 2nd tangent
+      J.transpose_mult(tan2,workv_);
+      D.set_column(NC+ii,workv_);
+      workv_.negate();
+      D.set_column(NC*3+ii,workv_);
+      ii++;
+    }
+
   }
 
+  R.set_zero(N.rows(),N.columns()+D.columns());
+
   R.set_sub_mat(0,0,N);
-  R.set_sub_mat(0,NC,D);
+  R.set_sub_mat(0,N.columns(),D);
 }
 #endif
 void Robot::calc_base_jacobian(Ravelin::MatrixNd& R){

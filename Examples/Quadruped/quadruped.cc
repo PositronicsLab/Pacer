@@ -50,13 +50,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #  endif
 
   Ravelin::VectorNd uff, ufb;
-  uff.set_zero(NUM_JOINTS);
-  ufb.set_zero(NUM_JOINTS);
-  u.set_zero(NUM_JOINTS);
+  uff.set_zero(NUM_JOINT_DOFS);
+  ufb.set_zero(NUM_JOINT_DOFS);
+  u.set_zero(NUM_JOINT_DOFS);
 
-  qdd_des.set_zero(NUM_JOINTS);
-  qd_des.set_zero(NUM_JOINTS);
-  q_des.set_zero(NUM_JOINTS);
+  qdd_des.set_zero(NUM_JOINT_DOFS);
+  qd_des.set_zero(NUM_JOINT_DOFS);
+  q_des.set_zero(NUM_JOINT_DOFS);
 
   Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
   std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS), foot_pos(NUM_EEFS), foot_acc(NUM_EEFS);
@@ -255,9 +255,11 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #else
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     if(eefs_[i].active){
-      for(int k=0;k<2;k++)
-        MU(ii,k) = eefs_[i].mu_coulomb;
-      ii++;
+      for(int j=0;j<eefs_[i].point.size();j++){
+        for(int k=0;k<2;k++)
+          MU(ii,k) = eefs_[i].mu_coulomb[j];
+        ii++;
+      }
     }
   }
 #endif
@@ -275,7 +277,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.kv"),
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.ki");
 
-      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINTS);
+      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       contact_jacobian_stabilizer(R,Kp,Kv,Ki,x_des,xd_des,fb);
 
       static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("quadruped.stabilization.viip.accel");
@@ -287,6 +289,13 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 
   // --------------------------- ERROR FEEDBACK --------------------------------
+
+//  for(int i=0;i<NUM_JOINTS;i++){
+//    if(!get_active_joints()[joints_[i]->id]){
+//      q_des[joints_[i]->get_coord_index()] = get_q0()[joints_[i]->id];
+//      qd_des[joints_[i]->get_coord_index()] = 0;
+//    }
+//  }
 
   static int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.active");
   if (ERROR_FEEDBACK){
@@ -301,13 +310,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.configuration-space.gains.ki");
 
       static std::map<std::string, Gains>      gains;
-      for(int i=0;i<NUM_JOINTS;i++){
-        gains[joints_[i]->id].kp = Kp[i];
-        gains[joints_[i]->id].kv = Kv[i];
-        gains[joints_[i]->id].ki = Ki[i];
+      for(int i=0,ii=0;i<NUM_JOINTS;i++){
+        if(joints_[i])
+        for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+          gains[joint_names_[ii]].kp = Kp[ii];
+          gains[joint_names_[ii]].kv = Kv[ii];
+          gains[joint_names_[ii]].ki = Ki[ii];
+        }
       }
 
-      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINTS);
+      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       PID::control(q_des, qd_des,q,qd,joint_names_, gains,fb);
 
       if(FEEDBACK_ACCEL)
@@ -315,6 +327,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       else
         ufb = fb;
     }
+
     // --------------------------- WORKSPACE FEEDBACK --------------------------
     static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.operational-space.active");
     if(WORKSPACE_FEEDBACK){
@@ -327,7 +340,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.kv"),
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.ki");
 
-      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINTS);
+      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       eef_stiffness_fb(Kp,Kv,Ki,foot_pos,foot_vel,q,qd,fb);
 
       if(FEEDBACK_ACCEL)
@@ -347,7 +360,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     static int &USE_LAST_CFS = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.last-cfs");
 
     Ravelin::VectorNd cf;
-    Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINTS);
+    Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
 
     // Recalculate contact jacobians based on desired lift-off feet
     if(!USE_DES_CONTACT){
@@ -362,20 +375,22 @@ Ravelin::VectorNd& Quadruped::control(double t,
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active) continue;
-        Ravelin::Matrix3d R_foot( eefs_[i].normal[0], eefs_[i].normal[1], eefs_[i].normal[2],
-                                    eefs_[i].tan1[0],   eefs_[i].tan1[1],   eefs_[i].tan1[2],
-                                    eefs_[i].tan2[0],   eefs_[i].tan2[1],   eefs_[i].tan2[2]);
-        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].impulse,workv3_)*((t-last_time)/dt));
-        cf[ii] = contact_impulse[0];
-        if(contact_impulse[1] >= 0)
-          cf[NC+ii] = contact_impulse[1];
-        else
-          cf[NC+ii+NC*2] = -contact_impulse[1];
-        if(contact_impulse[2] >= 0)
-          cf[NC+ii+NC] = contact_impulse[2];
-        else
-          cf[NC+ii+NC*3] = -contact_impulse[2];
-        ii++;
+        for(int j=0;j<eefs_[i].point.size();j++){
+          Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
+                                      eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
+                                      eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
+          Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].impulse[j],workv3_)*((t-last_time)/dt));
+          cf[ii] = contact_impulse[0];
+          if(contact_impulse[1] >= 0)
+            cf[NC+ii] = contact_impulse[1];
+          else
+            cf[NC+ii+NC*2] = -contact_impulse[1];
+          if(contact_impulse[2] >= 0)
+            cf[NC+ii+NC] = contact_impulse[2];
+          else
+            cf[NC+ii+NC*3] = -contact_impulse[2];
+          ii++;
+        }
       }
       Utility::check_finite(cf);
       OUTLOG(cf,"cf z",logDEBUG);
@@ -416,7 +431,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   // -------------------------- LIMIT TORQUES ----------------------------
 
   // Enforce torque limits
-  for(unsigned i=0;i< NUM_JOINTS;i++){
+  for(unsigned i=0;i< NUM_JOINT_DOFS;i++){
     if(u[i] > torque_limits_u[i])
       u[i] = torque_limits_u[i];
     else if(u[i] < torque_limits_l[i])
@@ -427,12 +442,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   OUT_LOG(logINFO)<< "time = "<< t ;
   OUT_LOG(logINFO)<< "num_contacts = " << NC ;
 
-  for(unsigned i=0;i< NUM_JOINTS;i++){
-    joints_[i]->q[0]  = q[i];
-    joints_[i]->qd[0]  = qd[i];
-  }
-  abrobot_->update_link_poses();
-  abrobot_->update_link_velocities();
+  set_model_state(q,qd);
 
   if(Log::ToString(Log::ReportingLevel()).compare("DEBUG") == 0){
     Ravelin::MatrixNd Jf;
@@ -464,19 +474,23 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
   }
 
-   OUT_LOG(logINFO) <<"JOINT\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
-   for(unsigned i=0;i< NUM_JOINTS;i++)
-     OUT_LOG(logINFO)<< joints_[i]->id
-               << "\t " <<  std::setprecision(4) << u[i]
-               << "\t| " << joints_[i]->q[0]
-               << "\t " << q_des[i]
+   OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
+   for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
+     if(joints_[i])
+     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+     OUT_LOG(logINFO)<< std::to_string(j)+joints_[i]->id << ":"<< active_joints_[std::to_string(j)+joints_[i]->id]
+               << "\t " <<  std::setprecision(4) << u[ii]
+               << "\t| " << joints_[i]->q[j]
+               << "\t " << q_des[ii]
                << "\t " << q[i] - q_des[i]
-               << "\t| " << joints_[i]->qd[0]
-               << "\t " << qd_des[i]
-               << "\t " <<  qd[i] - qd_des[i]
-               << "\t| " << qdd[i]
-               << "\t " << qdd_des[i]
-               << "\t " <<  (qdd[i] - qdd_des[i]);
+               << "\t| " << joints_[i]->qd[j]
+               << "\t " << qd_des[ii]
+               << "\t " <<  qd[ii] - qd_des[ii]
+               << "\t| " << qdd[ii]
+               << "\t " << qdd_des[ii]
+               << "\t " <<  (qdd[ii] - qdd_des[ii]);
+     }
+   }
    OUTLOG(roll_pitch_yaw,"roll_pitch_yaw",logINFO);
    OUTLOG(zero_moment_point,"ZmP",logINFO);
    OUTLOG(center_of_mass_x,"CoM_x",logINFO);
@@ -525,10 +539,10 @@ void Quadruped::init(){
    tglc = new std::thread(init_glconsole);
 #endif
   // ================= LOAD SCRIPT DATA ==========================
-  load_variables("startup.xml");
+  load_variables("INIT/startup.xml");
   std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
   std::cerr << "Using Robot: " << robot_start_file << std::endl;
-  load_variables("startup-"+robot_start_file+".xml");
+  load_variables("INIT/startup-"+robot_start_file+".xml");
 
   // ================= SETUP LOGGING ==========================
 
@@ -547,7 +561,7 @@ void Quadruped::init(){
   // ================= BUILD ROBOT ==========================
   /// The map of objects read from the simulation XML file
   std::map<std::string, Moby::BasePtr> READ_MAP;
-  READ_MAP = Moby::XMLReader::read(std::string(robot_start_file+".xml"));
+  READ_MAP = Moby::XMLReader::read(std::string("MODELS/"+robot_start_file+".xml"));
   for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
        i !=READ_MAP.end(); i++)
   {
@@ -568,6 +582,50 @@ void Quadruped::init(){
   std::vector<double> &eefs_start
       = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x");
 
+  static std::vector<std::string>
+     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+
+ static std::vector<double>
+    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
+    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
+    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
+
+ OUTLOG(joint_names,"joint_names",logERROR);
+ OUTLOG(joints_start,"joints_start",logERROR);
+
+ // MAKE SURE DATA PARSED PROPERLY
+
+// assert(joint_names.size() == joints_.size());
+ assert(joint_names.size() == joints_start.size());
+ assert(joint_names.size() == torque_limits.size());
+
+  std::map<std::string, double> torque_limits_;
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+//      OUT_LOG(logDEBUG) << joint_names[ii] << active_joints[ii] << std::endl;
+      active_joints_[joint_names[ii]] = (joint_names[ii].substr(4,2).compare("XY") == 0)? false : true;
+      q0_[joint_names[ii]] = joints_start[ii];
+      torque_limits_[joint_names[ii]] = torque_limits[ii];
+    }
+  }
+
+  // push into robot
+  torque_limits_l.resize(NUM_JOINT_DOFS);
+  torque_limits_u.resize(NUM_JOINT_DOFS);
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+//      assert(joint_names[ii].substr(0,2).compare(joints_[ii-j]->id.substr(0,2)) &&
+//             joint_names[ii].substr(joint_names[ii].size()-2,1).compare(joints_[ii-j]->id.substr(joints_[ii-j]->id.size()-2,1)));
+      OUT_LOG(logINFO)<< "torque_limit: " << joints_[ii-j]->id << " = " <<  torque_limits_[joint_names[ii]];
+        torque_limits_l[ii] = -torque_limits_[std::to_string(j)+joints_[i]->id];
+        torque_limits_u[ii] =  torque_limits_[std::to_string(j)+joints_[i]->id];
+    }
+  }
+  OUTLOG(torque_limits_l,"torque_limits_l",logERROR);
+  OUTLOG(torque_limits_u,"torque_limits_u",logERROR);
+
   // Initialize Foot Structures
   OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
   for(unsigned j=0;j<eef_names_.size();j++){
@@ -575,7 +633,7 @@ void Quadruped::init(){
       if(eef_names_[j].compare(links_[i]->id) == 0){
         OUT_LOG(logINFO)<< eef_names_[j] << " FOUND!";
         workv3_ = Ravelin::Vector3d(eefs_start[j*3],eefs_start[j*3+1],eefs_start[j*3+2],base_link_frame);
-        eefs_.push_back(EndEffector(links_[i],workv3_,joint_names_));
+        eefs_.push_back(EndEffector(links_[i],workv3_,joint_names_,(Robot*)this));
         break;
       }
     }
@@ -588,39 +646,4 @@ void Quadruped::init(){
   OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
   OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
-
- static std::vector<std::string>
-    &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
- static std::vector<double>
-    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
-    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
-    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
-
- OUTLOG(joint_names,"joint_names",logERROR);
- OUTLOG(joints_start,"joints_start",logERROR);
-
- // MAKE SURE DATA PARSED PROPERLY
-
- assert(joint_names.size() == joints_.size());
- assert(joint_names.size() == joints_start.size());
- assert(joint_names.size() == torque_limits.size());
-
- for(int i=0;i<joint_names.size();i++)
-    q0_[joint_names[i]] = joints_start[i];
-
-  std::map<std::string, double> torque_limits_;
-  for(int i=0;i<joint_names.size();i++)
-    torque_limits_[joint_names[i]] = torque_limits[i];
-
-  // push into robot
-  torque_limits_l.resize(NUM_JOINTS);
-  torque_limits_u.resize(NUM_JOINTS);
-  for(int i=0;i<NUM_JOINTS;i++){
-    OUT_LOG(logINFO)<< "torque_limit: " << joints_[i]->id << " = " <<  torque_limits_[joints_[i]->id];
-    torque_limits_l[i] = -torque_limits_[joints_[i]->id];
-    torque_limits_u[i] = torque_limits_[joints_[i]->id];
-  }
-  OUTLOG(torque_limits_l,"torque_limits_l",logERROR);
-  OUTLOG(torque_limits_u,"torque_limits_u",logERROR);
-
 }

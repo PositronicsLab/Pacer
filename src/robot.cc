@@ -21,6 +21,28 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   // Kinetic Energy
 }
 
+void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
+//  for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
+//    for(unsigned j=0;i<joints_[i]->num_dof();j++,ii++){
+//      joints_[i]->q[j] = q[ii];
+//      if(!qd.rows() > 0)
+//        joints_[i]->qd[j] = qd[ii];
+//    }
+//  }
+  Ravelin::VectorNd set_q,set_qd;
+  abrobot_->get_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
+  abrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,set_qd);
+
+  set_q.set_sub_vec(0,q);
+  set_qd.set_sub_vec(0,qd);
+
+  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
+  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eSpatial,set_qd);
+
+  abrobot_->update_link_poses();
+  abrobot_->update_link_velocities();
+}
+
 void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
    M.resize(NDOFS,NDOFS);
 //   fext.resize(NDOFS);
@@ -32,15 +54,17 @@ void Robot::compile(){
 
   NSPATIAL = 6;
   NEULER = 7;
+  NDOFS = abrobot_->num_generalized_coordinates(Moby::DynamicBody::eSpatial); // for generalized velocity, forces. accel
+  NUM_JOINT_DOFS = NDOFS - NSPATIAL;
 
   dbrobot_ = boost::dynamic_pointer_cast<Moby::DynamicBody>(abrobot_);
   std::vector<Moby::JointPtr> joints = abrobot_->get_joints();
-  joints_.resize(joints.size());
+  joints_.resize(NUM_JOINT_DOFS);
 
   NUM_FIXED_JOINTS = 0;
   for(unsigned i=0;i<joints.size();i++){
     OUT_LOG(logINFO)  << joints[i]->id;
-    if(joints[i]->q.rows() == 0){
+    if(joints[i]->num_dof() == 0){
       OUT_LOG(logINFO) <<"\tFixed: "<< joints[i]->id;
 
       NUM_FIXED_JOINTS ++;
@@ -49,32 +73,32 @@ void Robot::compile(){
     joints_[joints[i]->get_coord_index()] = joints[i];
   }
 
-  for(unsigned i=0;i<joints_.size()-NUM_FIXED_JOINTS;i++){
-    OUT_LOG(logINFO)  << joints[i]->id;
-    if(joints_[i]->num_dof() == 0){
-      continue;
-    }
-    joint_names_.push_back(joints_[i]->id);
-    OUT_LOG(logINFO)  << joints_[i]->get_coord_index() << " "
-              << joints_[i]->id;
-  }
+  OUT_LOG(logINFO) <<"\tNum Fixed: "<< NUM_FIXED_JOINTS;
+  NUM_JOINTS = joints_.size();
 
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+      OUT_LOG(logINFO)  << joints_[i]->id;
+      joint_names_.push_back(std::to_string(j) + joints_[i]->id);
+      OUT_LOG(logINFO)  << joints_[i]->get_coord_index() << " "
+                      << joint_names_[ii];
+    }
+  }
   // Set up link references
   links_ = abrobot_->get_links();
 
   // set up initial stance if it exists
-  for(int i=0;i<NUM_FIXED_JOINTS;i++)
-    joints_.pop_back();
-  NUM_JOINTS = joints_.size();
+//  for(int i=0;i<NUM_FIXED_JOINTS;i++)
+//    joints_.pop_back();
   NUM_LINKS = links_.size();
-  NDOFS = NSPATIAL + NUM_JOINTS; // for generalized velocity, forces. accel
 
   environment_frame = boost::shared_ptr<const Ravelin::Pose3d>( new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Origin3d(0,0,0),Moby::GLOBAL));
 //  environment_frame->x = Ravelin::Origin3d(0,0,0);
 //  environment_frame->q.set_identity();
 }
 
-void EndEffector::init(){
+void EndEffector::init(Robot* robot){
   Moby::JointPtr joint_ptr = link->get_inner_joint_explicit();
   Moby::RigidBodyPtr rb_ptr = link;
   OUT_LOG(logDEBUG) << id ;
@@ -83,10 +107,14 @@ void EndEffector::init(){
   while (rb_ptr->id.substr(0,4).compare("BODY") != 0){
     OUT_LOG(logDEBUG) << rb_ptr->id ;
     for(int j=0;j<joint_names_.size();j++){
-      if(joint_ptr->id.compare(joint_names_[j]) == 0){
-        OUT_LOG(logDEBUG) << "  " << j <<  " "<< joint_ptr->id;
-        chain.push_back(j);
-        chain_bool[j] = true;
+      if(joint_ptr->id.compare(joint_names_[j].substr(1,joint_names_[j].size())) == 0){
+        if(robot->get_active_joints()[joint_names_[j]]){
+          OUT_LOG(logDEBUG) << "  " << j <<  " "<< joint_ptr->id;
+          chain.push_back(j);
+          chain_bool[j] = true;
+        } else {
+          OUT_LOG(logDEBUG) << "DISABLED:  " << j <<  " "<< joint_ptr->id;
+        }
       }
     }
     OUT_LOG(logDEBUG) ;
@@ -96,18 +124,17 @@ void EndEffector::init(){
   OUT_LOG(logDEBUG) ;
   OUT_LOG(logDEBUG) ;
 
-  Ravelin::Pose3d pose = *link->get_pose();
-  normal = Ravelin::Vector3d(0,0,1);
-  point = pose.x;
   active = false;
 }
 
 void Robot::update(){
-  generalized_q.get_sub_vec(0,NUM_JOINTS,q);
-  generalized_qd.get_sub_vec(0,NUM_JOINTS,qd);
-  generalized_qdd.get_sub_vec(0,NUM_JOINTS,qdd);
+  q   = generalized_q.segment(0,NUM_JOINT_DOFS);
+  qd  = generalized_qd.segment(0,NUM_JOINT_DOFS);
+  qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);
 
 //  abrobot_->reset_accumulators();
+//  SHAREDVECTORN(unsigned len, unsigned inc, unsigned start, SharedResizable<REAL> data);
+//  Ravelin::SharedVectorNd sgeneralized_q(generalized_q.size(),1,0,generalized_q.data());
   abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
 
   abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
@@ -116,23 +143,25 @@ void Robot::update(){
   update_poses();
 
 //    abrobot_->set_generalized_acceleration(generalized_qdd);
-    for(int i=0;i<NUM_JOINTS;i++)
-      joints_[i]->qdd[0] = generalized_qdd[joints_[i]->get_coord_index()];
-    abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(generalized_qdd.segment(NUM_JOINTS,NDOFS)));
-
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+      joints_[i]->qdd[j] = generalized_qdd[ii];
+    }
+  }
+  abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(generalized_qdd.segment(NUM_JOINT_DOFS,NDOFS)));
 //  abrobot_->add_generalized_force(generalized_fext);
   for(int i = 0;i<NUM_EEFS;i++){
     Ravelin::Pose3d * fp;
     EndEffector& foot =  eefs_[i];
 
-    // Impulse is always in global orientation
-    foot.impulse_frame = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),foot.point.data(),Moby::GLOBAL));
     fp = new Ravelin::Pose3d(
-           Ravelin::Quatd::identity(),
-           Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
-           environment_frame
-         );
+                 Ravelin::Quatd::identity(),
+                 Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
+                 environment_frame
+               );
     fp->update_relative_pose(Moby::GLOBAL);
+    // Impulse is always in global orientation
     foot.frame_environment = boost::shared_ptr<const Ravelin::Pose3d>(fp);
 
     fp = new Ravelin::Pose3d(
@@ -150,7 +179,7 @@ void Robot::update(){
   NC = 0;
   for (unsigned i=0; i< NUM_EEFS;i++)
     if(eefs_[i].active)
-      NC++;
+      NC+=eefs_[i].point.size();
 
   // fetch robot state vectors
   calc_contact_jacobians(N,D,R);
@@ -159,26 +188,31 @@ void Robot::update(){
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   // SRZ: updating generalized_fext disabled (for now)
+  // generalized_fext is supplied by Sim (controller input)
   calculate_dyn_properties(M,generalized_fext);
 //  calc_energy(generalized_qd,M);
   calc_com();
 
+  center_of_contact.point.resize(1);
+  center_of_contact.normal.resize(1);
   if(NC != 0) {
-    center_of_contact.point.set_zero();
-    center_of_contact.normal.set_zero();
-    center_of_contact.point.pose = environment_frame;
-    center_of_contact.normal.pose = environment_frame;
-    for(int f=0;f<NUM_EEFS;f++){
+    center_of_contact.point[0] = Ravelin::Vector3d::zero();
+    center_of_contact.normal[0] = Ravelin::Vector3d::zero();
+    center_of_contact.point[0].pose = environment_frame;
+    center_of_contact.normal[0].pose = environment_frame;
+    for(int i=0;i<NUM_EEFS;i++){
       // set gait centers
-      if(eefs_[f].active){
-        center_of_contact.point += Ravelin::Vector3d(eefs_[f].point.data(),environment_frame)/NC;
-        center_of_contact.normal += Ravelin::Vector3d(eefs_[f].normal.data(),environment_frame)/NC;
+      if(eefs_[i].active){
+        for(int j=0;j<eefs_[i].point.size();j++){
+          center_of_contact.point[0] += Ravelin::Vector3d(eefs_[i].point[j].data(),environment_frame)/NC;
+          center_of_contact.normal[0] += Ravelin::Vector3d(eefs_[i].normal[j].data(),environment_frame)/NC;
+        }
       }
     }
     center_of_contact.active = true;
   }
   else {
-    center_of_contact.normal = Ravelin::Vector3d(0,0,1,environment_frame);
+    center_of_contact.normal[0] = Ravelin::Vector3d(0,0,1,environment_frame);
     center_of_contact.active = false;
   }
 #ifdef VISUALIZE_MOBY
@@ -245,5 +279,10 @@ void Robot::reset_contact(){
   NC = 0;
   for(int i=0;i<eefs_.size();i++){
     eefs_[i].active = false;
+    eefs_[i].point.clear();
+    eefs_[i].normal.clear();
+    eefs_[i].impulse.clear();
+    eefs_[i].tan1.clear();
+    eefs_[i].tan2.clear();
   }
 }

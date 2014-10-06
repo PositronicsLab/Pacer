@@ -61,11 +61,11 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
     // Stepping Terrain Filter
     // Eqns: 7, 8, 9
     if(center_of_contact.active){
-      OUTLOG(center_of_contact.normal,"normal",logERROR);
-      OUTLOG(center_of_contact.point,"point",logERROR);
+      OUTLOG(center_of_contact.normal[0],"normal",logERROR);
+      OUTLOG(center_of_contact.point[0],"point",logERROR);
       OUTLOG(Ravelin::Pose3d::transform_point(environment_frame,x[i]),"foot_pos",logERROR);
-      double dist_plane = Utility::distance_from_plane(center_of_contact.normal,
-                                              center_of_contact.point,Ravelin::Pose3d::transform_point(environment_frame,x[i]));
+      double dist_plane = Utility::distance_from_plane(center_of_contact.normal[0],
+                                              center_of_contact.point[0],Ravelin::Pose3d::transform_point(environment_frame,x[i]));
       std::cout << eefs_[i].id << " " << dist_plane << std::endl;
       double Sf1 = 1.0/(exp(-bf*(dist_plane)) + 1.0);
       double Sf2 = 1.0/(exp( bf*(dist_plane)) + 1.0);

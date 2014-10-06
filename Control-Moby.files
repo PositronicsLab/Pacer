@@ -56,3 +56,15 @@ Examples/Quadruped/SCRIPTS/parse_data.bash
 Examples/Quadruped/SCRIPTS/run_all_test.bash
 Examples/Quadruped/SCRIPTS/run_test.bash
 Examples/Quadruped/SCRIPTS/clean_data.sh
+Examples/Quadruped/startup-links-ankles.xml
+Examples/Quadruped/startup-biped.xml
+Examples/Quadruped/links-ankles.xml
+Examples/Quadruped/INIT/startup-links-ankles.xml
+Examples/Quadruped/INIT/startup-links1.xml
+Examples/Quadruped/INIT/startup-links2.xml
+Examples/Quadruped/INIT/startup.xml
+Examples/Quadruped/MODELS/links-ankles.xml
+Examples/Quadruped/MODELS/links1.xml
+Examples/Quadruped/MODELS/links2.xml
+Examples/Quadruped/MODELS/links.xml
+Examples/Quadruped/MODELS/articulatedBody.xml

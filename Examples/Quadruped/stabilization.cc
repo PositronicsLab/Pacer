@@ -11,7 +11,7 @@ void Quadruped::fk_stance_adjustment(double dt){
   qd_base.set_zero();
 
   Ravelin::Vector3d CoM_CoC_goal(0,0,0.13,environment_frame);
-  (workv3_ = center_of_mass_x) -= center_of_contact.point;
+  (workv3_ = center_of_mass_x) -= center_of_contact.point[0];
   CoM_CoC_goal -= workv3_;
   qd_base.set_sub_vec(NUM_JOINTS,CoM_CoC_goal);
   qd_base.set_sub_vec(NUM_JOINTS+3,Ravelin::Vector3d(-roll_pitch_yaw[0],-roll_pitch_yaw[1],0));
@@ -19,7 +19,7 @@ void Quadruped::fk_stance_adjustment(double dt){
   OUTLOG(qd_base,"BASE_GOAL",logDEBUG);
   OUTLOG(CoM_CoC_goal,"GOAL_COM",logDEBUG);
   OUTLOG(center_of_mass_x,"center_of_mass",logDEBUG);
-  OUTLOG(center_of_contact.point,"center_of_contact",logDEBUG);
+  OUTLOG(center_of_contact.point[0],"center_of_contact",logDEBUG);
 
 //  for(int f=0;f<NUM_EEFS;f++){
 //    Rw.get_sub_mat(NUM)
@@ -39,9 +39,12 @@ void Quadruped::fk_stance_adjustment(double dt){
 // Parallel Stiffness Controller
 void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& fb){
 
-  for(unsigned i=0;i< NUM_JOINTS;i++){
-    joints_[i]->q[0]  = q[i];
-    joints_[i]->qd[0]  = qd[i];
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+      joints_[i]->q[j]  = q[ii];
+      joints_[i]->qd[j]  = qd[ii];
+    }
   }
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();

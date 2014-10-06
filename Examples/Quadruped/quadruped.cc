@@ -45,7 +45,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
   for(int i=0;i<NUM_EEFS;i++){
       if(!eefs_[i].active)
         continue;
-      visualize_ray(eefs_[i].point,eefs_[i].point+eefs_[i].normal*0.05,Ravelin::Vector3d(1,1,0),sim);
+//      visualize_ray(eefs_[i].point,eefs_[i].point+eefs_[i].normal*0.05,Ravelin::Vector3d(1,1,0),sim);
   }
 #  endif
 
@@ -85,6 +85,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     static int &HOLONOMIC = CVarUtils::GetCVarRef<int>("quadruped.locomotion.holonomic");
     static double &gait_time = CVarUtils::GetCVarRef<double>("quadruped.locomotion.gait-duration");
     static double &step_height = CVarUtils::GetCVarRef<double>("quadruped.locomotion.step-height");
+    static std::vector<int> &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.end-effector.foot");
     static std::vector<Ravelin::Vector3d> footholds(0);
     OUTLOG(goto_command ,"goto_command",logINFO);
 
@@ -181,6 +182,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     // Edit foot origins to Lean into turns
     std::vector<Ravelin::Vector3d> foot_origin;
     for(unsigned i=0;i< NUM_EEFS;i++){
+      if(is_foot[i] == 0) continue;
       foot_origin.push_back(eefs_[i].origin);
       // Robot leans into movement
       foot_origin[i][0] += go_to[0]*-0.1;
@@ -208,6 +210,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     center_of_feet_x.pose = environment_frame;
     int num_stance_feet = 0;
     for(int i=0;i<NUM_EEFS;i++){
+      if(is_foot[i] == 0) continue;
       double gait_progress = t/gait_time;
       gait_progress = gait_progress - (double) ((int) gait_progress);
       if(gait_phase(this_gait[i],duty_factor[i],gait_progress)){
@@ -290,12 +293,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   // --------------------------- ERROR FEEDBACK --------------------------------
 
-//  for(int i=0;i<NUM_JOINTS;i++){
-//    if(!get_active_joints()[joints_[i]->id]){
-//      q_des[joints_[i]->get_coord_index()] = get_q0()[joints_[i]->id];
-//      qd_des[joints_[i]->get_coord_index()] = 0;
-//    }
-//  }
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+      if(!get_active_joints()[std::to_string(j)+joints_[i]->id]){
+        q_des[joints_[i]->get_coord_index()] = get_q0()[std::to_string(j)+joints_[i]->id];
+        qd_des[joints_[i]->get_coord_index()] = 0;
+        qdd_des[joints_[i]->get_coord_index()] = 0;
+      }
+    }
+  }
 
   static int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.active");
   if (ERROR_FEEDBACK){
@@ -604,7 +611,8 @@ void Quadruped::init(){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
 //      OUT_LOG(logDEBUG) << joint_names[ii] << active_joints[ii] << std::endl;
-      active_joints_[joint_names[ii]] = (joint_names[ii].substr(4,2).compare("XY") == 0)? false : true;
+      active_joints_[joint_names[ii]] = (joint_names[ii].substr(joint_names[ii].size()-1,1).compare("4") == 0)? false : true;
+//          (joint_names[ii].substr(4,2).compare("XY") == 0)? false : true;
       q0_[joint_names[ii]] = joints_start[ii];
       torque_limits_[joint_names[ii]] = torque_limits[ii];
     }

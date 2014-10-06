@@ -224,23 +224,23 @@ void Robot::update(){
 #ifdef VISUALIZE_MOBY
        // CONTACTS
        if(NC != 0){
-         std::vector<const EndEffector * > active_eefs;
-         if(eefs_[0].active)
-           active_eefs.push_back(&eefs_[0]);
-         if(eefs_[1].active)
-           active_eefs.push_back(&eefs_[1]);
-         if(eefs_[3].active)
-           active_eefs.push_back(&eefs_[3]);
-         if(eefs_[2].active)
-           active_eefs.push_back(&eefs_[2]);
+//         std::vector<const EndEffector * > active_eefs;
+//         if(eefs_[0].active)
+//           active_eefs.push_back(&eefs_[0]);
+//         if(eefs_[1].active)
+//           active_eefs.push_back(&eefs_[1]);
+//         if(eefs_[3].active)
+//           active_eefs.push_back(&eefs_[3]);
+//         if(eefs_[2].active)
+//           active_eefs.push_back(&eefs_[2]);
 
-         // Draw Contact Polygon
-         for(int i=0;i<NC;i++){
-           visualize_ray(active_eefs[i]->point + Ravelin::Vector3d(0,0,0.001),
-                         active_eefs[(i+1)%NC]->point  + Ravelin::Vector3d(0,0,0.001),
-                         Ravelin::Vector3d(0.5,0.5,1),
-                         sim);
-         }
+//         // Draw Contact Polygon
+//         for(int i=0;i<NC;i++){
+//           visualize_ray(active_eefs[i]->point + Ravelin::Vector3d(0,0,0.001),
+//                         active_eefs[(i+1)%NC]->point  + Ravelin::Vector3d(0,0,0.001),
+//                         Ravelin::Vector3d(0.5,0.5,1),
+//                         sim);
+//         }
          // Draw all Contacts
 //         for(int i=0;i<NC;i++)
 //           for(int j=0;j<active_eefs[i]->contacts.size();j++){

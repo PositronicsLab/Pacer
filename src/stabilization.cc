@@ -115,8 +115,8 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
   if(NC == 0) return;
 //  workM_ = R;
 //  workM_.remove_row(0);
-  Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,R.columns());
-  Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,R.columns());
+  Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,N.columns()*3);
+  Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,N.columns()*3);
 
   OUTLOG(Jb,"Jb",logDEBUG1);
   OUTLOG(Jq,"Jq",logDEBUG1);

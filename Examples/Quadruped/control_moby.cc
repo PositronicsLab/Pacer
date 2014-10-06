@@ -223,8 +223,8 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       for(int j=0;j<eefs_[i].point.size();j++){
       OUT_LOG(logDEBUG) << " " << eefs_[i].impulse[j];
 #ifdef VISUALIZE_MOBY
-      visualize_ray(  eefs_[i].point,
-                      eefs_[i].point + eefs_[i].impulse*10.0,
+      visualize_ray(  eefs_[i].point[j],
+                      eefs_[i].point[j] + eefs_[i].impulse[j]*10.0,
                       Ravelin::Vector3d(1,0.5,0),
                       0.1,
                       sim

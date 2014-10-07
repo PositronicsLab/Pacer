@@ -3,20 +3,20 @@
     <init>
       <base>
         <active type="bool">true</active>
-        <x type="double">0 0 0.36 0 -1.56 0</x>
+        <x type="double">0 0 0.34 0 -1.5708 0</x>
       </base>
 
       <joint>
-      <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3 0LH_ZY_4 1LH_ZY_4   0RH_X_1 0RH_Y_2 0RH_Y_3 0RH_ZY_4 1RH_ZY_4</id>
-       <q type="double">0.3927 2.3562 -1.5708           -0.3927 -2.3562 1.5708         0 -0.7854 1.5708 0 -0.7         0 0.7854 -1.5708 0 -0.7</q>
+      <id type="string">0LF_Z_1 0LF_Y_2 0LF_Y_3  0RF_Z_1 0RF_Y_2 0RF_Y_3   0LH_Z_1 0LH_Y_2 0LH_Y_3 0LH_ZY_4 1LH_ZY_4   0RH_Z_1 0RH_Y_2 0RH_Y_3 0RH_ZY_4 1RH_ZY_4</id>
+       <q type="double">1.5708 2.3562 -0.7854           1.5708 -2.3562 0.7854         0 -0.7854 1.5708 0 -0.7854         0 0.7854 -1.5708 0 -0.7854</q>
        <max-torque type="double">4 4 4   4 4 4   4 4 4 1 1   4 4 4 1 1</max-torque>
       </joint>
 
       <end-effector>
       <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
-      <foot type="bool">0                 0                   1                       1</foot>
+      <foot type="bool">false             false               true                true                       1</foot>
        <!-- the [X Y Z] of end-effector ids respectively -->
-       <x type="double">0.10 0.125 -0.14    0.10 -0.125 -0.14    -0.3 0.06 -0.0    -0.3 -0.06 -0.0</x>
+       <x type="double">0.1 0.16 0.05    0.1 -0.16 0.05    0 0.06 -0.29    0 -0.06 -0.29</x>
       </end-effector>
     </init>
 
@@ -27,17 +27,17 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the q of joint ids respectively -->
         <gains>
-          <kp type="double">1e1 1e1 1e1      1e1 1e1 1e1       1e1 1e2 1e3 1e1 1e1        1e1 1e2 1e3 1e1 1e1</kp>
-          <kv type="double">1e-1 1e-1 1e-1   1e-1 1e-1 1e-1    1e-1 1e0 1e1 1e-1 1e-1     1e-1 1e0 1e1 1e-1 1e-1</kv>
-          <ki type="double">3e-3 3e-3 3e-3   3e-3 3e-3 3e-3    3e-3 3e-3 3e-3 3e-3 3e-3   3e-3 3e-3 3e-3 3e-3 3e-3</ki>
+          <kp type="double">1e1 1e1 1e1      1e1 1e1 1e1       1e1 1e1 1e1 1e0 1e0        1e1 1e1 1e1 1e0 1e0</kp>
+          <kv type="double">1e-1 1e-1 1e-1   1e-1 1e-1 1e-1    1e-1 1e-1 1e-1 1e-3 1e-3     1e-1 1e-1 1e-1 1e-3 1e-3</kv>
+          <ki type="double">3e-3 3e-3 3e-3   3e-3 3e-3 3e-3    3e-3 3e-3 3e-3 0 0   3e-3 3e-3 3e-3 0 0</ki>
         </gains>
       </configuration-space>
       <operational-space>
-        <active type="bool">true</active>
+        <active type="bool">false</active>
         <accel type="bool">false</accel>
         <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
         <gains>
-          <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e4 1e3 1e3     1e4 1e3 1e3</kp>
+          <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e3 1e3 1e3     1e3 1e3 1e3</kp>
           <kv type="double">1e1 1e1 1e1      1e1 1e1 1e1      1e1 1e1 1e1     1e1 1e1 1e1</kv>
           <ki type="double">1e-2 1e-2 1e-2   1e-2 1e-2 1e-2   1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
         </gains>
@@ -48,22 +48,22 @@
       <active type="bool">true</active>
       <viip>
         <active type="bool">true</active>
-        <accel type="bool">false</accel>
+        <accel type="bool">true</accel>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
-          <kp type="double">0 0 0  1e3 1e5 0</kp>
-          <kv type="double">0 0 0  5e1 5e2 0</kv>
+          <kp type="double">0 0 0  1e1 1e2 0</kp>
+          <kv type="double">0 0 0  5e0 5e1 0</kv>
           <ki type="double">0 0 0  0 0 0</ki>
         </gains>
         <desired>
-          <x type="double">0 0 0  0 -1.5708 0</x>
+          <x type="double">0 0 0  0 0.0 0</x>
           <xd type="double">0 0 0  0 0 0</xd>
         </desired>
       </viip>
     </stabilization>
 
     <inverse-dynamics>
-      <active type="bool">false</active>
+      <active type="bool">true</active>
       <dt type="double">0.005</dt>
       <alpha type="double">1.0</alpha>
       <beta type="double">1</beta>
@@ -76,14 +76,14 @@
       <active type="bool">true</active>
       <stance-on-contact type="bool">false</stance-on-contact>
       <holonomic type="bool">false</holonomic>
-      <step-height type="double">0.01</step-height>
+      <step-height type="double">0.02</step-height>
 <!--      <step-height type="double">0.0</step-height>-->
       <gait-duration type="double">0.5</gait-duration>
       <!--trot-->
-      <gait type="double">0.0  0.5</gait>
+      <gait type="double">0.0 0.5</gait>
       <!--walk-->
 <!--      <gait type="double">0.25  0.75  0.0  0.5</gait>-->
-      <command type="double">0.0 0 0   0 0 0</command>
+      <command type="double">0.1 0 0   0 0 0</command>
 <!--      <command type="double">0 0 0   0 0 0</command>-->
 <!--      <patrol type="double">0.25 0   0 0.25   0 -0.25   -0.25 0</patrol>-->
       <patrol type="double">0 0</patrol>

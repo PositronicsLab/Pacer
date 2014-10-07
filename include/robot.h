@@ -145,7 +145,8 @@ class Robot {
                       center_of_feet_x,
                       roll_pitch_yaw;
     Ravelin::Vector2d zero_moment_point;
-    Ravelin::VectorNd q,qd,qdd,generalized_q,generalized_qd,generalized_qdd;
+    Ravelin::VectorNd q,qd,qdd;
+    Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd;
     Ravelin::MatrixNd N,D,M,R,Rw;
     Ravelin::VectorNd generalized_fext;
     // NDFOFS for forces, accel, & velocities

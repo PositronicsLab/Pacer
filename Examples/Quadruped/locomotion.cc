@@ -306,7 +306,7 @@ void Quadruped::walk_toward(
     double step_height,
     bool STANCE_ON_CONTACT,
     // MODEL
-    const std::vector<Ravelin::Vector3d>& foot_origin,
+    std::vector<EndEffector*>& feet,
     const Ravelin::SVector6d& base_velocity,
     double t,
     const Ravelin::VectorNd& q,
@@ -321,20 +321,20 @@ void Quadruped::walk_toward(
   const boost::shared_ptr<const Ravelin::Pose3d>& base_frame = command.pose;
   static bool inited = false;
   static int spline_plan_length = 1,
-             NUM_EEFS = foot_origin.size();
+             NUM_FEET = feet.size();
   static double last_time = t;
-  static std::vector<bool> last_eefs_active(NUM_EEFS);
+  static std::vector<bool> last_feetactive(NUM_FEET);
 
   if(t-last_time > gait_duration* (*std::min_element(duty_factor.begin(),duty_factor.end())) )
     inited = false;
 
   // persistent Vector storing spline coefs
   // [foot][dimension][interval]
-  static std::vector< std::vector< std::vector<Ravelin::VectorNd> > > spline_coef(NUM_EEFS);
+  static std::vector< std::vector< std::vector<Ravelin::VectorNd> > > spline_coef(NUM_FEET);
   // persistent Vector storing time delimitations to each spline
   // [foot][interval]
-  static std::vector< std::vector<Ravelin::VectorNd> > spline_t(NUM_EEFS);
-  static std::vector< bool > stance_phase(NUM_EEFS);
+  static std::vector< std::vector<Ravelin::VectorNd> > spline_t(NUM_FEET);
+  static std::vector< bool > stance_phase(NUM_FEET);
 
   double gait_progress = t/gait_duration;
   gait_progress = gait_progress - (double) ((int) gait_progress);
@@ -349,8 +349,8 @@ void Quadruped::walk_toward(
 
   // (Re)Populate spline vectors
   if(!inited){
-    for(int i=0;i<NUM_EEFS;i++){
-      last_eefs_active[i] = false;
+    for(int i=0;i<NUM_FEET;i++){
+      last_feetactive[i] = false;
       stance_phase[i] = gait_phase(touchdown[i],duty_factor[i],gait_progress);
       spline_coef[i].resize(3);
       for(int d=0; d<3;d++){
@@ -366,7 +366,7 @@ void Quadruped::walk_toward(
   }
 
   ////////////////// PHASE PLANNING ///////////////////////
-  for(int i=0;i<NUM_EEFS;i++){
+  for(int i=0;i<NUM_FEET;i++){
 
     Ravelin::Vector3d &x   = foot_pos[i],
                       &xd  = foot_vel[i],
@@ -377,7 +377,7 @@ void Quadruped::walk_toward(
     bool replan_path = false;
     if(inited){
       // Set liftoff feet (opposite of stance_phase variable)
-      if(stance_phase[i] && eefs_[i].active && !last_eefs_active[i] && STANCE_ON_CONTACT){
+      if(stance_phase[i] && feet[i]->active && !last_feetactive[i] && STANCE_ON_CONTACT){
         replan_path = true;
       } else {
         for(int d=0; d<3;d++){
@@ -391,7 +391,7 @@ void Quadruped::walk_toward(
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
-      OUTLOG(foot_origin[i],"foot_origin_" + eefs_[i].id,logDEBUG);
+      OUTLOG(feet[i]->origin,"foot_origin_" + feet[i]->id,logDEBUG);
 
       // What phase of the gait is the controller in?
       // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
@@ -412,9 +412,9 @@ void Quadruped::walk_toward(
 
       if(!inited){ // first iteration
         // Get Current Foot pos, Velocities & Accelerations
-//        foot_jacobian(x,eefs_[i],environment_frame,workM_);
-//        workM_.transpose_mult(qd.select(eefs_[i].chain_bool,workv_),xd);
-//        workM_.transpose_mult(qdd.select(eefs_[i].chain_bool,workv_),xdd);
+//        foot_jacobian(x,feet[i],environment_frame,workM_);
+//        workM_.transpose_mult(qd.select(feet[i]->chain_bool,workv_),xd);
+//        workM_.transpose_mult(qdd.select(feet[i]->chain_bool,workv_),xdd);
         xd.set_zero();
         xdd.set_zero();
       } else {
@@ -436,8 +436,8 @@ void Quadruped::walk_toward(
       // Calculate foot-step info
       // Determine linear portion of step
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
-      foot_frame->x = Ravelin::Pose3d::transform_point(environment_frame,foot_origin[i]);
-      Ravelin::Origin3d x0 = foot_origin[i].data();
+      foot_frame->x = Ravelin::Pose3d::transform_point(environment_frame,feet[i]->origin);
+      Ravelin::Origin3d x0 = feet[i]->origin.data();
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
       if(fabs(command[5]) > Moby::NEAR_ZERO){
@@ -581,9 +581,9 @@ void Quadruped::walk_toward(
       }
       stance_phase[i] = !stance_phase[i];
     }
-    last_eefs_active[i] = eefs_[i].active;
+    last_feetactive[i] = feet[i]->active;
     if(stance_phase[i]){
-      eefs_[i].active = false;
+      feet[i]->active = false;
     }
     x.pose =  xd.pose = xdd.pose = base_frame;
   }
@@ -595,13 +595,13 @@ void Quadruped::walk_toward(
 //    visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);
 //  }
 
-  for(int i=0;i<NUM_EEFS;i++){
+  for(int i=0;i<NUM_FEET;i++){
 
-    for(int i=0;i<eefs_[i].chain.size();i++)
-      joints_[eefs_[i].chain[i]]->q[0] = q[eefs_[i].chain[i]];
-    abrobot_->update_link_poses();
+//    for(int i=0;i<feet[i]->chain.size();i++)
+//      joints_[feet[i]->chain[i]]->q[0] = q[feet[i]->chain[i]];
+//    abrobot_->update_link_poses();
 
-    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,feet[i]->link->get_pose()));
 
     Ravelin::VectorNd &T1 = *(spline_t[i].begin()),
                       &T2 = *(spline_t[i].rbegin());
@@ -637,4 +637,5 @@ void Quadruped::walk_toward(
 
   last_time = t;
   inited = true;
+  OUT_LOG(logDEBUG) << " -- Quadruped::walk_toward() exited";
 }

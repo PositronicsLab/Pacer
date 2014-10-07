@@ -18,10 +18,10 @@
 // ============================================================================
 
 Ravelin::VectorNd& Quadruped::control(double t,
-                                      const Ravelin::VectorNd& generalized_q,
-                                      const Ravelin::VectorNd& generalized_qd,
-                                      const Ravelin::VectorNd& generalized_qdd,
-                                      const Ravelin::VectorNd& generalized_fext,
+                                      const Ravelin::VectorNd& generalized_q_in,
+                                      const Ravelin::VectorNd& generalized_qd_in,
+                                      const Ravelin::VectorNd& generalized_qdd_in,
+                                      const Ravelin::VectorNd& generalized_fext_in,
                                       Ravelin::VectorNd& q_des,
                                       Ravelin::VectorNd& qd_des,
                                       Ravelin::VectorNd& qdd_des,
@@ -30,24 +30,15 @@ Ravelin::VectorNd& Quadruped::control(double t,
   // Import Robot Data
   static double last_time = -0.001;
   double dt = t - last_time;
-  this->generalized_q = generalized_q;
-  this->generalized_qd = generalized_qd;
-  this->generalized_qdd = generalized_qdd;
-  this->generalized_fext = generalized_fext;
-
+  this->generalized_q = generalized_q_in;
+  this->generalized_qd = generalized_qd_in;
+  this->generalized_qdd = generalized_qdd_in;
+  this->generalized_fext = generalized_fext_in;
   OUTLOG(generalized_q,"generalized_q",logDEBUG);
   OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
 
   // Set Robot Data in robot
   update();
-
-#  ifdef VISUALIZE_MOBY
-  for(int i=0;i<NUM_EEFS;i++){
-      if(!eefs_[i].active)
-        continue;
-//      visualize_ray(eefs_[i].point,eefs_[i].point+eefs_[i].normal*0.05,Ravelin::Vector3d(1,1,0),sim);
-  }
-#  endif
 
   Ravelin::VectorNd uff, ufb;
   uff.set_zero(NUM_JOINT_DOFS);
@@ -58,14 +49,19 @@ Ravelin::VectorNd& Quadruped::control(double t,
   qd_des.set_zero(NUM_JOINT_DOFS);
   q_des.set_zero(NUM_JOINT_DOFS);
 
-  Ravelin::VectorNd vb_w(NUM_EEFS*3 + 6);
-  std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS), foot_pos(NUM_EEFS), foot_acc(NUM_EEFS);
+  Ravelin::VectorNd
+      os_velocity(NUM_EEFS*3 + 6);
+
+  std::vector<Ravelin::Vector3d>
+      x_des(NUM_EEFS),
+      xd_des(NUM_EEFS),
+      xdd_des(NUM_EEFS);
 
   for(unsigned i=0;i< NUM_EEFS;i++){
-    foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    foot_vel[i].set_zero();
-    foot_acc[i].set_zero();
-    foot_pos[i].pose = foot_vel[i].pose = foot_acc[i].pose = base_frame;
+    x_des[i] = eefs_[i].origin;//Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    xd_des[i].set_zero();
+    xdd_des[i].set_zero();
+    x_des[i].pose = xd_des[i].pose = xdd_des[i].pose = base_frame;
 #  ifdef VISUALIZE_MOBY
     workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
     visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,1,0),0.2,sim);
@@ -73,6 +69,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
     visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,0,0),0.2,sim);
 #  endif
   }
+
+  static std::vector<std::string>
+     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+
   Ravelin::VectorNd go_to(6);
   static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("quadruped.locomotion.active");
   if(USE_LOCOMOTION){
@@ -85,7 +85,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     static int &HOLONOMIC = CVarUtils::GetCVarRef<int>("quadruped.locomotion.holonomic");
     static double &gait_time = CVarUtils::GetCVarRef<double>("quadruped.locomotion.gait-duration");
     static double &step_height = CVarUtils::GetCVarRef<double>("quadruped.locomotion.step-height");
-    static std::vector<int> &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.end-effector.foot");
+    std::vector<int> &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.end-effector.foot");
     static std::vector<Ravelin::Vector3d> footholds(0);
     OUTLOG(goto_command ,"goto_command",logINFO);
 
@@ -97,7 +97,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
     if(patrol_points.size() >= 4){
       int num_waypoints = patrol_points.size()/2;
       static int patrol_index = 0;
-      static Ravelin::Vector3d next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
+      static Ravelin::Vector3d
+          next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
       next_waypoint[2] = center_of_mass_x[2];
 
       double distance_to_wp = (next_waypoint - center_of_mass_x).norm();
@@ -180,28 +181,36 @@ Ravelin::VectorNd& Quadruped::control(double t,
 //    OUTLOG(go_to,"go_to",logINFO);
 
     // Edit foot origins to Lean into turns
-    std::vector<Ravelin::Vector3d> foot_origin;
-    for(unsigned i=0;i< NUM_EEFS;i++){
+    std::vector<EndEffector*> feet;
+    for(unsigned i=0,ii=0;i< NUM_EEFS;i++){
       if(is_foot[i] == 0) continue;
-      foot_origin.push_back(eefs_[i].origin);
+      feet.push_back(&eefs_[i]);
+
       // Robot leans into movement
-      foot_origin[i][0] += go_to[0]*-0.1;
-      foot_origin[i][1] += go_to[1]*-0.1;
-      // lean forward on front feet if moving forward
-      if(foot_origin[i][0] > 0 && go_to[0] > 0)
-        foot_origin[i][2] += go_to[0]*0.1;
-      foot_origin[i][1] += go_to[5]*-0.01;
-      foot_origin[i].pose = base_frame;
+//      foot_origin[i][0] += go_to[0]*-0.1;
+//      foot_origin[i][1] += go_to[1]*-0.1;
+//      // lean forward on front feet if moving forward
+//      if(foot_origin[i][0] > 0 && go_to[0] > 0)
+//        foot_origin[i][2] += go_to[0]*0.1;
+//      foot_origin[i][1] += go_to[5]*-0.01;
+//      foot_origin[i].pose = base_frame;
+
 #ifdef VISUALIZE_MOBY
-      visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
-                      Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_origin[i]),
+      visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
+                      Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
                       Ravelin::Vector3d(1,0,0),
                       0.1,
                       sim
                     );
 #endif
+      ii++;
     }
 
+    int NUM_FEET = feet.size();
+    std::vector<Ravelin::Vector3d>
+        foot_vel(NUM_FEET),
+        foot_pos(NUM_FEET),
+        foot_acc(NUM_FEET);
 
     OUTLOG(this_gait,"this_gait",logINFO);
     OUTLOG(duty_factor,"duty_factor",logINFO);
@@ -209,14 +218,20 @@ Ravelin::VectorNd& Quadruped::control(double t,
     center_of_feet_x.set_zero();
     center_of_feet_x.pose = environment_frame;
     int num_stance_feet = 0;
-    for(int i=0;i<NUM_EEFS;i++){
+    for(int i=0,ii=0;i<NUM_EEFS;i++){
       if(is_foot[i] == 0) continue;
+      foot_pos[ii] = x_des[i];
+      foot_vel[ii] = xd_des[i];
+      foot_acc[ii] = xdd_des[i];
+
+
       double gait_progress = t/gait_time;
       gait_progress = gait_progress - (double) ((int) gait_progress);
-      if(gait_phase(this_gait[i],duty_factor[i],gait_progress)){
+      if(gait_phase(this_gait[ii],duty_factor[ii],gait_progress)){
         num_stance_feet += 1;
         center_of_feet_x += Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
       }
+      ii++;
     }
     center_of_feet_x /= (double)num_stance_feet;
 
@@ -232,15 +247,27 @@ Ravelin::VectorNd& Quadruped::control(double t,
     goto_6d.pose = base_frame;
 
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
-    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
-    trajectory_ik(foot_pos,foot_vel, foot_acc,q,q_des,qd_des,qdd_des);
+    for(int i=0,ii=0;i<NUM_EEFS;i++){
+      if(is_foot[i] == 0) continue;
+      x_des[i] = foot_pos[ii];
+      xd_des[i] = foot_vel[ii];
+      xdd_des[i] = foot_acc[ii];
+      ii++;
+    }
+    trajectory_ik(x_des,xd_des, xdd_des,q,q_des,qd_des,qdd_des);
+
   }
   else {
-    static Ravelin::VectorNd q_start = q;
-    q_des = q_start;
-    qd_des.set_zero();
-    qdd_des.set_zero();
+    for(int i=0,ii=0;i<NUM_JOINTS;i++){
+      if(joints_[i])
+      for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+        q_des[ii] = get_q0()[std::to_string(j)+joints_[i]->id];
+        qd_des[ii] = 0;
+        qdd_des[ii] = 0;
+      }
+    }
   }
 
   static Ravelin::MatrixNd MU;
@@ -297,9 +324,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
       if(!get_active_joints()[std::to_string(j)+joints_[i]->id]){
-        q_des[joints_[i]->get_coord_index()] = get_q0()[std::to_string(j)+joints_[i]->id];
-        qd_des[joints_[i]->get_coord_index()] = 0;
-        qdd_des[joints_[i]->get_coord_index()] = 0;
+        q_des[ii] = get_q0()[std::to_string(j)+joints_[i]->id];
+        qd_des[ii] = 0;
+        qdd_des[ii] = 0;
       }
     }
   }
@@ -316,13 +343,14 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.configuration-space.gains.kv"),
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.configuration-space.gains.ki");
 
-      static std::map<std::string, Gains>      gains;
+      static std::map<std::string, Gains> gains;
       for(int i=0,ii=0;i<NUM_JOINTS;i++){
         if(joints_[i])
         for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-          gains[joint_names_[ii]].kp = Kp[ii];
-          gains[joint_names_[ii]].kv = Kv[ii];
-          gains[joint_names_[ii]].ki = Ki[ii];
+          // NOTE: Ordered by input joint_names, NOT class joint_names_
+          gains[joint_names[ii]].kp = Kp[ii];
+          gains[joint_names[ii]].kv = Kv[ii];
+          gains[joint_names[ii]].ki = Ki[ii];
         }
       }
 
@@ -330,9 +358,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
       PID::control(q_des, qd_des,q,qd,joint_names_, gains,fb);
 
       if(FEEDBACK_ACCEL)
-        qdd_des = fb;
+        qdd_des += fb;
       else
-        ufb = fb;
+        ufb += fb;
     }
 
     // --------------------------- WORKSPACE FEEDBACK --------------------------
@@ -348,12 +376,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.ki");
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-      eef_stiffness_fb(Kp,Kv,Ki,foot_pos,foot_vel,q,qd,fb);
+      eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,q,qd,fb);
 
       if(FEEDBACK_ACCEL)
-        qdd_des = fb;
+        qdd_des += fb;
       else
-        ufb = fb;
+        ufb += fb;
     }
   }
 
@@ -407,16 +435,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
     static int &WORKSPACE_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.operational-space");
     static double &beta = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.beta");
     if(WORKSPACE_IDYN){
-      vb_w.set_zero(Rw.rows());
+      os_velocity.set_zero(Rw.rows());
       Ravelin::SVector6d go_to_global;
       go_to_global = Ravelin::Pose3d::transform(Moby::GLOBAL,Ravelin::SVelocityd(go_to.data(),base_horizontal_frame));
-      workspace_trajectory_goal(go_to_global,foot_pos,foot_vel,foot_acc,beta,dt,vb_w);
+      workspace_trajectory_goal(go_to_global,x_des,xd_des,xdd_des,beta,dt,os_velocity);
 
       if(USE_LAST_CFS){
-        if(workspace_inverse_dynamics(generalized_qd,vb_w,M,R.mult(cf,workv_) += generalized_fext,dt,MU,id))
+        if(workspace_inverse_dynamics(generalized_qd,os_velocity,M,R.mult(cf,workv_) += generalized_fext,dt,MU,id))
           uff += (id*=alpha);
       }else{
-        if(workspace_inverse_dynamics(generalized_qd,vb_w,M,generalized_fext,dt,MU,id,cf))
+        if(workspace_inverse_dynamics(generalized_qd,os_velocity,M,generalized_fext,dt,MU,id,cf))
           uff += (id*=alpha);
       }
     } else {
@@ -454,29 +482,29 @@ Ravelin::VectorNd& Quadruped::control(double t,
   if(Log::ToString(Log::ReportingLevel()).compare("DEBUG") == 0){
     Ravelin::MatrixNd Jf;
     for(int i=0;i<NUM_EEFS;i++){
-      boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(foot_pos[i].pose));
+      boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(x_des[i].pose));
       EndEffector& foot = eefs_[i];
 
       // Positional Correction
-      Ravelin::Vector3d foot_pos_now = Ravelin::Pose3d::transform_point(foot_pos[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-      Ravelin::Vector3d x_err  = foot_pos[i] - foot_pos_now;
-      OUTLOG( foot_pos_now,foot.id + "_x",logDEBUG);
-      OUTLOG( foot_pos[i],foot.id + "_x_des",logDEBUG);
+      Ravelin::Vector3d x_des_now = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+      Ravelin::Vector3d x_err  = x_des[i] - x_des_now;
+      OUTLOG( x_des_now,foot.id + "_x",logDEBUG);
+      OUTLOG( x_des[i],foot.id + "_x_des",logDEBUG);
       OUTLOG( x_err,foot.id + "_x_err",logDEBUG);
 
       // Remove portion of foot velocity that can't be affected by corrective forces
-      event_frame->x = Ravelin::Pose3d::transform_point(foot_pos[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+      event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
       dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
       Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
       Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
       Jb.mult(vb,workv3_);
-      workv3_.pose = foot_pos[i].pose;
+      workv3_.pose = x_des[i].pose;
 
       // Velocity Correction
-      Ravelin::Vector3d foot_vel_now = (Ravelin::Pose3d::transform_vector(foot_pos[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
-      Ravelin::Vector3d xd_err = foot_vel[i] - foot_vel_now;
-      OUTLOG( foot_vel_now,foot.id + "_xd",logDEBUG);
-      OUTLOG( foot_vel[i],foot.id + "_xd_des",logDEBUG);
+      Ravelin::Vector3d xd_des_now = (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
+      Ravelin::Vector3d xd_err = xd_des[i] - xd_des_now;
+      OUTLOG( xd_des_now,foot.id + "_xd",logDEBUG);
+      OUTLOG( xd_des[i],foot.id + "_xd_des",logDEBUG);
       OUTLOG( xd_err,foot.id + "_xd_err",logDEBUG);
     }
   }
@@ -489,7 +517,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
                << "\t " <<  std::setprecision(4) << u[ii]
                << "\t| " << joints_[i]->q[j]
                << "\t " << q_des[ii]
-               << "\t " << q[i] - q_des[i]
+               << "\t " << q[ii] - q_des[ii]
                << "\t| " << joints_[i]->qd[j]
                << "\t " << qd_des[ii]
                << "\t " <<  qd[ii] - qd_des[ii]

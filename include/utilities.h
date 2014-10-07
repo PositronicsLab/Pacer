@@ -6,7 +6,8 @@
 class Utility{
   public:
   static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
-  static Ravelin::Vector3d& quat2TaitBryan(const Ravelin::Quatd& q_, Ravelin::Vector3d& ypr);
+  static Ravelin::Vector3d& quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::Vector3d& ypr);
+  static Ravelin::Vector3d& quat2TaitBryanX(const Ravelin::Quatd& q_, Ravelin::Vector3d& ypr);
   static Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
   static Ravelin::Quatd& aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q);
   static Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R);

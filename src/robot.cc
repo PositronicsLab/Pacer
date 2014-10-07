@@ -23,6 +23,7 @@ double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
 
 void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
 //  for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
+//    if(joints_[i])
 //    for(unsigned j=0;i<joints_[i]->num_dof();j++,ii++){
 //      joints_[i]->q[j] = q[ii];
 //      if(!qd.rows() > 0)
@@ -31,14 +32,13 @@ void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& 
 //  }
   Ravelin::VectorNd set_q,set_qd;
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
-  abrobot_->get_generalized_coordinates(Moby::DynamicBody::eSpatial,set_qd);
+  abrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,set_qd);
 
   set_q.set_sub_vec(0,q);
   set_qd.set_sub_vec(0,qd);
 
   abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
-  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eSpatial,set_qd);
-
+  abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,set_qd);
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
 }
@@ -132,17 +132,14 @@ void Robot::update(){
   qd  = generalized_qd.segment(0,NUM_JOINT_DOFS);
   qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);
 
-//  abrobot_->reset_accumulators();
-//  SHAREDVECTORN(unsigned len, unsigned inc, unsigned start, SharedResizable<REAL> data);
-//  Ravelin::SharedVectorNd sgeneralized_q(generalized_q.size(),1,0,generalized_q.data());
+  abrobot_->reset_accumulators();
   abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
-
   abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
   update_poses();
 
-//    abrobot_->set_generalized_acceleration(generalized_qdd);
+//  abrobot_->set_generalized_acceleration(generalized_qdd);
   for(int i=0,ii=0;i<NUM_JOINTS;i++){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
@@ -262,7 +259,13 @@ void Robot::update_poses(){
   // Get base frame
   base_link_frame = links_[0]->get_pose();
 
-  Utility::quat2TaitBryan(base_link_frame->q,roll_pitch_yaw);
+  // Internal offset of base from level (useful for adjusting locomotion frame)
+  Ravelin::Matrix3d R_base(base_link_frame->q),R_y90(0,0,1,0,1,0,-1,0,0),new_R;
+  R_base.mult(R_y90,new_R);
+  base_link_frame = boost::shared_ptr<const Ravelin::Pose3d>(
+                         new Ravelin::Pose3d( new_R,base_link_frame->x,Moby::GLOBAL));
+  Utility::quat2TaitBryanZ(base_link_frame->q,roll_pitch_yaw);
+//  Utility::quat2TaitBryanX(base_link_frame->q,roll_pitch_yaw);
 
   // preserve yaw
   Ravelin::AAngled yaw(0,0,1,roll_pitch_yaw[2]);

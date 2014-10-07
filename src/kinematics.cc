@@ -61,8 +61,6 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     x[k] = q[foot.chain[k]];
 
   foot_kinematics(x,foot,base_frame,goal,step,J);
-//  OUTLOG(x,"q",logDEBUG1);
-  OUTLOG(goal,"goal",logDEBUG1);
 
   err = step.norm();
 

@@ -146,7 +146,7 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
     if(ws_correct[i] < 0.0)
       ws_correct[i] = 0.0;
 
-  // Remove Tangential Elements
+  // Remove Tangential Elements (for now)
   for(int i=N.columns();i<ws_correct.rows();i++)
       ws_correct[i] = 0.0;
 

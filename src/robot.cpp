@@ -246,10 +246,10 @@ void Robot::update(){
 //                           Ravelin::Vector3d(1,1,1),
 //                           sim);
 //           }
-//         visualize_ray(center_of_contact.point,
-//                    center_of_contact.normal + center_of_contact.point,
-//                    Ravelin::Vector3d(1,1,0),
-//                    sim);
+         visualize_ray(center_of_contact.point[0],
+                    center_of_contact.normal[0]*0.1 + center_of_contact.point[0],
+                    Ravelin::Vector3d(1,1,0),
+                    sim);
        }
 
 #endif

@@ -54,7 +54,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // compute D, E, and F
   static Ravelin::MatrixNd iM_chol;
   iM_chol = M;
-  OUTLOG(M,"M",logDEBUG);
   assert(LA_.factor_chol(iM_chol));
 
   static Ravelin::MatrixNd iM;
@@ -72,8 +71,12 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   iM.get_sub_mat(0,nq,0,nq,F);
   static Ravelin::MatrixNd iF;
   iF = F;
-  OUTLOG(F,"F",logDEBUG);
   assert(LA_.factor_chol(iF));
+
+#ifndef NDEBUG
+  OUTLOG(N,"N",logDEBUG);
+//  OUTLOG(F,"",logDEBUG);
+#endif
 
   // if in mid-air only return ID forces solution
   if(nc == 0){

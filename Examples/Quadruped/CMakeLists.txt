@@ -62,29 +62,29 @@ link_directories(
 /Applications/MATLAB_R2013a.app/extern/lib/maci64
                   )
 
-set(SOURCES ../../src/output.cc
-            ../../src/robot.cc
-            ../../src/estimate_friction.cc
-            ../../src/inverse_dynamics.cc
-            ../../src/kinematics.cc
-            ../../src/stabilization.cc
-            ../../src/utilities.cc
-            ../../src/splines.cc
-            ../../src/solve_qp.cc
+set(SOURCES ../../src/output.cpp
+            ../../src/robot.cpp
+            #../../src/estimate_friction.cpp
+            ../../src/inverse_dynamics.cpp
+            ../../src/kinematics.cpp
+            ../../src/stabilization.cpp
+            ../../src/utilities.cpp
+            ../../src/splines.cpp
+            ../../src/solve_qp.cpp
             ../../src/Solvers.cpp
            )
 
 if(VISUALIZE_MOBY)
-  set(SOURCES ${SOURCES} ../../src/visualize_moby.cc)
+  set(SOURCES ${SOURCES} ../../src/visualize_moby.cpp)
   set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
 endif(VISUALIZE_MOBY)
 
-set(SOURCES2 quadruped.cc
-             inverse_kinematics.cc
-             locomotion.cc
-             wcpg.cc
-             stabilization.cc
-             variables.cc
+set(SOURCES2 quadruped.cpp
+             inverse_kinematics.cpp
+             locomotion.cpp
+             wcpg.cpp
+             stabilization.cpp
+             variables.cpp
             )
 
 set(THIRDPARTY
@@ -93,5 +93,5 @@ set(THIRDPARTY
 add_library(${PROJECT_NAME} ${SOURCES} ${SOURCES2} ${THIRDPARTY})
 target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
 
-add_library(${PROJECT_NAME}Plugin MODULE control_moby.cc)
+add_library(${PROJECT_NAME}Plugin MODULE control_moby.cpp)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)

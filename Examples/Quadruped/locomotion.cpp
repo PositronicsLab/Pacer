@@ -473,19 +473,19 @@ void Quadruped::walk_toward(
         foot_goal /= (1-duty_factor[i]);
         OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
 
-//        // velocity correction
-//        // FEEDBACK CAPTURE POINT
+        // velocity correction
+        // FEEDBACK CAPTURE POINT
 //        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
 //        OUT_LOG(logERROR) << "Getting " << links_[3+i]->id << " pose";
-//        double eta = 1.2,
-//               height = hip_pos[2];
-//        Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
-//                                     -  Ravelin::Origin3d(
-//                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINT_DOFS,NUM_JOINT_DOFS+3,workv3_))
-//                                        )
-//                                     ) * sqrt(height/grav);
-//        rfb[2] = 0;
-//        foot_goal -= Ravelin::Origin3d(rfb);
+        double eta = 1.2,
+               height = 0.20;
+        Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
+                                     -  Ravelin::Origin3d(
+                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINT_DOFS,NUM_JOINT_DOFS+3,workv3_))
+                                        )
+                                     ) * sqrt(height/grav);
+        rfb[2] = 0;
+        foot_goal -= Ravelin::Origin3d(rfb);
 
           control_points.push_back(Ravelin::Origin3d(x));
           control_points.push_back(Ravelin::Origin3d(x) + Ravelin::Origin3d(0,0,step_height));

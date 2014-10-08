@@ -102,7 +102,6 @@
       <CollisionGeometry primitive-id="foot3" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
-
     </RCArticulatedBody>
 
      <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="3" ylen="0.001" zlen="3" />

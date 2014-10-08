@@ -11,5 +11,5 @@
     <known-leading-force type="double">0.13 0 0 0 0 0</known-leading-force>
   </sim>
 
-  <robot type="string">links-ankles</robot>
+  <robot type="string">simple-biped</robot>
 </XML>

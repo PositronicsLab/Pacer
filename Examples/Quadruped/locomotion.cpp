@@ -477,8 +477,8 @@ void Quadruped::walk_toward(
         // FEEDBACK CAPTURE POINT
 //        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
 //        OUT_LOG(logERROR) << "Getting " << links_[3+i]->id << " pose";
-        double eta = 1.2,
-               height = 0.40;
+        double eta = 0.5,
+               height = 0.30;
         Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
                                      -  Ravelin::Origin3d(
                                           Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINT_DOFS,NUM_JOINT_DOFS+3,workv3_))

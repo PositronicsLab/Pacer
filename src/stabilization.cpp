@@ -150,7 +150,7 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
   for(int i=N.columns();i<ws_correct.rows();i++)
       ws_correct[i] = 0.0;
 
-  Jq.mult(ws_correct,js_correct,-1.0/NC,0);
+  Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);
 }
 

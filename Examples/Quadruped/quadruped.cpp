@@ -115,15 +115,15 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 
   // NOTE: Some minor balancing code
-  for(unsigned i=0;i< NUM_EEFS;i++){
-    if(!is_foot[i]){
-      eefs_[i].origin[0] += (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
-      eefs_[i].origin[1] += (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
-    } else {
-      eefs_[i].origin[0] -= (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
-      eefs_[i].origin[1] -= (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
-    }
-  }
+//  for(unsigned i=0;i< NUM_EEFS;i++){
+//    if(!is_foot[i]){
+//      eefs_[i].origin[0] += (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
+//      eefs_[i].origin[1] += (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
+//    } else {
+//      eefs_[i].origin[0] -= (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
+//      eefs_[i].origin[1] -= (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
+//    }
+//  }
 
   static std::vector<std::string>
      &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");

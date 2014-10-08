@@ -46,3 +46,5 @@ Examples/Quadruped/INIT/startup-links-ankles.xml
 Examples/Quadruped/INIT/startup-links2.xml
 Examples/Quadruped/INIT/startup-links1.xml
 Examples/Quadruped/INIT/startup.xml
+Examples/Quadruped/MODELS/simple-biped.xml
+Examples/Quadruped/INIT/startup-simple-biped.xml

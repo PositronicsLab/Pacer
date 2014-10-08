@@ -22,8 +22,8 @@ class Quadruped : public Robot{
                                Ravelin::VectorNd& u);
 
     void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt);
-    bool gait_phase(double touchdown,double duty_factor,double gait_progress);
-    double gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase);
+    static bool gait_phase(double touchdown,double duty_factor,double gait_progress);
+    static double gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase);
     void cpg_trot(
         const Ravelin::SVector6d& command,
         const std::vector<double>& touchdown,
@@ -65,6 +65,7 @@ class Quadruped : public Robot{
                       bool STANCE_ON_CONTACT,
                       std::vector<EndEffector*>& feet,
                       const Ravelin::SVector6d &base_velocity,
+                      const Ravelin::Vector3d &center_of_mass_x,
                       double t,
                       const Ravelin::VectorNd& q,
                       const Ravelin::VectorNd& qd,

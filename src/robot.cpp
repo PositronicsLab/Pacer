@@ -259,13 +259,16 @@ void Robot::update_poses(){
   // Get base frame
   base_link_frame = links_[0]->get_pose();
 
-  // Internal offset of base from level (useful for adjusting locomotion frame)
-  Ravelin::Matrix3d R_base(base_link_frame->q),R_y90(0,0,1,0,1,0,-1,0,0),new_R;
-  R_base.mult(R_y90,new_R);
+  Ravelin::Matrix3d R_base(base_link_frame->q),
+      R_pitch(cos(displace_base_link[4]),0,sin(displace_base_link[4]),0,1,0,-sin(displace_base_link[4]),0,cos(displace_base_link[4])),
+//      R_yaw(cos(displace_base_link[4]),0,sin(displace_base_link[4]),0,1,0,-sin(displace_base_link[4]),0,cos(displace_base_link[4])),
+//      R_roll(cos(displace_base_link[4]),0,sin(displace_base_link[4]),0,1,0,-sin(displace_base_link[4]),0,cos(displace_base_link[4])),
+      new_R;
+  OUT_LOG(logINFO) << "Rotating base_link_frame saggitally by: theta = " << -displace_base_link[4];
+  R_base.mult_transpose(R_pitch,new_R);
   base_link_frame = boost::shared_ptr<const Ravelin::Pose3d>(
                          new Ravelin::Pose3d( new_R,base_link_frame->x,Moby::GLOBAL));
   Utility::quat2TaitBryanZ(base_link_frame->q,roll_pitch_yaw);
-//  Utility::quat2TaitBryanX(base_link_frame->q,roll_pitch_yaw);
 
   // preserve yaw
   Ravelin::AAngled yaw(0,0,1,roll_pitch_yaw[2]);

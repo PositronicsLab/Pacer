@@ -3,12 +3,12 @@
     <init>
       <base>
         <active type="bool">true</active>
-        <x type="double">0 0 0.32 0 -1.5708 0</x>
+        <x type="double">0 0 0.34 0 -1.5708 0</x>
       </base>
 
       <joint>
       <id type="string">0LH_Z_1 0LH_Y_2 0LH_Y_3 0LH_ZY_4 1LH_ZY_4  0RH_Z_1 0RH_Y_2 0RH_Y_3 0RH_ZY_4 1RH_ZY_4</id>
-       <q type="double">0 -0.7854 1.5708 0 -0.8   0 0.7854 -1.5708 0 -0.8</q>
+       <q type="double">-0.2 -0.6 1.2 0 -0.65    -0.2 0.6 -1.2 0 -0.65</q>
        <max-torque type="double">4 4 4 1 1  4 4 4 1 1</max-torque>
       </joint>
 
@@ -29,7 +29,7 @@
         <gains>
           <kp type="double">1e0 1e0 1e0 1e-1 1e-1s     1e0 1e0 1e0 1e-1 1e-1s    </kp>
           <kv type="double">1e-2 1e-2 1e-2 5e-3 5e-3  1e-2 1e-2 1e-2 5e-3 5e-3</kv>
-          <ki type="double">3e-3 3e-3 3e-3 0 0  3e-3 3e-3 3e-3 0 0</ki>
+          <ki type="double">3e-3 3e-3 3e-3 3e-4 3e-4  3e-3 3e-3 3e-3 3e-4 3e-4</ki>
         </gains>
       </configuration-space>
       <operational-space>
@@ -48,11 +48,11 @@
       <active type="bool">true</active>
       <viip>
         <active type="bool">true</active>
-        <accel type="bool">false</accel>
+        <accel type="bool">true</accel>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
-          <kp type="double">0 0 0  1e0 1e1 0</kp>
-          <kv type="double">0 0 0  5e-1 5e0 0</kv>
+          <kp type="double">1e5 0 0  1e4 1e5 0</kp>
+          <kv type="double">5e2 0 0  5e1 5e2 0</kv>
           <ki type="double">0 0 0  0 0 0</ki>
         </gains>
         <desired>
@@ -73,18 +73,18 @@
     </inverse-dynamics>
 
     <locomotion>
-      <active type="bool">true</active>
+      <active type="bool">false</active>
       <stance-on-contact type="bool">false</stance-on-contact>
       <holonomic type="bool">false</holonomic>
-      <step-height type="double">0.03</step-height>
-      <gait-duration type="double">0.2</gait-duration>
+      <step-height type="double">0.02</step-height>
+      <gait-duration type="double">0.3</gait-duration>
       <!--trot-->
       <gait type="double">0.0 0.5</gait>
       <!--walk-->
       <command type="double">0.0 0 0   0 0 0</command>
       <patrol type="double">0 0</patrol>
       <point type="double">0 0 0</point>
-      <duty-factor type="double">0.5 0.5</duty-factor>
+      <duty-factor type="double">0.7 0.7</duty-factor>
     </locomotion>
 
   </quadruped>

@@ -237,7 +237,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
 //{
 //  Ravelin::SVector6d go_to(Ravelin::VectorNd(command.size(),&command[0]),base_horizontal_frame);
 //  Ravelin::Vector3d goto_direction =
-//      Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
+//      Ravelin::Vector3d(goto_point[0],goto_point[1],0,Moby::GLOBAL)
 //      - Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
 //  goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
 //  goto_direction.normalize();
@@ -308,6 +308,7 @@ void Quadruped::walk_toward(
     // MODEL
     std::vector<EndEffector*>& feet,
     const Ravelin::SVector6d& base_velocity,
+    const Ravelin::Vector3d& center_of_mass_x,
     double t,
     const Ravelin::VectorNd& q,
     const Ravelin::VectorNd& qd,
@@ -342,10 +343,11 @@ void Quadruped::walk_toward(
   OUT_LOG(logDEBUG) << "\tprog : " << gait_progress;
   OUT_LOG(logDEBUG) << "\ttime : " << t;
 
-  Ravelin::Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
+  Ravelin::Vector3d turn_origin(0,command[0]/command[5],0,foot_pos[0].pose);
 
   boost::shared_ptr< Ravelin::Pose3d> turning_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame.get()));
-  turning_frame->x = Ravelin::Origin3d(center_of_mass_x + Ravelin::Pose3d::transform_vector(environment_frame,turn_origin));
+
+  turning_frame->x = Ravelin::Origin3d(center_of_mass_x) + Ravelin::Origin3d(Ravelin::Pose3d::transform_vector(Moby::GLOBAL,turn_origin));
 
   // (Re)Populate spline vectors
   if(!inited){
@@ -412,7 +414,7 @@ void Quadruped::walk_toward(
 
       if(!inited){ // first iteration
         // Get Current Foot pos, Velocities & Accelerations
-//        foot_jacobian(x,feet[i],environment_frame,workM_);
+//        foot_jacobian(x,feet[i],Moby::GLOBAL,workM_);
 //        workM_.transpose_mult(qd.select(feet[i]->chain_bool,workv_),xd);
 //        workM_.transpose_mult(qdd.select(feet[i]->chain_bool,workv_),xdd);
         xd.set_zero();
@@ -436,7 +438,7 @@ void Quadruped::walk_toward(
       // Calculate foot-step info
       // Determine linear portion of step
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
-      foot_frame->x = Ravelin::Pose3d::transform_point(environment_frame,feet[i]->origin);
+      foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[i]->origin);
       Ravelin::Origin3d x0 = feet[i]->origin.data();
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
@@ -475,13 +477,13 @@ void Quadruped::walk_toward(
 
         // velocity correction
         // FEEDBACK CAPTURE POINT
-//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
+//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
 //        OUT_LOG(logERROR) << "Getting " << links_[3+i]->id << " pose";
         double eta = 0.5,
                height = 0.30;
         Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
                                      -  Ravelin::Origin3d(
-                                          Ravelin::Pose3d::transform_vector(base_horizontal_frame, generalized_qd.get_sub_vec(NUM_JOINT_DOFS,NUM_JOINT_DOFS+3,workv3_))
+                                          Ravelin::Pose3d::transform_vector(foot_pos[i].pose, base_velocity.get_upper())
                                         )
                                      ) * sqrt(height/grav);
         rfb[2] = 0;
@@ -494,9 +496,9 @@ void Quadruped::walk_toward(
           control_points.push_back(x0 + Ravelin::Origin3d(foot_goal));
         } else {
           Ravelin::Origin3d x_fh;
-          select_foothold(footholds,Ravelin::Pose3d::transform_point(environment_frame, Ravelin::Vector3d((x0+Ravelin::Origin3d(foot_goal)).data(),base_frame)).data(),x_fh);
+          select_foothold(footholds,Ravelin::Pose3d::transform_point(Moby::GLOBAL, Ravelin::Vector3d((x0+Ravelin::Origin3d(foot_goal)).data(),base_frame)).data(),x_fh);
           // Reach new foothold, account for movement of robot during step
-          control_points.push_back(Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(x_fh.data(),environment_frame)).data()) - Ravelin::Origin3d(foot_goal) + Ravelin::Origin3d(0,0,step_height));
+          control_points.push_back(Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(x_fh.data(),Moby::GLOBAL)).data()) - Ravelin::Origin3d(foot_goal) + Ravelin::Origin3d(0,0,step_height));
           control_points.push_back(x_fh - Ravelin::Origin3d(foot_goal));
         }
       }
@@ -536,10 +538,10 @@ void Quadruped::walk_toward(
       //  plane X + Y + c = z
 
 //      if(NC > 0){
-//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
+//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
 //        center_of_contact.point[2] = 0.13;
 //        double ground_z = Utility::get_z_plane(hip_pos[0],hip_pos[1],center_of_contact.normal,center_of_contact.point);
-//        Ravelin::Vector3d ground_offset(0,0,ground_z - center_of_contact.point[2],environment_frame);
+//        Ravelin::Vector3d ground_offset(0,0,ground_z - center_of_contact.point[2],Moby::GLOBAL);
 //        OUTLOG(ground_offset,"ground_offset",logERROR);
 //        (*control_points.rbegin())[2] -= Ravelin::Pose3d::transform_vector(base_horizontal_frame,ground_offset)[2];
 //      }

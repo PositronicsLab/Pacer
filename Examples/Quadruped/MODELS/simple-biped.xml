@@ -27,12 +27,12 @@
     <Box id="body2" xlen="0.05" ylen="0.16" zlen="0.04" mass="0.05"/>
     <Box id="leg1" xlen="0.05" ylen="0.03" zlen="0.03" mass="0.01"/>
     <Box id="leg2" xlen="0.12" ylen="0.03" zlen="0.02" mass="0.01"/>
-    <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.01"/>
-    <Sphere position="0 0.02 -0.05" id="foot1" radius="0.01" mass="0.01"/>
-    <Sphere position="0 -0.02 -0.05" id="foot2" radius="0.01" mass="0.01"/>
+    <Cylinder id="leg3" height="0.12" radius="0.005" rpy="0 0 1.5708" mass="0.01"/>
+    <Sphere position="0 0.04 -0.08" id="foot1" radius="0.01" mass="0.005"/>
+    <Sphere position="0 -0.04 -0.08" id="foot2" radius="0.01" mass="0.005"/>
     <Sphere position="0 0 0.04" id="foot3" radius="0.01" mass="0.01"/>
     <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.01"/>
-<!--<Box id="bigfoot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.02"/>-->
+<!--<Box id="foot" xlen="0.01" ylen="0.08" zlen="0.16" mass="0.02"/>-->
 
     <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
@@ -63,13 +63,13 @@
       </RigidBody>
 
       <RevoluteJoint id="LH_Y_3"  location="-0.25 0.06 0" inboard-link-id="LH_LEG_2" outboard-link-id="LH_LEG_3" axis="0 1 0" />
-      <RigidBody id="LH_LEG_3" position="-0.3 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
+      <RigidBody id="LH_LEG_3" position="-0.31 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
 <!--        <CollisionGeometry primitive-id="leg3" />-->
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <UniversalJoint id="LH_ZY_4" location="-0.35 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
-      <RigidBody id="LH_FOOT" position="-0.35 0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
+      <UniversalJoint id="LH_ZY_4" location="-0.37 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
+      <RigidBody id="LH_FOOT" position="-0.37 0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
       <CollisionGeometry primitive-id="foot1" />
       <CollisionGeometry primitive-id="foot2" />
       <CollisionGeometry primitive-id="foot3" />
@@ -90,13 +90,13 @@
       </RigidBody>
 
       <RevoluteJoint id="RH_Y_3"  location="-0.25 -0.06 0" inboard-link-id="RH_LEG_2" outboard-link-id="RH_LEG_3" axis="0 -1 0" />
-      <RigidBody id="RH_LEG_3" position="-0.3 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
+      <RigidBody id="RH_LEG_3" position="-0.31 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
 <!--      <CollisionGeometry primitive-id="leg3" />-->
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <UniversalJoint id="RH_ZY_4" location="-0.35 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
-      <RigidBody id="RH_FOOT" position="-0.35 -0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
+      <UniversalJoint id="RH_ZY_4" location="-0.37 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 0 -1" axis2="0 1 0"/>
+      <RigidBody id="RH_FOOT" position="-0.37 -0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
       <CollisionGeometry primitive-id="foot1" />
       <CollisionGeometry primitive-id="foot2" />
       <CollisionGeometry primitive-id="foot3" />

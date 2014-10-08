@@ -239,6 +239,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     for(unsigned i=0,ii=0;i< NUM_EEFS;i++){
       if(is_foot[i] == 0) continue;
       feet.push_back(&eefs_[i]);
+      feet[ii]->origin.pose = base_horizontal_frame;
 
       // Robot leans into movement
 //      foot_origin[i][0] += go_to[0]*-0.1;
@@ -274,7 +275,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
       foot_pos[ii] = x_des[i];
       foot_vel[ii] = xd_des[i];
       foot_acc[ii] = xdd_des[i];
-
+//      foot_pos[ii] = Ravelin::Pose3d::transform_point(base_horizontal_frame,x_des[i]);
+//      foot_vel[ii] = Ravelin::Pose3d::transform_vector(base_horizontal_frame,xd_des[i]);
+//      foot_acc[ii] = Ravelin::Pose3d::transform_vector(base_horizontal_frame,xdd_des[i]);
       double gait_progress = t/gait_time;
       gait_progress = gait_progress - (double) ((int) gait_progress);
       ii++;
@@ -282,14 +285,25 @@ Ravelin::VectorNd& Quadruped::control(double t,
     Ravelin::SVector6d goto_6d = go_to;
     goto_6d.pose = base_frame;
 
+    if(roll_pitch_yaw[1] > 0.01){
+      goto_6d[0] += 0.05;
+//      displace_base_link[4] += roll_pitch_yaw[1]*0.1;
+    } else if(roll_pitch_yaw[1] < 0.01){
+      goto_6d[0] -= 0.05;
+//      displace_base_link[4] += roll_pitch_yaw[1]*0.1;
+    }
+
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
-    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,generalized_qd.segment(NUM_JOINTS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,generalized_qd.segment(NUM_JOINTS,NDOFS),center_of_mass_x,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     for(int i=0,ii=0;i<NUM_EEFS;i++){
       if(is_foot[i] == 0) continue;
       x_des[i] = foot_pos[ii];
       xd_des[i] = foot_vel[ii];
       xdd_des[i] = foot_acc[ii];
+//      x_des[i] = Ravelin::Pose3d::transform_point(base_frame,foot_pos[ii]);
+//      xd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,foot_vel[ii]);
+//      xdd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,foot_acc[ii]);
       ii++;
     }
   }
@@ -647,6 +661,9 @@ void Quadruped::init(){
     &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
     &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
     &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
+
+ const double* data = &base_start.front();
+ displace_base_link = Ravelin::SVector6d(data);
 
  OUTLOG(joint_names,"joint_names",logERROR);
  OUTLOG(joints_start,"joints_start",logERROR);

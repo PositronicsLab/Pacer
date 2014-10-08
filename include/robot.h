@@ -153,8 +153,7 @@ class Robot {
     unsigned                          NDOFS,NUM_JOINT_DOFS;
     unsigned                          NSPATIAL;
     unsigned                          NEULER;
-
-    Ravelin::VectorNd BASE_ORIGIN;
+    Ravelin::SVector6d                displace_base_link;
 
   // PHYSICAL ROBOT LIMITS AND VARIABLES
     std::map<std::string, double>     q0_;

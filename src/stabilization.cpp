@@ -123,9 +123,9 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
 
   Ravelin::VectorNd vel_base(6), pos_base(6), base_correct(6);
   generalized_qd.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
-  pos_base.set_sub_vec(0,center_of_mass_x);
+//  pos_base.set_sub_vec(0,center_of_mass_x);
   pos_base.set_sub_vec(3,roll_pitch_yaw);
-  pos_des
+
   OUTLOG(vel_base,"vel_base",logDEBUG1);
   OUTLOG(vel_des,"vel_des",logDEBUG1);
   static Ravelin::VectorNd sum_p_err = Ravelin::VectorNd::zero(6);

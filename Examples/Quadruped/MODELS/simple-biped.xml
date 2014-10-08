@@ -25,11 +25,13 @@
 
     <Box id="body1" xlen="0.1" ylen="0.14" zlen="0.02" mass="0.10"/>
     <Box id="body2" xlen="0.05" ylen="0.16" zlen="0.04" mass="0.05"/>
-    <Box id="leg1" xlen="0.05" ylen="0.03" zlen="0.03" mass="0.10"/>
-    <Box id="leg2" xlen="0.12" ylen="0.03" zlen="0.02" mass="0.10"/>
-    <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.04"/>
-<!--    <Sphere id="foot" radius="0.01" mass="0.01"/>-->
-    <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.02"/>
+    <Box id="leg1" xlen="0.05" ylen="0.03" zlen="0.03" mass="0.01"/>
+    <Box id="leg2" xlen="0.12" ylen="0.03" zlen="0.02" mass="0.01"/>
+    <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.01"/>
+    <Sphere position="0 0.02 -0.05" id="foot1" radius="0.01" mass="0.01"/>
+    <Sphere position="0 -0.02 -0.05" id="foot2" radius="0.01" mass="0.01"/>
+    <Sphere position="0 0 0.04" id="foot3" radius="0.01" mass="0.01"/>
+    <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.01"/>
 <!--<Box id="bigfoot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.02"/>-->
 
     <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb"
@@ -68,7 +70,9 @@
 
       <UniversalJoint id="LH_ZY_4" location="-0.35 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
       <RigidBody id="LH_FOOT" position="-0.35 0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
-        <CollisionGeometry primitive-id="foot" />
+      <CollisionGeometry primitive-id="foot1" />
+      <CollisionGeometry primitive-id="foot2" />
+      <CollisionGeometry primitive-id="foot3" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
 
@@ -93,7 +97,9 @@
 
       <UniversalJoint id="RH_ZY_4" location="-0.35 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
       <RigidBody id="RH_FOOT" position="-0.35 -0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
-        <CollisionGeometry primitive-id="foot" />
+      <CollisionGeometry primitive-id="foot1" />
+      <CollisionGeometry primitive-id="foot2" />
+      <CollisionGeometry primitive-id="foot3" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
 

@@ -115,11 +115,15 @@ Ravelin::VectorNd& Quadruped::control(double t,
   }
 
   // NOTE: Some minor balancing code
-//  for(unsigned i=0;i< NUM_EEFS;i++)
-//    if(!is_foot[i]){
-//      eefs_[i].origin[0] += (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
-//      eefs_[i].origin[1] += (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
-//    }
+  for(unsigned i=0;i< NUM_EEFS;i++){
+    if(!is_foot[i]){
+      eefs_[i].origin[0] += (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
+      eefs_[i].origin[1] += (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
+    } else {
+      eefs_[i].origin[0] -= (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
+      eefs_[i].origin[1] -= (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
+    }
+  }
 
   static std::vector<std::string>
      &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
@@ -306,10 +310,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #else
   for(int i=0,ii=0;i<NUM_EEFS;i++){
     if(eefs_[i].active){
-      for(int j=0;j<eefs_[i].point.size();j++){
+      for(int j=0;j<eefs_[i].point.size();j++,ii++){
         for(int k=0;k<2;k++)
           MU(ii,k) = eefs_[i].mu_coulomb[j];
-        ii++;
       }
     }
   }
@@ -417,13 +420,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
     Ravelin::VectorNd cf;
     Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-
     // Recalculate contact jacobians based on desired lift-off feet
     if(USE_DES_CONTACT){
       NC = 0;
-      for (unsigned i=0; i< NUM_EEFS;i++)
+      for(int i=0;i<NUM_EEFS;i++)
         if(eefs_[i].active)
-          NC+=eefs_[i].point.size();
+          NC += eefs_[i].point.size();
       calc_contact_jacobians(N,D,R);
     }
 

@@ -41,6 +41,7 @@
     <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.04"/>
     <Sphere id="hand" radius="0.01" mass="0.1"/>
     <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.02"/>
+    <Box id="bigfoot" xlen="0.01" ylen="0.02" zlen="0.16" mass="0.02"/>
 
     <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 -1.5708 0.0" translate="0,0,0.36" >
@@ -184,7 +185,7 @@
 
       <UniversalJoint id="LH_ZY_4" location="-0.35 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
       <RigidBody id="LH_FOOT" position="-0.35 0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
-        <CollisionGeometry primitive-id="foot" />
+        <CollisionGeometry primitive-id="bigfoot" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
 
@@ -209,7 +210,7 @@
 
       <UniversalJoint id="RH_ZY_4" location="-0.35 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
       <RigidBody id="RH_FOOT" position="-0.35 -0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
-        <CollisionGeometry primitive-id="foot" />
+        <CollisionGeometry primitive-id="bigfoot" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
     </RCArticulatedBody>

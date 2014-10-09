@@ -48,3 +48,6 @@ Examples/Quadruped/INIT/startup-links1.xml
 Examples/Quadruped/INIT/startup.xml
 Examples/Quadruped/MODELS/simple-biped.xml
 Examples/Quadruped/INIT/startup-simple-biped.xml
+Examples/Quadruped/INIT/startup-atlas.xml
+Examples/Quadruped/MODELS/atlas.xml
+Examples/Quadruped/MODELS/atlas_simple_shapes.urdf

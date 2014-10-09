@@ -506,7 +506,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   // Enforce torque limits
   for(unsigned i=0;i< NUM_JOINT_DOFS;i++){
-    assert(u[i] <= torque_limits_u[i] && u[i] >= torque_limits_l[i]);
+//    assert(u[i] <= torque_limits_u[i] && u[i] >= torque_limits_l[i]);
     if(u[i] > torque_limits_u[i])
       u[i] = torque_limits_u[i];
     else if(u[i] < torque_limits_l[i])

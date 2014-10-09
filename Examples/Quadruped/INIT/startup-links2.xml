@@ -57,7 +57,7 @@
           <ki type="double">0 0 0  0 0 0</ki>
         </gains>
         <desired>
-          <x type="double">0 0 0  0 0 0</x>
+          <x type="double">-0.01 0 0  0 0 0</x>
           <xd type="double">0 0 0  0 0 0</xd>
         </desired>
       </viip>

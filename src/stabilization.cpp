@@ -122,16 +122,15 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
   OUTLOG(Jq,"Jq",logDEBUG1);
 
   Ravelin::VectorNd vel_base(6), pos_base(6), base_correct(6);
-  generalized_qd.get_sub_vec(NUM_JOINTS,NDOFS, vel_base);
-//  pos_base.set_sub_vec(0,center_of_mass_x);
+  generalized_qd.get_sub_vec(NUM_JOINT_DOFS,generalized_qd.rows(), vel_base);
+  pos_base.set_sub_vec(0,center_of_mass_x);
   pos_base.set_sub_vec(3,roll_pitch_yaw);
-
   OUTLOG(vel_base,"vel_base",logDEBUG1);
   OUTLOG(vel_des,"vel_des",logDEBUG1);
   static Ravelin::VectorNd sum_p_err = Ravelin::VectorNd::zero(6);
   for(int i=0;i<6;i++){
-    sum_p_err[i] += (pos_des[i] - pos_base[i]);
-    base_correct[i] = (vel_des[i] - vel_base[i])*Kv[i]
+    sum_p_err[i]   += (pos_des[i] - pos_base[i]);
+    base_correct[i] =   (vel_des[i] - vel_base[i])*Kv[i]
                       + (pos_des[i] - pos_base[i])*Kp[i]
                       + sum_p_err[i]*Ki[i];
   }
@@ -148,8 +147,8 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
       ws_correct[i] = 0.0;
 
 //   Remove Tangential Elements (for now)
-//  for(int i=N.columns();i<ws_correct.rows();i++)
-//      ws_correct[i] = 0.0;
+  for(int i=N.columns();i<ws_correct.rows();i++)
+      ws_correct[i] = 0.0;
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);

@@ -286,10 +286,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
     goto_6d.pose = base_frame;
 
     if(roll_pitch_yaw[1] > 0.01){
-      goto_6d[0] += 0.05;
+//      goto_6d[0] += 0.05;
 //      displace_base_link[4] += roll_pitch_yaw[1]*0.1;
     } else if(roll_pitch_yaw[1] < 0.01){
-      goto_6d[0] -= 0.05;
+//      goto_6d[0] -= 0.05;
 //      displace_base_link[4] += roll_pitch_yaw[1]*0.1;
     }
 
@@ -344,6 +344,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Kp = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.kp"),
           &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.kv"),
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.ki");
+
+      for(int i=0;i<3;i++)
+        x_des[i] += center_of_feet_x[i];
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       contact_jacobian_stabilizer(R,Kp,Kv,Ki,x_des,xd_des,fb);
@@ -503,6 +506,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   // Enforce torque limits
   for(unsigned i=0;i< NUM_JOINT_DOFS;i++){
+    assert(u[i] <= torque_limits_u[i] && u[i] >= torque_limits_l[i]);
     if(u[i] > torque_limits_u[i])
       u[i] = torque_limits_u[i];
     else if(u[i] < torque_limits_l[i])

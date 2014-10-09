@@ -218,8 +218,8 @@
 <!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->
 <!--     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="3" ylen="0.001" zlen="3" />-->
 <!--     <Plane id="ground-primitive" rpy="1.5708 0 0" />-->
-<Heightmap id="ground-primitive" filename="heightmap2.dat" width="1" depth="1" rpy="1.5708 0 0" />
-<RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"
+<Heightmap id="ground-primitive" filename="../heightmap2.dat" width="1" depth="1" rpy="1.5708 0 0" />
+<RigidBody id="GROUND" color="0.6 0.6 0.6 1" enabled="false"
   position="0 0 -0.0"
   visualization-id="ground-primitive"
   compliant="false">

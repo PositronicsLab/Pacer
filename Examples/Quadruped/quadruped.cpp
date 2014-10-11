@@ -89,8 +89,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #  endif
   }
 
-  static std::vector<int>
-      &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.end-effector.foot");
+  static std::vector<bool>
+      &is_foot = CVarUtils::GetCVarRef<std::vector<bool> >("quadruped.init.end-effector.foot");
 
   {
     center_of_feet_x.set_zero();
@@ -666,6 +666,9 @@ void Quadruped::init(){
     &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
     &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
 
+ static std::vector<bool>
+    &active_joints = CVarUtils::GetCVarRef<std::vector<bool> >("quadruped.init.joint.active");
+
  const double* data = &base_start.front();
  displace_base_link = Ravelin::SVector6d(data);
 
@@ -683,8 +686,7 @@ void Quadruped::init(){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
 //      OUT_LOG(logDEBUG) << joint_names[ii] << active_joints[ii] << std::endl;
-      active_joints_[joint_names[ii]] = (joint_names[ii].substr(joint_names[ii].size()-1,1).compare("4") == 0)? false : true;
-//          (joint_names[ii].substr(4,2).compare("XY") == 0)? false : true;
+      active_joints_[joint_names[ii]] = active_joints[ii];
       q0_[joint_names[ii]] = joints_start[ii];
       torque_limits_[joint_names[ii]] = torque_limits[ii];
     }

@@ -10,6 +10,7 @@
       <id type="string">0LH_Z_1 0LH_Y_2 0LH_Y_3 0LH_ZY_4 1LH_ZY_4  0RH_Z_1 0RH_Y_2 0RH_Y_3 0RH_ZY_4 1RH_ZY_4</id>
        <q type="double">0.1 -0.6 1.2 0 -0.65    0.1 0.6 -1.2 0 -0.65</q>
        <max-torque type="double">4 4 4 4 4  4 4 4 4 4</max-torque>
+       <active type="bool">true true true false false   true true true false false</active>
       </joint>
 
       <end-effector>

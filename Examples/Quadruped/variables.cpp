@@ -83,11 +83,11 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
             case (str2int("bool")):
               if(elements.size()>1)
               {
-                std::vector<int> typed_elements;
+                std::vector<bool> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
-                        [](std::string const& val) {return str2bool(val);});
-                CVarUtils::CreateCVar<std::vector<int> >(tag+n->name,typed_elements, help );
+                        [](std::string const& val) {return (bool) str2bool(val);});
+                CVarUtils::CreateCVar<std::vector<bool> >(tag+n->name,typed_elements, help );
               }
               else
                 CVarUtils::CreateCVar<int>(tag+n->name,str2bool(elements[0]), help );

@@ -48,17 +48,17 @@
     <stabilization>
       <active type="bool">true</active>
       <viip>
-        <active type="bool">true</active>
-        <accel type="bool">false</accel>
+        <active      type="bool">true </active>
+        <accel       type="bool">false</accel>
         <des-contact type="bool">false</des-contact>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
-          <kp type="double">0 0 0      1e4 1e4 0</kp>
-          <kv type="double">0 0 0      1e2 1e2 0</kv>
-          <ki type="double">0 0 0      0   0 0</ki>
+          <kp type="double">0 0 0  1e4 1e4 0 </kp>
+          <kv type="double">0 0 0  1e2 1e2 0 </kv>
+          <ki type="double">0 0 0   0   0  0 </ki>
         </gains>
         <desired>
-          <x type="double">0 0 0  0 0 0</x>
+          <x  type="double">0 0 0  0 0 0</x>
           <xd type="double">0 0 0  0 0 0</xd>
         </desired>
       </viip>

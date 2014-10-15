@@ -31,6 +31,7 @@ public:
                                       impulse;
 
     bool                  active;
+    bool                  stance;
     std::vector<double>   mu_viscous,
                           mu_coulomb;
     int                   nk;
@@ -68,7 +69,7 @@ class Robot {
     boost::shared_ptr<const Ravelin::Pose3d>& get_base_link_frame(){return base_link_frame;}
     std::map<int, int>& get_joint_map()  { return joint_map_; }
     std::map<std::string, double>& get_q0()  { return q0_; }
-    std::map<std::string,bool>& get_active_joints()  { return active_joints_; }
+    std::map<std::string, bool>& get_active_joints()  { return active_joints_; }
 
   protected:
 
@@ -101,11 +102,13 @@ class Robot {
 
     void calc_workspace_jacobian(Ravelin::MatrixNd& Rw);
     void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::SVector6d& goal,Ravelin::VectorNd& q_des);
 
   //  Ravelin::VectorNd& kinematics(const Ravelin::VectorNd& x, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
     Ravelin::MatrixNd& foot_jacobian(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
     void update();
     void update_poses();
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
@@ -123,7 +126,7 @@ class Robot {
     // End Effector data
     std::vector<std::string>          eef_names_;
     std::vector<EndEffector>          eefs_;
-    std::map<std::string,bool>        active_joints_;
+    std::map<std::string, bool>                 active_joints_;
 
 
     unsigned                          NUM_FIXED_JOINTS;
@@ -143,6 +146,7 @@ class Robot {
                       center_of_mass_xd,
                       center_of_mass_xdd,
                       center_of_feet_x,
+                      center_of_feet_xd,
                       roll_pitch_yaw;
     Ravelin::Vector2d zero_moment_point;
     Ravelin::VectorNd q,qd,qdd;

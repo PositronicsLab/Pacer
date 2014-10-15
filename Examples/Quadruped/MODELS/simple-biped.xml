@@ -30,7 +30,8 @@
     <Cylinder id="leg3" height="0.12" radius="0.005" rpy="0 0 1.5708" mass="0.01"/>
     <Sphere position="0 0.04 -0.08" id="foot1" radius="0.01" mass="0.005"/>
     <Sphere position="0 -0.04 -0.08" id="foot2" radius="0.01" mass="0.005"/>
-    <Sphere position="0 0 0.04" id="foot3" radius="0.01" mass="0.01"/>
+    <Sphere position="0 -0.04 0.04" id="foot3" radius="0.01" mass="0.01"/>
+    <Sphere position="0 0.04 0.04" id="foot4" radius="0.01" mass="0.01"/>
     <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.01"/>
 <!--<Box id="foot" xlen="0.01" ylen="0.08" zlen="0.16" mass="0.02"/>-->
 
@@ -68,11 +69,12 @@
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <UniversalJoint id="LH_ZY_4" location="-0.37 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 -1 0" axis2="1 0 0"/>
+      <UniversalJoint id="LH_ZY_4" location="-0.37 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 -1 0" axis2="0 0 -1"/>
       <RigidBody id="LH_FOOT" position="-0.37 0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
       <CollisionGeometry primitive-id="foot1" />
       <CollisionGeometry primitive-id="foot2" />
       <CollisionGeometry primitive-id="foot3" />
+      <CollisionGeometry primitive-id="foot4" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
 
@@ -95,11 +97,12 @@
         <InertiaFromPrimitive primitive-id="leg3" />
       </RigidBody>
 
-      <UniversalJoint id="RH_ZY_4" location="-0.37 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 1 0" axis2="-1 0 0"/>
+      <UniversalJoint id="RH_ZY_4" location="-0.37 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 -1 0" axis2="0 0 1"/>
       <RigidBody id="RH_FOOT" position="-0.37 -0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
       <CollisionGeometry primitive-id="foot1" />
       <CollisionGeometry primitive-id="foot2" />
       <CollisionGeometry primitive-id="foot3" />
+      <CollisionGeometry primitive-id="foot4" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
     </RCArticulatedBody>

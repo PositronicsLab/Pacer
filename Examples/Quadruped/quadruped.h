@@ -64,7 +64,7 @@ class Quadruped : public Robot{
                       double step_height,
                       bool STANCE_ON_CONTACT,
                       std::vector<EndEffector*>& feet,
-                      const Ravelin::SVector6d &base_velocity,
+                      const Ravelin::Vector3d &base_velocity,
                       const Ravelin::Vector3d &center_of_mass_x,
                       double t,
                       const Ravelin::VectorNd& q,

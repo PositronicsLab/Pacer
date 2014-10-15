@@ -3,14 +3,14 @@
     <init>
       <base>
         <active type="bool">true</active>
-        <x type="double">0 0 0.36 0 -1.5708 0</x>
+        <x type="double">0 0 0.95 0 0 0</x>
       </base>
 
       <joint>
       <id type="string">0r_leg_uhz1 0r_leg_mhx2 0r_leg_lhy3 0r_leg_kny4 0r_leg_uay5 0r_leg_lax6    0l_leg_uhz1 0l_leg_mhx2 0l_leg_lhy3 0l_leg_kny4 0l_leg_uay5 0l_leg_lax6</id>
-      <active type="string">true false true true false false                                       true false true true false false</active>
-       <q type="double">    0 0 0 0 0 0                                                            0 0 0 0 0 0</q>
-       <max-torque type="double">4 4 4 4 4 4                                                       4 4 4 4 4 4</max-torque>
+      <active type="bool">false true true true true false                                       false true true true true false</active>
+       <q type="double">  0 0 0 0.1 -0.1 0                                                            0 0 0 0.1 -0.1 -0</q>
+       <max-torque type="double">500 500 500 500 500 500                                           500 500 500 500 500 500</max-torque>
       </joint>
 
       <end-effector>
@@ -28,9 +28,9 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the q of joint ids respectively -->
         <gains>
-          <kp type="double">1e0 1e0 1e0 1e-1 1e-1s     1e0 1e0 1e0 1e-1 1e-1s    </kp>
-          <kv type="double">1e-2 1e-2 1e-2 5e-3 5e-3  1e-2 1e-2 1e-2 5e-3 5e-3</kv>
-          <ki type="double">3e-3 3e-3 3e-3 3e-4 3e-4  3e-3 3e-3 3e-3 3e-4 3e-4</ki>
+          <kp type="double">1e3 1e3 1e3 1e3 1e3 1e3         1e3 1e3 1e3 1e3 1e3 1e3   </kp>
+          <kv type="double">1e1 1e1 1e1 1e1 1e1 1e1         1e1 1e1 1e1 1e1 1e1 1e1</kv>
+          <ki type="double">1e-2 1e-2 1e-2 1e-2 1e-2 1e-2   1e-2 1e-2 1e-2 1e-2 1e-2 1e-2</ki>
         </gains>
       </configuration-space>
       <operational-space>
@@ -38,8 +38,8 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
         <gains>
-          <kp type="double"> 1e3 1e3 1e3     1e3 1e3 1e3</kp>
-          <kv type="double"> 1e1 1e1 1e1     1e1 1e1 1e1</kv>
+          <kp type="double"> 1e4 1e4 1e4     1e4 1e4 1e4</kp>
+          <kv type="double"> 1e2 1e2 1e2     1e2 1e2 1e2</kv>
           <ki type="double"> 1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
         </gains>
       </operational-space>
@@ -50,11 +50,12 @@
       <viip>
         <active type="bool">true</active>
         <accel type="bool">false</accel>
+        <des-contact type="bool">false</des-contact>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
-          <kp type="double">0 0 0  1e1 1e1 0</kp>
-          <kv type="double">0 0 0  5e0 5e0 0</kv>
-          <ki type="double">0 0 0    0   0 0</ki>
+          <kp type="double">0 0 0      1e4 1e4 0</kp>
+          <kv type="double">0 0 0      1e2 1e2 0</kv>
+          <ki type="double">0 0 0      0   0 0</ki>
         </gains>
         <desired>
           <x type="double">0 0 0  0 0 0</x>
@@ -64,7 +65,7 @@
     </stabilization>
 
     <inverse-dynamics>
-      <active type="bool">false</active>
+      <active type="bool">true</active>
       <dt type="double">0.005</dt>
       <alpha type="double">1</alpha>
       <beta type="double">1</beta>
@@ -77,12 +78,12 @@
       <active type="bool">true</active>
       <stance-on-contact type="bool">false</stance-on-contact>
       <holonomic type="bool">false</holonomic>
-      <step-height type="double">0.02</step-height>
-      <gait-duration type="double">1</gait-duration>
+      <step-height type="double">0.03</step-height>
+      <gait-duration type="double">0.5</gait-duration>
       <!--trot-->
       <gait type="double">0.0 0.5</gait>
       <!--walk-->
-      <command type="double">0.0 0 0   0 0 0</command>
+      <command type="double">0.05 0 0   0 0 0</command>
       <patrol type="double">0 0</patrol>
       <point type="double">0 0 0</point>
       <duty-factor type="double">0.7 0.7</duty-factor>

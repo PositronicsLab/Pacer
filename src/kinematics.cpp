@@ -9,7 +9,8 @@ Ravelin::VectorNd& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEf
 
   gk.set_zero(3,foot.chain.size());
   fk = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
-  boost::shared_ptr<Ravelin::Pose3d> jacobian_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+  boost::shared_ptr<Ravelin::Pose3d>
+      jacobian_frame = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
   jacobian_frame->x = Ravelin::Origin3d(fk[0],fk[1],fk[2]);
 
   abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);
@@ -24,8 +25,26 @@ Ravelin::VectorNd& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEf
 /// evaluated in foot link frame
 Ravelin::VectorNd& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk){
   foot_jacobian(x,foot,frame,gk);
+  gk = gk.get_sub_mat(0,3,0,gk.columns(),workM_);
   fk = Ravelin::Pose3d::transform_vector(frame,Ravelin::Pose3d::transform_point(
          foot.link->get_pose(),goal));
+  return fk;
+}
+
+/// Working kinematics function [y] = f(x,foot,pt,y,J)
+/// evaluated in foot link frame
+Ravelin::VectorNd& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk){
+  foot_jacobian(x,foot,frame,gk);
+  fk = Ravelin::VectorNd(6,Ravelin::Pose3d::transform(
+                           frame,
+                           Ravelin::SVelocityd(
+                             Ravelin::Pose3d::transform_point(
+                               foot.link->get_pose(),
+                               goal.get_upper()
+                               ),
+                             goal.get_lower(),
+                             base_frame)).data()
+                         );
   return fk;
 }
 
@@ -34,7 +53,7 @@ Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::VectorNd& x,const EndEffe
     joints_[foot.chain[i]]->q[0] = x[i];
   abrobot_->update_link_poses();
 
-  gk.resize(3,foot.chain.size());
+  gk.resize(6,foot.chain.size());
   boost::shared_ptr<Ravelin::Pose3d> jacobian_frame(
         new Ravelin::Pose3d(Ravelin::Quatd::identity(),
                             Ravelin::Pose3d::transform_point(
@@ -42,12 +61,15 @@ Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::VectorNd& x,const EndEffe
                               Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
                             frame));
   abrobot_->calc_jacobian(jacobian_frame,foot.link,workM_);
-  for(int j=0;j<3;j++)                                      // x,y,z
+//  OUTLOG(workM_,foot.id + "__J_full", logDEBUG1);
+
+  for(int j=0;j<6;j++)                                      // x,y,z
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
-      gk(j,k) = workM_(j,foot.chain[k]);
+      gk(j,k) = workM_(j,joints_[foot.chain[k]]->get_coord_index());
 
   return gk;
 }
+
 extern void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 
 /// Resolved Motion Rate Control
@@ -63,6 +85,7 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
   foot_kinematics(x,foot,base_frame,goal,step,J);
 
   err = step.norm();
+  OUTLOG(goal,"goal",logDEBUG1);
 
   while(err > 1e-3  && err < last_err){
     // update error
@@ -102,6 +125,66 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     if(err > last_err)
       x -= ( (workv_ = qstep)*= alpha );
   }
+  for(int k=0;k<foot.chain.size();k++)
+    q_des[foot.chain[k]] = x[k];
+}
+
+void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::SVector6d& goal,Ravelin::VectorNd& q_des){
+  Ravelin::MatrixNd J;
+  Ravelin::VectorNd x(foot.chain.size());
+  Ravelin::VectorNd step(foot.chain.size());
+
+  double alpha = 1, err = 1, last_err = 2;
+  for(int k=0;k<foot.chain.size();k++)                // actuated joints
+    x[k] = q[foot.chain[k]];
+
+  foot_kinematics(x,foot,base_frame,goal,step,J);
+
+  err = step.norm();
+  OUTLOG(goal,"goal",logDEBUG1);
+
+  while(err > 1e-3  && err < last_err){
+    // update error
+    last_err = err;
+//    OUTLOG(x,"q",logDEBUG1);
+    OUTLOG(step,"xstep",logDEBUG1);
+      solve(workM_ = J,step);
+
+    Ravelin::VectorNd qstep = step;
+    OUTLOG(qstep,"qstep",logDEBUG1);
+
+    // Line Search
+    alpha = 1;
+    {
+      double beta = 0.5;
+      Ravelin::VectorNd fk1;
+      Ravelin::VectorNd xx = x;
+      // distance to goal is greater alpha*step than beta*alpha*step?
+      // reduce alpha to alpha*beta
+      while (foot_kinematics((x = xx) += (workv_ = qstep)*= alpha      ,foot,base_frame,goal,fk1,workM_).norm() >
+             foot_kinematics((x = xx) += (workv_ = qstep)*= alpha*beta ,foot,base_frame,goal,fk1,workM_).norm()){
+        alpha = alpha*beta;
+      }
+      x = xx;
+    }
+
+    OUT_LOG(logDEBUG1) << "alpha: " << alpha;
+
+    x += ( (workv_ = qstep)*= alpha );
+
+    // get foot pos
+    foot_kinematics(x,foot,base_frame,goal,step,J);
+
+    err = step.norm();
+    OUTLOG(err,"err",logDEBUG1);
+
+    // if error increases, backstep then return
+    if(err > last_err)
+      x -= ( (workv_ = qstep)*= alpha );
+  }
+
+  OUTLOG(err,"final_err",logDEBUG1);
+
   for(int k=0;k<foot.chain.size();k++)
     q_des[foot.chain[k]] = x[k];
 }

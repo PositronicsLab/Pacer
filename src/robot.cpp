@@ -105,7 +105,10 @@ void EndEffector::init(Robot* robot){
   chain_bool.resize(joint_names_.size());
   rb_ptr = joint_ptr->get_inboard_link();
   while (rb_ptr->id.substr(0,4).compare("BODY") != 0){
-    OUT_LOG(logDEBUG) << rb_ptr->id ;
+    OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
+    joint_ptr = rb_ptr->get_inner_joint_explicit();
+    OUT_LOG(logDEBUG) << "  " << joint_ptr->id;
+
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j].substr(1,joint_names_[j].size())) == 0){
         if(robot->get_active_joints()[joint_names_[j]]){
@@ -119,7 +122,6 @@ void EndEffector::init(Robot* robot){
     }
     OUT_LOG(logDEBUG) ;
     rb_ptr = joint_ptr->get_inboard_link();
-    joint_ptr = rb_ptr->get_inner_joint_explicit();
   }
   OUT_LOG(logDEBUG) ;
   OUT_LOG(logDEBUG) ;
@@ -180,7 +182,7 @@ void Robot::update(){
 
   // fetch robot state vectors
   calc_contact_jacobians(N,D,R);
-  calc_workspace_jacobian(Rw);
+//  calc_workspace_jacobian(Rw);
 
   // Get robot dynamics state
   // SRZ: Very Heavy Computation

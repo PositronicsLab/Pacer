@@ -8,9 +8,9 @@
 
       <joint>
       <id type="string">0LH_Z_1 0LH_Y_2 0LH_Y_3 0LH_ZY_4 1LH_ZY_4  0RH_Z_1 0RH_Y_2 0RH_Y_3 0RH_ZY_4 1RH_ZY_4</id>
-       <q type="double">0.1 -0.6 1.2 0 -0.65    0.1 0.6 -1.2 0 -0.65</q>
+       <q type="double">0 -0.6 1.2 0.65 0    0 0.6 -1.2 0.65 0</q>
        <max-torque type="double">4 4 4 4 4  4 4 4 4 4</max-torque>
-       <active type="bool">true true true false false   true true true false false</active>
+       <active type="bool">true true true true false   true true true true false</active>
       </joint>
 
       <end-effector>
@@ -28,9 +28,9 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the q of joint ids respectively -->
         <gains>
-          <kp type="double">1e0 1e0 1e0 1e-1 1e-1s     1e0 1e0 1e0 1e-1 1e-1s    </kp>
-          <kv type="double">1e-2 1e-2 1e-2 5e-3 5e-3  1e-2 1e-2 1e-2 5e-3 5e-3</kv>
-          <ki type="double">3e-3 3e-3 3e-3 3e-4 3e-4  3e-3 3e-3 3e-3 3e-4 3e-4</ki>
+          <kp type="double">1e0 1e0 1e0 1e-1 1e-2     1e0 1e0 1e0 1e-1 1e-2    </kp>
+          <kv type="double">1e-2 1e-2 1e-2 5e-3 0  1e-2 1e-2 1e-2 5e-3 0</kv>
+          <ki type="double">3e-3 3e-3 3e-3 3e-4 0  3e-3 3e-3 3e-3 3e-4 0</ki>
         </gains>
       </configuration-space>
       <operational-space>
@@ -50,10 +50,11 @@
       <viip>
         <active type="bool">true</active>
         <accel type="bool">false</accel>
+        <des-contact type="bool">true</des-contact>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
-          <kp type="double">0 0 0  1e1 1e1 0</kp>
-          <kv type="double">0 0 0  5e0 5e0 0</kv>
+          <kp type="double">0 0 0  1e2 1e2 0</kp>
+          <kv type="double">0 0 0  1e0 1e0 0</kv>
           <ki type="double">0 0 0    0   0 0</ki>
         </gains>
         <desired>
@@ -64,12 +65,12 @@
     </stabilization>
 
     <inverse-dynamics>
-      <active type="bool">false</active>
+      <active type="bool">true</active>
       <dt type="double">0.005</dt>
       <alpha type="double">1</alpha>
       <beta type="double">1</beta>
       <last-cfs type="bool">false</last-cfs>
-      <des-contact type="bool">false</des-contact>
+      <des-contact type="bool">true</des-contact>
       <operational-space type="bool">false</operational-space>
     </inverse-dynamics>
 
@@ -77,7 +78,7 @@
       <active type="bool">true</active>
       <stance-on-contact type="bool">false</stance-on-contact>
       <holonomic type="bool">false</holonomic>
-      <step-height type="double">0.02</step-height>
+      <step-height type="double">0.05</step-height>
       <gait-duration type="double">1</gait-duration>
       <!--trot-->
       <gait type="double">0.0 0.5</gait>

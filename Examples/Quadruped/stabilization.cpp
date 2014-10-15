@@ -69,6 +69,7 @@ void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vecto
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
       x[k] = q[foot.chain[k]];
     foot_jacobian(x,foot,boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*x_des[i].pose)),J);
+    J = J.get_sub_mat(0,3,0,J.columns(),workM_);
 
     // Positional Correction
     Ravelin::Vector3d x_err  = x_des[i] - Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));

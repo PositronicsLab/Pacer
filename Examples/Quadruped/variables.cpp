@@ -17,7 +17,12 @@ constexpr unsigned int str2int(const char* str, int h = 0)
 
 static int str2bool(const std::string& str)
 {
-    return (str.compare(std::string("true")) == 0)? 1 : 0;
+  if(str.compare(std::string("true")) == 0)
+    return 1;
+  else if (str.compare(std::string("false")) == 0)
+    return 0;
+
+  assert(false);
 }
 
 std::vector<std::string> split(std::string const &input) {
@@ -83,11 +88,11 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
             case (str2int("bool")):
               if(elements.size()>1)
               {
-                std::vector<bool> typed_elements;
+                std::vector<int> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
-                        [](std::string const& val) {return (bool) str2bool(val);});
-                CVarUtils::CreateCVar<std::vector<bool> >(tag+n->name,typed_elements, help );
+                        [](std::string const& val) {return str2bool(val);});
+                CVarUtils::CreateCVar<std::vector<int> >(tag+n->name,typed_elements, help );
               }
               else
                 CVarUtils::CreateCVar<int>(tag+n->name,str2bool(elements[0]), help );

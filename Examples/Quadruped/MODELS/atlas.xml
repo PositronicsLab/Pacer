@@ -9,15 +9,16 @@
   <MOBY>
 
   <RungeKuttaIntegrator id="rk4" />
+  <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
 
-  <GravityForce id="gravity" accel="0 -9.81 0" />
+  <GravityForce id="gravity" accel="0 0 -9.81" />
 
-  <EventDrivenSimulator integrator-id="rk4" Euler-step="0.001">
+  <EventDrivenSimulator integrator-id="bs" Euler-step="0.001">
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="GROUND" />
     <DynamicBody dynamic-body-id="ATLAS" />
     <DisabledPair object1-id="ATLAS" object2-id="ATLAS"/>
-    <ContactParameters object1-id="GROUND" object2-id="ATLAS" epsilon="0" mu-coulomb="0.5" />
+    <ContactParameters object1-id="GROUND" object2-id="ATLAS" epsilon="0" mu-coulomb="1.4" />
   </EventDrivenSimulator>
 
   <SDF filename="atlas_simple_shapes.sdf"/>

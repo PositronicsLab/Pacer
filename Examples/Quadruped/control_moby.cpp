@@ -217,11 +217,11 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     }
   }
 
-  OUT_LOG(logDEBUG)<< "cfs_moby = [";
+//  OUT_LOG(logDEBUG)<< "cfs_moby = [";
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
       for(int j=0;j<eefs_[i].point.size();j++){
-      OUT_LOG(logDEBUG) << " " << eefs_[i].impulse[j];
+//      OUT_LOG(logDEBUG) << " " << eefs_[i].impulse[j];
 #ifdef VISUALIZE_MOBY
       visualize_ray(  eefs_[i].point[j],
                       eefs_[i].point[j] + eefs_[i].impulse[j]*10.0,
@@ -233,10 +233,10 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       ii++;
       }
     } else {
-      OUT_LOG(logDEBUG) << " [0.0, 0.0, 0.0] ";
+//      OUT_LOG(logDEBUG) << " [0.0, 0.0, 0.0] ";
     }
   }
-  OUT_LOG(logDEBUG) << "]';" << std::endl;
+//  OUT_LOG(logDEBUG) << "]';" << std::endl;
 }
 
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){

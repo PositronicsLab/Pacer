@@ -111,12 +111,12 @@ void Robot::contact_jacobian_null_stabilizer(const Ravelin::MatrixNd& R,const Ra
 void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos_des,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
-
+  int NC = R.columns()/5;
   if(NC == 0) return;
 //  workM_ = R;
 //  workM_.remove_row(0);
-  Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,N.columns()*3);
-  Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,N.columns()*3);
+  Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,NC*3);
+  Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,NC*3);
 
   OUTLOG(Jb,"Jb",logDEBUG1);
   OUTLOG(Jq,"Jq",logDEBUG1);
@@ -125,8 +125,12 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
   generalized_qd.get_sub_vec(NUM_JOINT_DOFS,generalized_qd.rows(), vel_base);
   pos_base.set_sub_vec(0,center_of_mass_x);
   pos_base.set_sub_vec(3,roll_pitch_yaw);
+
   OUTLOG(vel_base,"vel_base",logDEBUG1);
   OUTLOG(vel_des,"vel_des",logDEBUG1);
+  OUTLOG(pos_base,"pos_base",logDEBUG1);
+  OUTLOG(pos_des,"pos_des",logDEBUG1);
+
   static Ravelin::VectorNd sum_p_err = Ravelin::VectorNd::zero(6);
   for(int i=0;i<6;i++){
     sum_p_err[i]   += (pos_des[i] - pos_base[i]);
@@ -142,13 +146,15 @@ void Robot::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::ve
   OUTLOG(ws_correct,"ws_correct",logDEBUG);
 
   // Remove non-compressive elements (cN < 0)
-  for(int i=0;i<N.columns();i++)
-    if(ws_correct[i] < 0.0)
-      ws_correct[i] = 0.0;
+//  for(int i=0;i<NC;i++)
+//    if(ws_correct[i] < 0.0)
+//      ws_correct[i] = 0.0;
+//  OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
 
 //   Remove Tangential Elements (for now)
-//  for(int i=N.columns();i<ws_correct.rows();i++)
+//  for(int i=NC;i<ws_correct.rows();i++)
 //      ws_correct[i] = 0.0;
+//  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);

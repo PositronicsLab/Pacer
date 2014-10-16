@@ -271,19 +271,16 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
       continue;
 
     for(int j=0;j<foot.point.size();j++){
-      Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
-                                  eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
-                                  eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
-
-      boost::shared_ptr<const Ravelin::Pose3d> impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd(R_foot),foot.point[j].data(),Moby::GLOBAL));
+      boost::shared_ptr<const Ravelin::Pose3d>
+          impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),foot.point[j].data(),Moby::GLOBAL));
 
       dbrobot_->calc_jacobian(impulse_frame,foot.link,workM_);
       workM_.get_sub_mat(0,3,0,NDOFS,J);
 
       Vector3d
-        normal  = foot.normal[j],
-        tan1    = foot.tan1[j],
-        tan2    = foot.tan2[j];
+        &normal  = foot.normal[j],
+        &tan1    = foot.tan1[j],
+        &tan2    = foot.tan2[j];
 
       // TODO: TEST FOR BAD TANGENTS BEFORE DOIGN THIS
       Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);

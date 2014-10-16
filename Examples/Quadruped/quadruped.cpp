@@ -498,10 +498,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   static int &CONTROL_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.active");
   if(CONTROL_IDYN){
-    static double &dt = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.dt");
+    static double &dt_idyn = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.dt");
     static double &alpha = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.alpha");
     static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.des-contact");
     static int &USE_LAST_CFS = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.last-cfs");
+    double DT = (dt_idyn == 0)? dt : dt_idyn;
+
 
     Ravelin::VectorNd cf;
     Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
@@ -519,6 +521,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
 
     if(USE_LAST_CFS){
+      int NC = N.columns();
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active) continue;
@@ -526,7 +529,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
           Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
                                       eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
                                       eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
-          Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].impulse[j],workv3_)*((t-last_time)/dt));
+          Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(eefs_[i].impulse[j],workv3_)*(dt/DT));
           cf[ii] = contact_impulse[0];
           if(contact_impulse[1] >= 0)
             cf[NC+ii] = contact_impulse[1];
@@ -542,28 +545,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
       OUTLOG(cf,"cf z",logDEBUG);
     }
 
-    // ------------------------ WORKSPACE INVERSE DYNAMICS ---------------------
-    static int &WORKSPACE_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.operational-space");
-    static double &beta = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.beta");
-    if(WORKSPACE_IDYN){
-      os_velocity.set_zero(Rw.rows());
-      Ravelin::SVector6d go_to_global;
-      go_to_global = Ravelin::Pose3d::transform(Moby::GLOBAL,Ravelin::SVelocityd(go_to.data(),base_horizontal_frame));
-      workspace_trajectory_goal(go_to_global,x_des,xd_des,xdd_des,beta,dt,os_velocity);
-
-      if(USE_LAST_CFS){
-        if(workspace_inverse_dynamics(generalized_qd,os_velocity,M,R.mult(cf,workv_) += generalized_fext,dt,MU,id))
-          uff += (id*=alpha);
-      }else{
-        if(workspace_inverse_dynamics(generalized_qd,os_velocity,M,generalized_fext,dt,MU,id,cf))
-          uff += (id*=alpha);
-      }
-    } else {
-      if(!inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf))
-        cf.set_zero(NC*5);
-      else
-        uff += (id*=alpha);
-    }
+    if(inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf))
+      uff += (id*=alpha);
   }
 
   // ------------------------- PROCESS FB AND FF FORCES ------------------------
@@ -587,7 +570,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 #ifndef NDEBUG
   OUT_LOG(logINFO)<< "time = "<< t ;
-  OUT_LOG(logINFO)<< "num_contacts = " << NC ;
 
   set_model_state(q,qd);
 
@@ -655,6 +637,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
    OUTLOG(uff,"uff",logINFO);
    OUTLOG(ufb,"ufb",logINFO);
    OUTLOG(u,"u",logINFO);
+
+   int ii = 0;
+   for(int i=0;i<NUM_EEFS;i++){
+     OUT_LOG(logDEBUG) << eefs_[i].id << " contacts: " << eefs_[i].point.size();
+     for(int j=0;j<eefs_[i].point.size();j++,ii++){
+       OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + std::to_string(i) + "]",logDEBUG);
+       OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + std::to_string(i) + "]",logDEBUG);
+     }
+   }
+   OUT_LOG(logDEBUG) << " -- num_contacts: " << ii;
    // -----------------------------------------------------------------------------
 #endif
 

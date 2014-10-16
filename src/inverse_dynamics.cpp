@@ -25,7 +25,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   int nc = N.columns();
 
   static Ravelin::MatrixNd workM1,workM2;
-  static Ravelin::VectorNd workv1, workv2;
+  static Ravelin::VectorNd workv1, workv2,fID;
 
   static Ravelin::VectorNd vq(nq);
   v.get_sub_vec(0,nq,vq);
@@ -79,13 +79,14 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 #endif
 
   // if in mid-air only return ID forces solution
+  F.mult(fext.get_sub_vec(0,nq,workv1),workv2,-1,0);
+  C.mult(workv2 += qdd,fID);
+
   if(nc == 0){
     // Inverse dynamics for a floating base w/ no contact
 //    goal accel
-    Ravelin::VectorNd qdd_ext;
-    F.mult(fext.get_sub_vec(0,nq,workv1),workv2,-1,0);
-    C.mult(workv2 += qdd,x);
-    return false;
+    x = fID;
+    return true;
   }
 
   int nk = ST.columns()/nc;
@@ -116,13 +117,16 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // j = [E,D]*fext*h + vb
   Ravelin::VectorNd j;
-  ED.mult(fext,(j = vb),h,1);
+  // fext + [0;fID]
+  workv1.set_zero(n);
+  workv1.set_sub_vec(0,fID) += fext;
+  ED.mult(workv1,(j = vb),h,1);
 
 //  OUTLOG(j,"j = [ %= [E,D]*fext*h + vb");
 
   // k = [F,E']*fext*h  +  vq
   Ravelin::VectorNd k;
-  FET.mult(fext,(k = vq),h,1);
+  FET.mult(workv1,(k = vq),h,1);
 //  OUTLOG(k,"k = [ % = [F,E']*fext*h  +  vq");
 
   // compute Z and p
@@ -430,6 +434,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   LA_.solve_chol_fast(iF,x);
   x /= h;
 
+  x += fID;
   // Some debugging dialogue
   return true;
 }

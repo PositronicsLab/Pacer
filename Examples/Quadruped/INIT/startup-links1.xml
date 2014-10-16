@@ -17,7 +17,7 @@
        <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
        <!-- the [X Y Z] of end-effector ids respectively -->
        <x type="double">0.12 0.10 -0.14    0.12 -0.10 -0.14    -0.12 0.10 -0.14    -0.12 -0.10 -0.14</x>
-       <foot type="bool">true true true true</foot>
+       <foot type="bool">true              true                true                true</foot>
       </end-effector>
     </init>
 
@@ -28,6 +28,7 @@
         <accel type="bool">false</accel>
         <!-- Gains are for the q of joint ids respectively -->
         <gains>
+<!--        <kp type="double">1e0 1e0 1e0     1e0 1e0 1e0     1e0 1e0 1e0    1e0 1e0 1e0</kp>-->
           <kp type="double">1e1 1e1 1e1     1e1 1e1 1e1     1e1 1e1 1e1    1e1 1e1 1e1</kp>
 <!--          <kp type="double">1e2 1e2 1e2     1e2 1e2 1e2     1e2 1e2 1e2    1e2 1e2 1e2</kp>-->
           <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
@@ -67,7 +68,7 @@
 
     <inverse-dynamics>
       <active type="bool">true</active>
-      <dt type="double">0.005</dt>
+      <dt type="double">0</dt>
       <alpha type="double">1</alpha>
       <last-cfs type="bool">false</last-cfs>
       <des-contact type="bool">false</des-contact>

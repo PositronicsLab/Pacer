@@ -482,6 +482,15 @@ void Quadruped::walk_toward(
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
       foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[i]->origin);
       Ravelin::Origin3d x0 = feet[i]->origin.data();
+
+      // Robot leans into movement
+      x0[0] += command[0]*-0.1;
+      x0[1] += command[1]*-0.1;
+      // lean forward on front feet if moving forward
+      if(x0[0] > 0 && command[0] > 0)
+        x0[2] += command[0]*0.1;
+      x0[1] += command[5]*-0.01;
+
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
       if(fabs(command[5]) > Moby::NEAR_ZERO){
@@ -520,7 +529,7 @@ void Quadruped::walk_toward(
         // velocity correction
         // FEEDBACK CAPTURE POINT
 //        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
-//        OUT_LOG(logERROR) << "Getting " << links_[3+i]->id << " pose";
+//        OUT_LOG(logDEBUG1) << "Getting " << links_[3+i]->id << " pose";
         double eta = 1.3,
                height = 0.30;
         Ravelin::Origin3d rfb = eta*(Ravelin::Origin3d(command.get_upper())
@@ -585,7 +594,7 @@ void Quadruped::walk_toward(
 //        center_of_contact.point[2] = 0.13;
 //        double ground_z = Utility::get_z_plane(hip_pos[0],hip_pos[1],center_of_contact.normal,center_of_contact.point);
 //        Ravelin::Vector3d ground_offset(0,0,ground_z - center_of_contact.point[2],Moby::GLOBAL);
-//        OUTLOG(ground_offset,"ground_offset",logERROR);
+//        OUTLOG(ground_offset,"ground_offset",logDEBUG1);
 //        (*control_points.rbegin())[2] -= Ravelin::Pose3d::transform_vector(base_horizontal_frame,ground_offset)[2];
 //      }
 

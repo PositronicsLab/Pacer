@@ -249,8 +249,8 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
     t.push_back(new std::thread(::calc_contact_jacobians,N,D,ii,NC,eefs_[i],environment_frame,dbrobot_));
     ii++;
   }
-  OUTLOG(N,"N",logERROR);
-  OUTLOG(D,"D",logERROR);
+  OUTLOG(N,"N",logDEBUG1);
+  OUTLOG(D,"D",logDEBUG1);
 
   R.block(0,N.rows(),0,N.columns()) = N;
   R.block(0,D.rows(),N.columns(),N.columns()+D.columns()) = D;

@@ -33,8 +33,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
   this->generalized_qd = generalized_qd_in;
   this->generalized_qdd = generalized_qdd_in;
   this->generalized_fext = generalized_fext_in;
-  OUTLOG(generalized_q,"generalized_q",logDEBUG);
-  OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
 
   // Set Robot Data in robot
   update();
@@ -98,15 +96,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
     feet.push_back(&eefs_[i]);
     feet[ii]->origin.pose = base_horizontal_frame;
 
-    // Robot leans into movement
-//      foot_origin[i][0] += go_to[0]*-0.1;
-//      foot_origin[i][1] += go_to[1]*-0.1;
-//      // lean forward on front feet if moving forward
-//      if(foot_origin[i][0] > 0 && go_to[0] > 0)
-//        foot_origin[i][2] += go_to[0]*0.1;
-//      foot_origin[i][1] += go_to[5]*-0.01;
-//      foot_origin[i].pose = base_frame;
-
 #ifdef VISUALIZE_MOBY
     visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
                     Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
@@ -117,17 +106,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #endif
     ii++;
   }
-
-  // NOTE: Some minor balancing code
-//  for(unsigned i=0;i< NUM_EEFS;i++){
-//    if(!is_foot[i]){
-//      eefs_[i].origin[0] += (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
-//      eefs_[i].origin[1] += (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
-//    } else {
-//      eefs_[i].origin[0] -= (center_of_feet_x[0]-center_of_mass_x[0])*0.01;
-//      eefs_[i].origin[1] -= (center_of_feet_x[1]-center_of_mass_x[1])*0.01;
-//    }
-//  }
 
   static Ravelin::Vector3d sum_base_velocity;
   static std::queue<Ravelin::Vector3d> base_vel_queue;
@@ -173,28 +151,28 @@ Ravelin::VectorNd& Quadruped::control(double t,
       double distance_to_wp = (next_waypoint - center_of_mass_x).norm();
 
       if( distance_to_wp < 0.025){
-        OUT_LOG(logERROR) << "waypoint reached, incrementing waypoint.";
-        OUTLOG(next_waypoint,"this_wp",logERROR);
-        OUTLOG(next_waypoint,"center_of_mass_x",logERROR);
+        OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
+        OUTLOG(next_waypoint,"this_wp",logDEBUG1);
+        OUTLOG(next_waypoint,"center_of_mass_x",logDEBUG1);
 
         patrol_index = (patrol_index+1) % num_waypoints;
 
         next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
       }
 # ifdef VISUALIZE_MOBY
-      OUT_LOG(logERROR) << "num_wps = " << num_waypoints;
-      OUT_LOG(logERROR) << "distance_to_wp = " << distance_to_wp;
-      OUT_LOG(logERROR) << "patrol_index = " << patrol_index;
+      OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
+      OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
+      OUT_LOG(logDEBUG1) << "patrol_index = " << patrol_index;
     visualize_ray(  next_waypoint,
                     center_of_mass_x,
                     Ravelin::Vector3d(1,0.5,0),
                     sim
                   );
-    OUTLOG(next_waypoint,"next_wp",logERROR);
+    OUTLOG(next_waypoint,"next_wp",logDEBUG1);
 
     for(int i=0;i<num_waypoints;i++){
       Ravelin::Vector3d wp(patrol_points[i*2],patrol_points[i*2+1],next_waypoint[2],environment_frame);
-      OUTLOG(wp,"wp",logERROR);
+      OUTLOG(wp,"wp",logDEBUG1);
       visualize_ray(  wp,
                       wp,
                       Ravelin::Vector3d(1,0.5,0),
@@ -272,14 +250,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
     Ravelin::SVector6d goto_6d = go_to;
     goto_6d.pose = base_frame;
-
-    if(roll_pitch_yaw[1] > 0.01){
-//      goto_6d[0] += 0.05;
-//      displace_base_link[4] += roll_pitch_yaw[1]*0.1;
-    } else if(roll_pitch_yaw[1] < 0.01){
-//      goto_6d[0] -= 0.05;
-//      displace_base_link[4] += roll_pitch_yaw[1]*0.1;
-    }
 
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
     walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,sum_base_velocity/ (double)base_vel_queue.size(),center_of_mass_x,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
@@ -573,42 +543,12 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   set_model_state(q,qd);
 
-  if(Log::ToString(Log::ReportingLevel()).compare("DEBUG") == 0){
-    Ravelin::MatrixNd Jf;
-    for(int i=0;i<NUM_EEFS;i++){
-      boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(x_des[i].pose));
-      EndEffector& foot = eefs_[i];
-
-      // Positional Correction
-      Ravelin::Vector3d x_des_now = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-      Ravelin::Vector3d x_err  = x_des[i] - x_des_now;
-      OUTLOG( x_des_now,foot.id + "_x",logDEBUG);
-      OUTLOG( x_des[i],foot.id + "_x_des",logDEBUG);
-      OUTLOG( x_err,foot.id + "_x_err",logDEBUG);
-
-      // Remove portion of foot velocity that can't be affected by corrective forces
-      event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-      dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
-      Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-      Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
-      Jb.mult(vb,workv3_);
-      workv3_.pose = x_des[i].pose;
-
-      // Velocity Correction
-      Ravelin::Vector3d xd_des_now = (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
-      Ravelin::Vector3d xd_err = xd_des[i] - xd_des_now;
-      OUTLOG( xd_des_now,foot.id + "_xd",logDEBUG);
-      OUTLOG( xd_des[i],foot.id + "_xd_des",logDEBUG);
-      OUTLOG( xd_err,foot.id + "_xd_err",logDEBUG);
-    }
-  }
-
-   OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err"<<std::endl;
+   OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
    for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
      if(joints_[i])
      for(int j=0;j<joints_[i]->num_dof();j++,ii++){
      OUT_LOG(logINFO)<< std::to_string(j)+joints_[i]->id << ":"<< active_joints_[std::to_string(j)+joints_[i]->id]
-               << "\t " <<  std::setprecision(4) << u[ii]
+               << "\t " <<  std::setprecision(3) << u[ii]
                << "\t| " << joints_[i]->q[j]
                << "\t " << q_des[ii]
                << "\t " << q[ii] - q_des[ii]
@@ -626,17 +566,48 @@ Ravelin::VectorNd& Quadruped::control(double t,
    OUTLOG(center_of_feet_x,"center_of_feet_x",logINFO);
    OUTLOG(center_of_mass_xd,"CoM_xd",logINFO);
    OUTLOG(center_of_mass_xdd,"CoM_xdd",logINFO);
-   OUTLOG(q,"q",logDEBUG);
-   OUTLOG(qd,"qd",logDEBUG);
-   OUTLOG(qdd,"qdd",logDEBUG);
-   OUTLOG(q_des,"q_des",logDEBUG);
-   OUTLOG(qd_des,"qd_des",logDEBUG);
-   OUTLOG(qdd_des,"qdd_des",logDEBUG);
-   OUTLOG(generalized_fext,"fext",logDEBUG);
+   OUTLOG(q,"q",logINFO);
+   OUTLOG(qd,"qd",logINFO);
+   OUTLOG(qdd,"qdd",logINFO);
+   OUTLOG(q_des,"q_des",logINFO);
+   OUTLOG(qd_des,"qd_des",logINFO);
+   OUTLOG(qdd_des,"qdd_des",logINFO);
+   OUTLOG(generalized_fext,"fext",logINFO);
+   OUTLOG(generalized_q,"generalized_q",logDEBUG);
+   OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
 
    OUTLOG(uff,"uff",logINFO);
    OUTLOG(ufb,"ufb",logINFO);
    OUTLOG(u,"u",logINFO);
+
+   Ravelin::MatrixNd Jf;
+   for(int i=0;i<NUM_EEFS;i++){
+     boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(x_des[i].pose));
+     EndEffector& foot = eefs_[i];
+
+     // Positional Correction
+     Ravelin::Vector3d x_des_now = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+     Ravelin::Vector3d x_err  = x_des[i] - x_des_now;
+     OUTLOG( x_des_now,foot.id + "_x",logINFO);
+     OUTLOG( x_des[i],foot.id + "_x_des",logINFO);
+     OUTLOG( x_err,foot.id + "_x_err",logINFO);
+
+     // Remove portion of foot velocity that can't be affected by corrective forces
+     event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+     dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
+     Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
+     Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
+     Jb.mult(vb,workv3_);
+     workv3_.pose = x_des[i].pose;
+
+     // Velocity Correction
+     // Need to account for base being a moving frame (but only converting as a static frame)
+     Ravelin::Vector3d xd_des_now = (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
+     Ravelin::Vector3d xd_err = xd_des[i] - xd_des_now;
+     OUTLOG( xd_des_now,foot.id + "_xd",logINFO);
+     OUTLOG( xd_des[i],foot.id + "_xd_des",logINFO);
+     OUTLOG( xd_err,foot.id + "_xd_err",logINFO);
+   }
 
    int ii = 0;
    for(int i=0;i<NUM_EEFS;i++){
@@ -647,6 +618,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
      }
    }
    OUT_LOG(logDEBUG) << " -- num_contacts: " << ii;
+   OUT_LOG(logDEBUG) << "==============================================" << std::endl;
    // -----------------------------------------------------------------------------
 #endif
 
@@ -693,8 +665,8 @@ void Quadruped::init(){
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
 
-  OUT_LOG(logERROR) << "Log Type : " << LOG_TYPE;
-  OUT_LOG(logERROR) << "logERROR";
+  OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
+  OUT_LOG(logDEBUG1) << "logDEBUG1";
   OUT_LOG(logINFO) << "logINFO";
   OUT_LOG(logDEBUG) << "logDEBUG";
   OUT_LOG(logDEBUG1) << "logDEBUG1";
@@ -737,8 +709,8 @@ void Quadruped::init(){
  const double* data = &base_start.front();
  displace_base_link = Ravelin::SVector6d(data);
 
- OUTLOG(joint_names,"joint_names",logERROR);
- OUTLOG(joints_start,"joints_start",logERROR);
+ OUTLOG(joint_names,"joint_names",logDEBUG1);
+ OUTLOG(joints_start,"joints_start",logDEBUG1);
 
  // MAKE SURE DATA PARSED PROPERLY
 
@@ -770,8 +742,8 @@ void Quadruped::init(){
       torque_limits_u[ii] =  torque_limits_[std::to_string(j)+joints_[i]->id];
     }
   }
-  OUTLOG(torque_limits_l,"torque_limits_l",logERROR);
-  OUTLOG(torque_limits_u,"torque_limits_u",logERROR);
+  OUTLOG(torque_limits_l,"torque_limits_l",logDEBUG1);
+  OUTLOG(torque_limits_u,"torque_limits_u",logDEBUG1);
 
   // Initialize Foot Structures
   OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;

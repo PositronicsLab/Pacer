@@ -68,10 +68,10 @@
 
     <inverse-dynamics>
       <active type="bool">true</active>
-      <dt type="double">0</dt>
+      <dt type="double">0.005</dt>
       <alpha type="double">1</alpha>
       <last-cfs type="bool">false</last-cfs>
-      <des-contact type="bool">false</des-contact>
+      <des-contact type="bool">true</des-contact>
     </inverse-dynamics>
 
     <locomotion>

@@ -100,3 +100,6 @@ target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUA
 
 add_library(${PROJECT_NAME}Plugin MODULE control_moby.cpp)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
+
+install (TARGETS ${PROJECT_NAME} DESTINATION lib)
+install (TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)

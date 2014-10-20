@@ -69,7 +69,7 @@
       <active type="bool">true</active>
       <dt type="double">0</dt>
       <alpha type="double">1</alpha>
-      <last-cfs type="bool">false</last-cfs>
+      <last-cfs type="bool">true</last-cfs>
       <des-contact type="bool">false</des-contact>
     </inverse-dynamics>
 

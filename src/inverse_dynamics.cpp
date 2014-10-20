@@ -81,7 +81,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // if in mid-air only return ID forces solution
   // fID + fext = M qdd  ==> fID = M qdd - fext
-  C.mult((workv1 = qdd) -= F.mult(fext.get_sub_vec(0,nq,workv_),workv2),fID);
+  C.mult((workv1 = qdd),fID) -= fext.get_sub_vec(0,nq,workv2);
 
   if(nc == 0){
     // Inverse dynamics for a floating base w/ no contact
@@ -116,7 +116,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // Incorporate fID into acting forces on robot, then find contact forces
   workv1.set_zero(n);
   workv1.set_sub_vec(0,fID);
-  fext -= workv1;
+  fext += workv1;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);

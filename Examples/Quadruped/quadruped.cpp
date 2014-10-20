@@ -512,7 +512,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #ifdef TIMING
     std::clock_t start = std::clock();
 #endif
-    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,DT,MU,id,cf))
+    Ravelin::VectorNd fext_scaled;
+    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf))
       uff += (id*=alpha);
 #ifdef TIMING
     // Milliseconds

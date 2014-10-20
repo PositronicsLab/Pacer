@@ -1,6 +1,7 @@
 for var in "$@"
 do
+      pushd .
       cd "$var"
       screen -d -m ~/Projects/Locomotion/Examples/Quadruped/SCRIPTS/parse_data.sh 
-      cd ~/Projects/Locomotion/Examples/Quadruped
+      popd
 done

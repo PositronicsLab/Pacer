@@ -18,7 +18,7 @@ grep ".._FOOT_xd = \[" out.log > xd.mat
 grep ".._FOOT_xd_des = \[" out.log > xd_des.mat
 grep ".._FOOT_xd_err = \[" out.log > xd_err.mat
 grep "roll_pitch_yaw = " out.log > rpy.mat
-grep "timing_idyn = " out.log > t_idyn.mat
+grep "idyn_timing = " out.log > t_idyn.mat
 grep "num_contacts = " out.log > nc.mat
 
 rpl -q "qdd = [" "" qdd.mat
@@ -57,8 +57,9 @@ rpl -q "ufb = [" "" ufb.mat
 rpl -q "uff = [" "" uff.mat
 rpl -q "u = [" "" u.mat
 rpl -q "roll_pitch_yaw = [" "" rpy.mat
-rpl -q "timing_idyn = [" "" t_idyn.mat
+rpl -q "idyn_timing = " "" t_idyn.mat
 rpl -q "num_contacts = " "" nc.mat
 
 rpl -q " ]';" "" *.mat
 rpl -q "]';" "" *.mat
+rpl -q ";" "" *.mat

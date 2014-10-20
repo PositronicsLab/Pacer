@@ -479,6 +479,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
           std::fill(MU.row(ii).begin(),MU.row(ii).end(),eefs_[i].mu_coulomb[j]);
 
     if(USE_LAST_CFS){
+      static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.last-cfs-filter");
+
       int NC = N.columns();
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
@@ -500,9 +502,35 @@ Ravelin::VectorNd& Quadruped::control(double t,
         }
       }
       Utility::check_finite(cf);
+
+      static std::queue<Ravelin::VectorNd>
+          cf_delay_queue;
+      static std::queue<Ravelin::MatrixNd>
+          N_delay_queue,
+          D_delay_queue;
+
+      if(FILTER_CFS && NC>0){
+
+        cf_delay_queue.push(cf);
+        N_delay_queue.push(N);
+        D_delay_queue.push(D);
+        cf = cf_delay_queue.front();
+        N = N_delay_queue.front();
+        D = D_delay_queue.front();
+        if(cf_delay_queue.size() >= 2){
+           cf_delay_queue.pop();
+           N_delay_queue.pop();
+           D_delay_queue.pop();
+        }
+      } else {
+        cf_delay_queue = std::queue<Ravelin::VectorNd>();
+        N_delay_queue = std::queue<Ravelin::MatrixNd>();
+        D_delay_queue = std::queue<Ravelin::MatrixNd>();
+      }
     } else {
       cf.set_zero(0);
     }
+
 
     // Reset active feet
     for(int i=0;i<NUM_EEFS;i++)

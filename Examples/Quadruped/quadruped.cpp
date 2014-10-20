@@ -28,14 +28,16 @@ Ravelin::VectorNd& Quadruped::control(double t,
                                       Ravelin::VectorNd& u){
   // Import Robot Data
   static double last_time = -0.001;
-  double dt = t - last_time;
-  this->generalized_q = generalized_q_in;
-  this->generalized_qd = generalized_qd_in;
-  this->generalized_qdd = generalized_qdd_in;
-  this->generalized_fext = generalized_fext_in;
+  const double dt = t - last_time;
+  new_data.generalized_q = generalized_q_in;
+  new_data.generalized_qd = generalized_qd_in;
+  new_data.generalized_qdd = generalized_qdd_in;
+  new_data.generalized_fext = generalized_fext_in;
 
   // Set Robot Data in robot
   update();
+
+  data = &new_data;
 
   static bool inited = false;
   if(!inited){
@@ -72,7 +74,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     }
   }
 
-  set_model_state(q,qd);
+  set_model_state(data->q,data->qd);
 
   for(unsigned i=0;i< NUM_EEFS;i++){
     x_des[i] = eefs_[i].origin;//Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
@@ -109,7 +111,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   static Ravelin::Vector3d sum_base_velocity;
   static std::queue<Ravelin::Vector3d> base_vel_queue;
-  base_vel_queue.push(workv3_ = Ravelin::Vector3d(generalized_qd[NUM_JOINT_DOFS],generalized_qd[NUM_JOINT_DOFS+1],generalized_qd[NUM_JOINT_DOFS+2]));
+  base_vel_queue.push(workv3_ = Ravelin::Vector3d(data->generalized_qd[NUM_JOINT_DOFS],data->generalized_qd[NUM_JOINT_DOFS+1],data->generalized_qd[NUM_JOINT_DOFS+2]));
   sum_base_velocity += workv3_;
   if(base_vel_queue.size() > 100){
      sum_base_velocity -= base_vel_queue.front();
@@ -145,10 +147,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
       int num_waypoints = patrol_points.size()/2;
       static int patrol_index = 0;
       static Ravelin::Vector3d
-          next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
-      next_waypoint[2] = center_of_mass_x[2];
+          next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],data->center_of_mass_x[2],environment_frame);
+      next_waypoint[2] = data->center_of_mass_x[2];
 
-      double distance_to_wp = (next_waypoint - center_of_mass_x).norm();
+      double distance_to_wp = (next_waypoint - data->center_of_mass_x).norm();
 
       if( distance_to_wp < 0.025){
         OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
@@ -157,7 +159,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
         patrol_index = (patrol_index+1) % num_waypoints;
 
-        next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],center_of_mass_x[2],environment_frame);
+        next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],data->center_of_mass_x[2],environment_frame);
       }
 # ifdef VISUALIZE_MOBY
       OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
@@ -189,7 +191,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     if(goto_point.size() == 2){
       Ravelin::Vector3d goto_direction =
           Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
-          - Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
+          - Ravelin::Vector3d(data->center_of_mass_x[0],data->center_of_mass_x[1],0,environment_frame);
       goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
       goto_direction.normalize();
 
@@ -252,7 +254,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     goto_6d.pose = base_frame;
 
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
-    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,sum_base_velocity/ (double)base_vel_queue.size(),center_of_mass_x,t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
+    walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,sum_base_velocity/ (double)base_vel_queue.size(),data->center_of_mass_x,t,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     for(int i=0,ii=0;i<NUM_EEFS;i++){
       if(is_foot[i] == 0) continue;
@@ -265,7 +267,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       ii++;
     }
   }
-  trajectory_ik(x_des,xd_des, xdd_des,q,q_des,qd_des,qdd_des);
+  trajectory_ik(x_des,xd_des, xdd_des,data->q,q_des,qd_des,qdd_des);
 
   // Find center of stance feet
   {
@@ -314,7 +316,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
     workv3_.pose = center_of_feet_x.pose;
     center_of_feet_xd = (center_of_feet_x - workv3_)*dt;
     if(center_of_feet_queue.size() == 0 || ii == 0)
-      center_of_feet_x = center_of_mass_x;
+      center_of_feet_x = data->center_of_mass_x;
 #ifdef VISUALIZE_MOBY
   visualize_ray(  center_of_feet_x,
                   center_of_feet_x,
@@ -326,29 +328,6 @@ Ravelin::VectorNd& Quadruped::control(double t,
   OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
   OUTLOG(center_of_feet_x,"center_of_feet_x (avg 1 sec)",logDEBUG);
   }
-
-  static Ravelin::MatrixNd MU;
-  MU.set_zero(NC,2);
-
-#ifdef EXPERIMENTAL_CODE
-  // --------------------------- FRICTION ESTIMATION ---------------------------
-  {
-    Ravelin::VectorNd cf;
-    double err = friction_estimation(vel,fext,dt,N,D,M,MU,cf);
-    OUT_LOG(logINFO)<< "err (friction estimation): " << err << std::endl;
-    OUTLOG(MU,"MU",logDEBUG);
-    OUTLOG(cf,"contact_forces",logDEBUG);
-  }
-#else
-  for(int i=0,ii=0;i<NUM_EEFS;i++){
-    if(eefs_[i].active){
-      for(int j=0;j<eefs_[i].point.size();j++,ii++){
-        for(int k=0;k<2;k++)
-          MU(ii,k) = eefs_[i].mu_coulomb[j];
-      }
-    }
-  }
-#endif
 
   // ----------------------------- STABILIZATION -------------------------------
   static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("quadruped.stabilization.active");
@@ -372,17 +351,21 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
 //      xd_des[0] = 0;
 
-      Ravelin::MatrixNd N = this->N,D = this->D,R = this->R;
+      Ravelin::MatrixNd N = data->N,
+                        D = data->D,
+                        R = data->R;
       // Recalculate contact jacobians based on desired lift-off feet
       if(USE_DES_CONTACT){
-        NC = 0;
-        for(int i=0;i<NUM_EEFS;i++){
-          eefs_[i].active = eefs_[i].stance;
-          if(eefs_[i].active)
-            NC += eefs_[i].point.size();
-        }
+        for(int i=0;i<NUM_EEFS;i++)
+          if(eefs_[i].active && !eefs_[i].stance)
+            eefs_[i].active = false;
         calc_contact_jacobians(N,D,R);
       }
+
+      // Reset active feet
+      for(int i=0;i<NUM_EEFS;i++)
+        if(eefs_[i].point.size() > 0)
+          eefs_[i].active = true;
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       contact_jacobian_stabilizer(R,Kp,Kv,Ki,x_des,xd_des,fb);
@@ -434,7 +417,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       }
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-      PID::control(q_des, qd_des,q,qd,joint_names_, gains,fb);
+      PID::control(q_des, qd_des,data->q,data->qd,joint_names_, gains,fb);
 
       if(FEEDBACK_ACCEL)
         qdd_des += fb;
@@ -455,7 +438,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.ki");
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-      eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,q,qd,fb);
+      eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,data->q,data->qd,fb);
 
       if(FEEDBACK_ACCEL)
         qdd_des += fb;
@@ -478,17 +461,22 @@ Ravelin::VectorNd& Quadruped::control(double t,
     Ravelin::VectorNd cf;
     Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
 
-    Ravelin::MatrixNd N = this->N,D = this->D,R = this->R;
-    // Recalculate contact jacobians based on desired lift-off feet
+    Ravelin::MatrixNd N = data->N,
+                      D = data->D,
+                      R = data->R;
     if(USE_DES_CONTACT){
-      NC = 0;
-      for(int i=0;i<NUM_EEFS;i++){
-        eefs_[i].active = eefs_[i].stance;
-        if(eefs_[i].active)
-          NC += eefs_[i].point.size();
-      }
+      for(int i=0;i<NUM_EEFS;i++)
+        if(eefs_[i].active && !eefs_[i].stance)
+          eefs_[i].active = false;
       calc_contact_jacobians(N,D,R);
     }
+
+    Ravelin::MatrixNd MU;
+    MU.set_zero(N.columns(),2);
+    for(int i=0,ii=0;i<NUM_EEFS;i++)
+      if(eefs_[i].active)
+        for(int j=0;j<eefs_[i].point.size();j++,ii++)
+          std::fill(MU.row(ii).begin(),MU.row(ii).end(),eefs_[i].mu_coulomb[j]);
 
     if(USE_LAST_CFS){
       int NC = N.columns();
@@ -512,11 +500,24 @@ Ravelin::VectorNd& Quadruped::control(double t,
         }
       }
       Utility::check_finite(cf);
-      OUTLOG(cf,"cf z",logDEBUG);
+    } else {
+      cf.set_zero(0);
     }
 
-    if(inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf))
+    // Reset active feet
+    for(int i=0;i<NUM_EEFS;i++)
+      if(eefs_[i].point.size() > 0)
+        eefs_[i].active = true;
+
+#ifdef TIMING
+    std::clock_t start = std::clock();
+#endif
+    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,DT,MU,id,cf))
       uff += (id*=alpha);
+#ifdef TIMING
+    // Milliseconds
+    OUTLOG(((std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000)),"idyn_timing",logINFO);
+#endif
   }
 
   // ------------------------- PROCESS FB AND FF FORCES ------------------------
@@ -531,7 +532,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   // Enforce torque limits
   for(unsigned i=0;i< NUM_JOINT_DOFS;i++){
-//    assert(u[i] <= torque_limits_u[i] && u[i] >= torque_limits_l[i]);
+    // Crash if the robot is attempting to apply excessive force
+//    assert(u[i] <= 2.0*torque_limits_u[i] && u[i] >= 2.0*torque_limits_l[i]);
+
     if(u[i] > torque_limits_u[i])
       u[i] = torque_limits_u[i];
     else if(u[i] < torque_limits_l[i])
@@ -541,7 +544,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 #ifndef NDEBUG
   OUT_LOG(logINFO)<< "time = "<< t ;
 
-  set_model_state(q,qd);
+  set_model_state(data->q,data->qd);
 
    OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
    for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
@@ -551,30 +554,30 @@ Ravelin::VectorNd& Quadruped::control(double t,
                << "\t " <<  std::setprecision(3) << u[ii]
                << "\t| " << joints_[i]->q[j]
                << "\t " << q_des[ii]
-               << "\t " << q[ii] - q_des[ii]
+               << "\t " << data->q[ii] - q_des[ii]
                << "\t| " << joints_[i]->qd[j]
                << "\t " << qd_des[ii]
-               << "\t " <<  qd[ii] - qd_des[ii]
-               << "\t| " << qdd[ii]
+               << "\t " <<  data->qd[ii] - qd_des[ii]
+               << "\t| " << data->qdd[ii]
                << "\t " << qdd_des[ii]
-               << "\t " <<  (qdd[ii] - qdd_des[ii]);
+               << "\t " <<  (data->qdd[ii] - qdd_des[ii]);
      }
    }
-   OUTLOG(roll_pitch_yaw,"roll_pitch_yaw",logINFO);
-   OUTLOG(zero_moment_point,"ZmP",logINFO);
-   OUTLOG(center_of_mass_x,"CoM_x",logINFO);
+   OUTLOG(data->roll_pitch_yaw,"roll_pitch_yaw",logINFO);
+   OUTLOG(data->zero_moment_point,"ZmP",logINFO);
+   OUTLOG(data->center_of_mass_x,"CoM_x",logINFO);
    OUTLOG(center_of_feet_x,"center_of_feet_x",logINFO);
-   OUTLOG(center_of_mass_xd,"CoM_xd",logINFO);
-   OUTLOG(center_of_mass_xdd,"CoM_xdd",logINFO);
-   OUTLOG(q,"q",logINFO);
-   OUTLOG(qd,"qd",logINFO);
-   OUTLOG(qdd,"qdd",logINFO);
+   OUTLOG(data->center_of_mass_xd,"CoM_xd",logINFO);
+   OUTLOG(data->center_of_mass_xdd,"CoM_xdd",logINFO);
+   OUTLOG(data->q,"q",logINFO);
+   OUTLOG(data->qd,"qd",logINFO);
+   OUTLOG(data->qdd,"qdd",logINFO);
    OUTLOG(q_des,"q_des",logINFO);
    OUTLOG(qd_des,"qd_des",logINFO);
    OUTLOG(qdd_des,"qdd_des",logINFO);
-   OUTLOG(generalized_fext,"fext",logINFO);
-   OUTLOG(generalized_q,"generalized_q",logDEBUG);
-   OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
+   OUTLOG(data->generalized_fext,"fext",logINFO);
+   OUTLOG(data->generalized_q,"generalized_q",logDEBUG);
+   OUTLOG(data->generalized_qd,"generalized_qd",logDEBUG);
 
    OUTLOG(uff,"uff",logINFO);
    OUTLOG(ufb,"ufb",logINFO);
@@ -596,7 +599,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
      event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
      dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
      Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-     Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
+     Ravelin::SharedConstVectorNd vb = data->generalized_qd.segment(NUM_JOINTS,NDOFS);
      Jb.mult(vb,workv3_);
      workv3_.pose = x_des[i].pose;
 
@@ -611,16 +614,19 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
    int ii = 0;
    for(int i=0;i<NUM_EEFS;i++){
-     OUT_LOG(logDEBUG) << eefs_[i].id << " contacts: " << eefs_[i].point.size();
+     OUT_LOG(logINFO) << eefs_[i].id << " contacts: " << eefs_[i].point.size();
      for(int j=0;j<eefs_[i].point.size();j++,ii++){
-       OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + std::to_string(i) + "]",logDEBUG);
-       OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + std::to_string(i) + "]",logDEBUG);
+       OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + std::to_string(i) + "]",logINFO);
+       OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + std::to_string(i) + "]",logINFO);
+       OUTLOG(eefs_[i].impulse[j],eefs_[i].id + "_impulse[" + std::to_string(i) + "]",logINFO);
      }
    }
-   OUT_LOG(logDEBUG) << " -- num_contacts: " << ii;
-   OUT_LOG(logDEBUG) << "==============================================" << std::endl;
+   OUT_LOG(logINFO) << "num_contacts = " << ii;
+   OUT_LOG(logINFO) << "==============================================" << std::endl;
    // -----------------------------------------------------------------------------
 #endif
+
+   assert(data->generalized_fext.norm() < 1e+6);
 
    reset_contact();
    last_time = t;

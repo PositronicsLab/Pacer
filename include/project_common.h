@@ -36,6 +36,10 @@
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
+#ifdef TIMING
+#include <ctime>
+#endif
+
 // ----------------------------------------------------------------------------
 
 const double grav     = 9.8; // M/s.s

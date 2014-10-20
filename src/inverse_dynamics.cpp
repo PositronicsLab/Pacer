@@ -81,7 +81,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // if in mid-air only return ID forces solution
   // fID + fext = M qdd  ==> fID = M qdd - fext
-  C.mult(qdd,fID) -= fext.get_sub_vec(0,nq,workv1);
+  C.mult((workv1 = qdd) -= F.mult(fext.get_sub_vec(0,nq,workv_),workv2),fID);
 
   if(nc == 0){
     // Inverse dynamics for a floating base w/ no contact
@@ -116,7 +116,7 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   // Incorporate fID into acting forces on robot, then find contact forces
   workv1.set_zero(n);
   workv1.set_sub_vec(0,fID);
-  fext += workv1;
+  fext -= workv1;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -137,11 +137,24 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
 
   // Use Sensed contact forces
   if(cf_final.rows() != 0){
+    Ravelin::VectorNd fext_cf;
+    // conventional way of incorporating contact forces into ID problem
+    R.mult(cf_final,fext_cf = fext_,1.0/h,1);
+    C.mult((workv1 = qdd) -= F.mult(fext_cf.get_sub_vec(0,nq,workv_),workv2),x);
+    workv1 = x;
+
+    // This produces a very good sensed contact controller
     (x = vqstar) -= k;
     FET.mult(R,workM1);
     workM1.mult(cf_final,x,-1,1);
     LA_.solve_chol_fast(iF,x);
     x /= h;
+
+    OUTLOG(fID,"f_ID",logERROR);
+    OUTLOG(workv1,"x_standard",logERROR);
+    OUTLOG(x,"x_eqn35",logERROR);
+    OUTLOG(workv1 -= x,"x_diff",logERROR);
+
     return true;
   }
 
@@ -437,7 +450,6 @@ bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
   x /= h;
-
   x += fID;
   // Some debugging dialogue
   return true;

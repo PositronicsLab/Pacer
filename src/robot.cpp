@@ -44,8 +44,8 @@ void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& 
 }
 
 void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
+  //   fext.resize(NDOFS);
    M.resize(NDOFS,NDOFS);
-//   fext.resize(NDOFS);
    abrobot_->get_generalized_inertia(M);
 //   abrobot_->get_generalized_forces(fext);
 }
@@ -130,13 +130,13 @@ void EndEffector::init(Robot* robot){
 }
 
 void Robot::update(){
-  q   = generalized_q.segment(0,NUM_JOINT_DOFS);
-  qd  = generalized_qd.segment(0,NUM_JOINT_DOFS);
-  qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);
+  new_data.q   = new_data.generalized_q.segment(0,NUM_JOINT_DOFS);
+  new_data.qd  = new_data.generalized_qd.segment(0,NUM_JOINT_DOFS);
+  new_data.qdd = new_data.generalized_qdd.segment(0,NUM_JOINT_DOFS);
 
   abrobot_->reset_accumulators();
-  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
-  abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
+  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,new_data.generalized_q);
+  abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,new_data.generalized_qd);
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
   update_poses();
@@ -145,10 +145,10 @@ void Robot::update(){
   for(int i=0,ii=0;i<NUM_JOINTS;i++){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-      joints_[i]->qdd[j] = generalized_qdd[ii];
+      joints_[i]->qdd[j] = new_data.generalized_qdd[ii];
     }
   }
-  abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(generalized_qdd.segment(NUM_JOINT_DOFS,NDOFS)));
+  abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(new_data.generalized_qdd.segment(NUM_JOINT_DOFS,NDOFS)));
 //  abrobot_->add_generalized_force(generalized_fext);
   for(int i = 0;i<NUM_EEFS;i++){
     Ravelin::Pose3d * fp;
@@ -175,20 +175,15 @@ void Robot::update(){
   }
 //  abrobot_->calc_fwd_dyn();
 
-  NC = 0;
-  for (unsigned i=0; i< NUM_EEFS;i++)
-    if(eefs_[i].active)
-      NC+=eefs_[i].point.size();
-
   // fetch robot state vectors
-  calc_contact_jacobians(N,D,R);
+  calc_contact_jacobians(new_data.N,new_data.D,new_data.R);
 //  calc_workspace_jacobian(Rw);
-
+  int NC = new_data.N.columns();
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   // SRZ: updating generalized_fext disabled (for now)
   // generalized_fext is supplied by Sim (controller input)
-  calculate_dyn_properties(M,generalized_fext);
+  calculate_dyn_properties(new_data.M,new_data.generalized_fext);
 //  calc_energy(generalized_qd,M);
   calc_com();
 
@@ -270,10 +265,10 @@ void Robot::update_poses(){
   R_base.mult_transpose(R_pitch,new_R);
   base_link_frame = boost::shared_ptr<const Ravelin::Pose3d>(
                          new Ravelin::Pose3d( new_R,base_link_frame->x,Moby::GLOBAL));
-  Utility::quat2TaitBryanZ(base_link_frame->q,roll_pitch_yaw);
+  Utility::quat2TaitBryanZ(base_link_frame->q,new_data.roll_pitch_yaw);
 
   // preserve yaw
-  Ravelin::AAngled yaw(0,0,1,roll_pitch_yaw[2]);
+  Ravelin::AAngled yaw(0,0,1,new_data.roll_pitch_yaw[2]);
   base_horizontal_frame = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(yaw,base_link_frame->x,Moby::GLOBAL));
 
 //  base_frame = base_horizontal_frame;//boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
@@ -284,7 +279,6 @@ void Robot::update_poses(){
 }
 
 void Robot::reset_contact(){
-  NC = 0;
   for(int i=0;i<eefs_.size();i++){
     eefs_[i].active = false;
     eefs_[i].point.clear();

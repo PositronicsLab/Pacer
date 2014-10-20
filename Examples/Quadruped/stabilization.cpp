@@ -5,20 +5,20 @@ void Quadruped::fk_stance_adjustment(double dt){
   static Ravelin::Vector3d workv3_;
   static Ravelin::MatrixNd workM_;
 
-  if(NC < 3) return;
+  if(data->N.columns() < 3) return;
 
   Ravelin::VectorNd xd_foot(NSPATIAL), qd_base(NDOFS);
   qd_base.set_zero();
 
   Ravelin::Vector3d CoM_CoC_goal(0,0,0.13,environment_frame);
-  (workv3_ = center_of_mass_x) -= center_of_contact.point[0];
+  (workv3_ = data->center_of_mass_x) -= center_of_contact.point[0];
   CoM_CoC_goal -= workv3_;
   qd_base.set_sub_vec(NUM_JOINTS,CoM_CoC_goal);
-  qd_base.set_sub_vec(NUM_JOINTS+3,Ravelin::Vector3d(-roll_pitch_yaw[0],-roll_pitch_yaw[1],0));
+  qd_base.set_sub_vec(NUM_JOINTS+3,Ravelin::Vector3d(-data->roll_pitch_yaw[0],-data->roll_pitch_yaw[1],0));
 
   OUTLOG(qd_base,"BASE_GOAL",logDEBUG);
   OUTLOG(CoM_CoC_goal,"GOAL_COM",logDEBUG);
-  OUTLOG(center_of_mass_x,"center_of_mass",logDEBUG);
+  OUTLOG(data->center_of_mass_x,"center_of_mass",logDEBUG);
   OUTLOG(center_of_contact.point[0],"center_of_contact",logDEBUG);
 
 //  for(int f=0;f<NUM_EEFS;f++){
@@ -84,7 +84,7 @@ void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vecto
     event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
     dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
     Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-    Ravelin::SharedConstVectorNd vb = generalized_qd.segment(NUM_JOINTS,NDOFS);
+    Ravelin::SharedConstVectorNd vb = data->generalized_qd.segment(NUM_JOINTS,NDOFS);
     Jb.mult(vb,workv3_);
     workv3_.pose = x_des[i].pose;
 

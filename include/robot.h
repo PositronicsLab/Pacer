@@ -44,6 +44,22 @@ public:
     void init(Robot* robot);
 };
 
+struct RobotData{
+  Ravelin::Vector2d zero_moment_point;
+  Ravelin::VectorNd q,
+                    qd,
+                    qdd;
+  Ravelin::VectorNd generalized_q,
+                    generalized_qd,
+                    generalized_qdd;
+  Ravelin::MatrixNd N,D,M,R;
+  Ravelin::VectorNd generalized_fext;
+  Ravelin::Vector3d center_of_mass_x,
+                    center_of_mass_xd,
+                    center_of_mass_xdd,
+                    roll_pitch_yaw;
+};
+
 class Robot {
   public:
   boost::shared_ptr<Moby::EventDrivenSimulator> sim;
@@ -74,7 +90,7 @@ class Robot {
   protected:
 
     void compile();
-    void calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext);
+    void calculate_dyn_properties(Ravelin::MatrixNd &M, Ravelin::VectorNd &fext);
     double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
     void calc_com();
     double friction_estimation(const Ravelin::VectorNd& v, const Ravelin::VectorNd& fext,
@@ -140,19 +156,11 @@ class Robot {
                                                environment_frame,
                                                base_link_frame;
 
-    unsigned          NC;
     EndEffector       center_of_contact;
-    Ravelin::Vector3d center_of_mass_x,
-                      center_of_mass_xd,
-                      center_of_mass_xdd,
-                      center_of_feet_x,
-                      center_of_feet_xd,
-                      roll_pitch_yaw;
-    Ravelin::Vector2d zero_moment_point;
-    Ravelin::VectorNd q,qd,qdd;
-    Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd;
-    Ravelin::MatrixNd N,D,M,R,Rw;
-    Ravelin::VectorNd generalized_fext;
+    Ravelin::Vector3d center_of_feet_x,
+                      center_of_feet_xd;
+    const RobotData * data;
+    RobotData new_data;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS,NUM_JOINT_DOFS;
     unsigned                          NSPATIAL;

@@ -84,11 +84,11 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
 void Quadruped::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
   footholds.clear();
   double rad = 0.2;
-  if(NC>0) center_of_contact.active = true;
+  if(data->N.columns()>0) center_of_contact.active = true;
   if(!center_of_contact.active) return;
   for(int i=0;i<num_footholds;i++){
     Ravelin::Vector3d fh(
-      center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,0
+      data->center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,data->center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,0
       ,Moby::GLOBAL
     );
     if(center_of_contact.normal[0].norm() > Moby::NEAR_ZERO)
@@ -109,35 +109,6 @@ void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,
     }
   }
   x_fh = Ravelin::Origin3d(footholds[min_vec]);
-}
-
-void Quadruped::workspace_trajectory_goal(const Ravelin::SVector6d& v_base, const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
-                                          double beta, double dt, Ravelin::VectorNd& v_bar){
-//  v_bar.set_sub_vec(NUM_EEFS*3,v_base);
-//  v_bar.set_zero(NUM_EEFS*3+6);
-  v_bar.set_zero(NUM_EEFS*3+3);
-  v_bar[NUM_EEFS*3] = v_base[0];
-//  v_bar.set_sub_vec(NUM_EEFS*3,generalized_qd.segment(NUM_JOINT_DOFS,NDOFS));
-//  v_bar[NUM_EEFS*3]   += base_correct[0];
-//  v_bar[NUM_EEFS*3+1] += base_correct[1];
-//  v_bar[NUM_EEFS*3+2] += base_correct[2];
-  v_bar[NUM_EEFS*3+1] += -beta/dt * roll_pitch_yaw[0];
-  v_bar[NUM_EEFS*3+2] += -beta/dt * roll_pitch_yaw[1];
-  for(int i=0;i<NUM_EEFS;i++){
-//    boost::shared_ptr<Ravelin::Pose3d> base_orient_at_foot = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Origin3d(foot_pos[i]),base_frame));
-//    Ravelin::SVelocityd base_velocity_at_foot = Ravelin::Pose3d::transform(base_orient_at_foot,links_[0]->get_velocity());
-//    base_velocity_at_foot.pose = base_frame;
-    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),
-                      pos_correct = beta * (foot_pos[i] - pos)/dt,
-                      foot_vel_wrt_base = foot_vel[i] + foot_acc[i]*dt;
-    v_bar.set_sub_vec(i*3,foot_vel_wrt_base + pos_correct);
-  }
-  Rw.remove_row(NUM_EEFS*3+5);
-//  Rw.remove_row(NUM_EEFS*3+4);
-//  Rw.remove_row(NUM_EEFS*3+3);
-  Rw.remove_row(NUM_EEFS*3+2);
-  Rw.remove_row(NUM_EEFS*3+1);
-//  Rw.remove_row(NUM_EEFS*3);
 }
 
 extern void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
@@ -351,9 +322,6 @@ void Quadruped::walk_toward(
     const Ravelin::Vector3d& base_velocity,
     const Ravelin::Vector3d& center_of_mass_x,
     double t,
-    const Ravelin::VectorNd& q,
-    const Ravelin::VectorNd& qd,
-    const Ravelin::VectorNd& qdd,
     // OUTPUT
     std::vector<Ravelin::Vector3d>& foot_pos,
     std::vector<Ravelin::Vector3d>& foot_vel,

@@ -20,6 +20,7 @@ option(VISUALIZE_MOBY "Display Moby Visualizations?" OFF)
 option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
 option(LOGGING "Logging" ON)
 option(CONSOLE "GLConsole" OFF)
+option(TIMING "use ctime timing functions" OFF)
 
 # you may have to add additional includes in here...
 add_definitions(-DBUILD_DOUBLE)
@@ -28,8 +29,12 @@ add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
 if(CONSOLE)
-  add_definitions( -DUSE_GLCONSOL)
+  add_definitions( -DUSE_GLCONSOLE)
 endif(CONSOLE)
+
+if(TIMING)
+  add_definitions( -DTIMING)
+endif(TIMING)
 
 if(LOGGING)
   add_definitions( -DLOGGING )

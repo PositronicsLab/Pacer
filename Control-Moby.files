@@ -52,3 +52,8 @@ Examples/Quadruped/INIT/startup-atlas.xml
 Examples/Quadruped/MODELS/atlas.xml
 Examples/Quadruped/MODELS/atlas_simple_shapes.urdf
 Examples/Quadruped/MODELS/atlas_simple_shapes.sdf
+Examples/Quadruped/SCRIPTS/animate.sh
+Examples/Quadruped/SCRIPTS/parse_all_data.sh
+Examples/Quadruped/SCRIPTS/parse_data.sh
+Examples/Quadruped/SCRIPTS/run_all_test.sh
+Examples/Quadruped/SCRIPTS/clean_data.sh

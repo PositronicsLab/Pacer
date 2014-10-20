@@ -67,9 +67,6 @@ class Quadruped : public Robot{
                       const Ravelin::Vector3d &base_velocity,
                       const Ravelin::Vector3d &center_of_mass_x,
                       double t,
-                      const Ravelin::VectorNd& q,
-                      const Ravelin::VectorNd& qd,
-                      const Ravelin::VectorNd& qdd,
                       std::vector<Ravelin::Vector3d>& foot_pos,
                       std::vector<Ravelin::Vector3d>& foot_vel,
                       std::vector<Ravelin::Vector3d>& foot_acc

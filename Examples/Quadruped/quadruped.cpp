@@ -1,6 +1,8 @@
 #include <quadruped.h>
 #include <utilities.h>
 
+#include <sys/time.h>
+
 #ifdef VISUALIZE_MOBY
 #ifdef APPLE
 # include <OpenGL/gl.h>
@@ -538,14 +540,20 @@ Ravelin::VectorNd& Quadruped::control(double t,
         eefs_[i].active = true;
 
 #ifdef TIMING
-    std::clock_t start = std::clock();
+    struct timeval start_t; 
+    struct timeval end_t; 
+    gettimeofday(&start_t, NULL);
+     //get difference, multiply by 1E-6 to convert to seconds
+    //std::clock_t start = std::clock();
 #endif
     Ravelin::VectorNd fext_scaled;
     if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf))
       uff += (id*=alpha);
 #ifdef TIMING
-    // Milliseconds
-    OUTLOG(((std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000)),"idyn_timing",logINFO);
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6; 
+//OUTLOG(((std::clock() - start) / (double)(CLOCKS_PER_SEC))*1000.0,"idyn_timing",logINFO);
+    OUTLOG(duration*1000.0,"idyn_timing",logINFO);
 #endif
   }
 

@@ -507,25 +507,30 @@ Ravelin::VectorNd& Quadruped::control(double t,
           cf_delay_queue;
       static std::queue<Ravelin::MatrixNd>
           N_delay_queue,
-          D_delay_queue;
+          D_delay_queue,
+          MU_delay_queue;
 
       if(FILTER_CFS && NC>0){
 
         cf_delay_queue.push(cf);
         N_delay_queue.push(N);
         D_delay_queue.push(D);
+        MU_delay_queue.push(MU);
         cf = cf_delay_queue.front();
         N = N_delay_queue.front();
         D = D_delay_queue.front();
+        MU = MU_delay_queue.front();
         if(cf_delay_queue.size() >= 2){
            cf_delay_queue.pop();
            N_delay_queue.pop();
            D_delay_queue.pop();
+           MU_delay_queue.pop();
         }
       } else {
         cf_delay_queue = std::queue<Ravelin::VectorNd>();
         N_delay_queue = std::queue<Ravelin::MatrixNd>();
         D_delay_queue = std::queue<Ravelin::MatrixNd>();
+        MU_delay_queue = std::queue<Ravelin::MatrixNd>();
       }
     } else {
       cf.set_zero(0);
@@ -648,6 +653,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
        OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + std::to_string(i) + "]",logINFO);
        OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + std::to_string(i) + "]",logINFO);
        OUTLOG(eefs_[i].impulse[j],eefs_[i].id + "_impulse[" + std::to_string(i) + "]",logINFO);
+       OUTLOG(eefs_[i].mu_coulomb[j],eefs_[i].id + "_mu[" + std::to_string(i) + "]",logINFO);
      }
    }
    OUT_LOG(logINFO) << "num_contacts = " << ii;

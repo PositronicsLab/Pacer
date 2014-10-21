@@ -239,18 +239,17 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 //  OUT_LOG(logDEBUG) << "]';" << std::endl;
 }
 
+#include <random>
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
   double workd;
-  static double
-      &SIM_PENALTY_KP = quad_ptr->get_variable("sim.penalty-kp",workd),
-      &SIM_PENALTY_KV = quad_ptr->get_variable("sim.penalty-kv",workd),
-      &SIM_MU_COULOMB = quad_ptr->get_variable("sim.mu-coulomb",workd),
-      &SIM_MU_VISCOUS = quad_ptr->get_variable("sim.mu-viscous",workd);
 
 //  e->penalty_Kp = SIM_PENALTY_KP;
 //  e->penalty_Kv = SIM_PENALTY_KV;
-//  e->mu_coulomb = SIM_MU_COULOMB;
+  static std::default_random_engine generator;
+  static std::uniform_real_distribution<double> distribution(0.1,1.4);
+
+  e->mu_coulomb = distribution(generator);
 //  e->mu_viscous = SIM_MU_VISCOUS;
   return e;
 }
@@ -300,7 +299,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   quad_ptr->sim = sim;
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
-//  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
+  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
   // CONTACT CALLBACK
 //  sim->constraint_callback_fn             = &pre_event_callback_fn;
   sim->constraint_post_callback_fn        = &post_event_callback_fn;

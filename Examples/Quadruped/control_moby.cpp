@@ -299,7 +299,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   quad_ptr->sim = sim;
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
-  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
+//  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
   // CONTACT CALLBACK
 //  sim->constraint_callback_fn             = &pre_event_callback_fn;
   sim->constraint_post_callback_fn        = &post_event_callback_fn;

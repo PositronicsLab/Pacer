@@ -9,9 +9,6 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 set (PROJECT_SRC_DIR .)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 find_package(Boost REQUIRED)
-FIND_PACKAGE( GLUT REQUIRED )
-#FIND_PACKAGE( GLU REQUIRED )
-FIND_PACKAGE( OpenGL REQUIRED )
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
@@ -21,16 +18,21 @@ option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
 option(LOGGING "Logging" ON)
 option(CONSOLE "GLConsole" OFF)
 option(TIMING "use ctime timing functions" OFF)
+option(USE_MOBY "use ctime timing functions" OFF)
 
-# you may have to add additional includes in here...
-add_definitions(-DBUILD_DOUBLE)
-add_definitions(-DUSE_OSG)
-add_definitions(-DSAFESTATIC=static)
-add_definitions(-DUSE_GLPK)
+
 
 if(CONSOLE)
   add_definitions( -DUSE_GLCONSOLE)
 endif(CONSOLE)
+
+if(USE_MOBY)
+  # you may have to add additional includes in here...
+  add_definitions(-DBUILD_DOUBLE)
+  add_definitions(-DUSE_OSG)
+  add_definitions(-DSAFESTATIC=static)
+  add_definitions(-DUSE_GLPK)
+endif(USE_MOBY)
 
 if(TIMING)
   add_definitions( -DTIMING)
@@ -45,12 +47,13 @@ if(SPLITTING_METHOD)
 endif(SPLITTING_METHOD)
 
 if(VISUALIZE_MOBY)
+  FIND_PACKAGE( GLUT REQUIRED )
+  FIND_PACKAGE( OpenGL REQUIRED )
   add_definitions( -DVISUALIZE_MOBY )
 endif(VISUALIZE_MOBY)
 
 include_directories(
-                    .
-                    ../../include
+                    include
                     /usr/include
                     /usr/include/libxml2
                     /usr/local/include
@@ -67,39 +70,33 @@ link_directories(
 /Applications/MATLAB_R2013a.app/extern/lib/maci64
                   )
 
-set(SOURCES ../../src/output.cpp
-            ../../src/robot.cpp
-            #../../src/estimate_friction.cpp
-            ../../src/inverse_dynamics.cpp
-            ../../src/kinematics.cpp
-            ../../src/stabilization.cpp
-            ../../src/utilities.cpp
-            ../../src/splines.cpp
-            ../../src/solve_qp.cpp
-            ../../src/Solvers.cpp
+set(SOURCES src/output.cpp
+            src/robot.cpp
+            src/inverse_dynamics.cpp
+            src/kinematics.cpp
+            src/stabilization.cpp
+            src/utilities.cpp
+            src/splines.cpp
+            src/solve_qp.cpp
+            src/quadruped.cpp
+            src/locomotion.cpp
+            src/wcpg.cpp
+            src/stabilization.cpp
+            src/variables.cpp
            )
 
 if(VISUALIZE_MOBY)
-  set(SOURCES ${SOURCES} ../../src/visualize_moby.cpp)
+  set(SOURCES ${SOURCES} visualize_moby.cpp)
   set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
 endif(VISUALIZE_MOBY)
 
-set(SOURCES2 quadruped.cpp
-             inverse_kinematics.cpp
-             locomotion.cpp
-             wcpg.cpp
-             stabilization.cpp
-             variables.cpp
-            )
-
-set(THIRDPARTY
-              )
-
-add_library(${PROJECT_NAME} ${SOURCES} ${SOURCES2} ${THIRDPARTY})
+add_library(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
+install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
-add_library(${PROJECT_NAME}Plugin MODULE control_moby.cpp)
+if(USE_MOBY)
+add_library(${PROJECT_NAME}Plugin MODULE src/control_moby.cpp)
 target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
+install(TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)
+endif(USE_MOBY)
 
-install (TARGETS ${PROJECT_NAME} DESTINATION lib)
-install (TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)

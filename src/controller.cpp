@@ -21,7 +21,7 @@
 
 
 
-Ravelin::VectorNd& Quadruped::control(double t,
+Ravelin::VectorNd& Controller::control(double t,
                                       const Ravelin::VectorNd& generalized_q_in,
                                       const Ravelin::VectorNd& generalized_qd_in,
                                       const Ravelin::VectorNd& generalized_qdd_in,

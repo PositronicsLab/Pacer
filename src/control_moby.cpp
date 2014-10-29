@@ -4,7 +4,7 @@
 #include <controller.h>
 
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
- boost::shared_ptr<Quadruped> quad_ptr;
+ boost::shared_ptr<Controller> robot_ptr;
  Moby::RCArticulatedBodyPtr abrobot;
 
  // ============================================================================
@@ -12,7 +12,7 @@
  // ============================================================================
 
  void apply_sim_perturbations(){
-   static std::vector<Moby::JointPtr>& joints_ = quad_ptr->get_joints();
+   static std::vector<Moby::JointPtr>& joints_ = robot_ptr->get_joints();
    int num_joints = joints_.size();
 
    static std::vector<double> workv_,
@@ -29,7 +29,7 @@
    Ravelin::Vector3d point_on_robot(known_leading_force[0],
                                     known_leading_force[1],
                                     known_leading_force[2],
-                                    quad_ptr->get_base_link_frame());
+                                    robot_ptr->get_base_link_frame());
    boost::shared_ptr<Ravelin::Pose3d> lead_transform =
        boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(
          Ravelin::Quatd::identity(),
@@ -43,10 +43,10 @@
                                               Moby::GLOBAL,
                                               Ravelin::SForced(lead,Ravelin::Vector3d(0,0,0),lead_transform)
                                             );
-   quad_ptr->set_leading_force(lead_force);
+   robot_ptr->set_leading_force(lead_force);
 
    Ravelin::SForced known_force(&known_leading_force[0],Moby::GLOBAL);
-   quad_ptr->set_known_force(known_force);
+   robot_ptr->set_known_force(known_force);
 
    OUTLOG(lead,"LEAD_bt",logDEBUG);
 
@@ -79,7 +79,7 @@
 
 void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
-  std::vector<Moby::JointPtr> joints_quad = quad_ptr->get_joints();
+  std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
   std::vector<Moby::JointPtr> joints = abrobot->get_joints();
 
   std::map<int,int> joint_map;
@@ -123,7 +123,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                     qdd_des(num_joints);
   Ravelin::VectorNd u(num_joints);
 
-  quad_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
+  robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
 
   // Re-map goals robot->simulation joints
   {
@@ -151,9 +151,9 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
-  std::vector<std::string>& eef_names_ = quad_ptr->get_end_effector_names();
-  std::vector<EndEffector>& eefs_ = quad_ptr->get_end_effectors();
-  quad_ptr->reset_contact();
+  std::vector<std::string>& eef_names_ = robot_ptr->get_end_effector_names();
+  std::vector<EndEffector>& eefs_ = robot_ptr->get_end_effectors();
+  robot_ptr->reset_contact();
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
@@ -277,9 +277,9 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
-  quad_ptr = boost::shared_ptr<Quadruped>(new Quadruped(std::string("Links")));
+  robot_ptr = boost::shared_ptr<Controller>(new Controller(std::string("Links")));
 
-  quad_ptr->sim = sim;
+  Robot::sim = sim;
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
 #ifdef RANDOM_FRICTION
   sim->get_contact_parameters_callback_fn = &get_contact_parameters;
@@ -291,10 +291,10 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   abrobot->controller                     = &controller_callback;
 
   // ================= INIT ROBOT STATE ==========================
-  std::vector<Moby::JointPtr> joints_quad = quad_ptr->get_joints();
+  std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
   std::vector<Moby::JointPtr> joints = abrobot->get_joints();
 
-  std::map<std::string,double> q0 = quad_ptr->get_q0();
+  std::map<std::string,double> q0 = robot_ptr->get_q0();
 
   std::vector<double>
       workvd,

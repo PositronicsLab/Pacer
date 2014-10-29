@@ -1,6 +1,5 @@
 #include <robot.h>
 #include <utilities.h>
-
 void Robot::calc_com(){
   new_data.center_of_mass_x.set_zero();
   new_data.center_of_mass_x.pose = environment_frame;

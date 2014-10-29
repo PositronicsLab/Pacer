@@ -4,10 +4,10 @@
 #include <robot.h>
 #include <CVars/CVar.h>
 
-class Quadruped : public Robot{
+class Controller : public Robot{
   public:
-    Quadruped() : Robot(""){}
-    Quadruped(std::string name) : Robot(name){}
+    Controller() : Robot(""){}
+    Controller(std::string name) : Robot(name){}
 
     Ravelin::VectorNd& control(double dt,
                                const Ravelin::VectorNd& generalized_q,
@@ -56,22 +56,6 @@ class Quadruped : public Robot{
                                  const Ravelin::VectorNd& q, Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des);
 
     /// Walks while trying to match COM velocity "command" in base_frame
-     void walk_toward(const Ravelin::SVector6d& command,
-                      const std::vector<double>& touchdown,
-                      const std::vector<Ravelin::Vector3d>& footholds,
-                      const std::vector<double>& duty_factor,
-                      double gait_duration,
-                      double step_height,
-                      bool STANCE_ON_CONTACT,
-                      std::vector<EndEffector*>& feet,
-                      const Ravelin::Vector3d &base_velocity,
-                      const Ravelin::Vector3d &center_of_mass_x,
-                      double t,
-                      std::vector<Ravelin::Vector3d>& foot_pos,
-                      std::vector<Ravelin::Vector3d>& foot_vel,
-                      std::vector<Ravelin::Vector3d>& foot_acc
-                      );
-
      static void walk_toward(const Ravelin::SVector6d& command,
                       const std::vector<double>& touchdown,
                       const std::vector<Ravelin::Vector3d>& footholds,
@@ -79,7 +63,7 @@ class Quadruped : public Robot{
                       double gait_duration,
                       double step_height,
                       bool STANCE_ON_CONTACT,
-                      std::vector<Ravelin::Vector3d>& feet,
+                      std::vector<EndEffector*>& feet,
                       const Ravelin::Vector3d &base_velocity,
                       const Ravelin::Vector3d &center_of_mass_x,
                       double t,
@@ -102,7 +86,7 @@ class Quadruped : public Robot{
 
     void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
 
-    bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
+    static bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
                           const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                           double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
 

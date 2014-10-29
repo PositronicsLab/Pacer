@@ -5,7 +5,7 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 using namespace Ravelin;
 
-void Quadruped::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos_des,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
+void Controller::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos_des,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
   int NC = R.columns()/5;
@@ -59,17 +59,9 @@ void Quadruped::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std
 
 
 // Parallel Stiffness Controller
-void Quadruped::eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& fb){
+void Controller::eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& fb){
 
-    for(int i=0,ii=0;i<NUM_JOINTS;i++){
-        if(joints_[i])
-            for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-                joints_[i]->q[j]  = q[ii];
-                joints_[i]->qd[j]  = qd[ii];
-            }
-    }
-    abrobot_->update_link_poses();
-    abrobot_->update_link_velocities();
+    set_model_state(q,qd);
 
     static std::vector<Ravelin::Vector3d> p_err_sum;
     if(p_err_sum.empty()){

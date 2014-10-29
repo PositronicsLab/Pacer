@@ -42,9 +42,11 @@ struct RobotData{
                     roll_pitch_yaw;
 };
 
-class Robot {
+class Robot{
   public:
-  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+#ifdef VISUALIZE_MOBY
+  static boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+#endif
     Robot(){}
     Robot(std::string name) : robot_name_(name){
       init();

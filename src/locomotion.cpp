@@ -1,7 +1,7 @@
 #include<controller.h>
 #include<utilities.h>
 
-void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
+void Controller::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
   if(dt==0)
     t = 0;
@@ -81,7 +81,7 @@ void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_d
 }
 
 /// Generate a bunch of random points at z = 0 around the COM
-void Quadruped::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
+void Controller::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
   footholds.clear();
   double rad = 0.2;
   if(data->N.columns()>0) center_of_contact.active = true;
@@ -98,7 +98,7 @@ void Quadruped::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num
   }
 }
 
-void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh){
+void Controller::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh){
   double min_dist = INFINITY;
   int    min_vec = 0;
   for(int i=0;i<footholds.size();i++){
@@ -113,7 +113,7 @@ void Quadruped::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,
 
 extern void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 /*
-void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
+void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                               const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
   ////////////////////// IK CONTROL ////////////////////////
 
@@ -152,7 +152,7 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
   }
 }
 */
-void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
+void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                               const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
   ////////////////////// IK CONTROL ////////////////////////
 
@@ -191,7 +191,7 @@ void Quadruped::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,con
 }
 
 
-bool Quadruped::gait_phase(double touchdown,double duty_factor,double gait_progress){
+bool Controller::gait_phase(double touchdown,double duty_factor,double gait_progress){
   double liftoff = touchdown + duty_factor,left_in_phase = 0;
   liftoff = liftoff - (double) ((int) liftoff);
 
@@ -213,7 +213,7 @@ bool Quadruped::gait_phase(double touchdown,double duty_factor,double gait_progr
 
 }
 
-double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
+double Controller::gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
   double liftoff = touchdown + duty_factor,left_in_phase = 0;
   liftoff = liftoff - (double) ((int) liftoff);
 
@@ -240,7 +240,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
   return left_in_phase;
 }
 
-//void Quadruped::walk_to(const Ravelin::SVector6d& command,
+//void Controller::walk_to(const Ravelin::SVector6d& command,
 //                        const std::vector<double>& goto_point,
 //                        std::vector<Ravelin::Vector3d>& foot_pos,
 //                        std::vector<Ravelin::Vector3d>& foot_vel,
@@ -281,7 +281,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
 //}
 
 
-//void Quadruped::walk_toward(const Ravelin::SVector6d& command,const
+//void Controller::walk_toward(const Ravelin::SVector6d& command,const
 //                            std::vector<Ravelin::Vector3d>& foot_pos,
 //                            std::vector<Ravelin::Vector3d>& foot_vel,
 //                            std::vector<Ravelin::Vector3d>& foot_acc,
@@ -292,7 +292,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
 //}
 
 /**
- * @brief Quadruped::walk_toward : OSRF Locomotion System Implementation
+ * @brief Controller::walk_toward : OSRF Locomotion System Implementation
  * @param command : 6x1 vector of goal base velocity differential
  * @param touchdown : specify the moment in the gait where a foot touches down stance phase. touchdown_i \in [0..1)
  * @param footholds : vector of 3x1 points indicating locations for valid foot placement
@@ -308,7 +308,7 @@ double Quadruped::gait_phase(double touchdown,double duty_factor,double gait_pro
  * @param foot_vel : NUM_FEET length vector of 3x1 cartesian velocities for feet (populated with current values)
  * @param foot_acc : NUM_FEET length vector of 3x1 cartesian acceleration for feet (populated with current values)
  */
-void Quadruped::walk_toward(
+void Controller::walk_toward(
     // PARAMETERS
     const Ravelin::SVector6d& command,
     const std::vector<double>& touchdown,
@@ -327,7 +327,7 @@ void Quadruped::walk_toward(
     std::vector<Ravelin::Vector3d>& foot_vel,
     std::vector<Ravelin::Vector3d>& foot_acc)
 {
-  OUT_LOG(logDEBUG) << " -- Quadruped::walk_toward() entered";
+  OUT_LOG(logDEBUG) << " -- Controller::walk_toward() entered";
   const boost::shared_ptr<const Ravelin::Pose3d>& base_frame = command.pose;
   static bool inited = false;
   int spline_plan_length = 1,
@@ -665,5 +665,5 @@ void Quadruped::walk_toward(
 
   last_time = t;
   inited = true;
-  OUT_LOG(logDEBUG) << " -- Quadruped::walk_toward() exited";
+  OUT_LOG(logDEBUG) << " -- Controller::walk_toward() exited";
 }

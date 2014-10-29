@@ -1,7 +1,7 @@
 #include <controller.h>
 #include <utilities.h>
 
-std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
+std::vector<Ravelin::Vector3d>& Controller::foot_oscilator(
     const std::vector<Ravelin::Vector3d>& x0,
     const std::vector<Ravelin::Vector3d>& x,
     const Ravelin::MatrixNd& C,
@@ -78,7 +78,7 @@ std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(
   return xd;
 }
 
-void Quadruped::cpg_trot(
+void Controller::cpg_trot(
     const Ravelin::SVector6d& command,
     const std::vector<double>& touchdown,
     const std::vector<double>& duty_factor,

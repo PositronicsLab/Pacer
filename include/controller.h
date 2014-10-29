@@ -56,7 +56,7 @@ class Controller : public Robot{
                                  const Ravelin::VectorNd& q, Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des);
 
     /// Walks while trying to match COM velocity "command" in base_frame
-     static void walk_toward(const Ravelin::SVector6d& command,
+      void walk_toward(const Ravelin::SVector6d& command,
                       const std::vector<double>& touchdown,
                       const std::vector<Ravelin::Vector3d>& footholds,
                       const std::vector<double>& duty_factor,

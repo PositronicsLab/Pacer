@@ -279,7 +279,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   /// to the quadruped model used by Control-Moby
   robot_ptr = boost::shared_ptr<Controller>(new Controller(std::string("Links")));
 
-  Robot::sim = sim;
+  robot_ptr->sim = sim;
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
 #ifdef RANDOM_FRICTION
   sim->get_contact_parameters_callback_fn = &get_contact_parameters;
@@ -311,7 +311,6 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   abrobot->set_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
   abrobot->update_link_poses();
   for(int i=0,ii=0;i<joints.size();i++){
-//    if(q0.find(std::to_string(j)+joints[i]->id) == q0.end()) continue;
     for(int j=0;j<joints[i]->num_dof();j++,ii++){
       joints[i]->q[j] = q0[std::to_string(j)+joints[i]->id];
     }

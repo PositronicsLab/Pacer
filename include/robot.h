@@ -45,7 +45,7 @@ struct RobotData{
 class Robot{
   public:
 #ifdef VISUALIZE_MOBY
-  static boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+    boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 #endif
     Robot(){}
     Robot(std::string name) : robot_name_(name){

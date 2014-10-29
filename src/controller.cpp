@@ -284,7 +284,7 @@ Ravelin::VectorNd& Controller::control(double t,
       visualize_ray(  workv3_,
                       workv3_,
                       Ravelin::Vector3d(1,0,1),
-                      2,
+                      0.5,
                       sim
                     );
 #endif
@@ -633,14 +633,7 @@ Ravelin::VectorNd& Controller::control(double t,
      OUTLOG( x_now_g,foot.id + "_x",logINFO);
      OUTLOG( x_des_g,foot.id + "_x_des",logINFO);
      OUTLOG( x_err,foot.id + "_x_err",logINFO);
-#ifdef VISUALIZE_MOBY
-      visualize_ray(  x_des_g,
-                      x_now_g,
-                      Ravelin::Vector3d(1,1,0),
-                      2,
-                      sim
-                    );
-#endif
+
 
      // Remove portion of foot velocity that can't be affected by corrective forces
      event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));

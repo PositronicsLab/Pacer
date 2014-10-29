@@ -92,5 +92,17 @@ class Utility{
     else
       return 0;
   }
+
+  static void load_variables(std::string fname);
+
+  static std::vector<double>& get_variable(const char* tag,std::vector<double>& val);
+  static double& get_variable(const char* tag,double& val);
+
+  static std::vector<std::string>& get_variable(const char* tag,std::vector<std::string>& val);
+  static std::string& get_variable(const char* tag,std::string& val);
+
+  static std::vector<int>& get_variable(const char* tag,std::vector<int>& val);
+  static int& get_variable(const char* tag,int& val);
+
 };
 #endif // UTILITIES_H

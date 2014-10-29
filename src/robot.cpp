@@ -1,6 +1,63 @@
 #include <robot.h>
 #include <utilities.h>
 
+void Robot::calc_com(){
+  new_data.center_of_mass_x.set_zero();
+  new_data.center_of_mass_x.pose = environment_frame;
+  double total_mass=0;
+  for(int i=0;i<links_.size();i++){
+    double m = links_[i]->get_mass();
+    total_mass += m;
+    new_data.center_of_mass_x += (Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_inertial_pose())) *= m);
+  }
+  new_data.center_of_mass_x /= total_mass;
+
+  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(environment_frame));
+  base_com_w->x = Ravelin::Origin3d(new_data.center_of_mass_x);
+  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_velocity());
+  new_data.center_of_mass_xd = com_vel.get_upper();
+
+  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_accel());
+  new_data.center_of_mass_xdd = com_acc.get_linear();
+//  center_of_mass_wd = com_acc.get_angular();
+//  center_of_mass_w = com_vel.get_angular();
+
+  // ZMP
+  // x(k+1) = A x(k) + B u(k)
+  // p(k)   = C x(k)
+
+  // From Kajita et al. 2003
+  // x(k) = [x(kT),xd(kT),xdd(kT)]'
+  // u(k) = u_x(kT)
+  // p(k) = p_x(kT)
+  // A = [1  T  (T^2)/2;
+  //      0  1  T      ;
+  //      0  0  1      ]
+  // B = [(T^3)/2 ;
+  //      (T^2)/2 ;
+  //          T   ]
+  // C = [1 0 -z/g]
+
+  // e = p - p_ref
+  //
+  Ravelin::Vector3d C(1,0,-new_data.center_of_mass_x[2]/grav,environment_frame);
+  new_data.zero_moment_point =
+      Ravelin::Vector2d(C.dot(Ravelin::Vector3d(new_data.center_of_mass_x[0],new_data.center_of_mass_xd[0],new_data.center_of_mass_xdd[0],environment_frame)),
+                        C.dot(Ravelin::Vector3d(new_data.center_of_mass_x[1],new_data.center_of_mass_xd[1],new_data.center_of_mass_xdd[1],environment_frame)));
+
+  new_data.center_of_mass_x.pose = new_data.center_of_mass_xd.pose = new_data.center_of_mass_xdd.pose = environment_frame;
+
+#ifdef VISUALIZE_MOBY
+  // ZMP and COM
+  Ravelin::Vector3d CoM_2D(new_data.center_of_mass_x[0],new_data.center_of_mass_x[1],new_data.center_of_mass_x[2]-0.10,environment_frame);
+  visualize_ray(CoM_2D,new_data.center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
+//  visualize_ray(CoM_2D + new_data.center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1),sim);
+//  visualize_ray(CoM_2D + new_data.center_of_mass_xd*0.1 + new_data.center_of_mass_xdd*0.01,CoM_2D + new_data.center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0),sim);
+  visualize_ray(CoM_2D+Ravelin::Vector3d(new_data.zero_moment_point[0],new_data.zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0),sim);
+#endif
+
+}
+
 double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
   // Potential Energy
   double PE = 0;
@@ -98,11 +155,13 @@ void Robot::compile(){
 //  environment_frame->q.set_identity();
 }
 
-void EndEffector::init(Robot* robot){
-  Moby::JointPtr joint_ptr = link->get_inner_joint_explicit();
-  Moby::RigidBodyPtr rb_ptr = link;
-  OUT_LOG(logDEBUG) << id ;
-  chain_bool.resize(joint_names_.size());
+void Robot::init_end_effector(EndEffector& eef){
+  eef.id = eef.link->id;
+
+  Moby::JointPtr joint_ptr = eef.link->get_inner_joint_explicit();
+  Moby::RigidBodyPtr rb_ptr = eef.link;
+  OUT_LOG(logDEBUG) << eef.id ;
+  eef.chain_bool.resize(joint_names_.size());
   rb_ptr = joint_ptr->get_inboard_link();
   while (rb_ptr->id.substr(0,4).compare("BODY") != 0){
     OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
@@ -111,10 +170,10 @@ void EndEffector::init(Robot* robot){
 
     for(int j=0;j<joint_names_.size();j++){
       if(joint_ptr->id.compare(joint_names_[j].substr(1,joint_names_[j].size())) == 0){
-        if(robot->get_active_joints()[joint_names_[j]]){
+        if(get_active_joints()[joint_names_[j]]){
           OUT_LOG(logDEBUG) << "  " << j <<  " "<< joint_ptr->id;
-          chain.push_back(j);
-          chain_bool[j] = true;
+          eef.chain.push_back(j);
+          eef.chain_bool[j] = true;
         } else {
           OUT_LOG(logDEBUG) << "DISABLED:  " << j <<  " "<< joint_ptr->id;
         }
@@ -126,10 +185,19 @@ void EndEffector::init(Robot* robot){
   OUT_LOG(logDEBUG) ;
   OUT_LOG(logDEBUG) ;
 
-  active = false;
+  eef.active = false;
 }
 
-void Robot::update(){
+void Robot::update(
+    const Ravelin::VectorNd& generalized_q_in,
+    const Ravelin::VectorNd& generalized_qd_in,
+    const Ravelin::VectorNd& generalized_qdd_in,
+    const Ravelin::VectorNd& generalized_fext_in){
+  new_data.generalized_q = generalized_q_in;
+  new_data.generalized_qd = generalized_qd_in;
+  new_data.generalized_qdd = generalized_qdd_in;
+  new_data.generalized_fext = generalized_fext_in;
+
   new_data.q   = new_data.generalized_q.segment(0,NUM_JOINT_DOFS);
   new_data.qd  = new_data.generalized_qd.segment(0,NUM_JOINT_DOFS);
   new_data.qdd = new_data.generalized_qdd.segment(0,NUM_JOINT_DOFS);
@@ -150,29 +218,6 @@ void Robot::update(){
   }
   abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(new_data.generalized_qdd.segment(NUM_JOINT_DOFS,NDOFS)));
 //  abrobot_->add_generalized_force(generalized_fext);
-  for(int i = 0;i<NUM_EEFS;i++){
-    Ravelin::Pose3d * fp;
-    EndEffector& foot =  eefs_[i];
-
-    fp = new Ravelin::Pose3d(
-                 Ravelin::Quatd::identity(),
-                 Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
-                 environment_frame
-               );
-    fp->update_relative_pose(Moby::GLOBAL);
-    // Impulse is always in global orientation
-    foot.frame_environment = boost::shared_ptr<const Ravelin::Pose3d>(fp);
-
-    fp = new Ravelin::Pose3d(
-           Ravelin::Quatd::identity(),
-           Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
-           base_frame
-         );
-    fp->update_relative_pose(Moby::GLOBAL);
-    foot.frame_robot_base = boost::shared_ptr<const Ravelin::Pose3d>(fp);
-    ////    foot.link->apply_impulse(Ravelin::SMomentumd(foot.impulse,Ravelin::Vector3d(0,0,0),foot.impulse_frame));
-//    foot.link->add_force(Ravelin::SForced(foot.impulse/0.001,Ravelin::Vector3d(0,0,0),foot.impulse_frame));
-  }
 //  abrobot_->calc_fwd_dyn();
 
   // fetch robot state vectors
@@ -250,6 +295,8 @@ void Robot::update(){
        }
 
 #endif
+
+       data = &new_data;
 }
 
 void Robot::update_poses(){
@@ -288,3 +335,144 @@ void Robot::reset_contact(){
     eefs_[i].tan2.clear();
   }
 }
+
+
+
+
+// ============================================================================
+// ===========================  BEGIN ROBOT INIT  =============================
+#include <CVars/CVar.h>
+
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+# include <thread>
+# include <GLConsole/GLConsole.h>
+  GLConsole theConsole;
+  extern void init_glconsole();
+  std::thread * tglc;
+#endif
+
+#include <Moby/XMLReader.h>
+
+void Robot::init(){
+
+#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+   tglc = new std::thread(init_glconsole);
+#endif
+  // ================= LOAD SCRIPT DATA ==========================
+  Utility::load_variables("INIT/startup.xml");
+  std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
+  std::cerr << "Using Robot: " << robot_start_file << std::endl;
+  Utility::load_variables("INIT/startup-"+robot_start_file+".xml");
+
+  // ================= SETUP LOGGING ==========================
+
+  std::string LOG_TYPE = CVarUtils::GetCVarRef<std::string>("logging");
+
+  std::cerr << LOG_TYPE << std::endl;
+  FILELog::ReportingLevel() =
+      FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
+
+  OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
+  OUT_LOG(logDEBUG1) << "logDEBUG1";
+  OUT_LOG(logINFO) << "logINFO";
+  OUT_LOG(logDEBUG) << "logDEBUG";
+  OUT_LOG(logDEBUG1) << "logDEBUG1";
+
+  // ================= BUILD ROBOT ==========================
+  /// The map of objects read from the simulation XML file
+  std::map<std::string, Moby::BasePtr> READ_MAP;
+  READ_MAP = Moby::XMLReader::read(std::string("MODELS/"+robot_start_file+".xml"));
+  for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
+       i !=READ_MAP.end(); i++)
+  {
+    // find the robot reference
+    if (!abrobot_)
+    {
+      abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+    }
+  }
+
+  compile();
+
+  // ================= SET UP END EFFECTORS ==========================
+
+  eef_names_
+      = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
+
+  std::vector<double> &eefs_start
+      = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x");
+
+  static std::vector<std::string>
+     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+
+ static std::vector<double>
+    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
+    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
+    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
+
+ static std::vector<int>
+    &active_joints = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.joint.active");
+
+ const double* data = &base_start.front();
+ displace_base_link = Ravelin::SVector6d(data);
+
+ OUTLOG(joint_names,"joint_names",logDEBUG1);
+ OUTLOG(joints_start,"joints_start",logDEBUG1);
+
+ // MAKE SURE DATA PARSED PROPERLY
+
+// assert(joint_names.size() == joints_.size());
+ assert(joint_names.size() == joints_start.size());
+ assert(joint_names.size() == torque_limits.size());
+
+  std::map<std::string, double> torque_limits_;
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+      OUT_LOG(logDEBUG) << joint_names[ii] << " " << ((active_joints[ii] == 0)? "false":"true") << std::endl;
+      active_joints_[joint_names[ii]] = (active_joints[ii] == 0)? false:true;
+      q0_[joint_names[ii]] = joints_start[ii];
+      torque_limits_[joint_names[ii]] = torque_limits[ii];
+    }
+  }
+
+  // push into robot
+  torque_limits_l.resize(NUM_JOINT_DOFS);
+  torque_limits_u.resize(NUM_JOINT_DOFS);
+  for(int i=0,ii=0;i<NUM_JOINTS;i++){
+    if(joints_[i])
+    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+//      assert(joint_names[ii].substr(0,2).compare(joints_[ii-j]->id.substr(0,2)) &&
+//             joint_names[ii].substr(joint_names[ii].size()-2,1).compare(joints_[ii-j]->id.substr(joints_[ii-j]->id.size()-2,1)));
+      OUT_LOG(logINFO)<< "torque_limit: " << joints_[ii-j]->id << " = " <<  torque_limits_[joint_names[ii]];
+      torque_limits_l[ii] = -torque_limits_[std::to_string(j)+joints_[i]->id];
+      torque_limits_u[ii] =  torque_limits_[std::to_string(j)+joints_[i]->id];
+    }
+  }
+  OUTLOG(torque_limits_l,"torque_limits_l",logDEBUG1);
+  OUTLOG(torque_limits_u,"torque_limits_u",logDEBUG1);
+
+  // Initialize Foot Data Structures
+  OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
+  for(unsigned j=0;j<eef_names_.size();j++){
+    for(unsigned i=0;i<links_.size();i++){
+      if(eef_names_[j].compare(links_[i]->id) == 0){
+        EndEffector eef;
+        eef.link = links_[i];
+        init_end_effector(eef);
+        eefs_.push_back(eef);
+
+        break;
+      }
+    }
+  }
+  NUM_EEFS = eefs_.size();
+
+  OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS ;
+  OUT_LOG(logINFO)<< "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS ;
+  OUT_LOG(logINFO)<< "NUM_JOINTS: " << NUM_JOINTS ;
+  OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
+  OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
+  OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
+}
+

@@ -51,7 +51,7 @@
       <viip>
         <active      type="bool">true </active>
         <accel       type="bool">false</accel>
-        <des-contact type="bool">true</des-contact>
+        <des-contact type="bool">false</des-contact>
         <!-- Gains are for the [X Y Z r p y] of base -->
         <gains>
           <kp type="double">0 0 0  1e3 1e3 0 </kp>
@@ -67,10 +67,10 @@
 
     <inverse-dynamics>
       <active type="bool">true</active>
-      <dt type="double">0</dt>
+      <dt type="double">0.005</dt>
       <alpha type="double">1</alpha>
-      <last-cfs type="bool">true</last-cfs>
-      <last-cfs-filter type="bool">true</last-cfs-filter>
+      <last-cfs type="bool">false</last-cfs>
+      <last-cfs-filter type="bool">false</last-cfs-filter>
       <des-contact type="bool">false</des-contact>
     </inverse-dynamics>
 

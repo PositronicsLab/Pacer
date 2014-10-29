@@ -1,4 +1,4 @@
-#include <robot.h>
+#include <controller.h>
 #include <utilities.h>
 #include <Opt/LP.h>
 
@@ -16,7 +16,7 @@ Ravelin::VectorNd STAGE1, STAGE2;
 //  M.mult(qdd,x) -= fext;
 //}
 
-bool Robot::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+bool Quadruped::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
 
   Ravelin::VectorNd fext = fext_;

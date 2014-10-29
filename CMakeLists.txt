@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 
-project(Links)
+project(Pacer)
 
 include (CheckIncludeFiles)
 include (CheckLibraryExists)
@@ -19,7 +19,12 @@ option(LOGGING "Logging" ON)
 option(CONSOLE "GLConsole" OFF)
 option(TIMING "use ctime timing functions" OFF)
 option(USE_MOBY "use ctime timing functions" OFF)
+option(RANDOM_FRICTION "Randomize friction mu = {0.1 .. 1.4}" OFF)
 
+
+if(RANDOM_FRICTION)
+  add_definitions( -DRANDOM_FRICTION)
+endif(RANDOM_FRICTION)
 
 
 if(CONSOLE)
@@ -78,17 +83,19 @@ set(SOURCES src/output.cpp
             src/utilities.cpp
             src/splines.cpp
             src/solve_qp.cpp
-            src/quadruped.cpp
+            src/controller.cpp
             src/locomotion.cpp
             src/wcpg.cpp
             src/stabilization.cpp
             src/variables.cpp
            )
 
-if(VISUALIZE_MOBY)
-  set(SOURCES ${SOURCES} visualize_moby.cpp)
-  set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
-endif(VISUALIZE_MOBY)
+if(USE_MOBY)
+  if(VISUALIZE_MOBY)
+    set(SOURCES ${SOURCES} src/visualize_moby.cpp)
+    set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
+  endif(VISUALIZE_MOBY)
+endif(USE_MOBY)
 
 add_library(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})

@@ -1,4 +1,4 @@
-#include<quadruped.h>
+#include<controller.h>
 #include<utilities.h>
 
 void Quadruped::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){

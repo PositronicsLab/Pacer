@@ -1,4 +1,4 @@
-#include <quadruped.h>
+#include <controller.h>
 #include <utilities.h>
 
 std::vector<Ravelin::Vector3d>& Quadruped::foot_oscilator(

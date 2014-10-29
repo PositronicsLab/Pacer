@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Controller for LINKS robot
  ****************************************************************************/
-#include <quadruped.h>
+#include <controller.h>
 
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
  boost::shared_ptr<Quadruped> quad_ptr;
@@ -16,9 +16,9 @@
    int num_joints = joints_.size();
 
    static std::vector<double> workv_,
-       &unknown_base_perturbation = quad_ptr->get_variable("sim.unknown-base-perturbation",workv_),
-       &known_base_perturbation = quad_ptr->get_variable("sim.known-base-perturbation",workv_),
-       &known_leading_force = quad_ptr->get_variable("sim.known-leading-force",workv_);
+       &unknown_base_perturbation = Utility::get_variable("sim.unknown-base-perturbation",workv_),
+       &known_base_perturbation = Utility::get_variable("sim.known-base-perturbation",workv_),
+       &known_leading_force = Utility::get_variable("sim.known-leading-force",workv_);
 
    Ravelin::Vector3d lead(known_leading_force[3],
                           known_leading_force[4],
@@ -151,9 +151,8 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
-  std::vector<EndEffector>& eefs_ = quad_ptr->get_end_effectors();
   std::vector<std::string>& eef_names_ = quad_ptr->get_end_effector_names();
-
+  std::vector<EndEffector>& eefs_ = quad_ptr->get_end_effectors();
   quad_ptr->reset_contact();
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
@@ -163,9 +162,6 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
-
-      // Quit if the body hits the ground, this is a failure condition
-      assert((sb2->id.substr(0,4).compare("BODY") != 0) && (sb1->id.substr(0,4).compare("BODY") != 0));
 
       std::vector<std::string>::iterator iter =
           std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
@@ -183,18 +179,11 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
       size_t index = std::distance(eef_names_.begin(), iter);
 
-
-      // Only accept 1 contact per foot
-//      if (eefs_[index].active)
-//        continue;
-//      else {
-        // convert impulses to a single impulse at first contact point
-        if(MIRROR_FLAG){
-          eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
-        } else {
-          eefs_[index].impulse.push_back( e[i].contact_impulse.get_linear());
-        }
-//      }
+      if(MIRROR_FLAG){
+        eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
+      } else {
+        eefs_[index].impulse.push_back( e[i].contact_impulse.get_linear());
+      }
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
@@ -217,11 +206,9 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     }
   }
 
-//  OUT_LOG(logDEBUG)<< "cfs_moby = [";
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
       for(int j=0;j<eefs_[i].point.size();j++){
-//      OUT_LOG(logDEBUG) << " " << eefs_[i].impulse[j];
 #ifdef VISUALIZE_MOBY
       visualize_ray(  eefs_[i].point[j],
                       eefs_[i].point[j] + eefs_[i].impulse[j]*10.0,
@@ -232,25 +219,20 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 #endif
       ii++;
       }
-    } else {
-//      OUT_LOG(logDEBUG) << " [0.0, 0.0, 0.0] ";
     }
   }
-//  OUT_LOG(logDEBUG) << "]';" << std::endl;
 }
 
 #include <random>
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
-  boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
-  double workd;
 
-//  e->penalty_Kp = SIM_PENALTY_KP;
-//  e->penalty_Kv = SIM_PENALTY_KV;
+  boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
+
   static std::default_random_engine generator;
   static std::uniform_real_distribution<double> distribution(0.1,1.4);
 
   e->mu_coulomb = distribution(generator);
-//  e->mu_viscous = SIM_MU_VISCOUS;
+
   return e;
 }
 
@@ -299,7 +281,9 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   quad_ptr->sim = sim;
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
-//  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
+#ifdef RANDOM_FRICTION
+  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
+#endif
   // CONTACT CALLBACK
 //  sim->constraint_callback_fn             = &pre_event_callback_fn;
   sim->constraint_post_callback_fn        = &post_event_callback_fn;
@@ -314,7 +298,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   std::vector<double>
       workvd,
-      base_start = quad_ptr->get_variable("quadruped.init.base.x",workvd);
+      base_start = Utility::get_variable("quadruped.init.base.x",workvd);
 
   Ravelin::VectorNd q_start;
   abrobot->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);

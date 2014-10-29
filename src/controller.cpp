@@ -1,4 +1,4 @@
-#include <quadruped.h>
+#include <controller.h>
 #include <utilities.h>
 
 #include <sys/time.h>
@@ -19,6 +19,8 @@
 // =========================== Begin Robot Controller =========================
 // ============================================================================
 
+
+
 Ravelin::VectorNd& Quadruped::control(double t,
                                       const Ravelin::VectorNd& generalized_q_in,
                                       const Ravelin::VectorNd& generalized_qd_in,
@@ -31,16 +33,10 @@ Ravelin::VectorNd& Quadruped::control(double t,
   // Import Robot Data
   static double last_time = -0.001;
   const double dt = t - last_time;
-  new_data.generalized_q = generalized_q_in;
-  new_data.generalized_qd = generalized_qd_in;
-  new_data.generalized_qdd = generalized_qdd_in;
-  new_data.generalized_fext = generalized_fext_in;
+
+  update(generalized_q_in,generalized_qd_in,generalized_qdd_in,generalized_fext_in);
 
   // Set Robot Data in robot
-  update();
-
-  data = &new_data;
-
   static bool inited = false;
   if(!inited){
     for(unsigned i=0;i< NUM_EEFS;i++){
@@ -168,7 +164,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
       OUT_LOG(logDEBUG1) << "patrol_index = " << patrol_index;
     visualize_ray(  next_waypoint,
-                    center_of_mass_x,
+                    data->center_of_mass_x,
                     Ravelin::Vector3d(1,0.5,0),
                     sim
                   );
@@ -545,8 +541,8 @@ Ravelin::VectorNd& Quadruped::control(double t,
         eefs_[i].active = true;
 
 #ifdef TIMING
-    struct timeval start_t; 
-    struct timeval end_t; 
+    struct timeval start_t;
+    struct timeval end_t;
     gettimeofday(&start_t, NULL);
      //get difference, multiply by 1E-6 to convert to seconds
     //std::clock_t start = std::clock();
@@ -556,7 +552,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
       uff += (id*=alpha);
 #ifdef TIMING
     gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6; 
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
 //OUTLOG(((std::clock() - start) / (double)(CLOCKS_PER_SEC))*1000.0,"idyn_timing",logINFO);
     OUTLOG(duration*1000.0,"idyn_timing",logINFO);
 #endif
@@ -588,7 +584,7 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
   set_model_state(data->q,data->qd);
 
-   OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
+   OUT_LOG(logINFO) <<"JOINT:A\t\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
    for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
      if(joints_[i])
      for(int j=0;j<joints_[i]->num_dof();j++,ii++){
@@ -631,11 +627,20 @@ Ravelin::VectorNd& Quadruped::control(double t,
      EndEffector& foot = eefs_[i];
 
      // Positional Correction
-     Ravelin::Vector3d x_des_now = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-     Ravelin::Vector3d x_err  = x_des[i] - x_des_now;
-     OUTLOG( x_des_now,foot.id + "_x",logINFO);
-     OUTLOG( x_des[i],foot.id + "_x_des",logINFO);
+     Ravelin::Vector3d x_now_g = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+     Ravelin::Vector3d x_des_g = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x_des[i]);
+     Ravelin::Vector3d x_err  = x_des_g - x_now_g;
+     OUTLOG( x_now_g,foot.id + "_x",logINFO);
+     OUTLOG( x_des_g,foot.id + "_x_des",logINFO);
      OUTLOG( x_err,foot.id + "_x_err",logINFO);
+#ifdef VISUALIZE_MOBY
+      visualize_ray(  x_des_g,
+                      x_now_g,
+                      Ravelin::Vector3d(1,1,0),
+                      2,
+                      sim
+                    );
+#endif
 
      // Remove portion of foot velocity that can't be affected by corrective forces
      event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
@@ -647,9 +652,9 @@ Ravelin::VectorNd& Quadruped::control(double t,
 
      // Velocity Correction
      // Need to account for base being a moving frame (but only converting as a static frame)
-     Ravelin::Vector3d xd_des_now = (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
-     Ravelin::Vector3d xd_err = xd_des[i] - xd_des_now;
-     OUTLOG( xd_des_now,foot.id + "_xd",logINFO);
+     Ravelin::Vector3d xd_now = (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
+     Ravelin::Vector3d xd_err = xd_des[i] - xd_now;
+     OUTLOG( xd_now,foot.id + "_xd",logINFO);
      OUTLOG( xd_des[i],foot.id + "_xd_des",logINFO);
      OUTLOG( xd_err,foot.id + "_xd_err",logINFO);
    }
@@ -678,140 +683,3 @@ Ravelin::VectorNd& Quadruped::control(double t,
 }
 // ===========================  END CONTROLLER  ===============================
 // ============================================================================
-
-
-
-
-
-// ============================================================================
-// ===========================  BEGIN ROBOT INIT  =============================
-#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
-# include <thread>
-# include <GLConsole/GLConsole.h>
-  GLConsole theConsole;
-  extern void init_glconsole();
-  std::thread * tglc;
-#endif
-
-#include <Moby/XMLReader.h>
-
-void Quadruped::init(){
-
-#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
-   tglc = new std::thread(init_glconsole);
-#endif
-  // ================= LOAD SCRIPT DATA ==========================
-  load_variables("INIT/startup.xml");
-  std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
-  std::cerr << "Using Robot: " << robot_start_file << std::endl;
-  load_variables("INIT/startup-"+robot_start_file+".xml");
-
-  // ================= SETUP LOGGING ==========================
-
-  std::string LOG_TYPE = CVarUtils::GetCVarRef<std::string>("logging");
-
-  std::cerr << LOG_TYPE << std::endl;
-  FILELog::ReportingLevel() =
-      FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
-
-  OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
-  OUT_LOG(logDEBUG1) << "logDEBUG1";
-  OUT_LOG(logINFO) << "logINFO";
-  OUT_LOG(logDEBUG) << "logDEBUG";
-  OUT_LOG(logDEBUG1) << "logDEBUG1";
-
-  // ================= BUILD ROBOT ==========================
-  /// The map of objects read from the simulation XML file
-  std::map<std::string, Moby::BasePtr> READ_MAP;
-  READ_MAP = Moby::XMLReader::read(std::string("MODELS/"+robot_start_file+".xml"));
-  for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
-       i !=READ_MAP.end(); i++)
-  {
-    // find the robot reference
-    if (!abrobot_)
-    {
-      abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
-    }
-  }
-
-  compile();
-
-  // ================= SET UP END EFFECTORS ==========================
-
-  eef_names_
-      = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
-
-  std::vector<double> &eefs_start
-      = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x");
-
-  static std::vector<std::string>
-     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
-
- static std::vector<double>
-    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
-    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
-    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
-
- static std::vector<int>
-    &active_joints = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.joint.active");
-
- const double* data = &base_start.front();
- displace_base_link = Ravelin::SVector6d(data);
-
- OUTLOG(joint_names,"joint_names",logDEBUG1);
- OUTLOG(joints_start,"joints_start",logDEBUG1);
-
- // MAKE SURE DATA PARSED PROPERLY
-
-// assert(joint_names.size() == joints_.size());
- assert(joint_names.size() == joints_start.size());
- assert(joint_names.size() == torque_limits.size());
-
-  std::map<std::string, double> torque_limits_;
-  for(int i=0,ii=0;i<NUM_JOINTS;i++){
-    if(joints_[i])
-    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-      OUT_LOG(logDEBUG) << joint_names[ii] << " " << ((active_joints[ii] == 0)? "false":"true") << std::endl;
-      active_joints_[joint_names[ii]] = (active_joints[ii] == 0)? false:true;
-      q0_[joint_names[ii]] = joints_start[ii];
-      torque_limits_[joint_names[ii]] = torque_limits[ii];
-    }
-  }
-
-  // push into robot
-  torque_limits_l.resize(NUM_JOINT_DOFS);
-  torque_limits_u.resize(NUM_JOINT_DOFS);
-  for(int i=0,ii=0;i<NUM_JOINTS;i++){
-    if(joints_[i])
-    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-//      assert(joint_names[ii].substr(0,2).compare(joints_[ii-j]->id.substr(0,2)) &&
-//             joint_names[ii].substr(joint_names[ii].size()-2,1).compare(joints_[ii-j]->id.substr(joints_[ii-j]->id.size()-2,1)));
-      OUT_LOG(logINFO)<< "torque_limit: " << joints_[ii-j]->id << " = " <<  torque_limits_[joint_names[ii]];
-      torque_limits_l[ii] = -torque_limits_[std::to_string(j)+joints_[i]->id];
-      torque_limits_u[ii] =  torque_limits_[std::to_string(j)+joints_[i]->id];
-    }
-  }
-  OUTLOG(torque_limits_l,"torque_limits_l",logDEBUG1);
-  OUTLOG(torque_limits_u,"torque_limits_u",logDEBUG1);
-
-  // Initialize Foot Structures
-  OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;
-  for(unsigned j=0;j<eef_names_.size();j++){
-    for(unsigned i=0;i<links_.size();i++){
-      if(eef_names_[j].compare(links_[i]->id) == 0){
-        OUT_LOG(logINFO)<< eef_names_[j] << " FOUND!";
-        workv3_ = Ravelin::Vector3d(eefs_start[j*3],eefs_start[j*3+1],eefs_start[j*3+2],base_link_frame);
-        eefs_.push_back(EndEffector(links_[i],workv3_,joint_names_,(Robot*)this));
-        break;
-      }
-    }
-  }
-  NUM_EEFS = eefs_.size();
-
-  OUT_LOG(logINFO)<< "NUM_EEFS: " << NUM_EEFS ;
-  OUT_LOG(logINFO)<< "N_FIXED_JOINTS: " << NUM_FIXED_JOINTS ;
-  OUT_LOG(logINFO)<< "NUM_JOINTS: " << NUM_JOINTS ;
-  OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
-  OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
-  OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
-}

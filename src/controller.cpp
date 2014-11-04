@@ -19,8 +19,6 @@
 // =========================== Begin Robot Controller =========================
 // ============================================================================
 
-
-
 Ravelin::VectorNd& Controller::control(double t,
                                       const Ravelin::VectorNd& generalized_q_in,
                                       const Ravelin::VectorNd& generalized_qd_in,

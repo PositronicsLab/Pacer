@@ -278,8 +278,9 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
   robot_ptr = boost::shared_ptr<Controller>(new Controller(std::string("Links")));
-
+#ifdef VISUALIZE_MOBY
   robot_ptr->sim = sim;
+#endif
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
 #ifdef RANDOM_FRICTION
   sim->get_contact_parameters_callback_fn = &get_contact_parameters;

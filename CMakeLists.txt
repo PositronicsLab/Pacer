@@ -8,7 +8,10 @@ include (CheckLibraryExists)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 set (PROJECT_SRC_DIR .)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-find_package(Boost REQUIRED)
+
+find_package(Boost REQUIRED COMPONENTS system)
+include_directories(${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
@@ -18,7 +21,8 @@ option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
 option(LOGGING "Logging" ON)
 option(CONSOLE "GLConsole" OFF)
 option(TIMING "use ctime timing functions" OFF)
-option(USE_MOBY "use ctime timing functions" OFF)
+option(USE_MOBY "build Moby plugin" OFF)
+option(USE_GAZEBO "build Gazebo plugin" OFF)
 option(RANDOM_FRICTION "Randomize friction mu = {0.1 .. 1.4}" OFF)
 
 
@@ -31,13 +35,11 @@ if(CONSOLE)
   add_definitions( -DUSE_GLCONSOLE)
 endif(CONSOLE)
 
-if(USE_MOBY)
-  # you may have to add additional includes in here...
-  add_definitions(-DBUILD_DOUBLE)
-  add_definitions(-DUSE_OSG)
-  add_definitions(-DSAFESTATIC=static)
-  add_definitions(-DUSE_GLPK)
-endif(USE_MOBY)
+# you may have to add additional includes in here...
+add_definitions(-DBUILD_DOUBLE)
+add_definitions(-DUSE_OSG)
+add_definitions(-DSAFESTATIC=static)
+add_definitions(-DUSE_GLPK)
 
 if(TIMING)
   add_definitions( -DTIMING)
@@ -93,7 +95,7 @@ set(SOURCES src/output.cpp
 if(USE_MOBY)
   if(VISUALIZE_MOBY)
     set(SOURCES ${SOURCES} src/visualize_moby.cpp)
-    set(VISUALIZE_LIBS  glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
+    set(VISUALIZE_LIBS glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
   endif(VISUALIZE_MOBY)
 endif(USE_MOBY)
 
@@ -102,8 +104,22 @@ target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUA
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
 if(USE_MOBY)
-add_library(${PROJECT_NAME}Plugin MODULE src/control_moby.cpp)
-target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
-install(TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)
+  add_library(${PROJECT_NAME}Plugin MODULE src/control_moby.cpp)
+  target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
+  install(TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)
 endif(USE_MOBY)
 
+if(USE_GAZEBO)
+#  find_package(Protobuf REQUIRED)
+
+  include (FindPkgConfig)
+  if (PKG_CONFIG_FOUND)
+    pkg_check_modules(GAZEBO gazebo)
+  endif()
+  include_directories(${GAZEBO_INCLUDE_DIRS})
+  link_directories(${GAZEBO_LIBRARY_DIRS})
+
+  add_library(${PROJECT_NAME}GazeboPlugin src/control_gazebo.cpp)
+  target_link_libraries(${PROJECT_NAME}GazeboPlugin ${PROJECT_NAME} Moby Ravelin ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES})
+  install(TARGETS ${PROJECT_NAME}GazeboPlugin DESTINATION lib)
+endif(USE_GAZEBO)

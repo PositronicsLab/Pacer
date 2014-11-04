@@ -1,6 +1,8 @@
+<?xml version="1.0" ?>
 <sdf version='1.5'>
-  <world>
   <model name='ATLAS'>
+  <plugin name="PacerPlugin" filename="/usr/local/lib/libPacerGazeboPlugin.dylib">
+  </plugin>
   <pose>0 0 1 0 -0 0</pose>
     <link name='BODY0'>
       <pose>0 0 0 0 -0 0</pose>
@@ -287,7 +289,7 @@
         </geometry>
       </collision>
 
-      <visual name='l_foot_visual'>
+      <visual name='l_foot_visual1'>
         <pose>0.048 0 -0.056119 0 -0 0</pose>
         <geometry>
           <box>
@@ -295,7 +297,7 @@
           </box>
         </geometry>
       </visual>
-      <visual name='l_foot_visual'>
+      <visual name='l_foot_visual2'>
         <pose>0.178 0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -303,7 +305,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='l_foot_visual'>
+      <visual name='l_foot_visual3'>
         <pose>0.178 -0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -311,7 +313,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='l_foot_visual'>
+      <visual name='l_foot_visual4'>
       <pose>-0.098 0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -319,7 +321,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='l_foot_visual'>
+      <visual name='l_foot_visual5'>
       <pose>-0.098 -0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -607,7 +609,7 @@
         </geometry>
       </collision>
 
-      <visual name='r_foot_visual'>
+      <visual name='r_foot_visual1'>
         <pose>0.048 0 -0.056119 0 -0 0</pose>
         <geometry>
           <box>
@@ -615,7 +617,7 @@
           </box>
         </geometry>
       </visual>
-      <visual name='r_foot_visual'>
+      <visual name='r_foot_visual2'>
         <pose>0.178 0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -623,7 +625,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='r_foot_visual'>
+      <visual name='r_foot_visual3'>
         <pose>0.178 -0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -631,7 +633,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='r_foot_visual'>
+      <visual name='r_foot_visual4'>
       <pose>-0.098 0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -639,7 +641,7 @@
           </sphere>
         </geometry>
       </visual>
-      <visual name='r_foot_visual'>
+      <visual name='r_foot_visual5'>
       <pose>-0.098 -0.06 -0.056119 0 -0 0</pose>
         <geometry>
           <sphere>
@@ -667,5 +669,4 @@
       </axis>
     </joint>
   </model>
-  </world>
 </sdf>

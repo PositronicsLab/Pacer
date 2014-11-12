@@ -1,3 +1,8 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #ifndef PROJECT_COMMON_H
 #define PROJECT_COMMON_H
 

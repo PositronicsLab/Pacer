@@ -1,7 +1,12 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #include <controller.h>
 #include <utilities.h>
-
 #include <sys/time.h>
+#include <Module.h>
 
 #ifdef VISUALIZE_MOBY
 #ifdef APPLE
@@ -14,6 +19,8 @@
 # include <GL/glut.h>
 #endif
 #endif
+
+
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================
@@ -86,7 +93,7 @@ Ravelin::VectorNd& Controller::control(double t,
   }
 
   static std::vector<int>
-      &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.end-effector.foot");
+      &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("init.end-effector.foot");
 
   std::vector<EndEffector*> feet;
   for(unsigned i=0,ii=0;i< NUM_EEFS;i++){
@@ -117,20 +124,20 @@ Ravelin::VectorNd& Controller::control(double t,
   OUTLOG(sum_base_velocity/(double)base_vel_queue.size(),"base_velocity (avg 1 sec)",logDEBUG);
 
   static std::vector<std::string>
-     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.joint.id");
 
   Ravelin::VectorNd go_to(6);
-  static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("quadruped.locomotion.active");
+  static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("locomotion.active");
   if(USE_LOCOMOTION){
     static std::vector<double>
-        &patrol_points = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.patrol"),
-        &goto_command = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.command"),
-        &goto_point = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.point"),
-        &duty_factor = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.duty-factor"),
-        &this_gait = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.locomotion.gait");
-    static int &HOLONOMIC = CVarUtils::GetCVarRef<int>("quadruped.locomotion.holonomic");
-    static double &gait_time = CVarUtils::GetCVarRef<double>("quadruped.locomotion.gait-duration");
-    static double &step_height = CVarUtils::GetCVarRef<double>("quadruped.locomotion.step-height");
+        &patrol_points = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.patrol"),
+        &goto_command = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.command"),
+        &goto_point = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.point"),
+        &duty_factor = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.duty-factor"),
+        &this_gait = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.gait");
+    static int &HOLONOMIC = CVarUtils::GetCVarRef<int>("locomotion.holonomic");
+    static double &gait_time = CVarUtils::GetCVarRef<double>("locomotion.gait-duration");
+    static double &step_height = CVarUtils::GetCVarRef<double>("locomotion.step-height");
     static std::vector<Ravelin::Vector3d> footholds(0);
     OUTLOG(goto_command ,"goto_command",logINFO);
 
@@ -249,7 +256,7 @@ Ravelin::VectorNd& Controller::control(double t,
     Ravelin::SVector6d goto_6d = go_to;
     goto_6d.pose = base_frame;
 
-    int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.locomotion.stance-on-contact");
+    int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("locomotion.stance-on-contact");
     walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,sum_base_velocity/ (double)base_vel_queue.size(),data->center_of_mass_x,t,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     for(int i=0,ii=0;i<NUM_EEFS;i++){
@@ -326,53 +333,68 @@ Ravelin::VectorNd& Controller::control(double t,
   }
 
   // ----------------------------- STABILIZATION -------------------------------
-  static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("quadruped.stabilization.active");
+  static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("controller.stabilization.active");
   if(USE_STABILIZATION){
-    static int &USE_VIIP = CVarUtils::GetCVarRef<int>("quadruped.stabilization.viip.active");
+    static int &USE_VIIP = CVarUtils::GetCVarRef<int>("controller.stabilization.viip.active");
     if(USE_VIIP){
-      static std::vector<double> &x_des = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.desired.x");
-      static std::vector<double> &xd_des = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.desired.xd");
-      static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.stabilization.viip.des-contact");
+      static std::vector<double> &x_des = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.desired.x");
+      static std::vector<double> &xd_des = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.desired.xd");
+      static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("controller.stabilization.viip.des-contact");
 
 
       static std::vector<double>
-          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.kp"),
-          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.kv"),
-          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.stabilization.viip.gains.ki");
+          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.kp"),
+          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.kv"),
+          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.ki");
 
-      for(int i=0;i<3;i++){
-        x_des[i] = center_of_feet_x[i];
-//        xd_des[i] = center_of_feet_xd[i];
-      }
 
-//      xd_des[0] = 0;
+        for(int i=0;i<3;i++){
+          x_des[i] = center_of_feet_x[i];
+  //        xd_des[i] = center_of_feet_xd[i];
+        }
 
-      Ravelin::MatrixNd N = data->N,
-                        D = data->D,
-                        R = data->R;
-      // Recalculate contact jacobians based on desired lift-off feet
-      if(USE_DES_CONTACT){
+  //      xd_des[0] = 0;
+
+        Ravelin::MatrixNd N = data->N,
+                          D = data->D,
+                          R = data->R;
+        // Recalculate contact jacobians based on desired lift-off feet
+        if(USE_DES_CONTACT){
+          for(int i=0;i<NUM_EEFS;i++)
+            if(eefs_[i].active && !eefs_[i].stance)
+              eefs_[i].active = false;
+          calc_contact_jacobians(N,D,R);
+        }
+
+        // Reset active feet
         for(int i=0;i<NUM_EEFS;i++)
-          if(eefs_[i].active && !eefs_[i].stance)
-            eefs_[i].active = false;
-        calc_contact_jacobians(N,D,R);
+          if(eefs_[i].point.size() > 0)
+            eefs_[i].active = true;
+
+        int NC = N.columns();
+
+        if(NC > 0){
+        std::vector<double> vel_base(6), pos_base(6);
+        for(int i=0;i<3;i++){
+          vel_base[i] = data->generalized_qd[NUM_JOINT_DOFS+i];
+          vel_base[i+3] = data->generalized_qd[NUM_JOINT_DOFS+3+i];
+          pos_base[i] = data->center_of_mass_x[i];
+          pos_base[i+3] = data->roll_pitch_yaw[i];
+        }
+
+        Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,NC*3);
+        Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,NC*3);
+
+        Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
+        contact_jacobian_stabilizer(Jb,Jq,Kp,Kv,Ki,pos_base,x_des,vel_base,xd_des,fb);
+
+        static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.stabilization.viip.accel");
+        if(FEEDBACK_ACCEL)
+          qdd_des += fb;
+        else
+          ufb += fb;
+        OUTLOG(fb,"viip_fb",logDEBUG);
       }
-
-      // Reset active feet
-      for(int i=0;i<NUM_EEFS;i++)
-        if(eefs_[i].point.size() > 0)
-          eefs_[i].active = true;
-
-      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-      contact_jacobian_stabilizer(R,Kp,Kv,Ki,x_des,xd_des,fb);
-
-      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("quadruped.stabilization.viip.accel");
-      if(FEEDBACK_ACCEL)
-        qdd_des += fb;
-      else
-        ufb += fb;
-
-      OUTLOG(fb,"viip_fb",logDEBUG);
     }
   }
 
@@ -389,49 +411,54 @@ Ravelin::VectorNd& Controller::control(double t,
     }
   }
 
-  static int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.active");
+  static int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.active");
   if (ERROR_FEEDBACK){
     // --------------------------- JOINT FEEDBACK ------------------------------
-    static int &JOINT_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.configuration-space.active");
+    static int &JOINT_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.configuration-space.active");
     if(JOINT_FEEDBACK){
-      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.configuration-space.accel");
+      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.error-feedback.configuration-space.accel");
 
-      static std::vector<double>
-          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.configuration-space.gains.kp"),
-          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.configuration-space.gains.kv"),
-          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.configuration-space.gains.ki");
+      static boost::shared_ptr<JointPID> pid;
+      if(!pid){
+         if(FEEDBACK_ACCEL)
+           pid = boost::shared_ptr<JointPID>( new JointPID(std::string("controller.error-feedback.configuration-space.accel")));
+         else
+           pid = boost::shared_ptr<JointPID>( new JointPID(std::string("controller.error-feedback.configuration-space.force")));
 
-      static std::map<std::string, Gains> gains;
-      for(int i=0,ii=0;i<NUM_JOINTS;i++){
-        if(joints_[i])
-        for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-          // NOTE: Ordered by input joint_names, NOT class joint_names_
-          gains[joint_names[ii]].kp = Kp[ii];
-          gains[joint_names[ii]].kv = Kv[ii];
-          gains[joint_names[ii]].ki = Ki[ii];
-        }
+         controllers.push_back(pid->ptr());
       }
-
-      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-      PID::control(q_des, qd_des,data->q,data->qd,joint_names_, gains,fb);
-
-      if(FEEDBACK_ACCEL)
-        qdd_des += fb;
-      else
-        ufb += fb;
+      pid->q = data->q;
+      pid->qd = data->qd;
+      pid->q_des = q_des;
+      pid->qd_des = qd_des;
+      pid->joint_names = get_joint_names();
+      pid->update();
     }
 
+    BOOST_FOREACH(boost::shared_ptr<ControllerModule> m,controllers){
+      if(m->type == CONTROLLER){
+//        boost::shared_ptr<ControllerModule> c = std::make_shared<ControllerModule>();
+//        c = boost::dynamic_pointer_cast<ControllerModule>(m);
+        if(false)
+          qdd_des += m->value;
+        else
+          ufb += m->value;
+        OUTLOG(ufb,"controller-ufb",logERROR);
+      }
+    }
+
+
     // --------------------------- WORKSPACE FEEDBACK --------------------------
-    static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.operational-space.active");
+    static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.active");
     if(WORKSPACE_FEEDBACK){
       // CURRENTLY THIS IS ONLY FORCE
       // BUT IT CAN BE ACCELERATIONS TOO
-      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("quadruped.error-feedback.operational-space.accel");
+      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.accel");
       std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
       static std::vector<double>
-          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.kp"),
-          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.kv"),
-          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.error-feedback.operational-space.gains.ki");
+          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kp"),
+          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kv"),
+          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.ki");
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,data->q,data->qd,fb);
@@ -445,12 +472,12 @@ Ravelin::VectorNd& Controller::control(double t,
 
   // ------------------------ INVERSE DYNAMICS ---------------------------------
 
-  static int &CONTROL_IDYN = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.active");
+  static int &CONTROL_IDYN = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.active");
   if(CONTROL_IDYN){
-    static double &dt_idyn = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.dt");
-    static double &alpha = CVarUtils::GetCVarRef<double>("quadruped.inverse-dynamics.alpha");
-    static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.des-contact");
-    static int &USE_LAST_CFS = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.last-cfs");
+    static double &dt_idyn = CVarUtils::GetCVarRef<double>("controller.inverse-dynamics.dt");
+    static double &alpha = CVarUtils::GetCVarRef<double>("controller.inverse-dynamics.alpha");
+    static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.des-contact");
+    static int &USE_LAST_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs");
     double DT = (dt_idyn == 0)? dt : dt_idyn;
 
 
@@ -475,7 +502,7 @@ Ravelin::VectorNd& Controller::control(double t,
           std::fill(MU.row(ii).begin(),MU.row(ii).end(),eefs_[i].mu_coulomb[j]);
 
     if(USE_LAST_CFS){
-      static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("quadruped.inverse-dynamics.last-cfs-filter");
+      static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs-filter");
 
       int NC = N.columns();
       cf.set_zero(NC*5);

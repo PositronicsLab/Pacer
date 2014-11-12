@@ -1,3 +1,8 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #include <utilities.h>
 #include <controller.h>
 
@@ -5,34 +10,24 @@ extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, con
 
 using namespace Ravelin;
 
-void Controller::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos_des,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
-  static Ravelin::VectorNd workv_;
-  static Ravelin::MatrixNd workM_;
-  int NC = R.columns()/5;
-  if(NC == 0) return;
-//  workM_ = R;
-//  workM_.remove_row(0);
-  Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,NC*3);
-  Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,NC*3);
+void Controller::contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::SharedConstMatrixNd& Jq,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos,const std::vector<double>& pos_des,const std::vector<double>& vel,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
+  int NC = Jb.columns();
 
   OUTLOG(Jb,"Jb",logDEBUG1);
   OUTLOG(Jq,"Jq",logDEBUG1);
 
-  Ravelin::VectorNd vel_base(6), pos_base(6), base_correct(6);
-  data->generalized_qd.get_sub_vec(NUM_JOINT_DOFS,data->generalized_qd.rows(), vel_base);
-  pos_base.set_sub_vec(0,data->center_of_mass_x);
-  pos_base.set_sub_vec(3,data->roll_pitch_yaw);
+  Ravelin::VectorNd base_correct(6);
 
-  OUTLOG(vel_base,"vel_base",logDEBUG1);
+  OUTLOG(vel,"vel_base",logDEBUG1);
   OUTLOG(vel_des,"vel_des",logDEBUG1);
-  OUTLOG(pos_base,"pos_base",logDEBUG1);
+  OUTLOG(pos,"pos_base",logDEBUG1);
   OUTLOG(pos_des,"pos_des",logDEBUG1);
 
   static Ravelin::VectorNd sum_p_err = Ravelin::VectorNd::zero(6);
   for(int i=0;i<6;i++){
-    sum_p_err[i]   += (pos_des[i] - pos_base[i]);
-    base_correct[i] =   (vel_des[i] - vel_base[i])*Kv[i]
-                      + (pos_des[i] - pos_base[i])*Kp[i]
+    sum_p_err[i]   += (pos_des[i] - pos[i]);
+    base_correct[i] =   (vel_des[i] - vel[i])*Kv[i]
+                      + (pos_des[i] - pos[i])*Kp[i]
                       + sum_p_err[i]*Ki[i];
   }
 
@@ -56,7 +51,6 @@ void Controller::contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const st
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);
 }
-
 
 // Parallel Stiffness Controller
 void Controller::eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& fb){

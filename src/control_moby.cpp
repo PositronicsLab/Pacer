@@ -1,5 +1,7 @@
-/*****************************************************************************
- * Controller for LINKS robot
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <controller.h>
 
@@ -277,7 +279,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
-  robot_ptr = boost::shared_ptr<Controller>(new Controller(std::string("Links")));
+  robot_ptr = boost::shared_ptr<Controller>(new Controller());
 #ifdef VISUALIZE_MOBY
   robot_ptr->sim = sim;
 #endif
@@ -299,7 +301,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   std::vector<double>
       workvd,
-      base_start = Utility::get_variable("quadruped.init.base.x",workvd);
+      base_start = Utility::get_variable("init.base.x",workvd);
 
   Ravelin::VectorNd q_start;
   abrobot->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);

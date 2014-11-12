@@ -1,10 +1,19 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #ifndef ROBOT_H
 #define ROBOT_H
 
 #include <project_common.h>
-#include <pid.h>
 class Robot;
 
+/**
+ * @brief The EndEffector struct
+ *
+ * Stores relevent contact and link data for an end effector.
+ */
 struct EndEffector{
     // permanent data
     std::string           id;
@@ -26,42 +35,37 @@ struct EndEffector{
     int                   nk;
 };
 
+/**
+ * @brief The RobotData struct stores const data for use by the controller.
+ */
 struct RobotData{
   Ravelin::Vector2d zero_moment_point;
-  Ravelin::VectorNd q,
-                    qd,
-                    qdd;
-  Ravelin::VectorNd generalized_q,
-                    generalized_qd,
-                    generalized_qdd;
-  Ravelin::MatrixNd N,D,M,R;
-  Ravelin::VectorNd generalized_fext;
-  Ravelin::Vector3d center_of_mass_x,
-                    center_of_mass_xd,
-                    center_of_mass_xdd,
-                    roll_pitch_yaw;
+  Ravelin::VectorNd q   /*!< position of robot joint dofs, size: [NUM_JOINT_DOFS] */ ,
+                    qd  /*!< velocity of robot joint dofs, size: [NUM_JOINT_DOFS] */ ,
+                    qdd /*!< acceleration of robot joint dofs, size: [NUM_JOINT_DOFS] */ ;
+  Ravelin::VectorNd generalized_q   /*!< generalized coordinates of robot, size: [NUM_JOINT_DOFS ,7 base dofs (3 linear, 4 angular) ] */,
+                    generalized_qd  /*!< generalized velocity of robot, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */,
+                    generalized_qdd /*!< generalized acceleration of robot, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */;
+  Ravelin::MatrixNd N /*!< Normal Contact Jacobian, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] x [Num Contacts] */,
+                    D /*!< Tangent Contact Jacobian, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] x [Num Contacts x 4] */,
+                    M /*!< generalized inertia matrix, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */,
+                    R /*!< Contact Jacobian [N,D] */;
+  Ravelin::VectorNd generalized_fext /*!< generalized external forces on robot (excluding contact), size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */;
+  Ravelin::Vector3d center_of_mass_x /*!< Global frame coordinates of the center of mass of robot links */,
+                    center_of_mass_xd /*!< Global frame velocity of the center of mass of robot links */,
+                    center_of_mass_xdd /*!< Global frame acceleration of the center of mass of robot links */,
+                    roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
 };
 
-class Robot{
+class Robot : public boost::enable_shared_from_this<Robot>{
   public:
+    boost::shared_ptr<Robot> ptr(){ return shared_from_this(); }
 #ifdef VISUALIZE_MOBY
     boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 #endif
-    Robot(){}
-    Robot(std::string name) : robot_name_(name){
+    Robot(){
       init();
     }
-
-    // This is the Simplest Controller (policy is determined within fn)
-    virtual Ravelin::VectorNd& control(double dt,
-                               const Ravelin::VectorNd& generalized_q,
-                               const Ravelin::VectorNd& generalized_qd,
-                               const Ravelin::VectorNd& generalized_qdd,
-                               const Ravelin::VectorNd& generalized_fext,
-                               Ravelin::VectorNd& q_des,
-                               Ravelin::VectorNd& qd_des,
-                               Ravelin::VectorNd& qdd_des,
-                               Ravelin::VectorNd& u) = 0;
 
     /// ---------------------------  Getters  ---------------------------
     std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
@@ -83,7 +87,13 @@ class Robot{
     void reset_contact();
 
   protected:
-    /// Update robot using currently set 'generalized' parameters
+    /**
+     * @brief Update robot internal model using 'generalized' (minimal) parameters
+     * @param generalized_q_in
+     * @param generalized_qd_in
+     * @param generalized_qdd_in
+     * @param generalized_fext_in
+     */
     void update(
         const Ravelin::VectorNd& generalized_q_in,
         const Ravelin::VectorNd& generalized_qd_in,
@@ -99,7 +109,7 @@ class Robot{
     /// Calcultate kinetic energy of robot
     double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
 
-    /// Calc Center of mass(x,xd,xdd,zmp)
+    /// Calculate Center of mass(x,xd,xdd,zmp)
     void calc_com();
 
     /// Set Plugin internal model to input state
@@ -109,21 +119,26 @@ class Robot{
     void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
 
     /// Resolved Motion Rate control (iterative inverse kinematics)
+    /// iterative inverse kinematics for a 3d (linear) goal
     void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+
+    /// Resolved Motion Rate control (iterative inverse kinematics)
+    /// iterative inverse kinematics for a 6d (linear and angular) goal
     void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::SVector6d& goal,Ravelin::VectorNd& q_des);
 
-    // Simple RMRC base frame kinematics
+    /// N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
-    // N x 3d kinematics
+
+    /// N x 3d kinematics
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
-    // N x 6d Jacobian
+
+    /// N x 6d Jacobian
     Ravelin::MatrixNd& foot_jacobian(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
-    // N x 6d kinematics
+
+    /// N x 6d kinematics
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
   protected:
-    std::string                       robot_name_;
-    // Robot Dynamics Datastructures
     Moby::RCArticulatedBodyPtr        abrobot_;
     Moby::DynamicBodyPtr              dbrobot_;
     std::vector<Moby::JointPtr>       joints_;
@@ -134,7 +149,7 @@ class Robot{
     // End Effector data
     std::vector<std::string>          eef_names_;
     std::vector<EndEffector>          eefs_;
-    std::map<std::string, bool>                 active_joints_;
+    std::map<std::string, bool>       active_joints_;
 
 
     unsigned                          NUM_FIXED_JOINTS;
@@ -151,6 +166,7 @@ class Robot{
     EndEffector       center_of_contact;
     Ravelin::Vector3d center_of_feet_x,
                       center_of_feet_xd;
+
     const RobotData * data;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS,NUM_JOINT_DOFS;

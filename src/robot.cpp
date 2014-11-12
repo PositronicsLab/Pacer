@@ -1,3 +1,8 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #include <robot.h>
 #include <utilities.h>
 void Robot::calc_com(){
@@ -396,21 +401,21 @@ void Robot::init(){
   // ================= SET UP END EFFECTORS ==========================
 
   eef_names_
-      = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.end-effector.id");
+      = CVarUtils::GetCVarRef<std::vector<std::string> >("init.end-effector.id");
 
   std::vector<double> &eefs_start
-      = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.end-effector.x");
+      = CVarUtils::GetCVarRef<std::vector<double> >("init.end-effector.x");
 
   static std::vector<std::string>
-     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("quadruped.init.joint.id");
+     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.joint.id");
 
  static std::vector<double>
-    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.q"),
-    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.joint.max-torque"),
-    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("quadruped.init.base.x");
+    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.q"),
+    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.max-torque"),
+    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("init.base.x");
 
  static std::vector<int>
-    &active_joints = CVarUtils::GetCVarRef<std::vector<int> >("quadruped.init.joint.active");
+    &active_joints = CVarUtils::GetCVarRef<std::vector<int> >("init.joint.active");
 
  const double* data = &base_start.front();
  displace_base_link = Ravelin::SVector6d(data);

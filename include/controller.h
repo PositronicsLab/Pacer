@@ -1,13 +1,22 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #ifndef CONTROL_H
 #define CONTROL_H
 
 #include <robot.h>
 #include <CVars/CVar.h>
-
+#include <Module.h>
 class Controller : public Robot{
   public:
-    Controller() : Robot(""){}
-    Controller(std::string name) : Robot(name){}
+
+    /**
+     * @brief Controller constructor
+     * @see Robot()
+     */
+    Controller() : Robot(){}
 
     Ravelin::VectorNd& control(double dt,
                                const Ravelin::VectorNd& generalized_q,
@@ -76,13 +85,25 @@ class Controller : public Robot{
     void set_leading_force(const Ravelin::SForced& f){lead_force_ = f;}
     void set_known_force(const Ravelin::SForced& f){known_force_ = f;}
 
-    /** FUNCTIONAL
-     *  Applys *compresssive* forces and unlimited tangential forces
+    /**
+     * @brief Stabilization method using active end effectors.
+     * @param Jb:  Contact Jacobian (base)
+     * @param Jq:  Contact Jacobian (joints)
+     * @param Kp: 6d Positional gains
+     * @param Kv: 6d Derivative gains
+     * @param Ki: 6d Integrative gains
+     * @param pos: Desired Position of robot base link in global frame
+     * @param pos_des: Current Position of robot base link in global frame
+     * @param vel: Desired Velocity of robot base link in global frame
+     * @param vel_des: Current Velocity of robot base link in global frame
+     * @param ufb: Stabilizing feedback force (return value)
+     *
+     * Applies compresssive forces and unlimited tangential forces
      * to correct the [p; v] state of the robot base
      * acording to Kp and Kv Respectively
-    **/
-    void contact_jacobian_stabilizer(const Ravelin::MatrixNd& R,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,
-                                     const std::vector<double>& pos_des, const std::vector<double>& vel_des, Ravelin::VectorNd& ufb);
+     */
+    static void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::SharedConstMatrixNd& Jq,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,
+                                     const std::vector<double>& pos,const std::vector<double>& pos_des, const std::vector<double>& vel, const std::vector<double>& vel_des, Ravelin::VectorNd& ufb);
 
     void zmp_stabilizer(const Ravelin::MatrixNd& R,const Ravelin::Vector2d& zmp_goal, Ravelin::VectorNd& ufb);
 
@@ -91,6 +112,7 @@ class Controller : public Robot{
                           double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
 
   private:
+    std::vector<boost::shared_ptr<ControllerModule> > controllers;
     Ravelin::SForced lead_force_;
     Ravelin::SForced known_force_;
 };

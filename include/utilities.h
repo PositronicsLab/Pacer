@@ -1,3 +1,8 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
@@ -5,13 +10,52 @@
 
 class Utility{
   public:
+  /**
+   * @brief Convert Rotation Matrix to roll pitch yaw Euler Angles
+   * @param R 3x3 orthonormal rotation matrix
+   * @param rpy: roll pitch yaw (return value)
+   * @return
+   */
   static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
-  static Ravelin::Vector3d& quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::Vector3d& ypr);
-  static Ravelin::Vector3d& quat2TaitBryanX(const Ravelin::Quatd& q_, Ravelin::Vector3d& ypr);
+
+  /**
+   * @brief Convert Quaternion to roll pitch yaw (Tait Bryan) Euler Angles
+   * @param q: quaternion
+   * @param rpy: roll pitch yaw (return value)
+   * @return
+   */
+  static Ravelin::Vector3d& quat2TaitBryanZ(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
+
+  /**
+   * @brief Convert Quaternion to roll pitch yaw
+   * @param q: quaternion
+   * @param rpy: roll pitch yaw (return value)
+   * @return
+   */
   static Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
-  static Ravelin::Quatd& aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q);
+
+  /**
+   * @brief Rotation matrix of x radians about the local z-axis
+   * @param x radian value of rotation about axis
+   * @param R 3x3 orthonormal rotation matrix (return value)
+   * @return reference to R parameter
+   */
   static Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R);
+
+  /**
+   * @brief Rotation matrix of x radians about the local y-axis
+   * @param x radian value of rotation about axis
+   * @param R 3x3 orthonormal rotation matrix (return value)
+   * @return reference to R parameter
+   */
   static Ravelin::Matrix3d& Ry(double x,Ravelin::Matrix3d& R);
+
+  /**
+   * @brief Rotation matrix of x radians about the local x-axis
+   * @param x radian value of rotation about axis
+   * @param R 3x3 orthonormal rotation matrix (return value)
+   * @return reference to R parameter
+   */
   static Ravelin::Matrix3d& Rx(double x,Ravelin::Matrix3d& R);
 
   /// Calculates The null pace for matrix M and places it in Vk

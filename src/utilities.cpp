@@ -1,6 +1,10 @@
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 #include <project_common.h>
 #include <utilities.h>
-#include <pid.h>
 
 Ravelin::Vector3d& Utility::quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::Vector3d& rpy){
 
@@ -19,25 +23,6 @@ Ravelin::Vector3d& Utility::quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::V
   rpy[2] = atan2((q[1]*q[2] + q[0]*q[3]),0.5-(q[2]*q[2] + q[3]*q[3]));
   return rpy;
 }
-
-Ravelin::Vector3d& Utility::quat2TaitBryanX(const Ravelin::Quatd& q_, Ravelin::Vector3d& rpy){
-
-  Ravelin::VectorNd q(4);
-  q[0] = q_.w;
-  q[1] = q_.x;
-  q[2] = q_.y;
-  q[3] = q_.z;
-
-  // Singularity Condition 2(q1q3 + q0q2) == +/- 1
-  assert(fabs(2*(q[2]*q[3] + q[0]*q[1])) < (1.0 - Moby::NEAR_ZERO) || fabs(2*(q[2]*q[3] + q[0]*q[1])) > (1.0 + Moby::NEAR_ZERO));
-
-  // (3-2-1) z-y-x Tait-Bryan rotation
-  rpy[0] = atan2((q[1]*q[3] + q[0]*q[2]),0.5-(q[3]*q[3] + q[2]*q[2]));
-  rpy[1] = -asin(-2*(q[2]*q[3] + q[0]*q[1]));
-  rpy[2] = atan2((q[1]*q[2] + q[0]*q[3]),0.5-(q[2]*q[2] + q[3]*q[3]));
-  return rpy;
-}
-
 
 Ravelin::Vector3d& Utility::R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy){
   if(R(0,0) == 0 || R(2,2) == 0)
@@ -74,13 +59,6 @@ Ravelin::Vector3d& Utility::quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d&
   return (rpy = Ravelin::Vector3d(rotateX,rotateY,rotateZ));
 }
 
-Ravelin::Quatd& Utility::aa2quat(const Ravelin::VectorNd& aa,Ravelin::Quatd& q){
-  q[0] = cos(aa[3]*0.5);
-  q[1] = sin(aa[3]*0.5)*cos(aa[0]);
-  q[2] = sin(aa[3]*0.5)*cos(aa[1]);
-  q[3] = sin(aa[3]*0.5)*cos(aa[2]);
-  return q;
-}
 Ravelin::Matrix3d& Utility::Rz(double x,Ravelin::Matrix3d& R){
   R = Ravelin::Matrix3d( cos(x), sin(x), 0,
                         -sin(x), cos(x), 0,
@@ -173,29 +151,4 @@ Ravelin::Vector3d Utility::slerp( const Ravelin::Vector3d& v0,const Ravelin::Vec
 
 Ravelin::Vector3d Utility::lerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t){
   return (v0*(1-t) + v1*t);
-}
-
-
-void PID::control(const Ravelin::VectorNd& q_des,const Ravelin::VectorNd& qd_des,
-                 const Ravelin::VectorNd& q,    const Ravelin::VectorNd& qd,
-                 const std::vector<std::string> joint_names,
-                 std::map<std::string, Gains> gains, Ravelin::VectorNd& ufb){
-  unsigned num_joints = joint_names.size();
-  // clear and set motor torques
-  for (unsigned i=0; i< num_joints; i++)
-  {
-    // get the two gains
-    std::string joint_name = joint_names[i];
-    const double KP = gains[joint_name].kp;
-    const double KV = gains[joint_name].kv;
-    const double KI = gains[joint_name].ki;
-
-    // add feedback torque to joints
-    double perr = q_des[i] - q[i];
-    gains[joint_name].perr_sum += perr;
-    double ierr = gains[joint_name].perr_sum;
-    double derr = qd_des[i] - qd[i];
-
-    ufb[i] += perr*KP + derr*KV + ierr*KI;
-  }
 }

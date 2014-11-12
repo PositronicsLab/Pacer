@@ -30,16 +30,16 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
   int nq = n - 6;
   int nc = N.columns();
 
-  static Ravelin::MatrixNd workM1,workM2;
-  static Ravelin::VectorNd workv1, workv2,fID;
+  Ravelin::MatrixNd workM1,workM2;
+  Ravelin::VectorNd workv1, workv2,fID;
 
-  static Ravelin::VectorNd vq(nq);
+  Ravelin::VectorNd vq(nq);
   v.get_sub_vec(0,nq,vq);
 
-  static Ravelin::VectorNd vb(6);
+  Ravelin::VectorNd vb(6);
   v.get_sub_vec(nq,n,vb);
 
-  static Ravelin::VectorNd vqstar;
+  Ravelin::VectorNd vqstar;
   ((vqstar = qdd) *= h) += vq;
 
   // Log these function variables
@@ -47,35 +47,35 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
   // compute A, B, and C
   // | C B'| = M
   // | B A |
-  static Ravelin::MatrixNd C(nq,nq);
+  Ravelin::MatrixNd C(nq,nq);
   M.get_sub_mat(0,nq,0,nq,C);
 
-  static Ravelin::MatrixNd B(6,nq);
+  Ravelin::MatrixNd B(6,nq);
   M.get_sub_mat(nq,n,0,nq,B);
 
-  static Ravelin::MatrixNd A(6,6);
+  Ravelin::MatrixNd A(6,6);
   M.get_sub_mat(nq,n,nq,n,A);
 
 
   // compute D, E, and F
-  static Ravelin::MatrixNd iM_chol;
+  Ravelin::MatrixNd iM_chol;
   iM_chol = M;
   assert(LA_.factor_chol(iM_chol));
 
-  static Ravelin::MatrixNd iM;
+  Ravelin::MatrixNd iM;
   iM = Ravelin::MatrixNd::identity(n);
   LA_.solve_chol_fast(iM_chol,iM);
 //  LA_.solve_fast(M,iM);
 
   // | F E'|  =  inv(M)
   // | E D |
-  static Ravelin::MatrixNd D(6,6);
+  Ravelin::MatrixNd D(6,6);
   iM.get_sub_mat(nq,n,nq,n,D);
-  static Ravelin::MatrixNd E(6,nq);
+  Ravelin::MatrixNd E(6,nq);
   iM.get_sub_mat(nq,n,0,nq,E);
-  static Ravelin::MatrixNd F(nq,nq);
+  Ravelin::MatrixNd F(nq,nq);
   iM.get_sub_mat(0,nq,0,nq,F);
-  static Ravelin::MatrixNd iF;
+  Ravelin::MatrixNd iF;
   iF = F;
   assert(LA_.factor_chol(iF));
 
@@ -455,7 +455,6 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
   x /= h;
-  x += fID;
   // Some debugging dialogue
   return true;
 }

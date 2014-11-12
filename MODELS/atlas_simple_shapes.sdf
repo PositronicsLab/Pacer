@@ -1,5 +1,4 @@
 <sdf version='1.5'>
-  <world>
   <model name='ATLAS'>
   <pose>0 0 1 0 -0 0</pose>
     <link name='BODY0'>
@@ -667,5 +666,4 @@
       </axis>
     </joint>
   </model>
-  </world>
 </sdf>

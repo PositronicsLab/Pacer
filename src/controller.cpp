@@ -433,19 +433,25 @@ Ravelin::VectorNd& Controller::control(double t,
       pid->qd_des = qd_des;
       pid->joint_names = get_joint_names();
       pid->update();
-    }
+      if(FEEDBACK_ACCEL)
+        qdd_des += pid->value;
+      else
+        ufb += pid->value;
+      OUTLOG(ufb,"controller-ufb",logERROR);
 
-    BOOST_FOREACH(boost::shared_ptr<ControllerModule> m,controllers){
-      if(m->type == CONTROLLER){
-//        boost::shared_ptr<ControllerModule> c = std::make_shared<ControllerModule>();
-//        c = boost::dynamic_pointer_cast<ControllerModule>(m);
-        if(false)
-          qdd_des += m->value;
-        else
-          ufb += m->value;
-        OUTLOG(ufb,"controller-ufb",logERROR);
       }
-    }
+
+//    BOOST_FOREACH(boost::shared_ptr<ControllerModule> m,controllers){
+//      if(m->type == CONTROLLER){
+////        boost::shared_ptr<ControllerModule> c = std::make_shared<ControllerModule>();
+////        c = boost::dynamic_pointer_cast<ControllerModule>(m);
+//        if(false)
+//          qdd_des += m->value;
+//        else
+//          ufb += m->value;
+//        OUTLOG(ufb,"controller-ufb",logERROR);
+//      }
+//    }
 
 
     // --------------------------- WORKSPACE FEEDBACK --------------------------
@@ -493,6 +499,7 @@ Ravelin::VectorNd& Controller::control(double t,
           eefs_[i].active = false;
       calc_contact_jacobians(N,D,R);
     }
+    int NC = N.columns();
 
     Ravelin::MatrixNd MU;
     MU.set_zero(N.columns(),2);
@@ -504,7 +511,6 @@ Ravelin::VectorNd& Controller::control(double t,
     if(USE_LAST_CFS){
       static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs-filter");
 
-      int NC = N.columns();
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active) continue;
@@ -559,11 +565,19 @@ Ravelin::VectorNd& Controller::control(double t,
       cf.set_zero(0);
     }
 
-
     // Reset active feet
     for(int i=0;i<NUM_EEFS;i++)
       if(eefs_[i].point.size() > 0)
         eefs_[i].active = true;
+
+    std::cout << "cf_moby = [";
+    for(unsigned i=0;i< eefs_.size();i++){
+      if(!eefs_[i].active)
+        std::cout << 0 << " " << 0 << " " << 0 << " ";
+      else
+        std::cout << eefs_[i].impulse[0][0] << " " << eefs_[i].impulse[0][1] << " " << eefs_[i].impulse[0][2] << " ";
+    }
+    std::cout << "]';" << std::endl;
 
 #ifdef TIMING
     struct timeval start_t;
@@ -581,6 +595,24 @@ Ravelin::VectorNd& Controller::control(double t,
 //OUTLOG(((std::clock() - start) / (double)(CLOCKS_PER_SEC))*1000.0,"idyn_timing",logINFO);
     OUTLOG(duration*1000.0,"idyn_timing",logINFO);
 #endif
+    std::cout << "cf_id = [";
+    for(unsigned i=0, ii=0;i< eefs_.size();i++){
+      if(!eefs_[i].active)
+        std::cout << 0 << " " << 0 << " " << 0 << " ";
+      else{
+        Ravelin::Vector3d impulse(cf[ii],cf[ii+NC]-cf[ii+NC*3],cf[ii+NC*2]-cf[ii+NC*4]);
+        int j = 0;
+        Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
+                                    eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
+                                    eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
+        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.transpose_mult(impulse,workv3_));
+
+        std::cout << contact_impulse[0] << " " << contact_impulse[1] << " " << contact_impulse[2] << " ";
+        ii++;
+      }
+    }
+    std::cout << "]';" << std::endl;
+
   }
 
   // ------------------------- PROCESS FB AND FF FORCES ------------------------

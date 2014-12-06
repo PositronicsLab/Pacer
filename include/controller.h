@@ -18,7 +18,7 @@ class Controller : public Robot{
      */
     Controller() : Robot(){}
 
-    Ravelin::VectorNd& control(double dt,
+    void control(double dt,
                                const Ravelin::VectorNd& generalized_q,
                                const Ravelin::VectorNd& generalized_qd,
                                const Ravelin::VectorNd& generalized_qdd,
@@ -111,6 +111,9 @@ class Controller : public Robot{
                           const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                           double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
 
+    static bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,
+                          const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
+                          double h, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
   private:
     std::vector<boost::shared_ptr<ControllerModule> > controllers;
     Ravelin::SForced lead_force_;

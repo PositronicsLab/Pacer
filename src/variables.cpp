@@ -13,7 +13,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 using boost::shared_ptr;
-using namespace Moby;
+using Moby::XMLTree;
+using Moby::XMLTreePtr;
+using Moby::XMLAttrib;
 
 constexpr unsigned int str2int(const char* str, int h = 0)
 {
@@ -48,7 +50,7 @@ std::vector<std::string> split(std::string const &input) {
 
 void process_tag(std::string tag,shared_ptr<const XMLTree> node){
     // do something with the current node instead of System.out
-    std::cout << "processing : " << tag << std::endl;
+    OUT_LOG(logDEBUG) << "processing : " << tag ;
 
     std::list<XMLTreePtr> nl = node->children;
     for (std::list<XMLTreePtr>::iterator  i = nl.begin(); i != nl.end(); i++) {
@@ -68,15 +70,27 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
 //          boost::algorithm::split(elements, parts[0],  boost::algorithm::is_any_of(" "));
           std::vector<std::string> elements = split(n->content);
 
-          std::cout << tag+n->name << "<" <<  data_type << "> = " <<  n->content << std::endl;
+          OUT_LOG(logDEBUG) << tag+n->name << "<" <<  data_type << "> = " <<  n->content ;
           if(elements.size() == 0)
             continue;
           switch(str2int(data_type.c_str())){
             case (str2int("string")):
-              if(elements.size()>1)
-                CVarUtils::CreateCVar<std::vector<std::string> >(tag+n->name,elements, help );
-              else
-                CVarUtils::CreateCVar<std::string>(tag+n->name,elements[0], help );
+              if(elements.size()>1){
+                try{
+                  CVarUtils::CreateCVar<std::vector<std::string> >(tag+n->name,elements, help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::vector<std::string> >(tag+n->name,elements);
+                }
+              }
+              else{
+                try{
+                  CVarUtils::CreateCVar<std::string>(tag+n->name,elements[0], help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::string>(tag+n->name,elements[0]);
+                }
+              }
             break;
             case (str2int("double")):
               if(elements.size()>1)
@@ -85,10 +99,21 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                         [](std::string const& val) {return std::stod(val);});
-                CVarUtils::CreateCVar<std::vector<double> >(tag+n->name,typed_elements, help );
+                try{
+                  CVarUtils::CreateCVar<std::vector<double> >(tag+n->name,typed_elements, help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::vector<double> >(tag+n->name,typed_elements );
+                }
               }
-              else
-                CVarUtils::CreateCVar<double>(tag+n->name,std::stod(elements[0]), help );
+              else{
+                try{
+                  CVarUtils::CreateCVar<double>(tag+n->name,std::stod(elements[0]), help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<double>(tag+n->name,std::stod(elements[0]));
+                }
+              }
             break;
             case (str2int("bool")):
               if(elements.size()>1)
@@ -97,13 +122,24 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                         [](std::string const& val) {return str2bool(val);});
-                CVarUtils::CreateCVar<std::vector<int> >(tag+n->name,typed_elements, help );
+                try{
+                  CVarUtils::CreateCVar<std::vector<int> >(tag+n->name,typed_elements, help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::vector<int> >(tag+n->name,typed_elements);
+                }
               }
-              else
-                CVarUtils::CreateCVar<int>(tag+n->name,str2bool(elements[0]), help );
+              else{
+                try{
+                  CVarUtils::CreateCVar<int>(tag+n->name,str2bool(elements[0]), help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<int>(tag+n->name,str2bool(elements[0]));
+                }
+              }
             break;
             default:
-              std::cerr << tag+n->name << "<" <<  data_type << "> = " <<  n->content << "\n"  << data_type << " is not a valid type!" << std::endl;
+              OUT_LOG(logERROR) << tag+n->name << "<" <<  data_type << "> = " <<  n->content << "\n"  << data_type << " is not a valid type!" ;
               assert(false);
             break;
           }

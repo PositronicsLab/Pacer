@@ -499,12 +499,8 @@ boost::shared_ptr<const RobotData> Robot::gen_vars_from_model(
     const std::map<std::string, double>& qd,
     boost::shared_ptr<const Ravelin::Pose3d> base_pose,
     const Ravelin::SVector6d& base_xd,
-    boost::shared_ptr<Robot> robot, // Needed for warmstarting
-    std::string xml_file,  // if cold starting
-    std::string init_file ) // if cold starting
+    boost::shared_ptr<Robot> robot) // if cold starting
 {
-  if(!robot) // cold start
-    robot = boost::shared_ptr<Robot>(new Robot(xml_file,init_file));
   std::vector<std::string>& joint_names = robot->get_joint_names();
   int N = q.size();
 

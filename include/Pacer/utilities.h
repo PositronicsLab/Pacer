@@ -9,6 +9,7 @@
 #include <Pacer/project_common.h>
 class Utility{
   public:
+
   /**
    * @brief Convert Rotation Matrix to roll pitch yaw Euler Angles
    * @param R 3x3 orthonormal rotation matrix

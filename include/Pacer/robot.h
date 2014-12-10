@@ -101,9 +101,7 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
         const std::map<std::string, double>& qd,
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
-        boost::shared_ptr<Robot> robot, // Needed for warmstarting
-        std::string xml_file = std::string(""),
-        std::string init_file = std::string(""));
+        boost::shared_ptr<Robot> robot);
 
   protected:
     /**

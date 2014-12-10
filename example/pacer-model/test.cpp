@@ -54,15 +54,21 @@ int main(){
                       Moby::GLOBAL)
                     );
 
-  boost::shared_ptr<Robot> robot;
+  // Init a robot from the model we want
+  std::string sdf_file("model.sdf");
+  std::string init_file("init.xml");
+  boost::shared_ptr<Robot> robot
+      = boost::shared_ptr<Robot>(new Robot(sdf_file,init_file));
+
+  robot
+      = boost::shared_ptr<Robot>(new Robot(sdf_file,init_file));
 
   boost::shared_ptr<const RobotData> data =
             Robot::gen_vars_from_model(
                   q,qd,
                   boost::shared_ptr<const Ravelin::Pose3d>(base_pose),
                   base_xd,
-                  robot,
-                  "model.sdf","init.xml");
+                  robot);
 
   std::cout << data->center_of_mass_x;
 

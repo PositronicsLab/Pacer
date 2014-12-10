@@ -142,7 +142,7 @@ public:
 
   std::string name;
 
-  std::vector<const EndEffector>
+  std::vector<EndEffector>
                     eefs;
 
   std::vector<Ravelin::Vector3d>

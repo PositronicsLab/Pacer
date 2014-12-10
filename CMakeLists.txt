@@ -25,6 +25,8 @@ option(USE_MOBY "build Moby plugin" OFF)
 option(USE_GAZEBO "build Gazebo plugin" OFF)
 option(RANDOM_FRICTION "Randomize friction mu = {0.1 .. 1.4}" OFF)
 
+# fix the C++ linking error on 64-bit Linux
+set (CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 
 if(RANDOM_FRICTION)
   add_definitions( -DRANDOM_FRICTION)
@@ -94,7 +96,6 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
 
 add_library(${PROJECT_NAME}Model ${SOURCES-BASIC})
 target_link_libraries(${PROJECT_NAME}Model Moby Ravelin Opt OpenThreads cvars)
-install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
 
 if(USE_MOBY)
   if(VISUALIZE_MOBY)
@@ -108,7 +109,7 @@ endif(USE_MOBY)
 
 add_library(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
-install(TARGETS ${PROJECT_NAME} DESTINATION lib)
+
 
 # EXAMPLES
 
@@ -142,4 +143,9 @@ endif(USE_GAZEBO)
 # Test: Calling PacerModel only instead of using controller features
   add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
   target_link_libraries(test-pacer-model ${PROJECT_NAME}Model Ravelin)
+
+  install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
+  install(TARGETS ${PROJECT_NAME} DESTINATION lib)
+
   install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
+

@@ -6,7 +6,8 @@
 #ifndef ROBOT_H
 #define ROBOT_H
 
-#include <project_common.h>
+#include <Pacer/project_common.h>
+namespace Pacer{
 class Robot;
 
 /**
@@ -57,20 +58,27 @@ struct RobotData{
                     roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
 };
 
-class Robot : public boost::enable_shared_from_this<Robot>{
+class Robot /*: public boost::enable_shared_from_this<Robot>*/{
   public:
-    boost::shared_ptr<Robot> ptr(){ return shared_from_this(); }
+//    boost::shared_ptr<Robot> ptr(){ return shared_from_this(); }
 #ifdef VISUALIZE_MOBY
     boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 #endif
     Robot(){
       init();
     }
+    Robot(std::string& xml_f, std::string& init_f) : xml_file(xml_f), init_file(init_f) {
+      init();
+    }
+
 
     /// ---------------------------  Getters  ---------------------------
     std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
+    std::map<std::string, EndEffector*>& get_end_effectors_map()  { return eefs_map_; }
     std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
     std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
+    std::vector<Moby::RigidBodyPtr>& get_links()  { return links_; }
+
     std::vector<std::string>& get_joint_names()  { return joint_names_; }
 
     /// Return Robot's internal model
@@ -78,6 +86,7 @@ class Robot : public boost::enable_shared_from_this<Robot>{
     Moby::DynamicBodyPtr get_dynamic_body()  { return dbrobot_; }
 
     boost::shared_ptr<const Ravelin::Pose3d> get_base_link_frame(){return base_link_frame;}
+    boost::shared_ptr<const RobotData> get_robot_data(){return data;}
 
     std::map<int, int>& get_joint_map()  { return joint_map_; }
     std::map<std::string, double>& get_q0()  { return q0_; }
@@ -85,6 +94,16 @@ class Robot : public boost::enable_shared_from_this<Robot>{
 
     /// Reset eefs_ data
     void reset_contact();
+
+    /// Function Warm Starts
+    static boost::shared_ptr<const RobotData> gen_vars_from_model(
+        const std::map<std::string, double>& q,
+        const std::map<std::string, double>& qd,
+        boost::shared_ptr<const Ravelin::Pose3d> base_x,
+        const Ravelin::SVector6d &base_xd,
+        boost::shared_ptr<Robot> robot, // Needed for warmstarting
+        std::string xml_file = std::string(""),
+        std::string init_file = std::string(""));
 
   protected:
     /**
@@ -149,6 +168,7 @@ class Robot : public boost::enable_shared_from_this<Robot>{
     // End Effector data
     std::vector<std::string>          eef_names_;
     std::vector<EndEffector>          eefs_;
+    std::map<std::string,EndEffector*> eefs_map_;
     std::map<std::string, bool>       active_joints_;
 
 
@@ -167,7 +187,7 @@ class Robot : public boost::enable_shared_from_this<Robot>{
     Ravelin::Vector3d center_of_feet_x,
                       center_of_feet_xd;
 
-    const RobotData * data;
+    boost::shared_ptr<const RobotData> data;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS,NUM_JOINT_DOFS;
     unsigned                          NSPATIAL;
@@ -183,8 +203,9 @@ class Robot : public boost::enable_shared_from_this<Robot>{
   // this function sorts everything to be sure of that
 
 private:
-    RobotData new_data;
+    boost::shared_ptr<RobotData> new_data;
 
+    std::string init_file, xml_file;
     // Import necessary info and then compile model
     void init();
 
@@ -194,5 +215,5 @@ private:
     void init_end_effector(EndEffector& eef);
 
 };
-
+}
 #endif // ROBOT_H

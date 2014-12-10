@@ -18,7 +18,7 @@
 #include <osg/LineSegment>
 #include <osg/LineWidth>
 
-#include <project_common.h>
+#include <Pacer/project_common.h>
 
 using namespace Moby;
 using namespace Ravelin;

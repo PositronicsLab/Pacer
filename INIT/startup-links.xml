@@ -2,14 +2,14 @@
   <init>
     <base>
       <active type="bool">true</active>
-      <x type="double">0 0 0.16 0 0 0</x>
+      <x type="double">0 0 0.2 0 0 0</x>
     </base>
 
     <joint>
-    <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3   0RH_X_1 0RH_Y_2 0RH_Y_3</id>
-    <q type="double">  0.3927 0.7854 1.5708           -0.3927 -0.7854 -1.5708          -0.3927 -0.7854 -1.5708          0.3927 0.7854 1.5708</q>
-    <active type="bool">true true true    true true true    true true true    true true true </active>
-     <max-torque type="double">4 4 4   4 4 4   4 4 4   4 4 4</max-torque>
+    <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3 0LF_ANKLE4  0RF_X_1 0RF_Y_2 0RF_Y_3 0RF_ANKLE4   0LH_X_1 0LH_Y_2 0LH_Y_3 0LH_ANKLE4   0RH_X_1 0RH_Y_2 0RH_Y_3 0RH_ANKLE4</id>
+    <q type="double">  0.3927 0.7854 1.5708 0           -0.3927 -0.7854 -1.5708 0         -0.3927 -0.7854 -1.5708 0         0.3927 0.7854 1.5708 0</q>
+    <active type="bool">true true true false   true true true false   true true true false   true true true false</active>
+     <max-torque type="double">4 4 4 0  4 4 4 0  4 4 4 0   4 4 4 0</max-torque>
     </joint>
 
     <end-effector>
@@ -25,7 +25,7 @@
     <active type="bool">true</active>
     <configuration-space>
       <active type="bool">true</active>
-      <accel type="bool">true</accel>
+      <accel type="bool">false</accel>
       <!-- Gains are for the q of joint ids respectively -->
       <force>
         <gains>
@@ -75,8 +75,8 @@
 
   <inverse-dynamics>
     <active type="bool">true</active>
-    <dt type="double">0.001</dt>
-    <alpha type="double">0.05</alpha>
+    <dt type="double">0.005</dt>
+    <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">false</des-contact>

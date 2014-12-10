@@ -3,8 +3,9 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <utilities.h>
-#include <controller.h>
+#include <Pacer/utilities.h>
+#include <Pacer/controller.h>
+using namespace Pacer;
 
 extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 

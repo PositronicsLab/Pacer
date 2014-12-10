@@ -3,8 +3,9 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include<controller.h>
-#include<utilities.h>
+#include<Pacer/controller.h>
+#include<Pacer/utilities.h>
+using namespace Pacer;
 
 void Controller::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
@@ -116,7 +117,6 @@ void Controller::select_foothold(const std::vector<Ravelin::Vector3d>& footholds
   x_fh = Ravelin::Origin3d(footholds[min_vec]);
 }
 
-extern void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 /*
 void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
                               const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
@@ -143,11 +143,11 @@ void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,co
     // VELOCITY & ACCELERATION
     OUTLOG(J,foot.id + "__J", logDEBUG1);
     OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG1);
-    solve((workM_ = J),(qd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_vel[i],Ravelin::Vector3d::zero()).data())));
+    Utility::solve((workM_ = J),(qd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_vel[i],Ravelin::Vector3d::zero()).data())));
     OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
 
     OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG1);
-    solve((workM_ = J),(qdd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_acc[i],Ravelin::Vector3d::zero()).data())));
+    Utility::solve((workM_ = J),(qdd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_acc[i],Ravelin::Vector3d::zero()).data())));
     OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
 
     for(int j=0;j<foot.chain.size();j++){
@@ -181,11 +181,11 @@ void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,co
     Ravelin::VectorNd qd_foot,qdd_foot;
     // VELOCITY & ACCELERATION
     OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG1);
-    solve((workM_ = J),(qd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_vel[i],Ravelin::Vector3d::zero()).data())));
+    Utility::solve((workM_ = J),(qd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_vel[i],Ravelin::Vector3d::zero()).data())));
     OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
 
     OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG1);
-    solve((workM_ = J),(qdd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_acc[i],Ravelin::Vector3d::zero()).data())));
+    Utility::solve((workM_ = J),(qdd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_acc[i],Ravelin::Vector3d::zero()).data())));
     OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
 
     for(int j=0;j<foot.chain.size();j++){

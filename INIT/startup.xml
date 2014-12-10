@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">INFO</logging>
+  <logging type="string">DEBUG1</logging>
 
   <sim>
     <known-base-perturbation type="double">0 0 0 0 0 0</known-base-perturbation>

@@ -6,7 +6,8 @@
 #ifndef MODULE_H
 #define MODULE_H
 
-#include <robot.h>
+#include <Pacer/robot.h>
+namespace Pacer{
 
 /**
  * @brief module class is the basic structure used to encapsulate controllers.
@@ -195,7 +196,7 @@ private:
   std::map<std::string,Gains> gains;
 
 };
-
+}
 
 
 #endif // MODULE_H

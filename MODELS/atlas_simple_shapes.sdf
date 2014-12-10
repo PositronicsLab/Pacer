@@ -1,8 +1,7 @@
 <?xml version="1.0" ?>
 <sdf version='1.5'>
-  <model name='ATLAS'>
-  <plugin name="PacerPlugin" filename="/usr/local/lib/libPacerGazeboPlugin.dylib">
-  </plugin>
+  <model name='ROBOT'>
+  <plugin name="PacerPlugin" filename="/usr/local/lib/libPacerGazeboPlugin.so"/>
   <pose>0 0 1 0 -0 0</pose>
     <link name='BODY0'>
       <pose>0 0 0 0 -0 0</pose>
@@ -334,6 +333,14 @@
         <linear>0</linear>
         <angular>0</angular>
       </velocity_decay>
+
+      <sensor name='l_foot_contact' type='contact'>
+        <!-- <plugin name="l_foot_contact_plugin" filename="libcontact.dylib"/> -->
+        <contact>
+          <collision>l_foot_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
     </link>
     <joint name='l_leg_lax6' type='revolute'>
       <child>l_foot</child>
@@ -654,6 +661,14 @@
         <linear>0</linear>
         <angular>0</angular>
       </velocity_decay>
+
+      <sensor name='r_foot_contact' type='contact'>
+        <!-- <plugin name="r_foot_contact_plugin" filename="libcontact.dylib"/> -->
+        <contact>
+          <collision>r_foot_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
     </link>
     <joint name='r_leg_lax6' type='revolute'>
       <child>r_foot</child>

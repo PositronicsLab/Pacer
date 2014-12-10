@@ -8,8 +8,8 @@
 #include<vector>
 #include<algorithm>
 #include<cmath>
-#include <project_common.h>
-#include <utilities.h>
+#include <Pacer/project_common.h>
+#include <Pacer/utilities.h>
 
 void Utility::evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P,Ravelin::Vector3d& dP,Ravelin::Vector3d& ddP) {
 

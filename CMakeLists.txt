@@ -53,12 +53,6 @@ if(SPLITTING_METHOD)
   add_definitions( -DSPLITTING_METHOD )
 endif(SPLITTING_METHOD)
 
-if(VISUALIZE_MOBY)
-  FIND_PACKAGE( GLUT REQUIRED )
-  FIND_PACKAGE( OpenGL REQUIRED )
-  add_definitions( -DVISUALIZE_MOBY )
-endif(VISUALIZE_MOBY)
-
 include_directories(
                     include
                     /usr/include
@@ -77,25 +71,38 @@ link_directories(
 /Applications/MATLAB_R2013a.app/extern/lib/maci64
                   )
 
-set(SOURCES src/output.cpp
+set(SOURCES-BASIC
+            src/output.cpp
             src/robot.cpp
-            src/inverse_dynamics.cpp
             src/kinematics.cpp
-            src/stabilization.cpp
             src/utilities.cpp
+            src/variables.cpp
+           )
+
+set(SOURCES ${SOURCES-BASIC}
+            src/inverse_dynamics.cpp
+            src/stabilization.cpp
             src/splines.cpp
             src/solve_qp.cpp
             src/controller.cpp
             src/locomotion.cpp
             src/wcpg.cpp
-            src/stabilization.cpp
-            src/variables.cpp
            )
+
+# install include dirs
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
+
+add_library(${PROJECT_NAME}Model ${SOURCES-BASIC})
+target_link_libraries(${PROJECT_NAME}Model Moby Ravelin Opt OpenThreads cvars)
+install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
 
 if(USE_MOBY)
   if(VISUALIZE_MOBY)
     set(SOURCES ${SOURCES} src/visualize_moby.cpp)
     set(VISUALIZE_LIBS glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
+    FIND_PACKAGE( GLUT REQUIRED )
+    FIND_PACKAGE( OpenGL REQUIRED )
+    add_definitions( -DVISUALIZE_MOBY )
   endif(VISUALIZE_MOBY)
 endif(USE_MOBY)
 
@@ -103,23 +110,36 @@ add_library(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
+# EXAMPLES
+
+# Moby Plugin
 if(USE_MOBY)
-  add_library(${PROJECT_NAME}Plugin MODULE src/control_moby.cpp)
+  add_library(${PROJECT_NAME}Plugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
   target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
-  install(TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)
+  install(TARGETS ${PROJECT_NAME}Plugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
 endif(USE_MOBY)
 
+# Gazebo Plugin
 if(USE_GAZEBO)
-#  find_package(Protobuf REQUIRED)
+  set(VISUALIZE_MOBY off)
 
   include (FindPkgConfig)
   if (PKG_CONFIG_FOUND)
     pkg_check_modules(GAZEBO gazebo)
-  endif()
+  endif(PKG_CONFIG_FOUND)
   include_directories(${GAZEBO_INCLUDE_DIRS})
   link_directories(${GAZEBO_LIBRARY_DIRS})
 
-  add_library(${PROJECT_NAME}GazeboPlugin src/control_gazebo.cpp)
-  target_link_libraries(${PROJECT_NAME}GazeboPlugin ${PROJECT_NAME} Moby Ravelin ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES})
-  install(TARGETS ${PROJECT_NAME}GazeboPlugin DESTINATION lib)
+  add_library(${PROJECT_NAME}Plugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
+  target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
+  install(TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)
+
+  add_library(contact SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/contact-plugin.cpp)
+  target_link_libraries(contact ${PROJECT_NAME} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
+  install(TARGETS contact DESTINATION ${CMAKE_SOURCE_DIR}/example/control-gazebo)
 endif(USE_GAZEBO)
+
+# Test: Calling PacerModel only instead of using controller features
+  add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
+  target_link_libraries(test-pacer-model ${PROJECT_NAME}Model Ravelin)
+  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)

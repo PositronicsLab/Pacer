@@ -6,8 +6,7 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-#include <project_common.h>
-
+#include <Pacer/project_common.h>
 class Utility{
   public:
   /**
@@ -17,6 +16,7 @@ class Utility{
    * @return
    */
   static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
+  static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 
   /**
    * @brief Convert Quaternion to roll pitch yaw (Tait Bryan) Euler Angles

@@ -16,9 +16,9 @@
   <EventDrivenSimulator integrator-id="bs" Euler-step="0.001">
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="GROUND" />
-    <DynamicBody dynamic-body-id="ATLAS" />
-    <DisabledPair object1-id="ATLAS" object2-id="ATLAS"/>
-    <ContactParameters object1-id="GROUND" object2-id="ATLAS" epsilon="0" mu-coulomb="1.4" />
+    <DynamicBody dynamic-body-id="ROBOT" />
+    <DisabledPair object1-id="ROBOT" object2-id="ROBOT"/>
+    <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="1.4" />
   </EventDrivenSimulator>
 
   <SDF filename="atlas_simple_shapes.sdf"/>

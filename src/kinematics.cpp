@@ -3,9 +3,10 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <robot.h>
+#include <Pacer/robot.h>
 
 using namespace Ravelin;
+using namespace Pacer;
 
 Ravelin::VectorNd& Robot::foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk){
   for(int i=0;i<foot.chain.size();i++)
@@ -75,8 +76,6 @@ Ravelin::MatrixNd& Robot::foot_jacobian(const Ravelin::VectorNd& x,const EndEffe
   return gk;
 }
 
-extern void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
-
 /// Resolved Motion Rate Control
 void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
   Ravelin::MatrixNd J;
@@ -97,7 +96,7 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
-      solve(workM_ = J,step);
+      Utility::solve(workM_ = J,step);
 
     Ravelin::VectorNd qstep = step;
     OUTLOG(qstep,"qstep",logDEBUG1);
@@ -153,7 +152,7 @@ void Robot::RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Raveli
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
     OUTLOG(step,"xstep",logDEBUG1);
-      solve(workM_ = J,step);
+      Utility::solve(workM_ = J,step);
 
     Ravelin::VectorNd qstep = step;
     OUTLOG(qstep,"qstep",logDEBUG1);

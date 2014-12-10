@@ -3,10 +3,9 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <controller.h>
-#include <utilities.h>
+#include <Pacer/controller.h>
+#include <Pacer/utilities.h>
 #include <sys/time.h>
-#include <Module.h>
 
 #ifdef VISUALIZE_MOBY
 #ifdef APPLE
@@ -20,13 +19,14 @@
 #endif
 #endif
 
+using namespace Pacer;
 
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================
 // ============================================================================
 
-Ravelin::VectorNd& Controller::control(double t,
+void Controller::control(double t,
                                       const Ravelin::VectorNd& generalized_q_in,
                                       const Ravelin::VectorNd& generalized_qd_in,
                                       const Ravelin::VectorNd& generalized_qdd_in,
@@ -587,8 +587,10 @@ Ravelin::VectorNd& Controller::control(double t,
     //std::clock_t start = std::clock();
 #endif
     Ravelin::VectorNd fext_scaled;
-    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf))
+//    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf))
+    if(inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf))
       uff += (id*=alpha);
+
 #ifdef TIMING
     gettimeofday(&end_t, NULL);
     double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
@@ -728,8 +730,6 @@ Ravelin::VectorNd& Controller::control(double t,
 
    reset_contact();
    last_time = t;
-
-   return u;
 }
 // ===========================  END CONTROLLER  ===============================
 // ============================================================================

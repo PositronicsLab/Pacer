@@ -6,9 +6,11 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
-#include <robot.h>
+#include <Pacer/robot.h>
 #include <CVars/CVar.h>
-#include <Module.h>
+#include <Pacer/Module.h>
+
+namespace Pacer{
 class Controller : public Robot{
   public:
 
@@ -119,4 +121,5 @@ class Controller : public Robot{
     Ravelin::SForced lead_force_;
     Ravelin::SForced known_force_;
 };
+}
 #endif // CONTROL_H

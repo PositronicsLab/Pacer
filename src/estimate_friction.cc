@@ -3,7 +3,8 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <robot.h>
+#include <Pacer/robot.h>
+using namespace Pacer;
 
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 

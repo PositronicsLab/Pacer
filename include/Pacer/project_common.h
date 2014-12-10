@@ -36,7 +36,7 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
-#include <utilities.h>
+#include <Pacer/utilities.h>
 
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
@@ -59,7 +59,7 @@ extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Event
 #endif
 
 // ----------------------------------------------------------------------------
-#include <Log.h>
+#include <Pacer/Log.h>
  void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
  void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
@@ -84,5 +84,4 @@ static Ravelin::VectorNd workv_;
 static Ravelin::Vector3d workv3_;
 static Ravelin::MatrixNd workM_;
 static Ravelin::LinAlgd LA_;
-
 #endif // PROJECT_COMMON_H

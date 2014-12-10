@@ -3,8 +3,8 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <project_common.h>
-#include <utilities.h>
+#include <Pacer/project_common.h>
+#include <Pacer/utilities.h>
 
 Ravelin::Vector3d& Utility::quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::Vector3d& rpy){
 
@@ -19,7 +19,7 @@ Ravelin::Vector3d& Utility::quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::V
 
   // (3-2-1) z-y-x Tait-Bryan rotation
   rpy[0] = atan2((q[2]*q[3] + q[0]*q[1]),0.5-(q[1]*q[1] + q[2]*q[2]));
-  rpy[1] = -asin(-2*(q[1]*q[3] + q[0]*q[2]));
+  rpy[1] = asin(2.0*(-q[1]*q[3] + q[0]*q[2]));
   rpy[2] = atan2((q[1]*q[2] + q[0]*q[3]),0.5-(q[2]*q[2] + q[3]*q[3]));
   return rpy;
 }
@@ -151,4 +151,13 @@ Ravelin::Vector3d Utility::slerp( const Ravelin::Vector3d& v0,const Ravelin::Vec
 
 Ravelin::Vector3d Utility::lerp( const Ravelin::Vector3d& v0,const Ravelin::Vector3d& v1,double t){
   return (v0*(1-t) + v1*t);
+}
+
+void Utility::solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx){
+  if(M.rows() == M.columns())
+    LA_.solve_fast(M,bx);
+  else{
+    LA_.pseudo_invert(workM_ = M);
+    workM_.mult(workv_ = bx,bx);
+  }
 }

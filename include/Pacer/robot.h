@@ -123,8 +123,8 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
     /// Get M and fext from model internal to plugin NOT simulator
     void calculate_dyn_properties(Ravelin::MatrixNd &M, Ravelin::VectorNd &fext);
 
-    /// Calcultate kinetic energy of robot
-    double calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M);
+    /// Calcultate energy of robot
+    double calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const;
 
     /// Calculate Center of mass(x,xd,xdd,zmp)
     void calc_com();

@@ -64,8 +64,8 @@ void Robot::calc_com(){
 #endif
 }
 
-double Robot::calc_energy(Ravelin::VectorNd& v, Ravelin::MatrixNd& M){
-  // Potential Energy
+double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const {
+  // Potential Energy: this calculation assumes that ground is always at zero 
   double PE = 0;
   for(int i=0;i<links_.size();i++){
      Moby::RigidBody& link = *links_[i];

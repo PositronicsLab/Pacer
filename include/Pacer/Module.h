@@ -6,6 +6,7 @@
 #ifndef MODULE_H
 #define MODULE_H
 
+#include <sstream>
 #include <Pacer/robot.h>
 namespace Pacer{
 
@@ -171,6 +172,13 @@ public:
     }
   }
 
+  std::string to_string(unsigned i)
+  {
+    std::ostringstream oss;
+    oss << i;
+    return oss.str();
+  }
+
   void update(){
     // get the two gains
     for (unsigned i=0; i< eefs.size(); i++)
@@ -179,13 +187,13 @@ public:
       const std::string& eef_name = eefs[i].id;
       for (unsigned j=0; j< 3; j++)
       {
-        const double KP = gains[eef_name+std::to_string(j)].kp;
-        const double KV = gains[eef_name+std::to_string(j)].kv;
-        const double KI = gains[eef_name+std::to_string(j)].ki;
+        const double KP = gains[eef_name+to_string(j)].kp;
+        const double KV = gains[eef_name+to_string(j)].kv;
+        const double KI = gains[eef_name+to_string(j)].ki;
 
         // add feedback torque to joints
         double perr = x_des[i][j] - x[i][j];
-        gains[eef_name+std::to_string(j)].perr_sum += perr;
+        gains[eef_name+to_string(j)].perr_sum += perr;
         double ierr = gains[eef_name].perr_sum;
         double derr = xd_des[i][j] - xd[i][j];
 

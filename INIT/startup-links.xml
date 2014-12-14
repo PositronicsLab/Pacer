@@ -2,7 +2,7 @@
   <init>
     <base>
       <active type="bool">true</active>
-      <x type="double">0 0 0.2 0 0 0</x>
+      <x type="double">0 0 0.18 0 0 0</x>
     </base>
 
     <joint>
@@ -24,6 +24,7 @@
   <error-feedback>
     <active type="bool">true</active>
     <configuration-space>
+      <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3   0RH_X_1 0RH_Y_2 0RH_Y_3 </id>
       <active type="bool">true</active>
       <accel type="bool">false</accel>
       <!-- Gains are for the q of joint ids respectively -->
@@ -55,11 +56,11 @@
   </error-feedback>
 
   <stabilization>
-    <active type="bool">false</active>
+    <active type="bool">true</active>
     <viip>
       <active type="bool">true</active>
-      <accel type="bool">true</accel>
-      <des-contact type="bool">true</des-contact>
+      <accel type="bool">false</accel>
+      <des-contact type="bool">false</des-contact>
       <!-- Gains are for the [X Y Z r p y] of base -->
       <gains>
         <kp type="double">0 0 0  0 0 0</kp>
@@ -79,7 +80,7 @@
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">false</des-contact>
+    <des-contact type="bool">true</des-contact>
   </inverse-dynamics>
   </controller>
 

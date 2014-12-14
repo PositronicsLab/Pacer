@@ -50,7 +50,7 @@ std::vector<std::string> split(std::string const &input) {
 
 void process_tag(std::string tag,shared_ptr<const XMLTree> node){
     // do something with the current node instead of System.out
-    OUT_LOG(logDEBUG) << "processing : " << tag ;
+//    OUT_LOG(logDEBUG1) << "processing : " << tag ;
 
     std::list<XMLTreePtr> nl = node->children;
     for (std::list<XMLTreePtr>::iterator  i = nl.begin(); i != nl.end(); i++) {
@@ -66,11 +66,9 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
           if(a)
              help = a->get_string_value();
 
-//          std::vector<std::string> elements;
-//          boost::algorithm::split(elements, parts[0],  boost::algorithm::is_any_of(" "));
           std::vector<std::string> elements = split(n->content);
 
-          OUT_LOG(logDEBUG) << tag+n->name << "<" <<  data_type << "> = " <<  n->content ;
+//          OUT_LOG(logDEBUG1) << tag+n->name << "<" <<  data_type << "> = " <<  n->content;
           if(elements.size() == 0)
             continue;
           switch(str2int(data_type.c_str())){
@@ -79,7 +77,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 try{
                   CVarUtils::CreateCVar<std::vector<std::string> >(tag+n->name,elements, help );
                 } catch (CVarUtils::CVarException& e){
-                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
                   CVarUtils::SetCVar<std::vector<std::string> >(tag+n->name,elements);
                 }
               }
@@ -87,7 +85,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 try{
                   CVarUtils::CreateCVar<std::string>(tag+n->name,elements[0], help );
                 } catch (CVarUtils::CVarException& e){
-                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
                   CVarUtils::SetCVar<std::string>(tag+n->name,elements[0]);
                 }
               }
@@ -102,7 +100,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 try{
                   CVarUtils::CreateCVar<std::vector<double> >(tag+n->name,typed_elements, help );
                 } catch (CVarUtils::CVarException& e){
-                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
                   CVarUtils::SetCVar<std::vector<double> >(tag+n->name,typed_elements );
                 }
               }
@@ -110,7 +108,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 try{
                   CVarUtils::CreateCVar<double>(tag+n->name,std::stod(elements[0]), help );
                 } catch (CVarUtils::CVarException& e){
-                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
                   CVarUtils::SetCVar<double>(tag+n->name,std::stod(elements[0]));
                 }
               }
@@ -125,7 +123,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 try{
                   CVarUtils::CreateCVar<std::vector<int> >(tag+n->name,typed_elements, help );
                 } catch (CVarUtils::CVarException& e){
-                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
                   CVarUtils::SetCVar<std::vector<int> >(tag+n->name,typed_elements);
                 }
               }
@@ -133,13 +131,13 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 try{
                   CVarUtils::CreateCVar<int>(tag+n->name,str2bool(elements[0]), help );
                 } catch (CVarUtils::CVarException& e){
-                  OUT_LOG(logDEBUG) << "\t -- Already set, resetting" ;
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
                   CVarUtils::SetCVar<int>(tag+n->name,str2bool(elements[0]));
                 }
               }
             break;
             default:
-              OUT_LOG(logERROR) << tag+n->name << "<" <<  data_type << "> = " <<  n->content << "\n"  << data_type << " is not a valid type!" ;
+              OUT_LOG(logINFO) << tag+n->name << "<" <<  data_type << "> = " <<  n->content << "\n"  << data_type << " is not a valid type!" ;
               assert(false);
             break;
           }

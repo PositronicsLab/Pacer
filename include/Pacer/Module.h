@@ -77,10 +77,9 @@ public:
   std::vector<std::string> joint_names;
 
   void init(){
-    OUT_LOG(logERROR) << "Controller: " << name << " inited!";
     type = CONTROLLER;
     std::vector<std::string>
-        &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.joint.id");
+        &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("controller.error-feedback.configuration-space.id");
 
     OUTLOG(joint_names,"joint_names",logERROR);
 
@@ -90,14 +89,16 @@ public:
         &Ki = CVarUtils::GetCVarRef<std::vector<double> >(name+".gains.ki");
 
     for(int i=0;i<joint_names.size();i++){
-        gains[joint_names[i]].kp = Kp[i];
-        gains[joint_names[i]].kv = Kv[i];
-        gains[joint_names[i]].ki = Ki[i];
+      gains[joint_names[i]].kp = Kp[i];
+      gains[joint_names[i]].kv = Kv[i];
+      gains[joint_names[i]].ki = Ki[i];
+      gains[joint_names[i]].perr_sum = 0;
     }
 
     OUTLOG(Kp,"Kp",logERROR);
     OUTLOG(Kv,"Kv",logERROR);
     OUTLOG(Ki,"Ki",logERROR);
+    OUT_LOG(logERROR) << "Controller: " << name << " inited!";
   }
 
   void update(){
@@ -121,6 +122,7 @@ public:
       value[i] = perr*KP + derr*KV + ierr*KI;
     }
     OUTLOG(value,"ufb",logERROR);
+    OUTLOG(joint_names,"joint_names",logERROR);
 
   }
 private:

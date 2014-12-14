@@ -814,3 +814,237 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   return true;
 }
 
+/*
+bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = N.columns();
+
+
+  /////////////////////////////////////////////////////////////////////////////
+  /// Solve System
+  ///
+  std::vector< std::vector<unsigned> > S_indices,T_indices;
+  const unsigned NCONTACTS = S[0].columns();
+  const unsigned NIMP = q.N_CONSTRAINT_EQNS_IMP;
+  const unsigned N_IDX = 0;
+  const unsigned P_IDX = N_IDX + NCONTACTS;
+  const unsigned nP_IDX = N_IDX + NCONTACTS + nq;
+  VectorNd lb, ub, b;
+  MatrixNd A;
+
+  // we do this by solving the MLCP:
+  // |  A  C  | | u | + | a | = | 0 |
+  // |  D  B  | | v |   | b |   | r |
+
+  // a = [-M*v'; 0]
+  // b = [-P*vdes P*vdes 0]
+  // A = [ M -S' -T' ;
+  //       S  0   0  ;
+  //       T  0   0  ];
+  // B = zeros(3,3)
+  // C = [ -P' P' -N' ;
+  //        0  0   0  ;
+  //        0  0   0  ];
+  // D = -C'
+  // u = [ v^+; cs; ct ]
+  // v = [ a; b; cN ]
+  // r = [ Cn*v+; vq_err; -vq_err ]
+
+  // Assuming that C is of full row rank (no dependent joint constraints)
+  // A is invertible; then we just need to solve the LCP:
+
+  // | B - D*inv(A)*C | | v | + | b - D*inv(A)*a | = | w |
+  // and use the result to solve for u:
+  // u = -inv(A)*(a + Cv)
+
+  // A is the matrix | M X'|
+  //                 | X 0 |  where X is [ S; T ]
+  // blockwise inversion yields
+  // inv(A) = [
+  //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
+  //    Y*X*inv(M)                    -Y          ]
+  // where Y = inv(X*inv(M)*X')
+
+  // defining Q = [a; b; Cn] and using the result above yields following LCP:
+  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  // vector: -Q*inv(A)*a  = -Q*v + Q*inv(M)*X'*Y*X*v
+
+  // loop through contacts, forming matrix below and checking its condition
+  // | S*inv(M)*S'  S*inv(M)*T' |
+  // | T*inv(M)*S'  T*inv(M)*T' |
+  bool last_success = false;
+  for (unsigned i=0; i< NCONTACTS; i++)
+  {
+    // update S indices
+    S_indices.push_back(i);
+
+    // setup indices
+    unsigned S_IDX = 0;
+    unsigned T_IDX = S_indices.size();
+    _Y.resize(T_IDX + T_indices.size(), T_IDX + T_indices.size());
+
+    // add S/S, T/T, J/J components to 'check' matrix
+    q.Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, S_IDX, _MM);
+    q.Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
+    _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+
+    // add S/T components to 'check' matrix
+    q.Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, T_IDX, _MM);
+    _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
+
+    // skew the matrix away from positive definiteness
+    for (unsigned j=0; j< _Y.rows(); j++)
+      _Y(j,j) -= NEAR_ZERO;
+
+    // see whether check matrix can be Cholesky factorized
+    if (!_LA.factor_chol(_Y))
+      S_indices.pop_back();
+
+    // add index for T
+    T_indices.push_back(i);
+
+    // resize the check matrix
+    T_IDX = S_indices.size();
+    _Y.resize(T_IDX + T_indices.size(), T_IDX + T_indices.size());
+
+    // add S/S, T/T, J/J components to 'check' matrix
+    q.Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, S_IDX, _MM);
+    q.Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
+    _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+
+    // add S/T components to 'check' matrix
+    q.Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, T_IDX, _MM);
+    _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
+
+    // skew the matrix away from positive definiteness
+    for (unsigned j=0; j< _Y.rows(); j++)
+      _Y(j,j) -= NEAR_ZERO;
+
+    // see whether check matrix can be Cholesky factorized
+    last_success = _LA.factor_chol(_Y);
+    if (!last_success)
+      T_indices.pop_back();
+  }
+
+  // output indices
+  if (LOG(logDEBUG))
+  {
+    std::ostringstream oss;
+    oss << "s indices:";
+    for (unsigned i=0; i< S_indices.size(); i++)
+      oss << " " << S_indices[i];
+    oss << "  t indices:";
+    for (unsigned i=0; i< T_indices.size(); i++)
+      oss << " " << T_indices[i];
+    OUT_LOG(logDEBUG) << oss.str() << std::endl;
+  }
+
+  // ********************************************************
+  // reform Y if necessary
+  // ********************************************************
+
+  // setup indices
+  const unsigned S_IDX = 0;
+  const unsigned T_IDX = S_indices.size();
+  if (!last_success)
+  {
+    _Y.resize(T_IDX + T_indices.size(), T_IDX + T_indices.size());
+
+    // add S/S, T/T, J/J components to X
+    q.Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, S_IDX, _MM);
+    q.Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
+    _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+
+    // add S/T components to X
+    q.Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, T_IDX, _MM);
+    _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
+
+    // do the Cholesky factorization (should not fail)
+    bool success = _LA.factor_chol(_Y);
+    assert(success);
+  }
+
+  // defining Y = inv(X*inv(M)*X') and Q = [Cn; L; 0]
+  // and using the result above yields following LCP:
+  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  // vector: Q*inv(A)*a  = Q*v - Q*inv(M)*X'*Y*X*v
+
+  // Selection Matrix v = [ vq vb ] -> vq ; [ T fb ] -> [ T ]
+  Ravelin::MatrixNd P();
+
+  // setup Q*inv(M)*Q'
+  _MM.set_zero(nc + nq * 2, nc + nq * 2);
+  _MM.set_sub_mat(N_IDX, N_IDX, q.Cn_iM_CnT);
+
+  // (N)(+P)
+  _MM.set_sub_mat(N_IDX, P_IDX, q.Cn_iM_PT);
+  _MM.set_sub_mat(P_IDX, N_IDX, q.Cn_iM_PT, Ravelin::eTranspose);
+
+  // (N)(-P)
+  _MM.set_sub_mat(N_IDX, nP_IDX, -q.Cn_iM_PT);
+  _MM.set_sub_mat(nP_IDX, N_IDX, -q.Cn_iM_PT, Ravelin::eTranspose);
+
+  // (+P)(-P)
+
+  _MM.set_sub_mat(P_IDX, P_IDX, q.P_iM_PT);
+
+  // setup Q*inv(M)*X'
+  _Q_iM_XT.resize(nc + nq * 2, S_indices.size() + T_indices.size());
+  q.Cn_iM_CsT.select_columns(S_indices.begin(), S_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(N_IDX, S_IDX, _workM);
+  q.Cn_iM_CtT.select_columns(T_indices.begin(), T_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(N_IDX, T_IDX, _workM);
+
+  // +P
+  q.Cs_iM_LT.select_rows(S_indices.begin(), S_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(P_IDX, S_IDX, _workM, Ravelin::eTranspose);
+  q.Ct_iM_LT.select_rows(T_indices.begin(), T_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(P_IDX, T_IDX, _workM, Ravelin::eTranspose);
+
+  // -P
+  q.Cs_iM_LT.select_rows(S_indices.begin(), S_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(P_IDX, S_IDX, _workM, Ravelin::eTranspose);
+  q.Ct_iM_LT.select_rows(T_indices.begin(), T_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(P_IDX, T_IDX, _workM, Ravelin::eTranspose);
+
+  // compute Y*X*inv(M)*Q'
+  MatrixNd::transpose(_Q_iM_XT, _workM);
+  _LA.solve_chol_fast(_Y, _workM);
+
+  // compute Q*inv(M)*X'*Y*X*inv(M)*Q'
+  _Q_iM_XT.mult(_workM, _workM2);
+  _MM -= _workM2;
+
+  // setup -Q*v
+  _qq.resize(nc + nq * 2);
+  _qq.set_sub_vec(N_IDX, q.Cn_v);
+  _qq.set_sub_vec(P_IDX, q.P_v);
+
+  // setup X*v
+  _Xv.resize(S_indices.size() + T_indices.size());
+  q.Cs_v.select(S_indices.begin(), S_indices.end(), _workv);
+  _Xv.set_sub_vec(S_IDX, _workv);
+  q.Ct_v.select(T_indices.begin(), T_indices.end(), _workv);
+  _Xv.set_sub_vec(T_IDX, _workv);
+
+  // compute Y*X*v
+  _YXv = _Xv;
+  _LA.solve_chol_fast(_Y, _YXv);
+
+  // compute Q*inv(M)*X' * Y*X*v
+  _Q_iM_XT.mult(_YXv, _workv);
+
+  // setup remainder of LCP vector
+  _qq -= _workv;
+
+}
+*/

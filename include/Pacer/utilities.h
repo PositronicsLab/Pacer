@@ -16,7 +16,7 @@ class Utility{
    * @param rpy: roll pitch yaw (return value)
    * @return
    */
-  static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
+//  static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
   static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 
   /**
@@ -25,7 +25,7 @@ class Utility{
    * @param rpy: roll pitch yaw (return value)
    * @return
    */
-  static Ravelin::Vector3d& quat2TaitBryanZ(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
+//  static Ravelin::Vector3d& quat2TaitBryanZ(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
 
   /**
    * @brief Convert Quaternion to roll pitch yaw
@@ -33,7 +33,7 @@ class Utility{
    * @param rpy: roll pitch yaw (return value)
    * @return
    */
-  static Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
+//  static Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
 
   /**
    * @brief Rotation matrix of x radians about the local z-axis
@@ -41,7 +41,7 @@ class Utility{
    * @param R 3x3 orthonormal rotation matrix (return value)
    * @return reference to R parameter
    */
-  static Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R);
+//  static Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R);
 
   /**
    * @brief Rotation matrix of x radians about the local y-axis
@@ -49,7 +49,7 @@ class Utility{
    * @param R 3x3 orthonormal rotation matrix (return value)
    * @return reference to R parameter
    */
-  static Ravelin::Matrix3d& Ry(double x,Ravelin::Matrix3d& R);
+//  static Ravelin::Matrix3d& Ry(double x,Ravelin::Matrix3d& R);
 
   /**
    * @brief Rotation matrix of x radians about the local x-axis
@@ -57,7 +57,7 @@ class Utility{
    * @param R 3x3 orthonormal rotation matrix (return value)
    * @return reference to R parameter
    */
-  static Ravelin::Matrix3d& Rx(double x,Ravelin::Matrix3d& R);
+//  static Ravelin::Matrix3d& Rx(double x,Ravelin::Matrix3d& R);
 
   /// Calculates The null pace for matrix M and places it in Vk
   /// returns the number of columns in Vk

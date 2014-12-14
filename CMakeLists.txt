@@ -77,6 +77,7 @@ set(SOURCES-BASIC
             src/kinematics.cpp
             src/utilities.cpp
             src/variables.cpp
+            src/visualize_moby.cpp
            )
 
 set(SOURCES ${SOURCES-BASIC}
@@ -92,10 +93,6 @@ set(SOURCES ${SOURCES-BASIC}
 # install include dirs
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
 
-add_library(${PROJECT_NAME}Model ${SOURCES-BASIC})
-target_link_libraries(${PROJECT_NAME}Model Moby Ravelin Opt OpenThreads cvars)
-install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
-
 if(USE_MOBY)
   if(VISUALIZE_MOBY)
     set(SOURCES ${SOURCES} src/visualize_moby.cpp)
@@ -110,13 +107,17 @@ add_library(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
+add_library(${PROJECT_NAME}Model ${SOURCES-BASIC})
+target_link_libraries(${PROJECT_NAME}Model Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
+install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
+
 # EXAMPLES
 
 # Moby Plugin
 if(USE_MOBY)
-  add_library(${PROJECT_NAME}Plugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
-  target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin)
-  install(TARGETS ${PROJECT_NAME}Plugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
+  add_library(${PROJECT_NAME}MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
+  target_link_libraries(${PROJECT_NAME}MobyPlugin ${PROJECT_NAME} Moby Ravelin)
+  install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
 endif(USE_MOBY)
 
 # Gazebo Plugin
@@ -130,9 +131,9 @@ if(USE_GAZEBO)
   include_directories(${GAZEBO_INCLUDE_DIRS})
   link_directories(${GAZEBO_LIBRARY_DIRS})
 
-  add_library(${PROJECT_NAME}Plugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
-  target_link_libraries(${PROJECT_NAME}Plugin ${PROJECT_NAME} Moby Ravelin ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
-  install(TARGETS ${PROJECT_NAME}Plugin DESTINATION lib)
+  add_library(${PROJECT_NAME}GazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
+  target_link_libraries(${PROJECT_NAME}GazeboPlugin ${PROJECT_NAME} Moby Ravelin ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
+  install(TARGETS ${PROJECT_NAME}GazeboPlugin DESTINATION lib)
 
   add_library(contact SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/contact-plugin.cpp)
   target_link_libraries(contact ${PROJECT_NAME} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)

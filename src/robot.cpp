@@ -49,8 +49,9 @@ void Robot::calc_com(){
   //
   Ravelin::Vector3d C(1,0,-new_data->center_of_mass_x[2]/grav,environment_frame);
   new_data->zero_moment_point =
-      Ravelin::Vector2d(C.dot(Ravelin::Vector3d(new_data->center_of_mass_x[0],new_data->center_of_mass_xd[0],new_data->center_of_mass_xdd[0],environment_frame)),
-                        C.dot(Ravelin::Vector3d(new_data->center_of_mass_x[1],new_data->center_of_mass_xd[1],new_data->center_of_mass_xdd[1],environment_frame)));
+      Ravelin::Vector3d(C.dot(Ravelin::Vector3d(new_data->center_of_mass_x[0],new_data->center_of_mass_xd[0],new_data->center_of_mass_xdd[0],environment_frame)),
+                        C.dot(Ravelin::Vector3d(new_data->center_of_mass_x[1],new_data->center_of_mass_xd[1],new_data->center_of_mass_xdd[1],environment_frame)),
+                        0,environment_frame);
 
   new_data->center_of_mass_x.pose = new_data->center_of_mass_xd.pose = new_data->center_of_mass_xdd.pose = environment_frame;
 
@@ -230,14 +231,14 @@ void Robot::update(
 
   // fetch robot state vectors
   calc_contact_jacobians(new_data->N,new_data->D,new_data->R);
-//  calc_workspace_jacobian(Rw);
+
   int NC = new_data->N.columns();
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   // SRZ: updating generalized_fext disabled (for now)
   // generalized_fext is supplied by Sim (controller input)
   calculate_dyn_properties(new_data->M,new_data->generalized_fext);
-//  calc_energy(generalized_qd,M);
+  calc_energy(new_data->generalized_qd,new_data->M);
   calc_com();
 
   center_of_contact.point.resize(1);
@@ -312,22 +313,23 @@ void Robot::update_poses(){
   base_link_frame = links_[0]->get_pose();
 
   Ravelin::Matrix3d R_base(base_link_frame->q),
-      R_pitch(cos(displace_base_link[4]),0,sin(displace_base_link[4]),0,1,0,-sin(displace_base_link[4]),0,cos(displace_base_link[4])),
-//      R_yaw(cos(displace_base_link[4]),0,sin(displace_base_link[4]),0,1,0,-sin(displace_base_link[4]),0,cos(displace_base_link[4])),
-//      R_roll(cos(displace_base_link[4]),0,sin(displace_base_link[4]),0,1,0,-sin(displace_base_link[4]),0,cos(displace_base_link[4])),
+      R_pitch = Ravelin::Matrix3d::rot_Y(displace_base_link[4]),
       new_R;
   OUT_LOG(logINFO) << "Rotating base_link_frame saggitally by: theta = " << -displace_base_link[4];
-  R_base.mult_transpose(R_pitch,new_R);
+  R_base.mult(R_pitch,new_R);
   base_link_frame = boost::shared_ptr<const Ravelin::Pose3d>(
                          new Ravelin::Pose3d( new_R,base_link_frame->x,Moby::GLOBAL));
-//  base_link_frame->q.to_rpy(new_data->roll_pitch_yaw[0],new_data->roll_pitch_yaw[1],new_data->roll_pitch_yaw[2]);
-  Utility::quat2TaitBryanZ(base_link_frame->q,new_data->roll_pitch_yaw);
+  base_link_frame->q.to_rpy(new_data->roll_pitch_yaw);
 
   // preserve yaw
-  Ravelin::AAngled yaw(0,0,1,new_data->roll_pitch_yaw[2]);
-  base_horizontal_frame = boost::shared_ptr<const Ravelin::Pose3d>(new Ravelin::Pose3d(yaw,base_link_frame->x,Moby::GLOBAL));
+  base_horizontal_frame
+      = boost::shared_ptr<const Ravelin::Pose3d>(
+          new Ravelin::Pose3d(
+            Ravelin::Matrix3d::rot_Z(new_data->roll_pitch_yaw[2]),
+          base_link_frame->x,Moby::GLOBAL));
 
-//  base_frame = base_horizontal_frame;//boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
+//  base_frame = base_horizontal_frame;
+//  base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
   base_frame = base_link_frame;
 
   for(int i=0;i<NUM_EEFS;i++)
@@ -371,7 +373,7 @@ void Robot::init(){
     std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
     std::cerr << "Using Robot: " << robot_start_file << std::endl;
     init_file = std::string("INIT/startup-"+robot_start_file+".xml");
-    xml_file = std::string("MODELS/"+robot_start_file+".sdf");
+    sdf_file = std::string("MODELS/"+robot_start_file+".sdf");
   }
   Utility::load_variables(init_file);
 
@@ -379,7 +381,6 @@ void Robot::init(){
 
   std::string LOG_TYPE = CVarUtils::GetCVarRef<std::string>("logging");
 
-  std::cerr << LOG_TYPE << std::endl;
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
 
@@ -392,8 +393,7 @@ void Robot::init(){
   // ================= BUILD ROBOT ==========================
   /// The map of objects read from the simulation XML file
 //  std::map<std::string, Moby::BasePtr> READ_MAP;
-//  READ_MAP = Moby::XMLReader::read(std::string("MODELS/"+robot_start_file+".xml"));
-  std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(xml_file);
+  std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(sdf_file);
 
   for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
        i !=READ_MAP.end(); i++)
@@ -406,7 +406,7 @@ void Robot::init(){
   }
 
   if (!abrobot_){
-    OUT_LOG(logERROR) << "could not find RCArticulatedBody for robot: " << xml_file;
+    OUT_LOG(logERROR) << "could not find RCArticulatedBody for robot: " << sdf_file;
     assert(false);
   }
   compile();
@@ -494,12 +494,11 @@ void Robot::init(){
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
 }
 
-boost::shared_ptr<const RobotData> Robot::gen_vars_from_model(
-    const std::map<std::string, double>& q,
+boost::shared_ptr<const RobotData> Robot::gen_vars_from_model(const std::map<std::string, double>& q,
     const std::map<std::string, double>& qd,
     boost::shared_ptr<const Ravelin::Pose3d> base_pose,
     const Ravelin::SVector6d& base_xd,
-    boost::shared_ptr<Robot> robot) // if cold starting
+    boost::shared_ptr<Robot>& robot)
 {
   std::vector<std::string>& joint_names = robot->get_joint_names();
   int N = q.size();

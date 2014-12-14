@@ -40,7 +40,7 @@ struct EndEffector{
  * @brief The RobotData struct stores const data for use by the controller.
  */
 struct RobotData{
-  Ravelin::Vector2d zero_moment_point;
+  Ravelin::Vector3d zero_moment_point;
   Ravelin::VectorNd q   /*!< position of robot joint dofs, size: [NUM_JOINT_DOFS] */ ,
                     qd  /*!< velocity of robot joint dofs, size: [NUM_JOINT_DOFS] */ ,
                     qdd /*!< acceleration of robot joint dofs, size: [NUM_JOINT_DOFS] */ ;
@@ -52,10 +52,10 @@ struct RobotData{
                     M /*!< generalized inertia matrix, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */,
                     R /*!< Contact Jacobian [N,D] */;
   Ravelin::VectorNd generalized_fext /*!< generalized external forces on robot (excluding contact), size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */;
-  Ravelin::Vector3d center_of_mass_x /*!< Global frame coordinates of the center of mass of robot links */,
-                    center_of_mass_xd /*!< Global frame velocity of the center of mass of robot links */,
-                    center_of_mass_xdd /*!< Global frame acceleration of the center of mass of robot links */,
-                    roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
+  Moby::Point3d center_of_mass_x /*!< Global frame coordinates of the center of mass of robot links */;
+  Ravelin::Vector3d center_of_mass_xd /*!< Global frame velocity of the center of mass of robot links */,
+                    center_of_mass_xdd /*!< Global frame acceleration of the center of mass of robot links */;
+  Ravelin::Origin3d roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
 };
 
 class Robot /*: public boost::enable_shared_from_this<Robot>*/{
@@ -67,10 +67,9 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
     Robot(){
       init();
     }
-    Robot(std::string& xml_f, std::string& init_f) : xml_file(xml_f), init_file(init_f) {
+    Robot(std::string& sdf_f, std::string& init_f) : sdf_file(sdf_f), init_file(init_f) {
       init();
     }
-
 
     /// ---------------------------  Getters  ---------------------------
     std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
@@ -101,7 +100,7 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
         const std::map<std::string, double>& qd,
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
-        boost::shared_ptr<Robot> robot);
+        boost::shared_ptr<Robot>& robot);
 
   protected:
     /**
@@ -203,7 +202,7 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
 private:
     boost::shared_ptr<RobotData> new_data;
 
-    std::string init_file, xml_file;
+    std::string init_file, sdf_file;
     // Import necessary info and then compile model
     void init();
 

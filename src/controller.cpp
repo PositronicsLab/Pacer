@@ -501,12 +501,17 @@ void Controller::control(double t,
     }
     int NC = N.columns();
 
+    bool inf_friction = true;
     Ravelin::MatrixNd MU;
     MU.set_zero(N.columns(),2);
     for(int i=0,ii=0;i<NUM_EEFS;i++)
       if(eefs_[i].active)
-        for(int j=0;j<eefs_[i].point.size();j++,ii++)
+        for(int j=0;j<eefs_[i].point.size();j++,ii++){
           std::fill(MU.row(ii).begin(),MU.row(ii).end(),eefs_[i].mu_coulomb[j]);
+          if(std::accumulate(MU.row(ii).begin(),MU.row(ii).end(),0)
+             /MU.row(ii).rows() < 100.0)
+            inf_friction = false;
+        }
 
     if(USE_LAST_CFS){
       static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs-filter");
@@ -565,11 +570,6 @@ void Controller::control(double t,
       cf.set_zero(0);
     }
 
-    // Reset active feet
-    for(int i=0;i<NUM_EEFS;i++)
-      if(eefs_[i].point.size() > 0)
-        eefs_[i].active = true;
-
     std::cout << "cf_moby = [";
     for(unsigned i=0;i< eefs_.size();i++){
       if(!eefs_[i].active)
@@ -586,9 +586,14 @@ void Controller::control(double t,
      //get difference, multiply by 1E-6 to convert to seconds
     //std::clock_t start = std::clock();
 #endif
+    bool solve_flag = false;
     Ravelin::VectorNd fext_scaled;
-//    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf))
-    if(inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf))
+    if(NC > 0 && inf_friction){
+      solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
+    } else
+      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
+
+    if(solve_flag)
       uff += (id*=alpha);
 
 #ifdef TIMING
@@ -599,7 +604,7 @@ void Controller::control(double t,
 #endif
     std::cout << "cf_id = [";
     for(unsigned i=0, ii=0;i< eefs_.size();i++){
-      if(!eefs_[i].active)
+      if(!eefs_[i].active || !solve_flag)
         std::cout << 0 << " " << 0 << " " << 0 << " ";
       else{
         Ravelin::Vector3d impulse(cf[ii],cf[ii+NC]-cf[ii+NC*3],cf[ii+NC*2]-cf[ii+NC*4]);
@@ -615,7 +620,12 @@ void Controller::control(double t,
     }
     std::cout << "]';" << std::endl;
 
+    // Reset active feet
+    for(int i=0;i<NUM_EEFS;i++)
+      if(eefs_[i].point.size() > 0)
+        eefs_[i].active = true;
   }
+
 
   // ------------------------- PROCESS FB AND FF FORCES ------------------------
 

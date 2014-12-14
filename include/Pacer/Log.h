@@ -96,6 +96,8 @@ typedef Log FILELog;
     if (level > FILELog::ReportingLevel()) ; \
     else Log().Get(level)
 
+#define LOG(level) (level > FILELog::ReportingLevel())
+
 #include <sys/time.h>
 
 inline std::string NowTime()

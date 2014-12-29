@@ -887,17 +887,17 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   //////////////////////////////////////////////////////////////
   Ravelin::MatrixNd P;
-  P.set_zero(n,nq);
+  P.set_zero(nq,n);
   P.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
   Ravelin::MatrixNd PT = P;
-  P.transpose();
+  PT.transpose();
 
   OUTLOG(P,"P",logDEBUG1);
   OUTLOG(PT,"P'",logDEBUG1);
-  Ravelin::MatrixNd Cs_iM_CsT, Cs_iM_CtT, /*Cs_iM_CnT,*/ Cs_iM_PT,
-                    Ct_iM_CsT, Ct_iM_CtT, /*Ct_iM_CnT,*/ Ct_iM_PT,
-                    Cn_iM_CsT, Cn_iM_CtT,   Cn_iM_CnT,   Cn_iM_PT,
-                 /*  P_iM_CsT,  P_iM_CtT,    P_iM_CnT,*/  P_iM_PT;
+  Ravelin::MatrixNd Cs_iM_CsT, Cs_iM_CtT, /*Cs_iM_CnT,*/ Cs_iM_JxT,
+                    Ct_iM_CsT, Ct_iM_CtT, /*Ct_iM_CnT,*/ Ct_iM_JxT,
+                    Cn_iM_CsT, Cn_iM_CtT,   Cn_iM_CnT,   Cn_iM_JxT,
+                 /*  Jx_iM_CsT,  Jx_iM_CtT,    Jx_iM_CnT,*/  Jx_iM_JxT;
 
   // S
   LA_.solve_chol_fast(iM_chol,_workM = ST);
@@ -910,7 +910,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 //  S.mult(_workM,Cs_iM_CnT);
 
   LA_.solve_chol_fast(iM_chol,_workM = PT);
-  S.mult(_workM,Cs_iM_PT);
+  S.mult(_workM,Cs_iM_JxT);
 
   // T
   LA_.solve_chol_fast(iM_chol,_workM = ST);
@@ -923,7 +923,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 //  T.mult(_workM,Ct_iM_CnT);
 
   LA_.solve_chol_fast(iM_chol,_workM = PT);
-  T.mult(_workM,Ct_iM_PT);
+  T.mult(_workM,Ct_iM_JxT);
 
   // N
   LA_.solve_chol_fast(iM_chol,_workM = ST);
@@ -936,57 +936,54 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   N.mult(_workM,Cn_iM_CnT);
 
   LA_.solve_chol_fast(iM_chol,_workM = PT);
-  N.mult(_workM,Cn_iM_PT);
+  N.mult(_workM,Cn_iM_JxT);
 
   // P
 //  LA_.solve_chol_fast(iM_chol,_workM = ST);
-//  P.mult(_workM,P_iM_CsT);
+//  P.mult(_workM,Jx_iM_CsT);
 
 //  LA_.solve_chol_fast(iM_chol,_workM = TT);
-//  P.mult(_workM,P_iM_CtT);
+//  P.mult(_workM,Jx_iM_CtT);
 
 //  LA_.solve_chol_fast(iM_chol,_workM = NT);
-//  P.mult(_workM,P_iM_CnT);
+//  P.mult(_workM,Jx_iM_CnT);
 
   LA_.solve_chol_fast(iM_chol,_workM = PT);
-  P.mult(_workM,P_iM_PT);
+  P.mult(_workM,Jx_iM_JxT);
 
-  Ravelin::VectorNd Cs_v, Ct_v, Cn_v, P_v, nP_v;
+  Ravelin::VectorNd Cs_v, Ct_v, Cn_v, Jx_v;
   S.mult(v,Cs_v);
   T.mult(v,Ct_v);
   N.mult(v,Cn_v);
-  P.mult(v, P_v);
-  P.mult(v,nP_v,-1,0);
+  P.mult(v,Jx_v);
 
   // Printouts
   OUTLOG(Cs_iM_CsT,"Cs_iM_CsT",logDEBUG1);
   OUTLOG(Cs_iM_CtT,"Cs_iM_CtT",logDEBUG1);
 //  OUTLOG(Cs_iM_CnT,"Cs_iM_CnT",logDEBUG1);
-  OUTLOG(Cs_iM_PT ,"Cs_iM_PT",logDEBUG1);
+  OUTLOG(Cs_iM_JxT ,"Cs_iM_JxT",logDEBUG1);
 
   OUTLOG(Ct_iM_CsT,"Ct_iM_CsT",logDEBUG1);
   OUTLOG(Ct_iM_CtT,"Ct_iM_CtT",logDEBUG1);
 //  OUTLOG(Ct_iM_CnT,"Ct_iM_CnT",logDEBUG1);
-  OUTLOG(Ct_iM_PT ,"Ct_iM_PT",logDEBUG1);
+  OUTLOG(Ct_iM_JxT ,"Ct_iM_JxT",logDEBUG1);
 
   OUTLOG(Cn_iM_CsT,"Cn_iM_CsT",logDEBUG1);
   OUTLOG(Cn_iM_CtT,"Cn_iM_CtT",logDEBUG1);
   OUTLOG(Cn_iM_CnT,"Cn_iM_CnT",logDEBUG1);
-  OUTLOG(Cn_iM_PT ,"Cn_iM_PT",logDEBUG1);
+  OUTLOG(Cn_iM_JxT ,"Cn_iM_JxT",logDEBUG1);
 
-//  OUTLOG( P_iM_CsT,"P_iM_CsT",logDEBUG1);
-//  OUTLOG( P_iM_CtT,"P_iM_CtT",logDEBUG1);
-//  OUTLOG( P_iM_CnT,"P_iM_CnT",logDEBUG1);
-  OUTLOG( P_iM_PT ,"P_iM_PT",logDEBUG1);
+//  OUTLOG( Jx_iM_CsT,"Jx_iM_CsT",logDEBUG1);
+//  OUTLOG( Jx_iM_CtT,"Jx_iM_CtT",logDEBUG1);
+//  OUTLOG( Jx_iM_CnT,"Jx_iM_CnT",logDEBUG1);
+  OUTLOG( Jx_iM_JxT ,"Jx_iM_JxT",logDEBUG1);
 
 
   /////////////////////////////////////////////////////////////////////////////
   /// Solve System
   ///
-  std::vector<unsigned> S_indices,T_indices;
+  std::vector<unsigned> S_indices,T_indices,J_indices;
   const unsigned N_IDX = 0;
-  const unsigned P_IDX = N_IDX + nc;
-  const unsigned P2_IDX = N_IDX + nc + nq;
 
   // we do this by solving the MLCP:
   // |  A  C  | | x | + | g | = | 0 |
@@ -1030,9 +1027,36 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // vector: h - Q*inv(A)*a  = h - (Q*v + Q*inv(M)*X'*Y*X*v)
 
   Ravelin::MatrixNd _MM,_Y;
+  // ********************************************************
+  // find largest non-singular set of J, S, and T indices
+  // ********************************************************
+
+  // loop through joint constraints, forming J*inv(M)*J' and checking condition
+  for (unsigned i=0; i< nc; i++)
+  {
+    // add the index tentatively to the set
+    J_indices.push_back(i);
+
+    // select the rows and columns
+    Jx_iM_JxT.select_square(J_indices.begin(), J_indices.end(), _Y);
+
+    // skew the matrix away from positive definiteness
+    for (unsigned j=0; j< J_indices.size(); j++)
+      _Y(j,j) -=Moby::NEAR_ZERO;
+
+    // attempt Cholesky factorization
+    if (!_LA.factor_chol(_Y))
+      J_indices.pop_back();
+  }
+
+  Ravelin::MatrixNd _rJx_iM_JxT;
+  // get the reduced Jx*iM*Jx' matrix
+  Jx_iM_JxT.select_square(J_indices.begin(), J_indices.end(), _rJx_iM_JxT);
+
   // loop through contacts, forming matrix below and checking its condition
-  // | S*inv(M)*S'  S*inv(M)*T' |
-  // | T*inv(M)*S'  T*inv(M)*T' |
+  // | S*inv(M)*S'  S*inv(M)*T' S*inv(M)*J' |
+  // | T*inv(M)*S'  T*inv(M)*T' T*inv(M)*J' |
+  // | J*inv(M)*S'  J*inv(M)*T' J*inv(M)*J' |
   bool last_success = false;
   for (unsigned i=0; i< nc; i++)
   {
@@ -1042,22 +1066,34 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     // setup indices
     unsigned S_IDX = 0;
     unsigned T_IDX = S_indices.size();
-    _Y.resize(T_IDX + T_indices.size(), T_IDX + T_indices.size());
+    unsigned J_IDX = T_IDX + T_indices.size();
+    _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
     // add S/S, T/T, J/J components to 'check' matrix
     Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
     _Y.set_sub_mat(S_IDX, S_IDX, _MM);
     Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
     _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, J_IDX, _rJx_iM_JxT);
 
     // add S/T components to 'check' matrix
     Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
     _Y.set_sub_mat(S_IDX, T_IDX, _MM);
     _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
 
+    // add S/J components to check matrix
+    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, J_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, S_IDX, _MM, Ravelin::eTranspose);
+
+    // add T/J components to check matrix
+    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _MM);
+    _Y.set_sub_mat(T_IDX, J_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
+
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= Moby::NEAR_ZERO;
+      _Y(j,j) -=Moby::NEAR_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     if (!_LA.factor_chol(_Y))
@@ -1068,29 +1104,40 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
     // resize the check matrix
     T_IDX = S_indices.size();
-    _Y.resize(T_IDX + T_indices.size(), T_IDX + T_indices.size());
+    J_IDX = T_IDX + T_indices.size();
+    _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
-    // add S/S, T/T components to 'check' matrix
+    // add S/S, T/T, J/J components to 'check' matrix
     Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
     _Y.set_sub_mat(S_IDX, S_IDX, _MM);
     Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
     _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, J_IDX, _rJx_iM_JxT);
 
     // add S/T components to 'check' matrix
     Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
     _Y.set_sub_mat(S_IDX, T_IDX, _MM);
     _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
 
+    // add S/J components to check matrix
+    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, J_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, S_IDX, _MM, Ravelin::eTranspose);
+
+    // add T/J components to check matrix
+    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _MM);
+    _Y.set_sub_mat(T_IDX, J_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
+
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= Moby::NEAR_ZERO;
+      _Y(j,j) -=Moby::NEAR_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     last_success = _LA.factor_chol(_Y);
-    if (!last_success )
+    if (!last_success)
       T_indices.pop_back();
   }
-
 
   // output indices
   if (true)
@@ -1102,7 +1149,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     oss << "  t indices:";
     for (unsigned i=0; i< T_indices.size(); i++)
       oss << " " << T_indices[i];
-    OUT_LOG(logDEBUG) << oss.str() << std::endl;
+    OUT_LOG(logDEBUG1) << oss.str() << std::endl;
   }
 
   // ********************************************************
@@ -1112,85 +1159,59 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // setup indices
   const unsigned S_IDX = 0;
   const unsigned T_IDX = S_indices.size();
+  const unsigned J_IDX = T_IDX + T_indices.size();
   if (!last_success)
   {
-    _Y.resize(T_IDX + T_indices.size(), T_IDX + T_indices.size());
+    _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
-    // add S/S, T/T components to X
+    // add S/S, T/T, J/J components to X
     Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
     _Y.set_sub_mat(S_IDX, S_IDX, _MM);
     Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
     _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, J_IDX, _rJx_iM_JxT);
 
     // add S/T components to X
     Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
     _Y.set_sub_mat(S_IDX, T_IDX, _MM);
     _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
 
+    // add S/J components to X
+    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _MM);
+    _Y.set_sub_mat(S_IDX, J_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, S_IDX, _MM, Ravelin::eTranspose);
+
+    // add T/J components to X
+    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _MM);
+    _Y.set_sub_mat(T_IDX, J_IDX, _MM);
+    _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
+
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
     assert(success);
   }
 
-  // defining Y = inv(X*inv(M)*X') and Q = C
-  // and using the result above yields following LCP:
-  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
-  // vector: h - Q*inv(A)*a  = h - (Q*v - Q*inv(M)*X'*Y*X*v)
-
-  // Selection Matrix v = [ vq vb ] -> vq ; [ T fb ] -> [ T ]
-  Ravelin::VectorNd _qq,_v;
-
   Ravelin::MatrixNd _Q_iM_XT;
   Ravelin::VectorNd _Xv,_YXv;
+  Ravelin::VectorNd _qq,_v;
+
+  // defining Y = inv(X*inv(M)*X') and Q = [Cn; L; 0]
+  // and using the result above yields following LCP:
+  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  // vector: Q*inv(A)*a  = Q*v - Q*inv(M)*X'*Y*X*v
+
   // setup Q*inv(M)*Q'
-  //  [  N(N'), -N(P'),  N(P')]
-  //  [ -P(N'),  P(P'), -P(P')]
-  //  [  P(N'), -P(P'),  P(P')]
-  _MM.set_zero(nc + nq * 2, nc + nq * 2);
-
-   Ravelin::MatrixNd n_Cn_iM_PT = Cn_iM_PT;
-   n_Cn_iM_PT.negate();
-   Ravelin::MatrixNd n_Cs_iM_PT = Cs_iM_PT;
-   n_Cs_iM_PT.negate();
-   Ravelin::MatrixNd n_Ct_iM_PT = Ct_iM_PT;
-   n_Ct_iM_PT.negate();
-
-   Ravelin::MatrixNd n_P_iM_PT = P_iM_PT;
-   n_P_iM_PT.negate();
-
+  _MM.set_zero(nc , nc);
   _MM.set_sub_mat(N_IDX, N_IDX, Cn_iM_CnT);
 
-  _MM.set_sub_mat(N_IDX, P_IDX, n_Cn_iM_PT);
-  _MM.set_sub_mat(P_IDX, N_IDX, n_Cn_iM_PT, Ravelin::eTranspose);
-
-  _MM.set_sub_mat(N_IDX,  P2_IDX, Cn_iM_PT);
-  _MM.set_sub_mat(P2_IDX,  N_IDX, Cn_iM_PT, Ravelin::eTranspose);
-
-  _MM.set_sub_mat( P_IDX, P2_IDX, n_P_iM_PT);
-  _MM.set_sub_mat(P2_IDX,  P_IDX, n_P_iM_PT);
-
-  _MM.set_sub_mat( P_IDX,  P_IDX, P_iM_PT);
-  _MM.set_sub_mat(P2_IDX, P2_IDX, P_iM_PT);
-
   // setup Q*inv(M)*X'
-  _Q_iM_XT.set_zero(nc + nq * 2, S_indices.size() + T_indices.size());
-
+  _Q_iM_XT.resize(nc, S_indices.size() + T_indices.size() + J_indices.size());
   Cn_iM_CsT.select_columns(S_indices.begin(), S_indices.end(), _workM);
   _Q_iM_XT.set_sub_mat(N_IDX, S_IDX, _workM);
   Cn_iM_CtT.select_columns(T_indices.begin(), T_indices.end(), _workM);
   _Q_iM_XT.set_sub_mat(N_IDX, T_IDX, _workM);
-
-  // -P
-  n_Cs_iM_PT.select_rows(S_indices.begin(), S_indices.end(), _workM);
-  _Q_iM_XT.set_sub_mat(P_IDX, S_IDX, _workM, Ravelin::eTranspose);
-  n_Ct_iM_PT.select_rows(T_indices.begin(), T_indices.end(), _workM);
-  _Q_iM_XT.set_sub_mat(P_IDX, T_IDX, _workM, Ravelin::eTranspose);
-
-  // +P
-  Cs_iM_PT.select_rows(S_indices.begin(), S_indices.end(), _workM);
-  _Q_iM_XT.set_sub_mat(P2_IDX, S_IDX, _workM, Ravelin::eTranspose);
-  Ct_iM_PT.select_rows(T_indices.begin(), T_indices.end(), _workM);
-  _Q_iM_XT.set_sub_mat(P2_IDX, T_IDX, _workM, Ravelin::eTranspose);
+  Cn_iM_JxT.select_columns(J_indices.begin(), J_indices.end(), _workM);
+  _Q_iM_XT.set_sub_mat(N_IDX, J_IDX, _workM);
 
   // compute Y*X*inv(M)*Q'
   Ravelin::MatrixNd::transpose(_Q_iM_XT, _workM);
@@ -1198,32 +1219,20 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   // compute Q*inv(M)*X'*Y*X*inv(M)*Q'
   _Q_iM_XT.mult(_workM, _workM2);
-  _MM += _workM2;
-
-  Ravelin::MatrixNd B;
-  B.set_zero(nq*2+nc,nq*2+nc);
-  for(int i=0;i<nq;i++){
-    B(nc+i,nc+i) = 1;
-    B(nc+nq+i,nc+nq+i) = 1;
-    B(nc+nq+i,nc+i) = -1;
-    B(nc+i,nc+nq+i) = -1;
-  }
-  _MM.negate();
-  _MM += B;
+  _MM -= _workM2;
 
   // setup -Q*v
-  _qq.resize(nc + nq * 2);
+  _qq.resize(nc);
   _qq.set_sub_vec(N_IDX, Cn_v);
-  _qq.set_sub_vec(P_IDX, nP_v);
-  _qq.set_sub_vec(P2_IDX, P_v);
-  _qq.negate();
 
   // setup X*v
-  _Xv.resize(S_indices.size() + T_indices.size());
+  _Xv.resize(S_indices.size() + T_indices.size() + J_indices.size());
   Cs_v.select(S_indices.begin(), S_indices.end(), _workv);
   _Xv.set_sub_vec(S_IDX, _workv);
   Ct_v.select(T_indices.begin(), T_indices.end(), _workv);
   _Xv.set_sub_vec(T_IDX, _workv);
+  Jx_v.select(J_indices.begin(), J_indices.end(), _workv);
+  _Xv.set_sub_vec(J_IDX, _workv);
 
   // compute Y*X*v
   _YXv = _Xv;
@@ -1231,17 +1240,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   // compute Q*inv(M)*X' * Y*X*v
   _Q_iM_XT.mult(_YXv, _workv);
+
+  // setup remainder of LCP vector
   _qq -= _workv;
-
-  Ravelin::VectorNd h;
-  h.set_zero(nc+nq*2);
-  h.set_sub_vec(nc+nq, vqstar);
-  workv_ = vqstar;
-  workv_.negate();
-  h.set_sub_vec(nc, workv_);
-
-  _qq.negate();
-  _qq += h;
 
   OUTLOG(_qq,"_qq",logDEBUG1);
   OUTLOG(_v,"_v",logDEBUG1);
@@ -1257,7 +1258,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
       throw std::runtime_error("Unable to solve constraint LCP!");
   }
 
-  Ravelin::VectorNd _cs_ct;
+  Ravelin::VectorNd _cs_ct_a;
 
   // compute the friction forces
   // u = -inv(A)*(a + Cv)
@@ -1267,21 +1268,24 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // | Y*X*inv(M)                    -Y          | sz(x) x ngc,  sz(x) x sz(x)
   // Q is nlcp x (ngc + sz(x))
   // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn; ct]
-  _cs_ct = _YXv;
+  _cs_ct_a = _YXv;
   _Q_iM_XT.transpose_mult(_v, _workv);
   _LA.solve_chol_fast(_Y, _workv);
-  _cs_ct += _workv;
-  _cs_ct.negate();
+  _cs_ct_a += _workv;
+  _cs_ct_a.negate();
 
-  Ravelin::VectorNd cn,cs,ct;
+  Ravelin::VectorNd cn,cs,ct,a;
   // setup impulses
   cn = _v.segment(0, nc);
   cs.set_zero(nc);
   ct.set_zero(nc);
-  Ravelin::SharedConstVectorNd cs_vec = _cs_ct.segment(S_IDX, T_IDX);
-  Ravelin::SharedConstVectorNd ct_vec = _cs_ct.segment(T_IDX, _cs_ct.rows());
+  a.set_zero(nq);
+  Ravelin::SharedConstVectorNd cs_vec = _cs_ct_a.segment(S_IDX, T_IDX);
+  Ravelin::SharedConstVectorNd ct_vec = _cs_ct_a.segment(T_IDX, J_IDX);
+  Ravelin::SharedConstVectorNd a_vec = _cs_ct_a.segment(J_IDX, _cs_ct_a.rows());
   cs.set(S_indices.begin(), S_indices.end(), cs_vec);
   ct.set(T_indices.begin(), T_indices.end(), ct_vec);
+  a.set(J_indices.begin(), J_indices.end(), a_vec);
 
   cf_final.set_zero(nc*5);
   for(unsigned i=0;i< nc;i++){

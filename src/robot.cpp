@@ -66,7 +66,7 @@ void Robot::calc_com(){
 }
 
 double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const {
-  // Potential Energy: this calculation assumes that ground is always at zero 
+  // Potential Energy: this calculation assumes that ground is always at zero
   double PE = 0;
   for(int i=0;i<links_.size();i++){
      Moby::RigidBody& link = *links_[i];
@@ -363,6 +363,7 @@ void Robot::reset_contact(){
 #endif
 
 #include <Moby/SDFReader.h>
+#include <Moby/XMLReader.h>
 void Robot::init(){
 #if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
    tglc = new std::thread(init_glconsole);
@@ -393,22 +394,43 @@ void Robot::init(){
   // ================= BUILD ROBOT ==========================
   /// The map of objects read from the simulation XML file
 //  std::map<std::string, Moby::BasePtr> READ_MAP;
-  std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(sdf_file);
+  try{
+    std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(sdf_file);
 
-  for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
-       i !=READ_MAP.end(); i++)
-  {
-    // find the robot reference
-    if (!abrobot_)
+    for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
+         i !=READ_MAP.end(); i++)
     {
-      abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+      // find the robot reference
+      if (!abrobot_)
+      {
+        abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+      }
+    }
+
+    if (!abrobot_){
+      throw std::runtime_error("could not find RCArticulatedBody for robot");
+    }
+  } catch (std::runtime_error& e){
+    try{
+      std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(sdf_file.substr(0,sdf_file.size()-4)+".xml"));
+      for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
+         i !=READ_MAP.end(); i++)
+      {
+      // find the robot reference
+      if (!abrobot_)
+      {
+        abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+      }
+    }
+
+    if (!abrobot_){
+      throw std::runtime_error("could not find RCArticulatedBody for robot");
+    }
+    } catch (std::runtime_error& e) {
+      assert(false);
     }
   }
 
-  if (!abrobot_){
-    OUT_LOG(logERROR) << "could not find RCArticulatedBody for robot: " << sdf_file;
-    assert(false);
-  }
   compile();
 
   // ================= SET UP END EFFECTORS ==========================

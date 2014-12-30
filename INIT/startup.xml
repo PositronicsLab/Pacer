@@ -7,5 +7,5 @@
     <known-leading-force type="double">0.13 0 0 0 0 0</known-leading-force>
   </sim>
 
-  <robot type="string">links</robot>
+  <robot type="string">links-moby</robot>
 </XML>

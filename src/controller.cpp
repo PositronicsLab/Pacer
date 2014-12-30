@@ -588,10 +588,24 @@ void Controller::control(double t,
 #endif
     bool solve_flag = false;
     Ravelin::VectorNd fext_scaled;
+    cf.resize(0);
     if(NC > 0 && inf_friction){
       solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
-    } else
+      OUTLOG(id,"uf_qp_noslip",logERROR);
+      OUTLOG(cf,"cf_qp_noslip",logERROR);
+      cf.resize(0);
+      id.resize(0);
       solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
+      OUTLOG(id,"uff_qp",logERROR);
+      OUTLOG(cf,"cf_qp",logERROR);
+      cf.resize(0);
+      id.resize(0);
+      solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
+      OUTLOG(id,"uff_lcp_noslip",logERROR);
+      OUTLOG(cf,"cf_lcp_noslip",logERROR);
+    } else {
+      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
+    }
 
     if(solve_flag)
       uff += (id*=alpha);
@@ -653,7 +667,7 @@ void Controller::control(double t,
 
   set_model_state(data->q,data->qd);
 
-   OUT_LOG(logINFO) <<"JOINT:A\t\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
+   OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
    for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
      if(joints_[i])
      for(int j=0;j<joints_[i]->num_dof();j++,ii++){

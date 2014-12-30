@@ -705,7 +705,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   Ravelin::MatrixNd P;
   LA_.nullspace(H,P);
   unsigned size_null_space = P.columns();
-  if(size_null_space != 0 && false)
+  if(size_null_space != 0)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
@@ -779,8 +779,14 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
     Ravelin::VectorNd w(size_null_space);
     if(!solve_qp(qG,qc,qM,qq,w)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!";
-      return false;
-      // then skip to calculating x from stage 1 solution
+      // calculate x from stage 1 solution
+      cf_final = cf;
+      (x = vqstar) -= k;
+      FET.mult(R,workM1);
+      workM1.mult(cf_final,x,-1,1);
+      LA_.solve_chol_fast(iF,x);
+      x /= h;
+      return true;
     } else {
       OUTLOG(w,"W_OP2",logDEBUG);
 
@@ -799,6 +805,13 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
       OUTLOG(cf,"z_OP2 =[ % (P*w + z)",logDEBUG);
 
     }
+  } else {
+    cf_final = cf;
+    (x = vqstar) -= k;
+    FET.mult(R,workM1);
+    workM1.mult(cf_final,x,-1,1);
+    LA_.solve_chol_fast(iF,x);
+    x /= h;
   }
 
 
@@ -810,7 +823,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   // x = iF*(vqstar - k - FET*R*(cf))/h
   (x = vqstar) -= k;
   FET.mult(R,workM1);
-  workM1.mult(cf,x,-1,1);
+  workM1.mult(cf_final,x,-1,1);
   LA_.solve_chol_fast(iF,x);
   x /= h;
 
@@ -820,7 +833,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
 }
 
 bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
-                         const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
+                         const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
@@ -883,8 +896,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   iM.mult(fext,v,dt,1);
 
   Ravelin::VectorNd vqstar;
-  ((vqstar = qdd) *= dt) += vq;
-
+//  ((vqstar = qdd) *= dt) += vq;
+  ((vqstar = qdd) *= dt) += v.segment(0,nq);
   //////////////////////////////////////////////////////////////
   Ravelin::MatrixNd P;
   P.set_zero(nq,n);
@@ -892,8 +905,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::MatrixNd PT = P;
   PT.transpose();
 
-  OUTLOG(P,"P",logDEBUG1);
   OUTLOG(PT,"P'",logDEBUG1);
+
   Ravelin::MatrixNd Cs_iM_CsT, Cs_iM_CtT, /*Cs_iM_CnT,*/ Cs_iM_JxT,
                     Ct_iM_CsT, Ct_iM_CtT, /*Ct_iM_CnT,*/ Ct_iM_JxT,
                     Cn_iM_CsT, Cn_iM_CtT,   Cn_iM_CnT,   Cn_iM_JxT,
@@ -987,35 +1000,33 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   // we do this by solving the MLCP:
   // |  A  C  | | x | + | g | = | 0 |
-  // |  D  B  | | y |   | h |   | r |
+  // |  D  B  | | y |   | h |   | 0 |
 
-  // g = [-M*v'; 0]
-  // h = [0 -vq* vq*]
-  // A = [ M -S' -T' ;
-  //       S  0   0  ;
-  //       T  0   0  ];
+  // g = [-M*v'; 0; 0; -vq_err]
+  // h = [ 0 ];
+  // A = [ M -S' -T' -P';
+  //       S  0   0   0 ;
+  //       T  0   0   0 ;
+  //       P  0   0   0 ];
 
-  // B = [  0  0  0 ;
-  //        0  I -I ;
-  //        0 -I  I ];
+  // B = [ 0 ];
 
-  // C = [ -N' -P' P' ;
-  //        0   0  0  ;
-  //        0   0  0  ];
+  // C = [ -N';
+  //        0 ;
+  //        0 ];
   // D = -C'
-  // x = [ v^+; cs; ct ]
-  // y = [ cN; a; b ]
-  // r = [ Cn*v+; vq_err; -vq_err]
+  // x = [ v^+; cs; ct; a ]
+  // y = [ cN]
 
   // Assuming that C is of full row rank (no dependent joint constraints)
   // A is invertible; then we just need to solve the LCP:
 
-  // | B - D*inv(A)*C | | v | + | b - D*inv(A)*a | = | w |
+  // | B - D*inv(A)*C | | v | + | h - D*inv(A)*g | = | w |
   // and use the result to solve for u:
-  // u = -inv(A)*(a + Cv)
+  // u = -inv(A)*(g + Cv)
 
   // A is the matrix | M X'|
-  //                 | X 0 |  where X is [ S; T ]
+  //                 | X 0 |  where X is [ S; T; P ]
   // blockwise inversion yields
   // inv(A) = [
   //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
@@ -1023,8 +1034,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // where Y = inv(X*inv(M)*X')
 
   // defining Q = C and using the result above yields following LCP:
-  // matrix: B - Q*inv(A)*Q' = B - Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
-  // vector: h - Q*inv(A)*a  = h - (Q*v + Q*inv(M)*X'*Y*X*v)
+  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  // vector: Q*inv(A)*a  = -(-Q*v + Q*inv(M)*X'*Y*X*v - Q*inv(M)*X'*Y*[0;0;vq*])
+  //                     = Q*v - Q*inv(M)*X'*Y*X*v + Q*inv(M)*X'*Y*[0;0;vq*])
 
   Ravelin::MatrixNd _MM,_Y;
   // ********************************************************
@@ -1032,7 +1044,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // ********************************************************
 
   // loop through joint constraints, forming J*inv(M)*J' and checking condition
-  for (unsigned i=0; i< nc; i++)
+  for (unsigned i=0; i< nq; i++)
   {
     // add the index tentatively to the set
     J_indices.push_back(i);
@@ -1131,7 +1143,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -=Moby::NEAR_ZERO;
+      _Y(j,j) -= Moby::NEAR_ZERO;
+
+    OUTLOG(_Y,"inv(_Y)",logDEBUG1);
 
     // see whether check matrix can be Cholesky factorized
     last_success = _LA.factor_chol(_Y);
@@ -1149,7 +1163,11 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     oss << "  t indices:";
     for (unsigned i=0; i< T_indices.size(); i++)
       oss << " " << T_indices[i];
-    OUT_LOG(logDEBUG1) << oss.str() << std::endl;
+    oss << "  j indices:";
+    for (unsigned i=0; i< J_indices.size(); i++)
+      oss << " " << J_indices[i];
+
+    OUT_LOG(logDEBUG) << oss.str() << std::endl;
   }
 
   // ********************************************************
@@ -1186,23 +1204,27 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     _Y.set_sub_mat(T_IDX, J_IDX, _MM);
     _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
 
+    OUTLOG(_Y,"inv(_Y)",logDEBUG1);
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
     assert(success);
   }
 
   Ravelin::MatrixNd _Q_iM_XT;
-  Ravelin::VectorNd _Xv,_YXv;
   Ravelin::VectorNd _qq,_v;
 
-  // defining Y = inv(X*inv(M)*X') and Q = [Cn; L; 0]
-  // and using the result above yields following LCP:
-  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
-  // vector: Q*inv(A)*a  = Q*v - Q*inv(M)*X'*Y*X*v
+  // inv(A) = [
+  //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
+  //    Y*X*inv(M)                    -Y          ]
+  // defining Y = inv(X*inv(M)*X') and Q = [Cn]
+  // matrix:-D*inv(A)*C = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  //
+  // vector:-Q*inv(A)*a  = -(-Q*inv(M)*M*v - -Q*inv(M)*X'*Y*X*inv(M)*M*v + -Q*inv(M)*X'*Y*[0;0;vq*])
+  //                     = -(-Q*v + Q*inv(M)*X'*Y*X*v - Q*inv(M)*X'*Y*[0;0;vq*])
+  //                     =    Q*v - Q*inv(M)*X'*Y*X*v + Q*inv(M)*X'*Y*[0;0;vq*]
 
   // setup Q*inv(M)*Q'
-  _MM.set_zero(nc , nc);
-  _MM.set_sub_mat(N_IDX, N_IDX, Cn_iM_CnT);
+  _MM = Cn_iM_CnT;
 
   // setup Q*inv(M)*X'
   _Q_iM_XT.resize(nc, S_indices.size() + T_indices.size() + J_indices.size());
@@ -1213,6 +1235,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Cn_iM_JxT.select_columns(J_indices.begin(), J_indices.end(), _workM);
   _Q_iM_XT.set_sub_mat(N_IDX, J_IDX, _workM);
 
+  OUTLOG(_Q_iM_XT,"_Q_iM_XT",logDEBUG1);
+
   // compute Y*X*inv(M)*Q'
   Ravelin::MatrixNd::transpose(_Q_iM_XT, _workM);
   _LA.solve_chol_fast(_Y, _workM);
@@ -1222,10 +1246,10 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   _MM -= _workM2;
 
   // setup -Q*v
-  _qq.resize(nc);
-  _qq.set_sub_vec(N_IDX, Cn_v);
+  _qq = Cn_v;
 
   // setup X*v
+  Ravelin::VectorNd _Xv,_YXv;
   _Xv.resize(S_indices.size() + T_indices.size() + J_indices.size());
   Cs_v.select(S_indices.begin(), S_indices.end(), _workv);
   _Xv.set_sub_vec(S_IDX, _workv);
@@ -1241,8 +1265,18 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // compute Q*inv(M)*X' * Y*X*v
   _Q_iM_XT.mult(_YXv, _workv);
 
-  // setup remainder of LCP vector
+  // Add to LCP Vector
   _qq -= _workv;
+
+  // compute Q*inv(M)*X'*Y*[0;0;vq*]
+  Ravelin::VectorNd _Yvqstar;
+  _Yvqstar.set_zero(S_indices.size() + T_indices.size() + J_indices.size());
+
+  vqstar.select(J_indices.begin(), J_indices.end(), _workv);
+  _Yvqstar.set_sub_vec(J_IDX, _workv);
+  _LA.solve_chol_fast(_Y, _Yvqstar);
+  _Q_iM_XT.mult(_Yvqstar,_workv);
+  _qq += _workv;
 
   OUTLOG(_qq,"_qq",logDEBUG1);
   OUTLOG(_v,"_v",logDEBUG1);
@@ -1254,7 +1288,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   {
     OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to slower solvers" << std::endl;
 
-    if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v))
+    if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
       throw std::runtime_error("Unable to solve constraint LCP!");
   }
 
@@ -1262,12 +1296,12 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   // compute the friction forces
   // u = -inv(A)*(a + Cv)
-  // u = inv(A)*(Q'*[cn;a;b])  [b/c we don't care about new velocity]
+  // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
   // recalling that inv(A) =
   // | inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y | ngc x ngc,    ngc x sz(x)
   // | Y*X*inv(M)                    -Y          | sz(x) x ngc,  sz(x) x sz(x)
   // Q is nlcp x (ngc + sz(x))
-  // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn; ct]
+  // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn]
   _cs_ct_a = _YXv;
   _Q_iM_XT.transpose_mult(_v, _workv);
   _LA.solve_chol_fast(_Y, _workv);
@@ -1287,72 +1321,56 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   ct.set(T_indices.begin(), T_indices.end(), ct_vec);
   a.set(J_indices.begin(), J_indices.end(), a_vec);
 
-  cf_final.set_zero(nc*5);
+  OUTLOG(cn,"cN",logDEBUG);
+  OUTLOG(cs,"cS",logDEBUG);
+  OUTLOG(ct,"cT",logDEBUG);
+
+  cf.set_zero(nc*5);
   for(unsigned i=0;i< nc;i++){
-    cf_final[i] = cn[i];
+    cf[i] = cn[i];
     if(ct[i] >= 0)
-      cf_final[nc+i] = cs[i];
+      cf[nc+i] = cs[i];
     else
-      cf_final[nc+i+nc*2] = -cs[i];
+      cf[nc+i+nc*2] = -cs[i];
     if(ct[i] >= 0)
-      cf_final[nc+i+nc] = ct[i];
+      cf[nc+i+nc] = ct[i];
     else
-      cf_final[nc+i+nc*3] = -ct[i];
+      cf[nc+i+nc*3] = -ct[i];
   }
 
-  /// Retrieve Joint Forces
-  Ravelin::VectorNd alpha, beta, tau;
-
-  alpha = _v.segment(nc, nc+nq);
-  beta = _v.segment(nc+nq, nc+nq*2);
-//  (tau = alpha) -= beta;
-
-  // Using M(dv) - z = tau
-  (_workv = vqstar) -= vq;
-  iF.mult(_workv,tau);
-  tau -= R.mult(cf_final,_workv).segment(0,nq);
-
-  /// Using only R*z
-  tau = R.mult(cf_final,_workv).segment(0,nq);
-  tau.negate();
-  x = tau;
-
 //   IDYN MLCP
-//            A             C          x         g
-//       | M −S' -T'   -N' -P'  P' | | v+ |   |-M v |    | 0 |
-//       | S  0   0     0   0   0  | | cS |   |  0  | =  | 0 |
-//       | T  0   0     0   0   0  | | cT |   |  0  |    | 0 |
-//                                  *       +
-//       | N  0   0     0   0   0  | | cN |   |  0  |    | 0 |
-//       | p  0   0     0   I  -I  | | a  |   |-vq* | >= | 0 |
-//       |-P  0   0     0  -I   I  | | b  |   | vq* |    | 0 |
-//            D             B          y         h
+//            A             C      x         g
+//       | M −S' -T' -P'   -N' | | v+ |   |-M v |    | 0 |
+//       | S  0   0   0     0  | | cS |   |  0  |  = | 0 |
+//       | T  0   0   0     0  | | cT |   |  0  |    | 0 |
+//       | P  0   0   0     0  | | a  |   |-vq* |    | 0 |
+//                              *       +
+//       | N  0   0   0     0  | | cN |   |  0  | >= | 0 |
+//            D            B      y         h
 
 //   Constraints
 //   [M −S' -T' -N' -P'  P' ].[ ]' - M*v  = 0
 //    S v+        = 0
 //    T v+        = 0
+//    P v+ - vq*  = 0
 //    N v+       >= 0
-//    P v+ - vq* >= 0
-//   -P v+ + vq* >= 0
 
-//    M v+ - (S'cs + T'cT + N'cN) - a + b = M v
-//    M(v+ - v) = (S'cs + T'cT + N'cN) + (a - b)
+//    M v+ - (S'cs + T'cT + N'cN) - a = M v
+//    M(v+ - v) = (S'cs + T'cT + N'cN)  +  a
 
 //   Therefore
-//    a - b               = tau
 //    M(v+ - v)           = f_total
 //    S'cs + T'cT + N'cN  = contact_force
-//    f = cf + tau
+//    f = cf + a
 
-  /// Like in other model
-  Ravelin::VectorNd k = v.segment(0,nq);
-
-  (x = vqstar) -= k;
-  FET.mult(R,_workM);
-  _workM.mult(cf_final,x,-1,1);
-  LA_.solve_chol_fast(iF,x);
+  // Using M(dv) - z = tau
+  x = a;
   x /= dt;
+
+  OUTLOG(x,"tau",logDEBUG);
+
+//  (x = a) += R.mult(cf,_workv).segment(0,nq);
+//  x /= dt;
 
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip_fast() exited" << std::endl;
   return true;

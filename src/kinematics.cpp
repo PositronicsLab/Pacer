@@ -286,13 +286,14 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
       dbrobot_->calc_jacobian(impulse_frame,foot.link,workM_);
       workM_.get_sub_mat(0,3,0,NDOFS,J);
 
-      const Vector3d
-        &normal  = foot.normal[j],
-        &tan1    = foot.tan1[j],
-        &tan2    = foot.tan2[j];
+      Vector3d
+        normal  = foot.normal[j],
+        tan1    = foot.tan1[j],
+        tan2    = foot.tan2[j];
 
       // TODO: TEST FOR BAD TANGENTS BEFORE DOIGN THIS
-//      Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);
+      if(tan1.norm() < 1.0 - Moby::NEAR_ZERO)
+        Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);
 
       // Normal direction
       J.transpose_mult(normal,workv_);

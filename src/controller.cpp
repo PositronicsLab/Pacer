@@ -598,11 +598,17 @@ void Controller::control(double t,
       solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
       OUTLOG(id,"uff_qp",logERROR);
       OUTLOG(cf,"cf_qp",logERROR);
+//      Ravelin::VectorNd temp_id = id,temp_cf = cf;
       cf.resize(0);
       id.resize(0);
-      solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
-      OUTLOG(id,"uff_lcp_noslip",logERROR);
-      OUTLOG(cf,"cf_lcp_noslip",logERROR);
+//      try{
+        solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
+        OUTLOG(id,"uff_lcp_noslip",logERROR);
+        OUTLOG(cf,"cf_lcp_noslip",logERROR);
+//      }catch(std::runtime_error& e){
+//        id = temp_id;
+//        cf = temp_cf;
+//      }
     } else {
       solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
     }

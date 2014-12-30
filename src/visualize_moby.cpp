@@ -25,10 +25,6 @@ using namespace Ravelin;
 extern double SIMULATION_TIME;
 const double VIBRANCY = 1;
 
-void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
-  visualize_ray(point,vec,c,0.1,sim);
-}
-
 /// Draws a ray directed from a contact point along the contact normal
 void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c,double point_radius, boost::shared_ptr<EventDrivenSimulator> sim ) {
 
@@ -112,6 +108,10 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
 
   // add the root to the transient data scene graph
   sim->add_transient_vdata( group_root );
+}
+
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
+  visualize_ray(point,vec,c,0.1,sim);
 }
 
 void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ,double lightness){

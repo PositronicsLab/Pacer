@@ -170,7 +170,7 @@ void Robot::init_end_effector(EndEffector& eef){
   OUT_LOG(logDEBUG) << eef.id ;
   eef.chain_bool.resize(joint_names_.size());
   rb_ptr = joint_ptr->get_inboard_link();
-  while (rb_ptr->id.substr(0,4).compare("BODY") != 0){
+  while (rb_ptr != abrobot_->get_base_link()) {
     OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
     joint_ptr = rb_ptr->get_inner_joint_explicit();
     OUT_LOG(logDEBUG) << "  " << joint_ptr->id;

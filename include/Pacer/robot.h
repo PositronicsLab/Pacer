@@ -67,7 +67,7 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
     Robot(){
       init();
     }
-    Robot(std::string& sdf_f, std::string& init_f) : sdf_file(sdf_f), init_file(init_f) {
+    Robot(const std::string& sdf_f, const std::string& init_f) : sdf_file(sdf_f), init_file(init_f) {
       init();
     }
 

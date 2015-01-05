@@ -5,6 +5,7 @@
  ****************************************************************************/
 
 #include <algorithm>
+#include <Moby/insertion_sort>
 #include <Pacer/project_common.h>
 
 using namespace Ravelin;
@@ -155,7 +156,7 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
     if (minw == UINF || _w[minw] > -zero_tol)
     {
       // find the (a) minimum of z
-      unsigned minz = select_pivot(_z, _nbas, indices, zero_tol); 
+      unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol); 
       if (minz < UINF && _z[minz] < -zero_tol)
       {
         // get the original index and remove it from the nonbasic set
@@ -164,7 +165,7 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
         
         // move index to basic set and continue looping
         _bas.push_back(idx);
-        insertion_sort(_bas.begin(), _bas.end());
+        Moby::insertion_sort(_bas.begin(), _bas.end());
       }
       else
       {
@@ -185,17 +186,17 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
       unsigned idx = _bas[minw];
       _bas.erase(_bas.begin()+minw);
       _nonbas.push_back(idx);
-      insertion_sort(_nonbas.begin(), _nonbas.end());
+      Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
 
       // look whether any component of z needs to move to basic set
-      unsigned minz = select_pivot(_z, _nbas, indices, zero_tol); 
+      unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol); 
       if (minz < UINF &&_z[minz] < -zero_tol)
       {
         // move index to basic set and continue looping
         unsigned idx = _nonbas[minz];
         _nonbas.erase(_nonbas.begin()+minz);
         _bas.push_back(idx);
-        insertion_sort(_bas.begin(), _bas.end());
+        Moby::insertion_sort(_bas.begin(), _bas.end());
       }
     }
   }

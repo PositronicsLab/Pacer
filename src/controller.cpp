@@ -39,7 +39,11 @@ void Controller::control(double t,
   static double last_time = -0.001;
   const double dt = t - last_time;
 
+
   update(generalized_q_in,generalized_qd_in,generalized_qdd_in,generalized_fext_in);
+
+  static Ravelin::VectorNd last_qdd_des = data->qdd,
+                          last_qd_des = data->qd;
 
   // Set Robot Data in robot
   static bool inited = false;
@@ -589,7 +593,7 @@ void Controller::control(double t,
     bool solve_flag = false;
     Ravelin::VectorNd fext_scaled;
     cf.resize(0);
-    if(NC > 0 && inf_friction){
+//    if(NC > 0 && inf_friction){
       solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
       OUTLOG(id,"uf_qp_noslip",logERROR);
       OUTLOG(cf,"cf_qp_noslip",logERROR);
@@ -602,16 +606,16 @@ void Controller::control(double t,
       cf.resize(0);
       id.resize(0);
 //      try{
-        solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
+        solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf,false);
         OUTLOG(id,"uff_lcp_noslip",logERROR);
         OUTLOG(cf,"cf_lcp_noslip",logERROR);
 //      }catch(std::runtime_error& e){
 //        id = temp_id;
 //        cf = temp_cf;
 //      }
-    } else {
-      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
-    }
+//    } else {
+//      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
+//    }
 
     if(solve_flag)
       uff += (id*=alpha);
@@ -698,7 +702,9 @@ void Controller::control(double t,
    OUTLOG(data->center_of_mass_xdd,"CoM_xdd",logINFO);
    OUTLOG(data->q,"q",logINFO);
    OUTLOG(data->qd,"qd",logINFO);
+   OUTLOG(last_qd_des,"qd_des{t-1}",logINFO);
    OUTLOG(data->qdd,"qdd",logINFO);
+   OUTLOG(last_qdd_des,"qdd_des{t-1}",logINFO);
    OUTLOG(q_des,"q_des",logINFO);
    OUTLOG(qd_des,"qd_des",logINFO);
    OUTLOG(qdd_des,"qdd_des",logINFO);
@@ -706,6 +712,8 @@ void Controller::control(double t,
    OUTLOG(data->generalized_q,"generalized_q",logDEBUG);
    OUTLOG(data->generalized_qd,"generalized_qd",logDEBUG);
 
+   last_qdd_des = qdd_des;
+   last_qd_des = qd_des;
    OUTLOG(uff,"uff",logINFO);
    OUTLOG(ufb,"ufb",logINFO);
    OUTLOG(u,"u",logINFO);

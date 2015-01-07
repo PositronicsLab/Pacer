@@ -833,10 +833,11 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
 }
 
 bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
-                         const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
+                         const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
+  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1049,12 +1050,14 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     // add the index tentatively to the set
     J_indices.push_back(i);
 
+    // This is an [I,0] matrix, it has full row rank
+    continue;
     // select the rows and columns
     Jx_iM_JxT.select_square(J_indices.begin(), J_indices.end(), _Y);
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< J_indices.size(); j++)
-      _Y(j,j) -=Moby::NEAR_ZERO;
+      _Y(j,j) -= CHECK_ZERO;
 
     // attempt Cholesky factorization
     if (!_LA.factor_chol(_Y))
@@ -1082,33 +1085,33 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
     // add S/S, T/T, J/J components to 'check' matrix
-    Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, S_IDX, _MM);
-    Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
-    _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+    Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, S_IDX, _workM);
+    Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _workM);
+    _Y.set_sub_mat(T_IDX, T_IDX, _workM);
     _Y.set_sub_mat(J_IDX, J_IDX, _rJx_iM_JxT);
 
     // add S/T components to 'check' matrix
-    Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, T_IDX, _MM);
-    _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
+    Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, T_IDX, _workM);
+    _Y.set_sub_mat(T_IDX, S_IDX, _workM, Ravelin::eTranspose);
 
     // add S/J components to check matrix
-    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, J_IDX, _MM);
-    _Y.set_sub_mat(J_IDX, S_IDX, _MM, Ravelin::eTranspose);
+    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, J_IDX, _workM);
+    _Y.set_sub_mat(J_IDX, S_IDX, _workM, Ravelin::eTranspose);
 
     // add T/J components to check matrix
-    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _MM);
-    _Y.set_sub_mat(T_IDX, J_IDX, _MM);
-    _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
+    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _workM);
+    _Y.set_sub_mat(T_IDX, J_IDX, _workM);
+    _Y.set_sub_mat(J_IDX, T_IDX, _workM, Ravelin::eTranspose);
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -=Moby::NEAR_ZERO;
+      _Y(j,j) -= CHECK_ZERO;
 
     // see whether check matrix can be Cholesky factorized
-    if (!_LA.factor_chol(_Y))
+    if (!_LA.factor_chol(_Y) || frictionless)
       S_indices.pop_back();
 
     // add index for T
@@ -1120,39 +1123,38 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
     // add S/S, T/T, J/J components to 'check' matrix
-    Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, S_IDX, _MM);
-    Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
-    _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+    Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, S_IDX, _workM);
+    Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _workM);
+    _Y.set_sub_mat(T_IDX, T_IDX, _workM);
     _Y.set_sub_mat(J_IDX, J_IDX, _rJx_iM_JxT);
 
     // add S/T components to 'check' matrix
-    Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, T_IDX, _MM);
-    _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
+    Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, T_IDX, _workM);
+    _Y.set_sub_mat(T_IDX, S_IDX, _workM, Ravelin::eTranspose);
 
     // add S/J components to check matrix
-    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, J_IDX, _MM);
-    _Y.set_sub_mat(J_IDX, S_IDX, _MM, Ravelin::eTranspose);
+    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, J_IDX, _workM);
+    _Y.set_sub_mat(J_IDX, S_IDX, _workM, Ravelin::eTranspose);
 
     // add T/J components to check matrix
-    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _MM);
-    _Y.set_sub_mat(T_IDX, J_IDX, _MM);
-    _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
+    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _workM);
+    _Y.set_sub_mat(T_IDX, J_IDX, _workM);
+    _Y.set_sub_mat(J_IDX, T_IDX, _workM, Ravelin::eTranspose);
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= Moby::NEAR_ZERO;
-
-    OUTLOG(_Y,"inv(_Y)",logDEBUG1);
+      _Y(j,j) -= CHECK_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     last_success = _LA.factor_chol(_Y);
-    if (!last_success)
+    if (!last_success && !frictionless)
       T_indices.pop_back();
   }
 
+  last_success = false;
   // output indices
   if (true)
   {
@@ -1183,28 +1185,27 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
     // add S/S, T/T, J/J components to X
-    Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, S_IDX, _MM);
-    Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _MM);
-    _Y.set_sub_mat(T_IDX, T_IDX, _MM);
+    Cs_iM_CsT.select_square(S_indices.begin(), S_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, S_IDX, _workM);
+    Ct_iM_CtT.select_square(T_indices.begin(), T_indices.end(), _workM);
+    _Y.set_sub_mat(T_IDX, T_IDX, _workM);
     _Y.set_sub_mat(J_IDX, J_IDX, _rJx_iM_JxT);
 
     // add S/T components to X
-    Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, T_IDX, _MM);
-    _Y.set_sub_mat(T_IDX, S_IDX, _MM, Ravelin::eTranspose);
+    Cs_iM_CtT.select(S_indices.begin(), S_indices.end(), T_indices.begin(), T_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, T_IDX, _workM);
+    _Y.set_sub_mat(T_IDX, S_IDX, _workM, Ravelin::eTranspose);
 
     // add S/J components to X
-    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _MM);
-    _Y.set_sub_mat(S_IDX, J_IDX, _MM);
-    _Y.set_sub_mat(J_IDX, S_IDX, _MM, Ravelin::eTranspose);
+    Cs_iM_JxT.select(S_indices.begin(), S_indices.end(), J_indices.begin(), J_indices.end(), _workM);
+    _Y.set_sub_mat(S_IDX, J_IDX, _workM);
+    _Y.set_sub_mat(J_IDX, S_IDX, _workM, Ravelin::eTranspose);
 
     // add T/J components to X
-    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _MM);
-    _Y.set_sub_mat(T_IDX, J_IDX, _MM);
-    _Y.set_sub_mat(J_IDX, T_IDX, _MM, Ravelin::eTranspose);
+    Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _workM);
+    _Y.set_sub_mat(T_IDX, J_IDX, _workM);
+    _Y.set_sub_mat(J_IDX, T_IDX, _workM, Ravelin::eTranspose);
 
-    OUTLOG(_Y,"inv(_Y)",logDEBUG1);
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
     assert(success);
@@ -1224,7 +1225,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   //                     =    Q*v - Q*inv(M)*X'*Y*X*v + Q*inv(M)*X'*Y*[0;0;vq*]
 
   // setup Q*inv(M)*Q'
-  _MM = Cn_iM_CnT;
+//  _MM = Cn_iM_CnT;
+
+  OUTLOG(Cn_iM_CnT,"A",logDEBUG1);
 
   // setup Q*inv(M)*X'
   _Q_iM_XT.resize(nc, S_indices.size() + T_indices.size() + J_indices.size());
@@ -1235,15 +1238,21 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Cn_iM_JxT.select_columns(J_indices.begin(), J_indices.end(), _workM);
   _Q_iM_XT.set_sub_mat(N_IDX, J_IDX, _workM);
 
-  OUTLOG(_Q_iM_XT,"_Q_iM_XT",logDEBUG1);
+  OUTLOG(_Q_iM_XT,"B",logDEBUG1);
+
+//  Ravelin::MatrixNd Y;
+//  Y = Ravelin::MatrixNd::identity(_Y.rows());
+//  _LA.solve_chol_fast(_Y, Y);
 
   // compute Y*X*inv(M)*Q'
   Ravelin::MatrixNd::transpose(_Q_iM_XT, _workM);
   _LA.solve_chol_fast(_Y, _workM);
+//  Y.mult_transpose(_Q_iM_XT,_workM);
 
   // compute Q*inv(M)*X'*Y*X*inv(M)*Q'
   _Q_iM_XT.mult(_workM, _workM2);
-  _MM -= _workM2;
+  (_MM = Cn_iM_CnT) -= _workM2;
+  OUTLOG(_MM,"_MM",logDEBUG1);
 
   // setup -Q*v
   _qq = Cn_v;
@@ -1280,13 +1289,12 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   OUTLOG(_qq,"_qq",logDEBUG1);
   OUTLOG(_v,"_v",logDEBUG1);
-  OUTLOG(_MM,"_MM",logDEBUG1);
   // setup remainder of LCP vector
 
   // attempt to solve the LCP using the fast method
   if (!_lcp.lcp_fast(_MM, _qq, _v))
   {
-    OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to slower solvers" << std::endl;
+    OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
     if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
       throw std::runtime_error("Unable to solve constraint LCP!");

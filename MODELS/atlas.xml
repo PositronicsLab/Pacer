@@ -21,7 +21,7 @@
     <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="1.4" />
   </EventDrivenSimulator>
 
-  <SDF filename="atlas_simple_shapes.sdf"/>
+  <SDF filename="atlas.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
 <!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->

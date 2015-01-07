@@ -117,7 +117,7 @@ class Controller : public Robot{
                           const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext,
                           double h, Ravelin::VectorNd& uff, Ravelin::VectorNd& cf_final);
     bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
-                             const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final);
+                             const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, bool frictionless = false);
   private:
     std::vector<boost::shared_ptr<ControllerModule> > controllers;
     Ravelin::SForced lead_force_;

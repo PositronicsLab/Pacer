@@ -87,6 +87,7 @@ set(SOURCES ${SOURCES-BASIC}
             src/stabilization.cpp
             src/splines.cpp
             src/solve_qp.cpp
+            src/solve_lcp_fast.cpp
             src/controller.cpp
             src/locomotion.cpp
             src/wcpg.cpp

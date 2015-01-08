@@ -90,12 +90,22 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
 
   // setup static variables
   static std::vector<unsigned> _nonbas, _bas;
+  static std::vector<bool> _represented;
   static MatrixNd _Msub, _Mmix;
   static VectorNd _z, _qbas, _w;
   static LinAlgd _LA;
 
   // verify that indices are the right size
   assert(indices.size() == N);
+
+  // determine the number of links represented
+  _represented.clear();
+  for (unsigned i=0; i< indices.size(); i++)
+    if (indices[i] >= _represented.size())
+      _represented.resize(indices[i]+1);
+
+  // indicate that no link is represented in the non-basic set
+  std::fill(_represented.begin(), _represented.end(), false);
 
   // look for trivial solution
   if (N == 0)
@@ -116,16 +126,30 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
     return true;
   }
 
-  // TODO: set initial nonbasic set to have a variable from each link index
-
-  // setup basic and nonbasic variable indices
+  // set initial nonbasic set to have a negative variable from each link index
   _nonbas.clear();
-  _nonbas.push_back(minw); 
+  for (unsigned i=0; i< N; i++)
+    if (q[i] < zero_tol && !_represented[indices[i]])
+    {
+      _nonbas.push_back(i);
+      _represented[indices[i]] = true;
+    }
+
+  // now add contacts from all links not represented
+  for (unsigned i=0; i< N; i++)
+    if (std::binary_search(_nonbas.begin(), _nonbas.end(), i) && 
+        !_represented[indices[i]])
+    {
+      _nonbas.push_back(i);
+      Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
+      _represented[indices[i]] = true;
+    }
+
+  // setup basic indices
   _bas.clear();
-  _bas.resize(N-1);
-  for (unsigned i=0, j=0; i< N; i++)
-    if (i != minw)
-      _bas[j++] = i;
+  for (unsigned i=0; i< N; i++)
+    if (!std::binary_search(_nonbas.begin(), _nonbas.end(), i))
+      _bas.push_back(i);
 
   // loop for maximum number of pivots
   const unsigned MAX_PIV = std::max(N*N, (unsigned) 1000);

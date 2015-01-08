@@ -832,6 +832,8 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   return true;
 }
 
+extern bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
+
 bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
                          const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless){
   Ravelin::MatrixNd _workM, _workM2;
@@ -1291,13 +1293,35 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   OUTLOG(_v,"_v",logDEBUG1);
   // setup remainder of LCP vector
 
-  // attempt to solve the LCP using the fast method
-  if (!_lcp.lcp_fast(_MM, _qq, _v))
-  {
-    OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+  // Setup Indices vector
+  std::vector<unsigned> indices;
+  unsigned active_eefs = 0;
+  for(int i=0;i<eefs_.size();i++){
+    if(!eefs_[i].active){
+      active_eefs++;
+      continue;
+    }
+    for(int j=0;j<eefs_[i].point.size();j++)
+      indices.push_back(i);
+  }
 
-    if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
-      throw std::runtime_error("Unable to solve constraint LCP!");
+  // attempt to solve the LCP using the fast method
+  if(active_eefs > 2){
+    if (!lcp_fast(_MM, _qq,indices, _v,CHECK_ZERO))
+    {
+      OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+
+      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+        throw std::runtime_error("Unable to solve constraint LCP!");
+    }
+  } else {
+    if (!_lcp.lcp_fast(_MM, _qq, _v))
+    {
+      OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+
+      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+        throw std::runtime_error("Unable to solve constraint LCP!");
+    }
   }
 
   Ravelin::VectorNd _cs_ct_a;

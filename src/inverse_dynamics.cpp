@@ -1298,9 +1298,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   unsigned active_eefs = 0;
   for(int i=0;i<eefs_.size();i++){
     if(!eefs_[i].active){
-      active_eefs++;
       continue;
     }
+    active_eefs++;
     for(int j=0;j<eefs_[i].point.size();j++)
       indices.push_back(i);
   }

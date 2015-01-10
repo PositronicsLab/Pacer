@@ -66,14 +66,16 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
   }
   else if (repeated.size() > 1)
   {
+/*
     // there are multiple such contact points, pick the one with the most
     // negative z value
     unsigned most_neg = repeated.front();
     for (unsigned i=1; i< repeated.size(); i++)
       if (znbas[repeated[i]] < znbas[repeated[most_neg]])
         most_neg = repeated[i];
-
-    return repeated[most_neg];
+*/
+    // there are multiple such contact points, pick cardinally 
+    return repeated.front();
   }
   else
   {

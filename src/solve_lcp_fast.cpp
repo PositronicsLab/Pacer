@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2015 Evan M. Drumwright 
+ * Copyright 2015 Evan M. Drumwright
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
@@ -10,7 +10,7 @@
 
 using namespace Ravelin;
 
-/// Get the minimum index of vector v; if there are multiple minima (within zero_tol), returns one randomly 
+/// Get the minimum index of vector v; if there are multiple minima (within zero_tol), returns one randomly
 unsigned rand_min(const VectorNd& v, double zero_tol)
 {
   static std::vector<unsigned> minima;
@@ -35,7 +35,7 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
   neg.clear();
   for (unsigned i=0; i< znbas.size(); i++)
     if (znbas[i] < -zero_tol)
-      neg.push_back(i); 
+      neg.push_back(i);
 
   // of all negative indices, find those which have a contact point with the
   // same link in nonbas
@@ -62,7 +62,7 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
   if (repeated.empty())
   {
     // pick the minimum entry of znbas
-    return rand_min(znbas, zero_tol); 
+    return rand_min(znbas, zero_tol);
   }
   else if (repeated.size() > 1)
   {
@@ -74,7 +74,7 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
       if (znbas[repeated[i]] < znbas[repeated[most_neg]])
         most_neg = repeated[i];
 */
-    // there are multiple such contact points, pick cardinally 
+    // there are multiple such contact points, pick cardinally
     return repeated.front();
   }
   else
@@ -84,7 +84,7 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
   }
 }
 
-/// Fast pivoting algorithm for denerate, monotone LCPs with few nonzero, nonbasic variables 
+/// Fast pivoting algorithm for denerate, monotone LCPs with few nonzero, nonbasic variables
 bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol)
 {
   const unsigned N = q.rows();
@@ -139,7 +139,7 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
 
   // now add contacts from all links not represented
   for (unsigned i=0; i< N; i++)
-    if (std::binary_search(_nonbas.begin(), _nonbas.end(), i) && 
+    if (std::binary_search(_nonbas.begin(), _nonbas.end(), i) &&
         !_represented[indices[i]])
     {
       _nonbas.push_back(i);
@@ -182,13 +182,13 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
     if (minw == UINF || _w[minw] > -zero_tol)
     {
       // find the (a) minimum of z
-      unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol); 
+      unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol);
       if (minz < UINF && _z[minz] < -zero_tol)
       {
         // get the original index and remove it from the nonbasic set
         unsigned idx = _nonbas[minz];
         _nonbas.erase(_nonbas.begin()+minz);
-        
+
         // move index to basic set and continue looping
         _bas.push_back(idx);
         Moby::insertion_sort(_bas.begin(), _bas.end());
@@ -215,7 +215,7 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
       Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
 
       // look whether any component of z needs to move to basic set
-      unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol); 
+      unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol);
       if (minz < UINF &&_z[minz] < -zero_tol)
       {
         // move index to basic set and continue looping

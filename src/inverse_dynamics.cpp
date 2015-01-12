@@ -1254,7 +1254,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // compute Q*inv(M)*X'*Y*X*inv(M)*Q'
   _Q_iM_XT.mult(_workM, _workM2);
   (_MM = Cn_iM_CnT) -= _workM2;
-  OUTLOG(_MM,"_MM",logDEBUG1);
+  OUTLOG(_MM,"MM",logDEBUG1);
 
   // setup -Q*v
   _qq = Cn_v;
@@ -1289,8 +1289,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   _Q_iM_XT.mult(_Yvqstar,_workv);
   _qq += _workv;
 
-  OUTLOG(_qq,"_qq",logDEBUG1);
-  OUTLOG(_v,"_v",logDEBUG1);
+  OUTLOG(_qq,"qq",logDEBUG1);
   // setup remainder of LCP vector
 
   // Setup Indices vector
@@ -1307,14 +1306,18 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
+    OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
+
     if (!lcp_fast(_MM, _qq,indices, _v,CHECK_ZERO))
     {
-      OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+      OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
       if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
         throw std::runtime_error("Unable to solve constraint LCP!");
     }
   } else {
+    OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
+
     if (!_lcp.lcp_fast(_MM, _qq, _v))
     {
       OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
@@ -1323,6 +1326,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
         throw std::runtime_error("Unable to solve constraint LCP!");
     }
   }
+  OUTLOG(_v,"v",logDEBUG1);
 
   Ravelin::VectorNd _cs_ct_a;
 
@@ -1397,6 +1401,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
   // Using M(dv) - z = tau
   x = a;
+  if(nc>0)
+    x -= R.mult(cf,_workv).segment(0,nq);
   x /= dt;
 
   OUTLOG(x,"tau",logDEBUG);

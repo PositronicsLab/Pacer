@@ -517,8 +517,7 @@ void Controller::control(double t,
             inf_friction = false;
         }
 
-    if(USE_LAST_CFS){
-      static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs-filter");
+//    if(USE_LAST_CFS){
 
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
@@ -540,6 +539,8 @@ void Controller::control(double t,
         }
       }
       Utility::check_finite(cf);
+    OUTLOG(cf,"cf_moby",logERROR);
+    if(USE_LAST_CFS){
 
       static std::queue<Ravelin::VectorNd>
           cf_delay_queue;
@@ -547,6 +548,7 @@ void Controller::control(double t,
           N_delay_queue,
           D_delay_queue,
           MU_delay_queue;
+      static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs-filter");
 
       if(FILTER_CFS && NC>0){
 
@@ -574,15 +576,6 @@ void Controller::control(double t,
       cf.set_zero(0);
     }
 
-    std::cout << "cf_moby = [";
-    for(unsigned i=0;i< eefs_.size();i++){
-      if(!eefs_[i].active)
-        std::cout << 0 << " " << 0 << " " << 0 << " ";
-      else
-        std::cout << eefs_[i].impulse[0][0] << " " << eefs_[i].impulse[0][1] << " " << eefs_[i].impulse[0][2] << " ";
-    }
-    std::cout << "]';" << std::endl;
-
 #ifdef TIMING
     struct timeval start_t;
     struct timeval end_t;
@@ -592,23 +585,31 @@ void Controller::control(double t,
 #endif
     bool solve_flag = false;
     Ravelin::VectorNd fext_scaled;
-    cf.resize(0);
-//    if(NC > 0 && inf_friction){
-      solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
-      OUTLOG(id,"uf_qp_noslip",logERROR);
-      OUTLOG(cf,"cf_qp_noslip",logERROR);
-      cf.resize(0);
-      id.resize(0);
-      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
-      OUTLOG(id,"uff_qp",logERROR);
-      OUTLOG(cf,"cf_qp",logERROR);
-//      Ravelin::VectorNd temp_id = id,temp_cf = cf;
+//    cf.resize(0);
+////    if(NC > 0 && inf_friction){
+//      solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf);
+//      OUTLOG(id,"uf_qp_noslip",logERROR);
+//      OUTLOG(cf,"cf_qp_noslip",logERROR);
+//      cf.resize(0);
+//      id.resize(0);
+//      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,MU,id,cf);
+//      OUTLOG(id,"uff_qp",logERROR);
+//      OUTLOG(cf,"cf_qp",logERROR);
+////      Ravelin::VectorNd temp_id = id,temp_cf = cf;
       cf.resize(0);
       id.resize(0);
 //      try{
         solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)*=(dt/DT),DT,id,cf,false);
         OUTLOG(id,"uff_lcp_noslip",logERROR);
         OUTLOG(cf,"cf_lcp_noslip",logERROR);
+        static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+        if(last_cf.rows() == NC){
+          Ravelin::VectorNd diff_cf  = last_cf;
+          diff_cf -= cf.segment(0,NC);
+          if(diff_cf.norm() > 0.01)
+            OUT_LOG(logERROR) << "-- Torque chatter detected!";
+        }
+        last_cf = cf.segment(0,NC);
 //      }catch(std::runtime_error& e){
 //        id = temp_id;
 //        cf = temp_cf;
@@ -626,23 +627,20 @@ void Controller::control(double t,
 //OUTLOG(((std::clock() - start) / (double)(CLOCKS_PER_SEC))*1000.0,"idyn_timing",logINFO);
     OUTLOG(duration*1000.0,"idyn_timing",logINFO);
 #endif
-    std::cout << "cf_id = [";
-    for(unsigned i=0, ii=0;i< eefs_.size();i++){
-      if(!eefs_[i].active || !solve_flag)
-        std::cout << 0 << " " << 0 << " " << 0 << " ";
-      else{
-        Ravelin::Vector3d impulse(cf[ii],cf[ii+NC]-cf[ii+NC*3],cf[ii+NC*2]-cf[ii+NC*4]);
-        int j = 0;
-        Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
-                                    eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
-                                    eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
-        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.transpose_mult(impulse,workv3_));
-
-        std::cout << contact_impulse[0] << " " << contact_impulse[1] << " " << contact_impulse[2] << " ";
-        ii++;
-      }
-    }
-    std::cout << "]';" << std::endl;
+//    for(unsigned i=0, ii=0;i< eefs_.size();i++){
+//      if(!eefs_[i].active || !solve_flag)
+//        std::cout << 0 << " " << 0 << " " << 0 << " ";
+//      else{
+//        Ravelin::Vector3d impulse(cf[ii],cf[ii+NC]-cf[ii+NC*3],cf[ii+NC*2]-cf[ii+NC*4]);
+//        int j = 0;
+//        Ravelin::Matrix3d R_foot( eefs_[i].normal[j][0], eefs_[i].normal[j][1], eefs_[i].normal[j][2],
+//                                    eefs_[i].tan1[j][0],   eefs_[i].tan1[j][1],   eefs_[i].tan1[j][2],
+//                                    eefs_[i].tan2[j][0],   eefs_[i].tan2[j][1],   eefs_[i].tan2[j][2]);
+//        Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.transpose_mult(impulse,workv3_));
+//        std::cout << contact_impulse[0] << " " << contact_impulse[1] << " " << contact_impulse[2] << " ";
+//        ii++;
+//      }
+//    }
 
     // Reset active feet
     for(int i=0;i<NUM_EEFS;i++)

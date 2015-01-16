@@ -10,6 +10,9 @@ using namespace Pacer;
 
 int N_SYSTEMS = 0;
 
+using Ravelin::VectorNd;
+using Ravelin::MatrixNd;
+
 Ravelin::LinAlgd _LA;
 Moby::LCP _lcp;
 
@@ -832,7 +835,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   return true;
 }
 
-extern bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
+extern bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol);
 
 bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
                          const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless){
@@ -1214,7 +1217,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   }
 
   Ravelin::MatrixNd _Q_iM_XT;
-  Ravelin::VectorNd _qq,_v;
+  Ravelin::VectorNd _qq;
 
   // inv(A) = [
   //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
@@ -1304,11 +1307,16 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
       indices.push_back(i);
   }
 
+  static Ravelin::VectorNd _v;
+  if(_v.size() != _qq.size())
+    _v.resize(0);
+
+
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
 
-    if (!lcp_fast(_MM, _qq,indices, _v,CHECK_ZERO))
+    if (!lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
     {
       OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
@@ -1416,7 +1424,7 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
+  const double CHECK_ZERO = Moby::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
 
   // get number of degrees of freedom and number of contact points

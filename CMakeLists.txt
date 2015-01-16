@@ -121,6 +121,7 @@ if(USE_MOBY)
   add_library(${PROJECT_NAME}MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
   target_link_libraries(${PROJECT_NAME}MobyPlugin ${PROJECT_NAME} Moby Ravelin)
   install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
+  install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION lib)
 endif(USE_MOBY)
 
 # Gazebo Plugin

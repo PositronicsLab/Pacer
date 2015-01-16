@@ -839,7 +839,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
+  const double CHECK_ZERO = Moby::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1054,21 +1054,10 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
 
     // This is an [I,0] matrix, it has full row rank
     continue;
-    // select the rows and columns
-    Jx_iM_JxT.select_square(J_indices.begin(), J_indices.end(), _Y);
-
-    // skew the matrix away from positive definiteness
-    for (unsigned j=0; j< J_indices.size(); j++)
-      _Y(j,j) -= CHECK_ZERO;
-
-    // attempt Cholesky factorization
-    if (!_LA.factor_chol(_Y))
-      J_indices.pop_back();
   }
 
-  Ravelin::MatrixNd _rJx_iM_JxT;
   // get the reduced Jx*iM*Jx' matrix
-  Jx_iM_JxT.select_square(J_indices.begin(), J_indices.end(), _rJx_iM_JxT);
+  Ravelin::MatrixNd _rJx_iM_JxT = Jx_iM_JxT;
 
   // loop through contacts, forming matrix below and checking its condition
   // | S*inv(M)*S'  S*inv(M)*T' S*inv(M)*J' |
@@ -1207,6 +1196,13 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     Ct_iM_JxT.select(T_indices.begin(), T_indices.end(), J_indices.begin(), J_indices.end(), _workM);
     _Y.set_sub_mat(T_IDX, J_IDX, _workM);
     _Y.set_sub_mat(J_IDX, T_IDX, _workM, Ravelin::eTranspose);
+
+// check the condition number on Y
+// TODO: remove this code when satisfied Cholesky factorization is not problem
+Ravelin::MatrixNd tmp = _Y;
+double cond = _LA.cond(tmp);
+if (cond > 1e6)
+  OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
 
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);

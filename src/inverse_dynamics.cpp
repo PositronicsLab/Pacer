@@ -708,7 +708,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   Ravelin::MatrixNd P;
   LA_.nullspace(H,P);
   unsigned size_null_space = P.columns();
-  if(size_null_space != 0)
+  if(size_null_space != 0 && false)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
@@ -842,7 +842,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = Moby::NEAR_ZERO;
+  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1200,12 +1200,13 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     _Y.set_sub_mat(T_IDX, J_IDX, _workM);
     _Y.set_sub_mat(J_IDX, T_IDX, _workM, Ravelin::eTranspose);
 
-// check the condition number on Y
-// TODO: remove this code when satisfied Cholesky factorization is not problem
-Ravelin::MatrixNd tmp = _Y;
-double cond = _LA.cond(tmp);
-if (cond > 1e6)
-  OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
+    // check the condition number on Y
+    // TODO: remove this code when satisfied Cholesky factorization is not problem
+    Ravelin::MatrixNd tmp = _Y;
+    double cond = _LA.cond(tmp);
+    if (cond > 1e6){
+      OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
+    }
 
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
@@ -1311,6 +1312,7 @@ if (cond > 1e6)
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
+    OUTLOG(_v,"warm_start_v",logERROR);
 
     if (!lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
     {
@@ -1330,7 +1332,7 @@ if (cond > 1e6)
         throw std::runtime_error("Unable to solve constraint LCP!");
     }
   }
-  OUTLOG(_v,"v",logDEBUG1);
+  OUTLOG(_v,"v",logERROR);
 
   Ravelin::VectorNd _cs_ct_tau;
 
@@ -1405,11 +1407,8 @@ if (cond > 1e6)
 
   // Using M(dv) - z = tau
   x = tau;
-  if(nc>0)
-    x -= R.mult(cf,_workv).segment(0,nq);
   x /= dt;
 
-  OUTLOG(x,"tau",logDEBUG);
 
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip_fast() exited" << std::endl;
   return true;
@@ -1652,7 +1651,7 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
   assert(success);
 
   Ravelin::MatrixNd _Q_iM_XT;
-  Ravelin::VectorNd _qq,_v;
+  Ravelin::VectorNd _qq;
 
   // inv(A) = [
   //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
@@ -1758,6 +1757,10 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
       indices.push_back(i);
   }
 
+  static Ravelin::VectorNd _v;
+  if(_v.size() != _qq.size())
+    _v.resize(0);
+
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
@@ -1837,8 +1840,6 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
 
   // Using M(dv) - z = tau
   x = tau;
-  if(nc>0)
-    x -= R.mult(cf,_workv).segment(0,nq);
   x /= dt;
 
   OUTLOG(x,"tau",logDEBUG);

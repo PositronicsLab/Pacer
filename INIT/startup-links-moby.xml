@@ -80,7 +80,7 @@
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">true</des-contact>
+    <des-contact type="bool">false</des-contact>
   </inverse-dynamics>
   </controller>
 

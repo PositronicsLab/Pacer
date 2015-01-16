@@ -85,6 +85,15 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
 }
 
 /// Fast pivoting algorithm for denerate, monotone LCPs with few nonzero, nonbasic variables
+/**
+ * \param M the LCP matrix
+ * \param q the LCP vector
+ * \param indices a set of indices corresponding to each foot
+ * \param z the solution is returned here; if z is an n-dimensional vector,
+ *        attempts warm-starting
+ * \param zero_tol the tolerance for solving to zero
+ * \return true if the solver is successful
+ */
 bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol)
 {
   const unsigned N = q.rows();
@@ -128,24 +137,35 @@ bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>&
     return true;
   }
 
-  // set initial nonbasic set to have a negative variable from each link index
-  _nonbas.clear();
-  for (unsigned i=0; i< N; i++)
-    if (q[i] < zero_tol && !_represented[indices[i]])
-    {
-      _nonbas.push_back(i);
-      _represented[indices[i]] = true;
-    }
+  // look for warm-start
+  if (z.size() == N)
+  {
+    _nonbas.clear();
+    for (unsigned i=0; i< N; i++)
+      if (z[i] > zero_tol)
+        _nonbas.push_back(i);
+  }
+  else
+  {
+    // set initial nonbasic set to have a negative variable from each link index
+    _nonbas.clear();
+    for (unsigned i=0; i< N; i++)
+      if (q[i] < zero_tol && !_represented[indices[i]])
+      {
+        _nonbas.push_back(i);
+        _represented[indices[i]] = true;
+      }
 
-  // now add contacts from all links not represented
-  for (unsigned i=0; i< N; i++)
-    if (std::binary_search(_nonbas.begin(), _nonbas.end(), i) &&
-        !_represented[indices[i]])
-    {
-      _nonbas.push_back(i);
-      Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
-      _represented[indices[i]] = true;
-    }
+    // now add contacts from all links not represented
+    for (unsigned i=0; i< N; i++)
+      if (std::binary_search(_nonbas.begin(), _nonbas.end(), i) &&
+          !_represented[indices[i]])
+      {
+        _nonbas.push_back(i);
+        Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
+        _represented[indices[i]] = true;
+      }
+  }
 
   // setup basic indices
   _bas.clear();

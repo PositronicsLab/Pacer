@@ -19,7 +19,7 @@
       <DynamicBody dynamic-body-id="LINKS" />
       <DynamicBody dynamic-body-id="GROUND" />
 <!--      <DynamicBody dynamic-body-id="BOX1" />-->
-      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="0.1" mu-viscous="0" epsilon="0.0"/>
+      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="100" mu-viscous="0" epsilon="0.0"/>
 <!--      <ContactParameters object1-id="LINKS" object2-id="BOX1" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>-->
     </EventDrivenSimulator>
 
@@ -40,7 +40,7 @@
 <!--    <Box id="leg3" xlen="0.1" ylen="0.01" zlen="0.01" mass="0.04"/>-->
     <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.04"/>
     <Sphere id="foot" radius="0.01" mass="0.01"/>
-<!--    <Box id="foot2" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.005"/>-->
+<!--    <Box id="foot" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.005" edge-sample-length="0.01"/>-->
 
     <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" rotate="0.0 0.0 0.0" translate="0,0,0.19" >

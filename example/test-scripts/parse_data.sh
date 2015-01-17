@@ -4,7 +4,7 @@ grep "u = " out.log > u.mat
 grep "uff = " out.log > uff.mat
 grep "ufb = " out.log > ufb.mat
 grep "qdd = " out.log > qdd.mat
-grep "qd = " out.log > qd.mat
+grep "generalized_qd = " out.log > qd.mat
 grep "q = " out.log > q.mat
 grep "qdd_des = " out.log > qdd_des.mat
 grep "qd_des = " out.log > qd_des.mat
@@ -24,7 +24,7 @@ grep "cf_moby = " out.log > cf_moby.mat
 grep "cf_id = " out.log > cf_id.mat
 
 rpl -q "qdd = [" "" qdd.mat
-rpl -q "qd = [" "" qd.mat
+rpl -q "generalized_qd = [" "" qd.mat
 rpl -q "q = [" "" q.mat
 rpl -q "qdd_des = [" "" qdd_des.mat
 rpl -q "qd_des = [" "" qd_des.mat

@@ -708,7 +708,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   Ravelin::MatrixNd P;
   LA_.nullspace(H,P);
   unsigned size_null_space = P.columns();
-  if(size_null_space != 0 && false)
+  if(size_null_space != 0)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
@@ -842,7 +842,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
+//  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
+  const double CHECK_ZERO = Moby::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1725,54 +1726,54 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
   OUTLOG(_qq,"qq",logDEBUG1);
   // setup remainder of LCP vector
 
-  // Setup Indices vector
-  std::vector<unsigned> indices;
-  unsigned active_eefs = 0;
-  for(int i=0;i<eefs_.size();i++){
-    if(!eefs_[i].active){
-      continue;
-    }
-    active_eefs++;
-    for(int j=0;j<eefs_[i].point.size();j++)
-      indices.push_back(i);
-  }
+//  // Setup Indices vector
+//  std::vector<unsigned> indices;
+//  unsigned active_eefs = 0;
+//  for(int i=0;i<eefs_.size();i++){
+//    if(!eefs_[i].active){
+//      continue;
+//    }
+//    active_eefs++;
+//    for(int j=0;j<eefs_[i].point.size();j++)
+//      indices.push_back(i);
+//  }
 
-  // D
-  for(int i=0;i<nk;i++){
-    for(int i=0;i<eefs_.size();i++){
-      if(!eefs_[i].active){
-        continue;
-      }
-      for(int j=0;j<eefs_[i].point.size();j++)
-        indices.push_back(i);
-    }
-  }
+//  // D
+//  for(int i=0;i<nk;i++){
+//    for(int i=0;i<eefs_.size();i++){
+//      if(!eefs_[i].active){
+//        continue;
+//      }
+//      for(int j=0;j<eefs_[i].point.size();j++)
+//        indices.push_back(i);
+//    }
+//  }
 
-  // E
-  for(int i=0;i<eefs_.size();i++){
-    if(!eefs_[i].active){
-      continue;
-    }
-    for(int j=0;j<eefs_[i].point.size();j++)
-      indices.push_back(i);
-  }
+//  // E
+//  for(int i=0;i<eefs_.size();i++){
+//    if(!eefs_[i].active){
+//      continue;
+//    }
+//    for(int j=0;j<eefs_[i].point.size();j++)
+//      indices.push_back(i);
+//  }
 
   static Ravelin::VectorNd _v;
-  if(_v.size() != _qq.size())
-    _v.resize(0);
+//  if(_v.size() != _qq.size())
+//    _v.resize(0);
 
-  // attempt to solve the LCP using the fast method
-  if(active_eefs > 2){
-    OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
+//  // attempt to solve the LCP using the fast method
+//  if(active_eefs > 2){
+//    OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
 
-    if (!lcp_fast(_MM, _qq,indices, _v,CHECK_ZERO))
-    {
-      OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+//    if (!lcp_fast(_MM, _qq,indices, _v,CHECK_ZERO))
+//    {
+//      OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
-      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
-        throw std::runtime_error("Unable to solve constraint LCP!");
-    }
-  } else {
+//      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+//        throw std::runtime_error("Unable to solve constraint LCP!");
+//    }
+//  } else {
     OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
 
     if (!_lcp.lcp_fast(_MM, _qq, _v))
@@ -1782,7 +1783,7 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
       if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
         throw std::runtime_error("Unable to solve constraint LCP!");
     }
-  }
+//  }
   OUTLOG(_v,"v",logDEBUG1);
 
   Ravelin::VectorNd tau;

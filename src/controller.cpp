@@ -602,10 +602,10 @@ void Controller::control(double t,
 
     // IDYN MAXIMAL DISSIPATION MODEL
     unsigned ctl_num = 0;
-#define USE_CLAWAR_MODEL
-#define USE_NO_SLIP_MODEL
+//#define USE_CLAWAR_MODEL
+//#define USE_NO_SLIP_MODEL
 #define USE_NO_SLIP_LCP_MODEL
-#define USE_AP_MODEL
+//#define USE_AP_MODEL
 
     {
       unsigned ii = 0;
@@ -712,10 +712,13 @@ void Controller::control(double t,
 #endif
     cf.resize(0);
     id.set_zero(NUM_JOINT_DOFS);
-    solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,id,cf);
+    if(inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,id,cf)){
+      compare_cf_vec.push_back(cf.segment(0,NC));
+    } else {
+      compare_cf_vec.push_back(cf);
+    }
     OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
     OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-    compare_cf_vec.push_back(cf.segment(0,NC));
 #ifdef TIMING
     gettimeofday(&end_t, NULL);
     double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
@@ -735,10 +738,13 @@ void Controller::control(double t,
 #endif
     cf.resize(0);
     id.set_zero(NUM_JOINT_DOFS);
-    solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf);
+    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf)){
+      compare_cf_vec.push_back(cf.segment(0,NC));
+    } else {
+      compare_cf_vec.push_back(cf);
+    }
     OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
     OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-    compare_cf_vec.push_back(cf.segment(0,NC));
 #ifdef TIMING
     gettimeofday(&end_t, NULL);
     double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
@@ -822,10 +828,7 @@ void Controller::control(double t,
 //#endif
 // /////////////////////////////////////////////////////////////////////////////
 
-    if(solve_flag)
-      uff += (id*=alpha);
-
-
+    uff += (id*=alpha);
 
     // Reset active feet
     for(int i=0;i<NUM_EEFS;i++)
@@ -839,7 +842,7 @@ void Controller::control(double t,
   Utility::check_finite(ufb);
   Utility::check_finite(uff);
   // combine ufb and uff
-  u = ufb;
+  u  = ufb;
   u += uff;
 
   // -------------------------- LIMIT TORQUES ----------------------------

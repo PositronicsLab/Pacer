@@ -866,9 +866,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   S.transpose();
   T.transpose();
 
-  OUTLOG(NT,"N'",logDEBUG1);
-  OUTLOG(ST,"S'",logDEBUG1);
-  OUTLOG(TT,"T'",logDEBUG1);
+  OUTLOG(N,"N",logDEBUG1);
+  OUTLOG(S,"S",logDEBUG1);
+  OUTLOG(T,"T",logDEBUG1);
 
   // compute D, E, and F
   Ravelin::MatrixNd iM_chol = M;
@@ -903,8 +903,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   iM.mult(fext,v,dt,1);
 
   Ravelin::VectorNd vqstar;
-//  ((vqstar = qdd) *= dt) += vq;
   ((vqstar = qdd) *= dt) += v.segment(0,nq);
+
   //////////////////////////////////////////////////////////////
   Ravelin::MatrixNd P;
   P.set_zero(nq,n);
@@ -912,7 +912,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::MatrixNd PT = P;
   PT.transpose();
 
-  OUTLOG(PT,"P'",logDEBUG1);
+  OUTLOG(P,"P",logDEBUG1);
 
   Ravelin::MatrixNd Cs_iM_CsT, Cs_iM_CtT, /*Cs_iM_CnT,*/ Cs_iM_JxT,
                     Ct_iM_CsT, Ct_iM_CtT, /*Ct_iM_CnT,*/ Ct_iM_JxT,
@@ -976,6 +976,10 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   T.mult(v,Ct_v);
   N.mult(v,Cn_v);
   P.mult(v,Jx_v);
+
+  OUTLOG(Cn_v,"Cn_v",logDEBUG1);
+  OUTLOG(Cs_v,"Cs_v",logDEBUG1);
+  OUTLOG(Ct_v,"Ct_v",logDEBUG1);
 
   // Printouts
   OUTLOG(Cs_iM_CsT,"Cs_iM_CsT",logDEBUG1);

@@ -520,7 +520,6 @@ void Controller::control(double t,
             inf_friction = false;
         }
 
-    static std::vector<Ravelin::VectorNd> compare_cf_vec;
 //    if(USE_LAST_CFS){
 
       cf.set_zero(NC*5);
@@ -546,18 +545,10 @@ void Controller::control(double t,
     OUTLOG(cf,"cf_moby",logERROR);
 
     {
-      for(int i=0;i<compare_cf_vec.size();i++){
-        double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);
-        if(compare_cf_vec[i].size() != NC)
-          OUT_LOG(logERROR) << i << ", Contact switch at: " << t << " , " << compare_cf_vec[i].size() << " -> " << NC ;
-        OUT_LOG(logERROR) << i << ", Sum normal force: " << sum ;
-
-      }
       double sum = std::accumulate(cf.segment(0,NC).begin(),cf.segment(0,NC).end(),0.0);
 
-      OUT_LOG(logERROR) << "M, Sum normal force: " << sum ;
+      OUT_LOG(logERROR) << t-dt <<",M, Sum normal force: " << sum ;
     }
-    compare_cf_vec.clear();
 
     if(USE_LAST_CFS){
 
@@ -603,31 +594,11 @@ void Controller::control(double t,
     // IDYN MAXIMAL DISSIPATION MODEL
     unsigned ctl_num = 0;
 //#define USE_CLAWAR_MODEL
-//#define USE_NO_SLIP_MODEL
+#define USE_NO_SLIP_MODEL
 #define USE_NO_SLIP_LCP_MODEL
 //#define USE_AP_MODEL
 
-    {
-      unsigned ii = 0;
-#ifdef USE_CLAWAR_MODEL
-      OUT_LOG(logERROR) << ii << " -- USE_CLAWAR_MODEL";
-      ii++;
-#endif
-#ifdef USE_NO_SLIP_MODEL
-      OUT_LOG(logERROR) << ii << " -- USE_NO_SLIP_MODEL";
-      ii++;
-#endif
-#ifdef USE_NO_SLIP_LCP_MODEL
-      OUT_LOG(logERROR) << ii << " -- USE_NO_SLIP_LCP_MODEL";
-      ii++;
-#endif
-#ifdef USE_AP_MODEL
-      OUT_LOG(logERROR) << ii << " -- USE_AP_MODEL";
-      ii++;
-#endif
-
-    }
-
+    std::vector<Ravelin::VectorNd> compare_cf_vec;
 
 #define TIMING
 
@@ -753,6 +724,30 @@ void Controller::control(double t,
     ctl_num++;
   }
 #endif
+
+    {
+      unsigned ii = 0;
+#ifdef USE_CLAWAR_MODEL
+      OUT_LOG(logERROR) << ii << " -- USE_CLAWAR_MODEL";
+      ii++;
+#endif
+#ifdef USE_NO_SLIP_MODEL
+      OUT_LOG(logERROR) << ii << " -- USE_NO_SLIP_MODEL";
+      ii++;
+#endif
+#ifdef USE_NO_SLIP_LCP_MODEL
+      OUT_LOG(logERROR) << ii << " -- USE_NO_SLIP_LCP_MODEL";
+      ii++;
+#endif
+#ifdef USE_AP_MODEL
+      OUT_LOG(logERROR) << ii << " -- USE_AP_MODEL";
+      ii++;
+#endif
+    }
+    for(int i=0;i<compare_cf_vec.size();i++){
+      double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);
+      OUT_LOG(logERROR) << i << ", Sum normal force: " << sum ;
+    }
 
     ////////////////////////// H IDYN ////////////////////////////////////////
 

@@ -18,10 +18,10 @@
     <DynamicBody dynamic-body-id="GROUND" />
     <DynamicBody dynamic-body-id="ROBOT" />
     <DisabledPair object1-id="ROBOT" object2-id="ROBOT"/>
-    <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="1.4" />
+    <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="100" />
   </EventDrivenSimulator>
 
-  <SDF filename="atlas.sdf"/>
+  <SDF filename="atlas-pointfeet.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
 <!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->

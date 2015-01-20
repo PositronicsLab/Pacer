@@ -1,0 +1,559 @@
+<?xml version="1.0" ?>
+<sdf version='1.5'>
+  <model name='ROBOT'>
+  <plugin name="PacerPlugin" filename="/usr/local/lib/libPacerGazeboPlugin.so"/>
+  <pose>0 0 1 0 -0 0</pose>
+    <link name='BODY0'>
+      <pose>0 0 0 0 -0 0</pose>
+      <inertial>
+        <mass>14.2529</mass>
+        <inertia>
+          <ixx>0.1</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.1</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.1</izz>
+        </inertia>
+      </inertial>
+      <visual name='BODY0_visual'>
+        <geometry>
+          <box>
+            <size>0.12 0.24 0.20</size>
+          </box>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <link name='l_uglut'>
+      <pose>0 0.089 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.5166</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='l_uglut_visual'>
+        <pose>0 0 0 0 1.57079 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.078396</length>
+            <radius>0.019096</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='l_leg_uhz1' type='revolute'>
+      <child>l_uglut</child>
+      <parent>BODY0</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='l_lglut'>
+      <pose>0 0.089 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.69</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='l_lglut_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.060306</length>
+            <radius>0.0200969</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='l_leg_mhx2' type='revolute'>
+      <child>l_lglut</child>
+      <parent>l_uglut</parent>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='l_uleg'>
+      <pose>0.05 0.089 -0.05 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 -0.21 0 -0 0</pose>
+        <mass>7.34</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='l_uleg_visual'>
+        <pose>-0.0179 0.02085 -0.2 0 -0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.4</length>
+            <radius>0.08</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='l_leg_lhy3' type='revolute'>
+      <child>l_uleg</child>
+      <parent>l_lglut</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='l_lleg'>
+      <pose>0 0.089 -0.424 0 -0 0</pose>
+      <inertial>
+        <pose>0.001 0 -0.187 0 -0 0</pose>
+        <mass>4.367</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='l_lleg_visual'>
+        <pose>0.02 0.00295 -0.18 0 0.1 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.4</length>
+            <radius>0.07</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='l_leg_kny4' type='revolute'>
+      <child>l_lleg</child>
+      <parent>l_uleg</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='l_talus'>
+      <pose>0 0.089 -0.846 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='l_talus_visual'>
+        <pose>0.02 0 0 -2.65359e-06 1.57079 -2.65359e-06</pose>
+        <geometry>
+          <cylinder>
+            <length>0.15</length>
+            <radius>0.07</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='l_leg_uay5' type='revolute'>
+      <child>l_talus</child>
+      <parent>l_lleg</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='l_foot'>
+      <pose>0.01 0.089 -0.846 0 -0 0</pose>
+      <inertial>
+        <pose>0.027 0 -0.067 0 -0 0</pose>
+        <mass>1.634</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <collision name='l_foot_collision'>
+        <pose>0.02 0 -0.04 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.05</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name='l_foot_visual1'>
+        <pose>0.02 0 -0.04 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.05</radius>
+          </sphere>
+        </geometry>
+      </visual>
+
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+
+      <sensor name='l_foot_contact' type='contact'>
+        <!-- <plugin name="l_foot_contact_plugin" filename="libcontact.dylib"/> -->
+        <contact>
+          <collision>l_foot_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
+    </link>
+    <joint name='l_leg_lax6' type='revolute'>
+      <child>l_foot</child>
+      <parent>l_talus</parent>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='r_uglut'>
+      <pose>0 -0.089 0 0 -0 0</pose>
+      <inertial>
+      <pose>0 0 0 0 0 0</pose>
+        <mass>0.5166</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='r_uglut_visual'>
+        <pose>0 0 0 0 1.57079 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.078396</length>
+            <radius>0.019096</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='r_leg_uhz1' type='revolute'>
+      <child>r_uglut</child>
+      <parent>BODY0</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='r_lglut'>
+      <pose>0 -0.089 0 0 -0 0</pose>
+      <inertial>
+      <pose>0 0 0 0 0 0</pose>
+        <mass>0.69</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='r_lglut_visual'>
+      <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.060306</length>
+            <radius>0.0200969</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='r_leg_mhx2' type='revolute'>
+      <child>r_lglut</child>
+      <parent>r_uglut</parent>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='r_uleg'>
+      <pose>0.05 -0.089 -0.05 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 -0.21 0 -0 0</pose>
+        <mass>7.34</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='r_uleg_visual'>
+        <pose>-0.0179 -0.02085 -0.20 0 -0 0</pose>
+        <geometry>
+          <cylinder>
+          <length>0.4</length>
+          <radius>0.08</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='r_leg_lhy3' type='revolute'>
+      <child>r_uleg</child>
+      <parent>r_lglut</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='r_lleg'>
+      <pose>0 -0.089 -0.424 0 -0 0</pose>
+      <inertial>
+        <pose>0.001 0 -0.187 0 -0 0</pose>
+        <mass>4.367</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='r_lleg_visual'>
+        <pose>0.02 -0.00295 -0.18 0 0.1 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.4</length>
+            <radius>0.07</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='r_leg_kny4' type='revolute'>
+      <child>r_lleg</child>
+      <parent>r_uleg</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='r_talus'>
+      <pose>0 -0.089 -0.846 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name='r_talus_visual'>
+        <pose>0.02 0 0 -2.65359e-06 1.57079 -2.65359e-06</pose>
+        <geometry>
+          <cylinder>
+            <length>0.15</length>
+            <radius>0.07</radius>
+          </cylinder>
+        </geometry>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+    <joint name='r_leg_uay5' type='revolute'>
+      <child>r_talus</child>
+      <parent>r_lleg</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+    <link name='r_foot'>
+      <pose>0.01 -0.089 -0.846 0 -0 0</pose>
+      <inertial>
+        <pose>0.027 0 -0.067 0 -0 0</pose>
+        <mass>1.634</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>-0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+
+      <collision name='r_foot_collision'>
+        <pose>0.02 0 -0.04 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.05</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name='r_foot_visual1'>
+        <pose>0.02 0 -0.04 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.05</radius>
+          </sphere>
+        </geometry>
+      </visual>
+
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+
+      <sensor name='r_foot_contact' type='contact'>
+        <!-- <plugin name="r_foot_contact_plugin" filename="libcontact.dylib"/> -->
+        <contact>
+          <collision>r_foot_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
+    </link>
+    <joint name='r_leg_lax6' type='revolute'>
+      <child>r_foot</child>
+      <parent>r_talus</parent>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics/>
+        <use_parent_model_frame>1</use_parent_model_frame>
+      </axis>
+    </joint>
+  </model>
+</sdf>

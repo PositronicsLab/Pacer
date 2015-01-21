@@ -18,7 +18,7 @@
     <DynamicBody dynamic-body-id="GROUND" />
     <DynamicBody dynamic-body-id="ROBOT" />
     <DisabledPair object1-id="ROBOT" object2-id="ROBOT"/>
-    <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="100" />
+    <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="0.5" />
   </EventDrivenSimulator>
 
   <SDF filename="atlas-pointfeet.sdf"/>

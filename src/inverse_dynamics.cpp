@@ -1171,6 +1171,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     OUT_LOG(logDEBUG) << oss.str() << std::endl;
   }
 
+  Ravelin::MatrixNd _X;
+
   // ********************************************************
   // reform Y if necessary
   // ********************************************************
@@ -1216,6 +1218,15 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
     assert(success);
+  
+    _X.resize(J_IDX + J_indices.size(), n);
+    S.select_rows(S_indices.begin(), S_indices.end(), _workM);
+    _X.set_sub_mat(S_IDX, 0, _workM);
+    T.select_rows(T_indices.begin(), T_indices.end(), _workM);
+    _X.set_sub_mat(T_IDX, 0, _workM);
+    P.select_rows(J_indices.begin(), J_indices.end(), _workM);
+    _X.set_sub_mat(J_IDX, 0, _workM);
+
   }
 
   Ravelin::MatrixNd _Q_iM_XT;
@@ -1339,9 +1350,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   }
   OUTLOG(_v,"v",logERROR);
 
-  Ravelin::VectorNd _cs_ct_tau;
+  Ravelin::VectorNd _cs_ct_tau, _v_plus;
 
-  // compute the friction forces
+  // compute the no-slip friction forces
   // u = -inv(A)*(a + Cv)
   // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
   // recalling that inv(A) =
@@ -1349,11 +1360,54 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // | Y*X*inv(M)                    -Y          | sz(x) x ngc,  sz(x) x sz(x)
   // Q is nlcp x (ngc + sz(x))
   // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn]
+  /*
+  if(nc > 0){
+    // [v+] = -inv(M)-inv(M)*X'*Y*X*inv(M) - Y*X*inv(M)*Q'*[cn]
+    Ravelin::VectorNd a_Cv(n+J_IDX+nq);
+ 
+    a_Cv.set_sub_vec(n,Cn_v);
+    _workv = vqstar;
+    _workv.negate();
+    a_Cv.set_sub_vec(n+J_IDX,_workv);
+    a_Cv.set_sub_vec(n,Cn_v);
+    a_Cv.set_sub_vec(0,M.mult(v,_workv,-1.0,0));
+ 
+    Ravelin::MatrixNd iM_XT;
+    Ravelin::MatrixNd::transpose(_X, iM_XT);
+    
+    // inv(M)*X'*Y
+    LA_.solve_chol_fast(iM_chol,iM_XT);
+    Ravelin::MatrixNd::transpose(iM_XT,_workM);
+    LA_.solve_chol_fast(_Y, _workM);
+    _workM.transpose_mult(a_Cv.segment(n,a_Cv.size()), _v_plus);
+
+
+    // inv(M)-inv(M)*X'*Y*X*inv(M)
+    iM_XT.mult(_workM,_workM2,-1.0,0);
+    _workM2 += iM;
+    _workM2.mult(a_Cv.segment(0,n),_v_plus,1.0,-1.0);
+    OUTLOG(_v_plus,"v_plus",logERROR);
+ 
+    N.mult(_v_plus, _workv);
+    OUTLOG(_workv,"Cn_v+",logERROR);
+ 
+    S.mult(_v_plus, _workv);
+    OUTLOG(_workv,"Cs_v+",logERROR);
+ 
+    T.mult(_v_plus, _workv);
+    OUTLOG(_workv,"Ct_v+",logERROR);
+  }
+  */
+  // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
   _cs_ct_tau = _YXv;
+  _cs_ct_tau -= _Yvqstar;
   _Q_iM_XT.transpose_mult(_v, _workv);
-  _LA.solve_chol_fast(_Y, _workv);
+  LA_.solve_chol_fast(_Y, _workv);
   _cs_ct_tau += _workv;
   _cs_ct_tau.negate();
+  
+  OUTLOG(_cs_ct_tau,"cs_ct_tau",logERROR);
+  
 
   Ravelin::VectorNd cn,cs,ct,tau;
   // setup impulses
@@ -1801,6 +1855,7 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
   // Q is nlcp x (ngc + sz(x))
   // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn]
   tau = _YXv;
+  tau -= _Yvqstar;
   _Q_iM_XT.transpose_mult(_v, _workv);
   _LA.solve_chol_fast(_Y, _workv);
   tau += _workv;

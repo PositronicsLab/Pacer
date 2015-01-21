@@ -605,73 +605,7 @@ void Controller::control(double t,
     OUTLOG(NC,"idyn_NC",logERROR);
 
     ////////////////////////// simulator DT IDYN //////////////////////////////
-#ifdef USE_NO_SLIP_LCP_MODEL
-  // NO-SLIP Fast MODEL
-    {
-#ifdef TIMING
-    struct timeval start_t;
-    struct timeval end_t;
-    gettimeofday(&start_t, NULL);
-#endif
-    cf.set_zero(NC*5);
-    id.set_zero(NUM_JOINT_DOFS);
-    {
-      solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,id,cf,false);
-      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
-      if(last_cf.rows() == NC){
-        Ravelin::VectorNd diff_cf  = last_cf;
-        diff_cf -= cf.segment(0,NC);
-        if(diff_cf.norm() > 0.01)
-          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
-      }
-      last_cf = cf.segment(0,NC);
-    }
-    compare_cf_vec.push_back(cf.segment(0,NC));
-#ifdef TIMING
-    gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
-#endif
-    ctl_num++;
-    }
-#endif
 
-#ifdef USE_AP_MODEL
-    // A-P Fast MODEL
-    {
-#ifdef TIMING
-    struct timeval start_t;
-    struct timeval end_t;
-    gettimeofday(&start_t, NULL);
-#endif
-    cf.set_zero(NC*5);
-    id.set_zero(NUM_JOINT_DOFS);
-    if(NC>0){
-      solve_flag = inverse_dynamics_ap(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf);
-      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
-      if(last_cf.rows() == NC){
-        Ravelin::VectorNd diff_cf  = last_cf;
-        diff_cf -= cf.segment(0,NC);
-        if(diff_cf.norm() > 0.01)
-          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
-      }
-      last_cf = cf.segment(0,NC);
-    } else {
-      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf);
-    }
-    compare_cf_vec.push_back(cf.segment(0,NC));
-#ifdef TIMING
-    gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
-#endif
-    ctl_num++;
-    }
-#endif
 
 #ifdef USE_NO_SLIP_MODEL
     // NO-SLIP MODEL
@@ -725,14 +659,80 @@ void Controller::control(double t,
   }
 #endif
 
+#ifdef USE_NO_SLIP_LCP_MODEL
+  // NO-SLIP Fast MODEL
+    {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf.set_zero(NC*5);
+    id.set_zero(NUM_JOINT_DOFS);
+    {
+      solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,id,cf,false);
+      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+      if(last_cf.rows() == NC){
+        Ravelin::VectorNd diff_cf  = last_cf;
+        diff_cf -= cf.segment(0,NC);
+        if(diff_cf.norm() > 0.01)
+          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+      }
+      last_cf = cf.segment(0,NC);
+    }
+    compare_cf_vec.push_back(cf.segment(0,NC));
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
+    }
+#endif
+#ifdef USE_AP_MODEL
+    // A-P Fast MODEL
+    {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf.set_zero(NC*5);
+    id.set_zero(NUM_JOINT_DOFS);
+    if(NC>0){
+      solve_flag = inverse_dynamics_ap(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf);
+      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+      if(last_cf.rows() == NC){
+        Ravelin::VectorNd diff_cf  = last_cf;
+        diff_cf -= cf.segment(0,NC);
+        if(diff_cf.norm() > 0.01)
+          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+      }
+      last_cf = cf.segment(0,NC);
+    } else {
+      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf);
+    }
+    compare_cf_vec.push_back(cf.segment(0,NC));
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
+    }
+#endif
     {
       unsigned ii = 0;
-#ifdef USE_CLAWAR_MODEL
-      OUT_LOG(logERROR) << ii << " -- USE_CLAWAR_MODEL";
-      ii++;
-#endif
 #ifdef USE_NO_SLIP_MODEL
       OUT_LOG(logERROR) << ii << " -- USE_NO_SLIP_MODEL";
+      ii++;
+#endif
+#ifdef USE_CLAWAR_MODEL
+      OUT_LOG(logERROR) << ii << " -- USE_CLAWAR_MODEL";
       ii++;
 #endif
 #ifdef USE_NO_SLIP_LCP_MODEL

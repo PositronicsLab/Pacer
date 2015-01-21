@@ -606,7 +606,6 @@ void Controller::control(double t,
 
     ////////////////////////// simulator DT IDYN //////////////////////////////
 
-
 #ifdef USE_NO_SLIP_MODEL
     // NO-SLIP MODEL
     {

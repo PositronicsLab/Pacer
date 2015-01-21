@@ -1061,9 +1061,12 @@ find_nonsingular_indices:
     S_indices.push_back(i);
 
     // setup indices
-    unsigned S_IDX = 0;
-    unsigned T_IDX = S_indices.size();
-    unsigned J_IDX = T_IDX + T_indices.size();
+    unsigned S_IDX;
+    S_IDX = 0;
+    unsigned T_IDX;
+    T_IDX = S_indices.size();
+    unsigned J_IDX;
+    J_IDX = T_IDX + T_indices.size();
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
     // add S/S, T/T, J/J components to 'check' matrix
@@ -1161,9 +1164,13 @@ find_nonsingular_indices:
   // ********************************************************
 
   // setup indices
-  const unsigned S_IDX = 0;
-  const unsigned T_IDX = S_indices.size();
-  const unsigned J_IDX = T_IDX + T_indices.size();
+  unsigned S_IDX;
+  S_IDX = 0;
+  unsigned T_IDX;
+  T_IDX = S_indices.size();
+  unsigned J_IDX;
+  J_IDX = T_IDX + T_indices.size();
+
   if (!last_success)
   {
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
@@ -1196,13 +1203,13 @@ find_nonsingular_indices:
     double cond = _LA.cond(tmp);
     if (cond > 1e6){
       OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
-      S_indices.clear();
-      T_indices.clear();
       CHECK_ZERO = 1e2*CHECK_ZERO;
       if(CHECK_ZERO > 1e-10){
-        OUT_LOG(logERROR) << "Deregularization constant for Chol. factorizations exceeded 1e-10, Y inversion is not relible!";
-        assert(CHECK_ZERO < 1e-10);
+        OUT_LOG(logERROR) << "Deregularization constant for Chol. factorizations exceeded 1e-10, Y inversion is not relible! " << CHECK_ZERO;
+//        assert(CHECK_ZERO < 1e-10);
       } else {
+        S_indices.clear();
+        T_indices.clear();
         goto find_nonsingular_indices;
       }
     }

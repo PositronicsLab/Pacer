@@ -123,9 +123,7 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  workv1.set_zero(n);
-  workv1.set_sub_vec(0,fID);
-  fext += workv1;
+  fext.segment(0,nq) += fID;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -146,23 +144,13 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
 
   // Use Sensed contact forces
   if(cf_final.rows() != 0){
-    Ravelin::VectorNd fext_cf;
-    // conventional way of incorporating contact forces into ID problem
-    R.mult(cf_final,fext_cf = fext_,1.0/h,1);
-    C.mult((workv1 = qdd) -= F.mult(fext_cf.get_sub_vec(0,nq,workv_),workv2),x);
-    workv1 = x;
 
-    // This produces a very good sensed contact controller
     (x = vqstar) -= k;
     FET.mult(R,workM1);
     workM1.mult(cf_final,x,-1,1);
     LA_.solve_chol_fast(iF,x);
     x /= h;
-
-    OUTLOG(fID,"f_ID",logDEBUG1);
-    OUTLOG(workv1,"x_standard",logDEBUG1);
-    OUTLOG(x,"x_eqn35",logDEBUG1);
-    OUTLOG(workv1 -= x,"x_diff",logDEBUG1);
+    x += fID;
 
     return true;
   }
@@ -459,6 +447,8 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
   x /= h;
+  x += fID;
+
   // Some debugging dialogue
   OUT_LOG(logDEBUG) << "<< inverse_dynamics() exited" << std::endl;
   return true;
@@ -586,23 +576,13 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
 
   // Use Sensed contact forces
   if(cf_final.rows() != 0){
-    Ravelin::VectorNd fext_cf;
-    // conventional way of incorporating contact forces into ID problem
-    R.mult(cf_final,fext_cf = fext_,1.0/h,1);
-    C.mult((workv1 = qdd) -= F.mult(fext_cf.get_sub_vec(0,nq,workv_),workv2),x);
-    workv1 = x;
 
-    // This produces a very good sensed contact controller
     (x = vqstar) -= k;
     FET.mult(R,workM1);
     workM1.mult(cf_final,x,-1,1);
     LA_.solve_chol_fast(iF,x);
     x /= h;
-
-    OUTLOG(fID,"f_ID",logDEBUG1);
-    OUTLOG(workv1,"x_standard",logDEBUG1);
-    OUTLOG(x,"x_eqn35",logDEBUG1);
-    OUTLOG(workv1 -= x,"x_diff",logDEBUG1);
+    x += fID;
 
     return true;
   }
@@ -829,6 +809,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   workM1.mult(cf_final,x,-1,1);
   LA_.solve_chol_fast(iF,x);
   x /= h;
+  x += fID;
 
   // Some debugging dialogue
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip() exited" << std::endl;
@@ -843,7 +824,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::VectorNd _workv, _workv2;
 
 //  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
-  const double CHECK_ZERO = Moby::NEAR_ZERO;
+  double CHECK_ZERO = Moby::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1071,6 +1052,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // | S*inv(M)*S'  S*inv(M)*T' S*inv(M)*J' |
   // | T*inv(M)*S'  T*inv(M)*T' T*inv(M)*J' |
   // | J*inv(M)*S'  J*inv(M)*T' J*inv(M)*J' |
+find_nonsingular_indices:
+
   bool last_success = false;
   for (unsigned i=0; i< nc; i++)
   {
@@ -1213,12 +1196,21 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     double cond = _LA.cond(tmp);
     if (cond > 1e6){
       OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
+      S_indices.clear();
+      T_indices.clear();
+      CHECK_ZERO = 1e2*CHECK_ZERO;
+      if(CHECK_ZERO > 1e-10){
+        OUT_LOG(logERROR) << "Deregularization constant for Chol. factorizations exceeded 1e-10, Y inversion is not relible!";
+        assert(CHECK_ZERO < 1e-10);
+      } else {
+        goto find_nonsingular_indices;
+      }
     }
 
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
     assert(success);
-  
+
     _X.resize(J_IDX + J_indices.size(), n);
     S.select_rows(S_indices.begin(), S_indices.end(), _workM);
     _X.set_sub_mat(S_IDX, 0, _workM);
@@ -1364,17 +1356,17 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   if(nc > 0){
     // [v+] = -inv(M)-inv(M)*X'*Y*X*inv(M) - Y*X*inv(M)*Q'*[cn]
     Ravelin::VectorNd a_Cv(n+J_IDX+nq);
- 
+
     a_Cv.set_sub_vec(n,Cn_v);
     _workv = vqstar;
     _workv.negate();
     a_Cv.set_sub_vec(n+J_IDX,_workv);
     a_Cv.set_sub_vec(n,Cn_v);
     a_Cv.set_sub_vec(0,M.mult(v,_workv,-1.0,0));
- 
+
     Ravelin::MatrixNd iM_XT;
     Ravelin::MatrixNd::transpose(_X, iM_XT);
-    
+
     // inv(M)*X'*Y
     LA_.solve_chol_fast(iM_chol,iM_XT);
     Ravelin::MatrixNd::transpose(iM_XT,_workM);
@@ -1387,13 +1379,13 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     _workM2 += iM;
     _workM2.mult(a_Cv.segment(0,n),_v_plus,1.0,-1.0);
     OUTLOG(_v_plus,"v_plus",logERROR);
- 
+
     N.mult(_v_plus, _workv);
     OUTLOG(_workv,"Cn_v+",logERROR);
- 
+
     S.mult(_v_plus, _workv);
     OUTLOG(_workv,"Cs_v+",logERROR);
- 
+
     T.mult(_v_plus, _workv);
     OUTLOG(_workv,"Ct_v+",logERROR);
   }
@@ -1405,9 +1397,9 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   LA_.solve_chol_fast(_Y, _workv);
   _cs_ct_tau += _workv;
   _cs_ct_tau.negate();
-  
+
   OUTLOG(_cs_ct_tau,"cs_ct_tau",logERROR);
-  
+
 
   Ravelin::VectorNd cn,cs,ct,tau;
   // setup impulses
@@ -1784,64 +1776,17 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
   OUTLOG(_qq,"qq",logDEBUG1);
   // setup remainder of LCP vector
 
-//  // Setup Indices vector
-//  std::vector<unsigned> indices;
-//  unsigned active_eefs = 0;
-//  for(int i=0;i<eefs_.size();i++){
-//    if(!eefs_[i].active){
-//      continue;
-//    }
-//    active_eefs++;
-//    for(int j=0;j<eefs_[i].point.size();j++)
-//      indices.push_back(i);
-//  }
-
-//  // D
-//  for(int i=0;i<nk;i++){
-//    for(int i=0;i<eefs_.size();i++){
-//      if(!eefs_[i].active){
-//        continue;
-//      }
-//      for(int j=0;j<eefs_[i].point.size();j++)
-//        indices.push_back(i);
-//    }
-//  }
-
-//  // E
-//  for(int i=0;i<eefs_.size();i++){
-//    if(!eefs_[i].active){
-//      continue;
-//    }
-//    for(int j=0;j<eefs_[i].point.size();j++)
-//      indices.push_back(i);
-//  }
-
   static Ravelin::VectorNd _v;
-//  if(_v.size() != _qq.size())
-//    _v.resize(0);
 
-//  // attempt to solve the LCP using the fast method
-//  if(active_eefs > 2){
-//    OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
+  OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
 
-//    if (!lcp_fast(_MM, _qq,indices, _v,CHECK_ZERO))
-//    {
-//      OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+  if (!_lcp.lcp_fast(_MM, _qq, _v))
+  {
+    OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
-//      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
-//        throw std::runtime_error("Unable to solve constraint LCP!");
-//    }
-//  } else {
-    OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
-
-    if (!_lcp.lcp_fast(_MM, _qq, _v))
-    {
-      OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
-
-      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
-        throw std::runtime_error("Unable to solve constraint LCP!");
-    }
-//  }
+    if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+      throw std::runtime_error("Unable to solve constraint LCP!");
+  }
   OUTLOG(_v,"v",logDEBUG1);
 
   Ravelin::VectorNd tau;

@@ -520,8 +520,7 @@ void Controller::control(double t,
             inf_friction = false;
         }
 
-//    if(USE_LAST_CFS){
-
+    Ravelin::VectorNd cf_init;
       cf.set_zero(NC*5);
       for(unsigned i=0,ii=0;i< eefs_.size();i++){
         if(!eefs_[i].active) continue;
@@ -552,6 +551,7 @@ void Controller::control(double t,
 
     if(USE_LAST_CFS){
 
+      cf_init = cf;
       static std::queue<Ravelin::VectorNd>
           cf_delay_queue;
       static std::queue<Ravelin::MatrixNd>
@@ -583,7 +583,7 @@ void Controller::control(double t,
         MU_delay_queue = std::queue<Ravelin::MatrixNd>();
       }
     } else {
-      cf.set_zero(0);
+      cf_init.set_zero(0);
     }
 
 
@@ -594,9 +594,9 @@ void Controller::control(double t,
     // IDYN MAXIMAL DISSIPATION MODEL
     unsigned ctl_num = 0;
 //#define USE_CLAWAR_MODEL
-#define USE_NO_SLIP_MODEL
-#define USE_NO_SLIP_LCP_MODEL
-//#define USE_AP_MODEL
+//#define USE_NO_SLIP_MODEL
+//#define USE_NO_SLIP_LCP_MODEL
+#define USE_AP_MODEL
 
     std::vector<Ravelin::VectorNd> compare_cf_vec;
 
@@ -615,7 +615,7 @@ void Controller::control(double t,
     struct timeval end_t;
     gettimeofday(&start_t, NULL);
 #endif
-    cf.resize(0);
+    cf = cf_init;
     id.set_zero(NUM_JOINT_DOFS);
     if(inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,id,cf)){
       compare_cf_vec.push_back(cf.segment(0,NC));
@@ -641,7 +641,7 @@ void Controller::control(double t,
     struct timeval end_t;
     gettimeofday(&start_t, NULL);
 #endif
-    cf.resize(0);
+    cf = cf_init;
     id.set_zero(NUM_JOINT_DOFS);
     if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf)){
       compare_cf_vec.push_back(cf.segment(0,NC));

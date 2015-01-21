@@ -1196,13 +1196,13 @@ find_nonsingular_indices:
     double cond = _LA.cond(tmp);
     if (cond > 1e6){
       OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
-      S_indices.clear();
-      T_indices.clear();
       CHECK_ZERO = 1e2*CHECK_ZERO;
       if(CHECK_ZERO > 1e-10){
         OUT_LOG(logERROR) << "Deregularization constant for Chol. factorizations exceeded 1e-10, Y inversion is not relible!";
         assert(CHECK_ZERO < 1e-10);
       } else {
+        S_indices.clear();
+        T_indices.clear();
         goto find_nonsingular_indices;
       }
     }

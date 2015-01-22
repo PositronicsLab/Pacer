@@ -1196,10 +1196,10 @@ find_nonsingular_indices:
     double cond = _LA.cond(tmp);
     if (cond > 1e6){
       OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
-      CHECK_ZERO = 1e2*CHECK_ZERO;
+      CHECK_ZERO = sqrt(CHECK_ZERO);
       if(CHECK_ZERO > 1e-10){
         OUT_LOG(logERROR) << "Deregularization constant for Chol. factorizations exceeded 1e-10, Y inversion is not relible!";
-        assert(CHECK_ZERO < 1e-10);
+        //assert(CHECK_ZERO < 1e-10);
       } else {
         S_indices.clear();
         T_indices.clear();
@@ -1320,7 +1320,7 @@ find_nonsingular_indices:
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
-    OUTLOG(_v,"warm_start_v",logERROR);
+    OUTLOG(_v,"warm_start_v",logDEBUG1);
 
     if (!lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
     {
@@ -1398,7 +1398,7 @@ find_nonsingular_indices:
   _cs_ct_tau += _workv;
   _cs_ct_tau.negate();
 
-  OUTLOG(_cs_ct_tau,"cs_ct_tau",logERROR);
+  OUTLOG(_cs_ct_tau,"cs_ct_tau",logDEBUG1);
 
 
   Ravelin::VectorNd cn,cs,ct,tau;

@@ -261,13 +261,30 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
 }
 #else
 void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R){
+
+  OUT_LOG(logERROR) << ">> entered Robot::calc_contact_jacobians(.)";
+  static unsigned max_contacts = 1;
+//#define LIMIT_CONTACTS
+#ifdef LIMIT_CONTACTS
+  const unsigned incr_interval = 100;
+  static unsigned counter = 0;
+  counter++;
+
+  if(counter%incr_interval == 0)
+    max_contacts++;
+  if(max_contacts > 25)
+    throw std::runtime_error("Contacts allowed per foot has exceeded 100, closing program");
+#endif
+
+
+  
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
 
   int NC = 0;
   for(int i=0;i<NUM_EEFS;i++)
     if(eefs_[i].active)
-      NC += eefs_[i].point.size();
+      NC += (eefs_[i].point.size() < max_contacts)? eefs_[i].point.size() :  max_contacts;
 
   N.set_zero(NDOFS,NC);
   D.set_zero(NDOFS,NC*4);
@@ -279,7 +296,7 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
     if(!foot.active)
       continue;
 
-    for(int j=0;j<foot.point.size();j++){
+    for(int j=0;j<foot.point.size() && j < max_contacts;j++){
       boost::shared_ptr<const Ravelin::Pose3d>
           impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),foot.point[j].data(),Moby::GLOBAL));
 
@@ -319,5 +336,6 @@ void Robot::calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Rav
 
   R.set_sub_mat(0,0,N);
   R.set_sub_mat(0,N.columns(),D);
+  OUT_LOG(logERROR) << "<< exited Robot::calc_contact_jacobians(.)";
 }
 #endif

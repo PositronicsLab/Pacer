@@ -275,7 +275,7 @@ void Controller::control(double t,
     }
   } else {
     for(int i=0;i<NUM_EEFS;i++)
-      eefs_[i].stance = true;
+      eefs_[i].stance = is_foot[i];
   }
   trajectory_ik(x_des,xd_des, xdd_des,data->q,q_des,qd_des,qdd_des);
 
@@ -593,9 +593,9 @@ void Controller::control(double t,
 
     // IDYN MAXIMAL DISSIPATION MODEL
     unsigned ctl_num = 0;
-//#define USE_CLAWAR_MODEL
-//#define USE_NO_SLIP_MODEL
-//#define USE_NO_SLIP_LCP_MODEL
+#define USE_CLAWAR_MODEL
+#define USE_NO_SLIP_MODEL
+#define USE_NO_SLIP_LCP_MODEL
 #define USE_AP_MODEL
 
     std::vector<Ravelin::VectorNd> compare_cf_vec;
@@ -853,7 +853,6 @@ void Controller::control(double t,
       u[i] = torque_limits_l[i];
   }
 
-#ifndef NDEBUG
   OUT_LOG(logINFO)<< "time = "<< t ;
 
   set_model_state(data->q,data->qd);
@@ -943,7 +942,6 @@ void Controller::control(double t,
    OUT_LOG(logINFO) << "num_contacts = " << ii;
    OUT_LOG(logINFO) << "==============================================" << std::endl;
    // -----------------------------------------------------------------------------
-#endif
 
    assert(data->generalized_fext.norm() < 1e+6);
 

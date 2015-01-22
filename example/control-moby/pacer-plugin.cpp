@@ -154,6 +154,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
+
   std::vector<std::string>& eef_names_ = robot_ptr->get_end_effector_names();
   std::vector<EndEffector>& eefs_ = robot_ptr->get_end_effectors();
   robot_ptr->reset_contact();
@@ -190,6 +191,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
       // Push Active contact info to EEF
       eefs_[index].active = true;
+
       eefs_[index].point.push_back(e[i].contact_point);
       if(MIRROR_FLAG){
         eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
@@ -224,6 +226,36 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       }
     }
   }
+
+#define OVERSAMPLE_FEET
+#ifdef OVERSAMPLE_FEET
+  static unsigned cpf = 1;
+  static unsigned counter = 0;
+  const unsigned obs = 10;
+  counter += 1;
+  if(counter%obs == 0)
+    cpf += 1;
+
+  for(int i=0;i<eefs_.size();i++){
+    double sample_step = 0;
+    if(eefs_[i].active){
+      while(cpf > eefs_[i].point.size()){
+        sample_step = -sample_step*1.01;
+        Moby::Point3d new_point(eefs_[i].point[0][0],eefs_[i].point[0][1]+sample_step,eefs_[i].point[0][2],eefs_[i].point[0].pose);
+        eefs_[i].point.push_back(new_point);
+        eefs_[i].impulse.push_back(eefs_[i].impulse[0]);
+        eefs_[i].normal.push_back(eefs_[i].normal[0]);
+        eefs_[i].tan1.push_back(eefs_[i].tan1[0]);
+        eefs_[i].tan2.push_back(eefs_[i].tan2[0]);
+        eefs_[i].mu_coulomb.push_back(eefs_[i].mu_coulomb[0]);
+        eefs_[i].mu_viscous.push_back(eefs_[i].mu_viscous[0]);
+        eefs_[i].impulse[eefs_[i].impulse.size()-1].pose = eefs_[i].point[eefs_[i].point.size()-1].pose;
+      }
+    }
+  }
+#endif
+
+
 }
 
 #include <random>

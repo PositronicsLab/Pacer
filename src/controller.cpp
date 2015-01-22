@@ -39,6 +39,11 @@ void Controller::control(double t,
   static double last_time = -0.001;
   const double dt = t - last_time;
 
+  static std::vector<int>
+      &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("init.end-effector.foot");
+
+  for(int i=0;i<NUM_EEFS;i++)
+    eefs_[i].active = is_foot[i];
 
   update(generalized_q_in,generalized_qd_in,generalized_qdd_in,generalized_fext_in);
 
@@ -95,9 +100,6 @@ void Controller::control(double t,
     visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,0,0),0.2,sim);
 #  endif
   }
-
-  static std::vector<int>
-      &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("init.end-effector.foot");
 
   std::vector<EndEffector*> feet;
   for(unsigned i=0,ii=0;i< NUM_EEFS;i++){
@@ -273,9 +275,6 @@ void Controller::control(double t,
 //      xdd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,foot_acc[ii]);
       ii++;
     }
-  } else {
-    for(int i=0;i<NUM_EEFS;i++)
-      eefs_[i].stance = is_foot[i];
   }
   trajectory_ik(x_des,xd_des, xdd_des,data->q,q_des,qd_des,qdd_des);
 

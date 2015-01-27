@@ -823,8 +823,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-//  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
-  double CHECK_ZERO = Moby::NEAR_ZERO;
+  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1192,34 +1191,12 @@ find_nonsingular_indices:
 
     // check the condition number on Y
     // TODO: remove this code when satisfied Cholesky factorization is not problem
-    Ravelin::MatrixNd tmp = _Y;
-    double cond = _LA.cond(tmp);
-    if (cond > 1e6){
-      OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
-      CHECK_ZERO = sqrt(CHECK_ZERO);
-      if(CHECK_ZERO > 1e-10){
-        OUT_LOG(logERROR) << "Deregularization constant for Chol. factorizations exceeded 1e-10, Y inversion is not relible!";
-        //assert(CHECK_ZERO < 1e-10);
-      } else {
-        S_indices.clear();
-        T_indices.clear();
-        goto find_nonsingular_indices;
-      }
     }
 
     // do the Cholesky factorization (should not fail)
     bool success = _LA.factor_chol(_Y);
     assert(success);
 
-    _X.resize(J_IDX + J_indices.size(), n);
-    S.select_rows(S_indices.begin(), S_indices.end(), _workM);
-    _X.set_sub_mat(S_IDX, 0, _workM);
-    T.select_rows(T_indices.begin(), T_indices.end(), _workM);
-    _X.set_sub_mat(T_IDX, 0, _workM);
-    P.select_rows(J_indices.begin(), J_indices.end(), _workM);
-    _X.set_sub_mat(J_IDX, 0, _workM);
-
-  }
 
   Ravelin::MatrixNd _Q_iM_XT;
   Ravelin::VectorNd _qq;

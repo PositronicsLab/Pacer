@@ -1,0 +1,231 @@
+<XML>
+  <DRIVER>
+    <camera position="1 -1 1" target="0 0 0" up="0 0 1" />
+    <window location="0 0" size="640 480" />
+  </DRIVER>
+  <MOBY>
+    <!-- multiple servo rigid bodies -->
+    <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+    <EulerIntegrator id="euler" />
+    <RungeKuttaIntegrator id="rk4" />
+    <RungeKuttaFehlbergIntegrator id="rkf" abs-err-tol="1e-1" rel-err-tol="1e-1" />
+    <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
+
+    <GravityForce id="gravity" accel="0 0 -9.81" />
+
+    <EventDrivenSimulator integrator-id="rk4" max-event-time="inf" Euler-step="0.001">
+      <RecurrentForce recurrent-force-id="gravity" />
+      <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
+      <DynamicBody dynamic-body-id="LINKS" />
+      <DynamicBody dynamic-body-id="GROUND" />
+<!--      <DynamicBody dynamic-body-id="BOX1" />-->
+      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>
+<!--      <ContactParameters object1-id="LINKS" object2-id="BOX1" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>-->
+    </EventDrivenSimulator>
+
+    <!-- the ROBOT [R. LINKS] "LYNX" -->
+    <Box id="rpi" xlen="0.1" ylen="0.07" zlen="0.05" rpy="0 0 1.5708" mass="0.025"/>
+    <Box id="battery" xlen="0.14" ylen="0.04" zlen="0.03" rpy="0 0 1.5708" mass="0.05"/>
+    <Box id="imu" xlen="0.035" ylen="0.025" zlen="0.015" rpy="0 0 1.5708" mass="0.05"/>
+    <Box id="kinect" xlen="0.04" ylen="0.08" zlen="0.025" rpy="0 0 0" mass="0.005"/>
+    <Cylinder id="camera" height="0.005" radius="0.005" rpy="0 0 1.5708" mass="0.005"/>
+    <Cylinder id="projector" height="0.005" radius="0.003" rpy="0 0 1.5708" mass="0.005"/>
+
+    <Box id="body1" xlen="0.1" ylen="0.14" zlen="0.02" mass="0.10"/>
+    <Box id="body2" xlen="0.05" ylen="0.16" zlen="0.04" mass="0.05"/>
+    <Box id="leg1" xlen="0.05" ylen="0.03" zlen="0.03" mass="0.10"/>
+<!--    <Cylinder id="leg1" height="0.05" radius="0.02" rpy="0 0 1.5708" mass="0.10"/>-->
+    <Box id="leg2" xlen="0.12" ylen="0.03" zlen="0.02" mass="0.10"/>
+<!--    <Cylinder id="leg2" height="0.1" radius="0.01" rpy="0 0 1.5708" mass="0.10"/>-->
+<!--    <Box id="leg3" xlen="0.1" ylen="0.01" zlen="0.01" mass="0.04"/>-->
+    <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.04"/>
+    <Sphere id="hand" radius="0.01" mass="0.1"/>
+    <Box id="foot" xlen="0.01" ylen="0.02" zlen="0.08" mass="0.02"/>
+    <Box id="bigfoot" xlen="0.01" ylen="0.02" zlen="0.16" mass="0.02"/>
+
+    <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb"
+      fdyn-algorithm-frame="link" rotate="0.0 -1.5708 0.0" translate="0,0,0.36" >
+      <!-- the body -->
+      <RigidBody id="BODY0" color="0.25 0.25 0.25 1" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="body1" compliant="false">
+<!--        <CollisionGeometry primitive-id="body1" />-->
+        <InertiaFromPrimitive primitive-id="body1" />
+      </RigidBody>
+
+      <FixedJoint id="BODY_Y_1" location="0.1 0.0 0" inboard-link-id="BODY0" outboard-link-id="BODY1" axis="0 1 0"/>
+
+      <RigidBody id="BODY1" position="0.075 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="body2" compliant="false">
+        <CollisionGeometry primitive-id="body2" />
+        <InertiaFromPrimitive primitive-id="body2" />
+      </RigidBody>
+
+      <FixedJoint id="BODY_Y_N" location="-0.1 0 0" inboard-link-id="BODY0" outboard-link-id="BODYN" axis="0 1 0"/>
+
+      <RigidBody id="BODYN" color="0.25 0.25 0.25 1" position="-0.075 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="body2" compliant="false">
+        <CollisionGeometry primitive-id="body2" />
+        <InertiaFromPrimitive primitive-id="body2" />
+      </RigidBody>
+
+       <!-- head -->
+       <FixedJoint id="HEAD_Z_1" location="0.1 0.0 0.02" inboard-link-id="BODY1" outboard-link-id="HEAD1" axis="1 0 0" axis2="0 1 0"/>
+
+       <RigidBody id="HEAD1" color="0.25 0.25 0.25 1" position="0.1 0.0 0.0325" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="kinect" compliant="false">
+<!--         <CollisionGeometry primitive-id="kinect" />-->
+         <InertiaFromPrimitive primitive-id="kinect" />
+       </RigidBody>
+
+       <FixedJoint id="CAMERA_MOUNT_1" location="0.1 0.0 0.02" inboard-link-id="HEAD1" outboard-link-id="CAMERA1" axis="1 0 0" axis2="0 1 0"/>
+
+       <RigidBody id="CAMERA1" color="0.5 0.5 0.5 1" position="0.12 0.025 0.0341" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="camera" compliant="false">
+         <InertiaFromPrimitive primitive-id="camera" />
+       </RigidBody>
+
+       <FixedJoint id="CAMERA_MOUNT_2" location="0.1 0.0 0.02" inboard-link-id="HEAD1" outboard-link-id="CAMERA2" axis="1 0 0" axis2="0 1 0"/>
+
+       <RigidBody id="CAMERA2" color="0.5 0.5 0.5 1" position="0.12 -0.025 0.0341" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="camera" compliant="false">
+         <InertiaFromPrimitive primitive-id="camera" />
+       </RigidBody>
+
+      <!-- <FixedJoint id="PROJECTOR_MOUNT_2" location="0.1 0.0 0.02" inboard-link-id="HEAD1" outboard-link-id="PROJECTOR" axis="1 0 0" axis2="0 1 0"/>
+
+       <RigidBody id="PROJECTOR" color="0.5 0 0 1" position="0.12 -0.01 0.0341" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="projector" compliant="false">
+         <InertiaFromPrimitive primitive-id="projector" />
+       </RigidBody>-->
+
+       <!-- components -->
+
+       <FixedJoint id="RPI_MOUNT" location="0.1 0.0 0.02" inboard-link-id="BODY0" outboard-link-id="RPI"/>
+
+       <RigidBody id="RPI" color="0.5 0 0 1"  position="0.0 0.0 0.02" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="rpi" compliant="false">
+<!--         <CollisionGeometry primitive-id="rpi" />-->
+         <InertiaFromPrimitive primitive-id="rpi" />
+       </RigidBody>
+
+       <FixedJoint id="BATTERY_MOUNT" location="0.0 0.0 0.0" inboard-link-id="BODY0" outboard-link-id="BATTERY"/>
+
+       <RigidBody id="BATTERY" color="0 .5 0 1"  position="-0.075 0 0.035" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="battery" compliant="false">
+<!--         <CollisionGeometry primitive-id="battery" />-->
+         <InertiaFromPrimitive primitive-id="battery" />
+       </RigidBody>
+
+       <FixedJoint id="IMU_MOUNT" location="0.0 0.0 0.0" inboard-link-id="BODY0" outboard-link-id="IMU"/>
+
+       <RigidBody id="IMU" color="0.2 0.3 0.5 1"  position="0.065 0.06 0.0275" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="imu" compliant="false">
+<!--         <CollisionGeometry primitive-id="imu" />-->
+         <InertiaFromPrimitive primitive-id="imu" />
+       </RigidBody>
+
+      <!-- LF leg -->
+      <RevoluteJoint id="LF_Z_1" location="0.1 0.06 0" inboard-link-id="BODY1" outboard-link-id="LF_LEG_1" axis="0 0 1" />
+      <RigidBody id="LF_LEG_1" color="1.0 0.4 0.0 1" position="0.125 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg1">
+<!--        <CollisionGeometry primitive-id="leg1" />-->
+        <InertiaFromPrimitive primitive-id="leg1" />
+      </RigidBody>
+
+      <RevoluteJoint id="LF_Y_2" location="0.15 0.06 0" inboard-link-id="LF_LEG_1" outboard-link-id="LF_LEG_2" axis="0 1 0" />
+      <RigidBody id="LF_LEG_2" color="1.0 0.4 0.0 1" position="0.2 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg2">
+<!--        <CollisionGeometry primitive-id="leg2" />-->
+        <InertiaFromPrimitive primitive-id="leg2" />
+      </RigidBody>
+
+      <RevoluteJoint id="LF_Y_3" location="0.25 0.06 0" inboard-link-id="LF_LEG_2" outboard-link-id="LF_LEG_3" axis="0 1 0" />
+      <RigidBody id="LF_LEG_3" color="1 1 1 1" position="0.3 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
+<!--        <CollisionGeometry primitive-id="leg3" />-->
+        <InertiaFromPrimitive primitive-id="leg3" />
+      </RigidBody>
+
+      <FixedJoint id="LF_XY_4" location="0.35 0.06 0" inboard-link-id="LF_LEG_3" outboard-link-id="LF_FOOT" axis1="0 0 1" axis2="0 1 0" />
+      <RigidBody id="LF_FOOT" color="0.25 0.25 0.25 1" position="0.35 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="hand" compliant="false">
+        <CollisionGeometry primitive-id="hand" />
+        <InertiaFromPrimitive primitive-id="hand" />
+      </RigidBody>
+
+      <!-- RF leg -->
+      <RevoluteJoint id="RF_Z_1" location="0.1 -0.06 0" inboard-link-id="BODY1" outboard-link-id="RF_LEG_1" axis="0 0 -1" />
+      <RigidBody id="RF_LEG_1" position="0.125 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg1">
+<!--        <CollisionGeometry primitive-id="leg1" />-->
+        <InertiaFromPrimitive primitive-id="leg1" />
+      </RigidBody>
+
+      <RevoluteJoint id="RF_Y_2" location="0.15 -0.06 0" inboard-link-id="RF_LEG_1" outboard-link-id="RF_LEG_2" axis="0 -1 0" />
+      <RigidBody id="RF_LEG_2" position="0.2 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg2">
+<!--        <CollisionGeometry primitive-id="leg2" />-->
+        <InertiaFromPrimitive primitive-id="leg2" />
+      </RigidBody>
+
+      <RevoluteJoint id="RF_Y_3" location="0.25 -0.06 0" inboard-link-id="RF_LEG_2" outboard-link-id="RF_LEG_3" axis="0 -1 0" />
+      <RigidBody id="RF_LEG_3" position="0.3 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
+<!--        <CollisionGeometry primitive-id="leg3" />-->
+        <InertiaFromPrimitive primitive-id="leg3" />
+      </RigidBody>
+
+      <FixedJoint id="RF_XY_4" location="0.35 -0.06 0" inboard-link-id="RF_LEG_3" outboard-link-id="RF_FOOT" axis1="0 0 1" axis2="0 1 0"/>
+      <RigidBody id="RF_FOOT" position="0.35 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="hand" compliant="false">
+        <CollisionGeometry primitive-id="hand" />
+        <InertiaFromPrimitive primitive-id="hand" />
+      </RigidBody>
+
+      <!-- LH leg -->
+      <RevoluteJoint id="LH_Z_1" location="-0.1 0.06 0" inboard-link-id="BODYN" outboard-link-id="LH_LEG_1" axis="0 0 1" />
+      <RigidBody id="LH_LEG_1" position="-0.125 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg1">
+<!--        <CollisionGeometry primitive-id="leg1" />-->
+        <InertiaFromPrimitive primitive-id="leg1" />
+      </RigidBody>
+
+      <RevoluteJoint id="LH_Y_2" location="-0.15 0.06 0" inboard-link-id="LH_LEG_1" outboard-link-id="LH_LEG_2" axis="0 1 0" />
+      <RigidBody id="LH_LEG_2" position="-0.2 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg2">
+<!--        <CollisionGeometry primitive-id="leg2" />-->
+        <InertiaFromPrimitive primitive-id="leg2" />
+      </RigidBody>
+
+      <RevoluteJoint id="LH_Y_3" location="-0.25 0.06 0" inboard-link-id="LH_LEG_2" outboard-link-id="LH_LEG_3" axis="0 1 0" />
+      <RigidBody id="LH_LEG_3" position="-0.3 0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
+<!--        <CollisionGeometry primitive-id="leg3" />-->
+        <InertiaFromPrimitive primitive-id="leg3" />
+      </RigidBody>
+
+      <UniversalJoint id="LH_ZY_4" location="-0.35 0.06 0" inboard-link-id="LH_LEG_3" outboard-link-id="LH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
+      <RigidBody id="LH_FOOT" position="-0.35 0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
+        <CollisionGeometry primitive-id="bigfoot" />
+        <InertiaFromPrimitive primitive-id="foot" />
+      </RigidBody>
+
+      <!-- RH leg -->
+      <RevoluteJoint id="RH_Z_1" location="-0.1 -0.06 0" inboard-link-id="BODYN" outboard-link-id="RH_LEG_1" axis="0 0 -1"/>
+      <RigidBody id="RH_LEG_1" position="-0.125 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg1">
+<!--      <CollisionGeometry primitive-id="leg1" />-->
+        <InertiaFromPrimitive primitive-id="leg1" />
+      </RigidBody>
+
+      <RevoluteJoint id="RH_Y_2" location="-0.15 -0.06 0" inboard-link-id="RH_LEG_1" outboard-link-id="RH_LEG_2" axis="0 -1 0" />
+      <RigidBody id="RH_LEG_2" position="-0.2 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg2">
+<!--      <CollisionGeometry primitive-id="leg2" />-->
+        <InertiaFromPrimitive primitive-id="leg2" />
+      </RigidBody>
+
+      <RevoluteJoint id="RH_Y_3" location="-0.25 -0.06 0" inboard-link-id="RH_LEG_2" outboard-link-id="RH_LEG_3" axis="0 -1 0" />
+      <RigidBody id="RH_LEG_3" position="-0.3 -0.06 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg3">
+<!--      <CollisionGeometry primitive-id="leg3" />-->
+        <InertiaFromPrimitive primitive-id="leg3" />
+      </RigidBody>
+
+      <UniversalJoint id="RH_ZY_4" location="-0.35 -0.06 0" inboard-link-id="RH_LEG_3" outboard-link-id="RH_FOOT" axis1="0 0 1" axis2="0 1 0"/>
+      <RigidBody id="RH_FOOT" position="-0.35 -0.06 -0.03" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot" compliant="false">
+        <CollisionGeometry primitive-id="bigfoot" />
+        <InertiaFromPrimitive primitive-id="foot" />
+      </RigidBody>
+    </RCArticulatedBody>
+
+  <!-- setup the platform rigid body; it is not active -->
+<!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->
+     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="3" ylen="0.001" zlen="3" />
+     <Plane id="ground-primitive" rpy="1.5708 0 0" />
+<!--<Heightmap id="ground-primitive" filename="MATLAB/heightmap.mat" width="3" depth="3" rpy="1.571 0 0"/>-->
+  <RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"
+  position="0 0 -0.0"
+  visualization-id="ground-primitive-viz"
+  compliant="false">
+    <CollisionGeometry primitive-id="ground-primitive" />
+  </RigidBody>
+
+  </MOBY>
+</XML>

@@ -65,9 +65,8 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
     boost::shared_ptr<Moby::EventDrivenSimulator> sim;
 #endif
     Robot(){
-      init();
     }
-    Robot(const std::string& sdf_f, const std::string& init_f) : sdf_file(sdf_f), init_file(init_f) {
+    Robot(const std::string& model_f, const std::string& vars_f) : robot_model_file(model_f), robot_vars_file(vars_f) {
       init();
     }
 
@@ -101,6 +100,8 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
         boost::shared_ptr<Robot>& robot);
+
+    std::string robot_vars_file, robot_model_file;
 
   protected:
     /**
@@ -202,7 +203,6 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
 private:
     boost::shared_ptr<RobotData> new_data;
 
-    std::string init_file, sdf_file;
     // Import necessary info and then compile model
     void init();
 

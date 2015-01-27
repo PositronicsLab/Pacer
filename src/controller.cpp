@@ -593,9 +593,9 @@ void Controller::control(double t,
     // IDYN MAXIMAL DISSIPATION MODEL
     unsigned ctl_num = 0;
 #define USE_CLAWAR_MODEL
-#define USE_NO_SLIP_MODEL
+//#define USE_AP_MODEL
+//#define USE_NO_SLIP_MODEL
 #define USE_NO_SLIP_LCP_MODEL
-#define USE_AP_MODEL
 
     std::vector<Ravelin::VectorNd> compare_cf_vec;
 
@@ -605,7 +605,7 @@ void Controller::control(double t,
 
     ////////////////////////// simulator DT IDYN //////////////////////////////
 
-
+if(inf_friction){
 #ifdef USE_NO_SLIP_MODEL
     // NO-SLIP MODEL
     {
@@ -631,33 +631,6 @@ void Controller::control(double t,
     ctl_num++;
     }
 #endif
-
-#ifdef USE_CLAWAR_MODEL
-    // IDYN QP
-  {
-#ifdef TIMING
-    struct timeval start_t;
-    struct timeval end_t;
-    gettimeofday(&start_t, NULL);
-#endif
-    cf = cf_init;
-    id.set_zero(NUM_JOINT_DOFS);
-    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf)){
-      compare_cf_vec.push_back(cf.segment(0,NC));
-    } else {
-      compare_cf_vec.push_back(cf);
-    }
-    OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-    OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-#ifdef TIMING
-    gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
-#endif
-    ctl_num++;
-  }
-#endif
-
 #ifdef USE_NO_SLIP_LCP_MODEL
   // NO-SLIP Fast MODEL
     {
@@ -690,6 +663,37 @@ void Controller::control(double t,
     ctl_num++;
     }
 #endif
+
+
+} else {
+
+#ifdef USE_CLAWAR_MODEL
+    // IDYN QP
+  {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf = cf_init;
+    id.set_zero(NUM_JOINT_DOFS);
+    if(inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,data->generalized_fext,dt,MU,id,cf)){
+      compare_cf_vec.push_back(cf.segment(0,NC));
+    } else {
+      compare_cf_vec.push_back(cf);
+    }
+    OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+    OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
+  }
+#endif
+
+
 #ifdef USE_AP_MODEL
     // A-P Fast MODEL
     {
@@ -724,7 +728,9 @@ void Controller::control(double t,
     ctl_num++;
     }
 #endif
-    {
+}
+   
+{
       unsigned ii = 0;
 #ifdef USE_NO_SLIP_MODEL
       OUT_LOG(logERROR) << ii << " -- USE_NO_SLIP_MODEL";
@@ -741,8 +747,10 @@ void Controller::control(double t,
 #ifdef USE_AP_MODEL
       OUT_LOG(logERROR) << ii << " -- USE_AP_MODEL";
       ii++;
-#endif
-    }
+#endif    
+}
+
+
     for(int i=0;i<compare_cf_vec.size();i++){
       double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);
       OUT_LOG(logERROR) << i << ", Sum normal force: " << sum ;

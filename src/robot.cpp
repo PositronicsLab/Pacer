@@ -369,14 +369,8 @@ void Robot::init(){
    tglc = new std::thread(init_glconsole);
 #endif
   // ================= LOAD SCRIPT DATA ==========================
-  if(init_file.size() == 0){
-    Utility::load_variables("INIT/startup.xml");
-    std::string robot_start_file = CVarUtils::GetCVarRef<std::string>("robot");
-    std::cerr << "Using Robot: " << robot_start_file << std::endl;
-    init_file = std::string("INIT/startup-"+robot_start_file+".xml");
-    sdf_file = std::string("MODELS/"+robot_start_file+".sdf");
-  }
-  Utility::load_variables(init_file);
+
+  Utility::load_variables(robot_vars_file);
 
   // ================= SETUP LOGGING ==========================
 
@@ -395,7 +389,7 @@ void Robot::init(){
   /// The map of objects read from the simulation XML file
 //  std::map<std::string, Moby::BasePtr> READ_MAP;
   try{
-    std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(sdf_file);
+    std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file+".sdf");
 
     for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
          i !=READ_MAP.end(); i++)
@@ -412,7 +406,7 @@ void Robot::init(){
     }
   } catch (std::runtime_error& e){
     try{
-      std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(sdf_file.substr(0,sdf_file.size()-4)+".xml"));
+      std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(robot_model_file+".xml"));
       for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
          i !=READ_MAP.end(); i++)
       {

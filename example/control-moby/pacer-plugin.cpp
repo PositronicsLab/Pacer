@@ -227,7 +227,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     }
   }
 
-#define OVERSAMPLE_FEET
+//#define OVERSAMPLE_FEET
 #ifdef OVERSAMPLE_FEET
   static unsigned cpf = 1;
   static unsigned counter = 0;
@@ -312,7 +312,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
-  robot_ptr = boost::shared_ptr<Controller>(new Controller());
+  robot_ptr = boost::shared_ptr<Controller>(new Controller("model","vars.xml"));
 #ifdef VISUALIZE_MOBY
   robot_ptr->sim = sim;
 #endif

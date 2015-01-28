@@ -19,7 +19,7 @@
       <DynamicBody dynamic-body-id="LINKS" />
       <DynamicBody dynamic-body-id="GROUND" />
 <!--      <DynamicBody dynamic-body-id="BOX1" />-->
-      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="0.1" mu-viscous="0" epsilon="0.0"/>
+      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>
 <!--      <ContactParameters object1-id="LINKS" object2-id="BOX1" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>-->
     </EventDrivenSimulator>
 
@@ -34,10 +34,7 @@
     <Box id="body1" xlen="0.1" ylen="0.14" zlen="0.02" mass="3.50"/>
     <Box id="body2" xlen="0.05" ylen="0.16" zlen="0.04" mass="0.05"/>
     <Box id="leg1" xlen="0.05" ylen="0.03" zlen="0.03" mass="0.10"/>
-<!--    <Cylinder id="leg1" height="0.05" radius="0.02" rpy="0 0 1.5708" mass="0.10"/>-->
     <Box id="leg2" xlen="0.12" ylen="0.03" zlen="0.02" mass="0.10"/>
-<!--    <Cylinder id="leg2" height="0.1" radius="0.01" rpy="0 0 1.5708" mass="0.10"/>-->
-<!--    <Box id="leg3" xlen="0.1" ylen="0.01" zlen="0.01" mass="0.04"/>-->
     <Cylinder id="leg3" height="0.1" radius="0.005" rpy="0 0 1.5708" mass="0.04"/>
     <Sphere id="foot" radius="0.01" mass="0.01"/>
 <!--    <Box id="foot" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.005" edge-sample-length="0.01"/>-->

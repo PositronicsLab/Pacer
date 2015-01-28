@@ -457,33 +457,31 @@ void Robot::init(){
 // assert(joint_names.size() == joints_.size());
  assert(joint_names.size() == joints_start.size());
  assert(joint_names.size() == torque_limits.size());
-
-  std::map<std::string, double> torque_limits_;
-  for(int i=0,ii=0;i<NUM_JOINTS;i++){
-    if(joints_[i])
-    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-      OUT_LOG(logDEBUG) << joint_names[ii] << " " << ((active_joints[ii] == 0)? "false":"true") << std::endl;
-      active_joints_[joint_names[ii]] = (active_joints[ii] == 0)? false:true;
-      q0_[joint_names[ii]] = joints_start[ii];
-      torque_limits_[joint_names[ii]] = torque_limits[ii];
-    }
-  }
-
-  // push into robot
+  
   torque_limits_l.resize(NUM_JOINT_DOFS);
   torque_limits_u.resize(NUM_JOINT_DOFS);
+
+  std::map<std::string, double> torque_limits_;
+  for(int ii=0;ii<joint_names.size();ii++){
+      OUT_LOG(logDEBUG) << joint_names[ii] << " " << ((active_joints[ii] == 0)? "false":"true") << std::endl;
+
+      active_joints_[joint_names[ii]] = (active_joints[ii] == 0)? false:true;
+
+      q0_[joint_names[ii]] = joints_start[ii];
+
+      torque_limits_[joint_names[ii]] = torque_limits[ii];
+      OUT_LOG(logINFO)<< "torque_limit: " << joint_names[ii] << " = " <<  torque_limits_[joint_names[ii]];
+  }
+  
   for(int i=0,ii=0;i<NUM_JOINTS;i++){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-//      assert(joint_names[ii].substr(0,2).compare(joints_[ii-j]->id.substr(0,2)) &&
-//             joint_names[ii].substr(joint_names[ii].size()-2,1).compare(joints_[ii-j]->id.substr(joints_[ii-j]->id.size()-2,1)));
-      OUT_LOG(logINFO)<< "torque_limit: " << joints_[ii-j]->id << " = " <<  torque_limits_[joint_names[ii]];
+      OUT_LOG(logINFO)<< "\t -- torque_limit: " << std::to_string(j)+joints_[i]->id << " = " <<  torque_limits_[std::to_string(j)+joints_[i]->id];
+
       torque_limits_l[ii] = -torque_limits_[std::to_string(j)+joints_[i]->id];
       torque_limits_u[ii] =  torque_limits_[std::to_string(j)+joints_[i]->id];
     }
   }
-  OUTLOG(torque_limits_l,"torque_limits_l",logDEBUG1);
-  OUTLOG(torque_limits_u,"torque_limits_u",logDEBUG1);
 
   // Initialize Foot Data Structures
   OUT_LOG(logINFO)<< eef_names_.size() << " end effectors LISTED:" ;

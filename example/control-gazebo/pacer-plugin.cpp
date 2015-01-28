@@ -2,7 +2,7 @@
  * Controller for LINKS robot
  ****************************************************************************/
 
-#include <controller.h>
+#include <Pacer/controller.h>
 #include <boost/bind.hpp>
 
 #include <gazebo/gazebo.hh>
@@ -12,13 +12,15 @@
 
 #include <stdio.h>
 
+using namespace Pacer;
+
  boost::shared_ptr<Controller> robot_ptr;
 
  void init_plugin()
  {
    /// Set up quadruped robot, linking data from moby's articulated body
    /// to the quadruped model used by Control-Moby
-   robot_ptr = boost::shared_ptr<Controller>(new Controller());
+   robot_ptr = boost::shared_ptr<Controller>(new Controller("model","vars.xml"));
  }
 
  namespace gazebo
@@ -74,8 +76,10 @@
        physics::Joint_V joints = model->GetJoints();
 
        for(int i=0;i<joints.size();i++){
+        OUT_LOG(logERROR) << " Gazebo " <<  i << " : " << joints[i]->GetName();
          for(int j=0;j<joints_quad.size();j++){
            if(!joints_quad[j]) continue;
+           OUT_LOG(logERROR) << "\t? = Moby " << j << " : " << joints_quad[j]->id;
            if(
               joints_quad[j]->id.compare(
                 joints[i]->GetName().substr(
@@ -83,7 +87,9 @@
                   joints_quad[j]->id.length())
                 ) == 0){
 //               for(int d = 0;d<joints_quad[j]->num_dof();d++)
-               joint_map[i] = joints_quad[j]->get_coord_index();//+d;
+             joint_map[i] = j;//+d;
+             OUT_LOG(logERROR) << "\t == Moby " << j << " : " << joints_quad[j]->id;
+             break;
            }
          }
        }

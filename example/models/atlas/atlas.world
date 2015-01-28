@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <!-- Ground -->
+    <include>
+      <uri>model://atlas_legs</uri>
+    </include>
+    <!-- Links (Lynx) model -->
+    <include>
+      <uri>model://lynx</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+  </world>
+</sdf>

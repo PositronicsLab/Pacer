@@ -21,7 +21,7 @@
       <ContactParameters object1-id="ROBOT" object2-id="GROUND" mu-coulomb="100" mu-viscous="0" epsilon="0.0"/>
     </EventDrivenSimulator>
 
-    <SDF filename="links.sdf"/>
+    <SDF filename="model.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
      <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="3" ylen="0.001" zlen="3" />

@@ -39,12 +39,14 @@ void Controller::control(double t,
   static double last_time = -0.001;
   const double dt = t - last_time;
 
+  // Select end effectors that are feet and set them as active contacts
   static std::vector<int>
       &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("init.end-effector.foot");
 
   for(int i=0;i<NUM_EEFS;i++)
     eefs_[i].active = is_foot[i];
 
+  // =================== BEGIN UPDATE & INIT ROBOT MODEL & CONTROL VARS =====================
   update(generalized_q_in,generalized_qd_in,generalized_qdd_in,generalized_fext_in);
 
   static Ravelin::VectorNd last_qdd_des = data->qdd,
@@ -67,9 +69,6 @@ void Controller::control(double t,
   qdd_des.set_zero(NUM_JOINT_DOFS);
   qd_des.set_zero(NUM_JOINT_DOFS);
   q_des.set_zero(NUM_JOINT_DOFS);
-
-  Ravelin::VectorNd
-      os_velocity(NUM_EEFS*3 + 6);
 
   std::vector<Ravelin::Vector3d>
       x_des(NUM_EEFS),
@@ -106,6 +105,11 @@ void Controller::control(double t,
     if(is_foot[i] == 0) continue;
     feet.push_back(&eefs_[i]);
     feet[ii]->origin.pose = base_horizontal_frame;
+
+  // =================== END UPDATE & INIT ROBOT MODEL & CONTROL VARS =====================
+
+  // =================== BEGIN PLANNING FUNCTIONS =====================
+
 
 #ifdef VISUALIZE_MOBY
     visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
@@ -278,6 +282,8 @@ void Controller::control(double t,
   }
   trajectory_ik(x_des,xd_des, xdd_des,data->q,q_des,qd_des,qdd_des);
 
+  // =================== END PLANNING FUNCTIONS =====================
+
   // Find center of stance feet
   {
     static Ravelin::Vector3d sum_center_of_feet(0,0,0,environment_frame);
@@ -337,6 +343,7 @@ void Controller::control(double t,
   OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
   OUTLOG(center_of_feet_x,"center_of_feet_x (avg 1 sec)",logDEBUG);
   }
+
 
   // ----------------------------- STABILIZATION -------------------------------
   static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("controller.stabilization.active");

@@ -68,21 +68,21 @@ class Controller : public Robot{
                                  const Ravelin::VectorNd& q, Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des);
 
     /// Walks while trying to match COM velocity "command" in base_frame
-      void walk_toward(const Ravelin::SVector6d& command,
-                      const std::vector<double>& touchdown,
-                      const std::vector<Ravelin::Vector3d>& footholds,
-                      const std::vector<double>& duty_factor,
-                      double gait_duration,
-                      double step_height,
-                      bool STANCE_ON_CONTACT,
-                      std::vector<EndEffector*>& feet,
-                      const Ravelin::Vector3d &base_velocity,
-                      const Ravelin::Vector3d &center_of_mass_x,
-                      double t,
-                      std::vector<Ravelin::Vector3d>& foot_pos,
-                      std::vector<Ravelin::Vector3d>& foot_vel,
-                      std::vector<Ravelin::Vector3d>& foot_acc
-                      );
+    void walk_toward(const Ravelin::SVector6d& command,
+                    const std::vector<double>& touchdown,
+                    const std::vector<Ravelin::Vector3d>& footholds,
+                    const std::vector<double>& duty_factor,
+                    double gait_duration,
+                    double step_height,
+                    bool STANCE_ON_CONTACT,
+                    std::vector<EndEffector*>& feet,
+                    const Ravelin::Vector3d &base_velocity,
+                    const Ravelin::Vector3d &center_of_mass_x,
+                    double t,
+                    std::vector<Ravelin::Vector3d>& foot_pos,
+                    std::vector<Ravelin::Vector3d>& foot_vel,
+                    std::vector<Ravelin::Vector3d>& foot_acc
+                    );
 
     void eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& ufb);
     void set_leading_force(const Ravelin::SForced& f){lead_force_ = f;}
@@ -122,7 +122,10 @@ class Controller : public Robot{
     bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& NT,
                              const Ravelin::MatrixNd& D_, const Ravelin::VectorNd& fext, double dt, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf);
 
-private:
+  public:
+    Ravelin::VectorNd movement_command;
+
+  private:
     std::vector<boost::shared_ptr<ControllerModule> > controllers;
     Ravelin::SForced lead_force_;
     Ravelin::SForced known_force_;

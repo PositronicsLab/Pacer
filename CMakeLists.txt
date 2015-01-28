@@ -79,7 +79,6 @@ set(SOURCES-BASIC
             src/kinematics.cpp
             src/utilities.cpp
             src/variables.cpp
-            src/visualize_moby.cpp
            )
 
 set(SOURCES ${SOURCES-BASIC}
@@ -95,6 +94,10 @@ set(SOURCES ${SOURCES-BASIC}
 
 # install include dirs
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
+
+if(VISUALIZE_MOBY)
+  set(SOURCES ${SOURCES} src/visualize_moby.cpp)
+endif(VISUALIZE_MOBY)
 
 if(USE_MOBY)
   if(VISUALIZE_MOBY)

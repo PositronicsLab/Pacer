@@ -1051,7 +1051,6 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // | S*inv(M)*S'  S*inv(M)*T' S*inv(M)*J' |
   // | T*inv(M)*S'  T*inv(M)*T' T*inv(M)*J' |
   // | J*inv(M)*S'  J*inv(M)*T' J*inv(M)*J' |
-find_nonsingular_indices:
 
   bool last_success = false;
   for (unsigned i=0; i< nc; i++)
@@ -1060,9 +1059,12 @@ find_nonsingular_indices:
     S_indices.push_back(i);
 
     // setup indices
-    unsigned S_IDX = 0;
-    unsigned T_IDX = S_indices.size();
-    unsigned J_IDX = T_IDX + T_indices.size();
+    unsigned S_IDX;
+    S_IDX = 0;
+    unsigned T_IDX;
+    T_IDX = S_indices.size();
+    unsigned J_IDX;
+    J_IDX = T_IDX + T_indices.size();
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
 
     // add S/S, T/T, J/J components to 'check' matrix
@@ -1160,9 +1162,13 @@ find_nonsingular_indices:
   // ********************************************************
 
   // setup indices
-  const unsigned S_IDX = 0;
-  const unsigned T_IDX = S_indices.size();
-  const unsigned J_IDX = T_IDX + T_indices.size();
+  unsigned S_IDX;
+  S_IDX = 0;
+  unsigned T_IDX;
+  T_IDX = S_indices.size();
+  unsigned J_IDX;
+  J_IDX = T_IDX + T_indices.size();
+
   if (!last_success)
   {
     _Y.resize(J_IDX + J_indices.size(), J_IDX + J_indices.size());
@@ -1189,13 +1195,22 @@ find_nonsingular_indices:
     _Y.set_sub_mat(T_IDX, J_IDX, _workM);
     _Y.set_sub_mat(J_IDX, T_IDX, _workM, Ravelin::eTranspose);
 
-    // check the condition number on Y
-    // TODO: remove this code when satisfied Cholesky factorization is not problem
     }
 
     // do the Cholesky factorization (should not fail)
-    bool success = _LA.factor_chol(_Y);
-    assert(success);
+    
+    // check the condition number on Y
+    // TODO: remove this code when satisfied Cholesky factorization is not problem
+    Ravelin::MatrixNd tmp = _Y;
+    double cond = _LA.cond(tmp);
+    if (cond > 1e6){
+      OUT_LOG(logERROR) << "Condition number *may* be high (check!): " << cond << std::endl;
+      bool success = _LA.factor_chol(_Y);
+      assert(success);
+    } else {
+      bool success = _LA.factor_chol(_Y);
+      assert(success); 
+    }
 
 
   Ravelin::MatrixNd _Q_iM_XT;

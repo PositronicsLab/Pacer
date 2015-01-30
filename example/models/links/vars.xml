@@ -64,7 +64,7 @@
   </error-feedback>
 
   <stabilization>
-    <active type="bool">true</active>
+    <active type="bool">false</active>
     <viip>
       <active type="bool">true</active>
       <accel type="bool">false</accel>

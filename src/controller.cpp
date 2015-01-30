@@ -263,7 +263,7 @@ void Controller::control(double t,
       gait_progress = gait_progress - (double) ((int) gait_progress);
       ii++;
     }
-    Ravelin::SVector6d goto_6d = go_to;
+      Ravelin::SVector6d goto_6d = (movement_command.rows() == 6 )? movement_command : go_to;
     goto_6d.pose = base_frame;
 
     int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("locomotion.stance-on-contact");

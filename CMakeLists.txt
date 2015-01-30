@@ -24,6 +24,7 @@ option(TIMING "use ctime timing functions" OFF)
 option(USE_MOBY "build Moby plugin" OFF)
 option(USE_GAZEBO "build Gazebo plugin" OFF)
 option(RANDOM_FRICTION "Randomize friction mu = {0.1 .. 1.4}" OFF)
+option(DRIVE_ROBOT "Use drive-robot controller plugin" OFF)
 
 # fix the C++ linking error on 64-bit Linux
 set (CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
@@ -109,20 +110,32 @@ if(USE_MOBY)
   endif(VISUALIZE_MOBY)
 endif(USE_MOBY)
 
-add_library(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
+set(REQURED_LIBS Moby Ravelin)
 
+add_library(${PROJECT_NAME} ${SOURCES})
+target_link_libraries(${PROJECT_NAME} ${REQURED_LIBS} Opt OpenThreads cvars ${VISUALIZE_LIBS})
 
 add_library(${PROJECT_NAME}Model ${SOURCES-BASIC})
 target_link_libraries(${PROJECT_NAME}Model Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
 install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
 
+set(REQURED_LIBS ${REQURED_LIBS} ${PROJECT_NAME})
 # EXAMPLES
 
+# Drive ROBOT
+if(DRIVE_ROBOT)
+  
+  add_definitions(-DDRIVE_ROBOT)
+  add_library(${PROJECT_NAME}DriveRobotPlugin ${CMAKE_SOURCE_DIR}/example/drive-robot/control.cpp)
+  target_link_libraries(${PROJECT_NAME}DriveRobotPlugin ${REQURED_LIBS})
+  install(TARGETS ${PROJECT_NAME}DriveRobotPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/drive-robot)
+  install(TARGETS ${PROJECT_NAME}DriveRobotPlugin DESTINATION lib)
+  set(REQURED_LIBS ${REQURED_LIBS} ${PROJECT_NAME}DriveRobotPlugin)
+endif(DRIVE_ROBOT)
 # Moby Plugin
 if(USE_MOBY)
   add_library(${PROJECT_NAME}MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
-  target_link_libraries(${PROJECT_NAME}MobyPlugin ${PROJECT_NAME} Moby Ravelin)
+  target_link_libraries(${PROJECT_NAME}MobyPlugin ${REQURED_LIBS})
   install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
   install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION lib)
 endif(USE_MOBY)
@@ -139,7 +152,7 @@ if(USE_GAZEBO)
   link_directories(${GAZEBO_LIBRARY_DIRS})
 
   add_library(${PROJECT_NAME}GazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
-  target_link_libraries(${PROJECT_NAME}GazeboPlugin ${PROJECT_NAME} Moby Ravelin ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
+  target_link_libraries(${PROJECT_NAME}GazeboPlugin ${REQURED_LIBS} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
   install(TARGETS ${PROJECT_NAME}GazeboPlugin DESTINATION lib)
 
   add_library(contact SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/contact-plugin.cpp)
@@ -150,9 +163,9 @@ endif(USE_GAZEBO)
 # Test: Calling PacerModel only instead of using controller features
   add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
   target_link_libraries(test-pacer-model ${PROJECT_NAME}Model Ravelin)
+  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
 
   install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
   install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
-  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
 

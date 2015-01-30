@@ -10,7 +10,14 @@ using namespace Pacer;
  boost::shared_ptr<Controller> robot_ptr;
  Moby::RCArticulatedBodyPtr abrobot;
 
- // ============================================================================
+#ifdef DRIVE_ROBOT
+extern void controller(double time,
+                       const Ravelin::VectorNd& q,
+                       const Ravelin::VectorNd& qd,
+                       Ravelin::VectorNd& command);
+#endif
+
+// ============================================================================
  // ================================ CUSTOM FNS ================================
  // ============================================================================
 
@@ -126,6 +133,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                     qdd_des(num_joints);
   Ravelin::VectorNd u(num_joints);
 
+  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command);
   robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
 
   // Re-map goals robot->simulation joints

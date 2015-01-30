@@ -42,8 +42,8 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     double max_forward_speed = 0.05;
     double max_strafe_speed = 0.025;
 //#define WALK_ON_LINE
-//#define WAYPOINTS
-#define WALK_TO_POINT
+#define WAYPOINTS
+//#define WALK_TO_POINT
 
 #ifdef WALK_ON_LINE
     //for now we'll walk at a constant 5 cm/s speed
@@ -90,13 +90,25 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     double N_WAYPOINTS = 4;
 
     // we'll just make it walk to N_WAYPOINTS points on a unit circle
-    for (double i=0; i<N_WAYPOINTS; i+=1.0) {
-        // X coord of ith waypoint
-        patrol_points.push_back(cos(2*M_PI * i / N_WAYPOINTS));  // NOTE: SET THIS
-        // Y coord of ith waypoint
-        patrol_points.push_back(sin(2*M_PI * i / N_WAYPOINTS));  // NOTE: SET THIS
-    }
+    //for (double i=0; i<N_WAYPOINTS; i+=1.0) {
+    //    // X coord of ith waypoint
+    //    patrol_points.push_back(cos(2*M_PI * i / N_WAYPOINTS));  // NOTE: SET THIS
+    //    // Y coord of ith waypoint
+    //    patrol_points.push_back(sin(2*M_PI * i / N_WAYPOINTS));  // NOTE: SET THIS
+    //}
 
+    // Or walk in a bowtie pattern
+    patrol_points.push_back(0); 
+    patrol_points.push_back(1);
+
+    patrol_points.push_back(1); 
+    patrol_points.push_back(0);
+
+    patrol_points.push_back(-1); 
+    patrol_points.push_back(0);
+
+    patrol_points.push_back(0); 
+    patrol_points.push_back(-1);
     /// HANDLE WAYPOINTS
     assert(patrol_points.size() >= 4);
     int num_waypoints = patrol_points.size()/2;

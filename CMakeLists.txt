@@ -100,9 +100,13 @@ set(REQURED_LIBS Moby Ravelin)
 
 add_library(Pacer ${SOURCES})
 target_link_libraries(Pacer ${REQURED_LIBS} Opt OpenThreads cvars)
+set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(TARGETS Pacer DESTINATION lib)
 
+# PACER MODEL
 #add_library(PacerModel ${SOURCES-BASIC})
 #target_link_libraries(PacerModel Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
+#set_target_properties(PacerModel PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 #install(TARGETS PacerModel DESTINATION lib)
 
 set(REQURED_LIBS ${REQURED_LIBS} Pacer)
@@ -113,6 +117,7 @@ if(DRIVE_ROBOT)
   add_definitions(-DDRIVE_ROBOT)
   add_library(PacerDriveRobotPlugin ${CMAKE_SOURCE_DIR}/example/drive-robot/control.cpp)
   target_link_libraries(PacerDriveRobotPlugin ${REQURED_LIBS})
+  set_target_properties(PacerDriveRobotPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
   install(TARGETS PacerDriveRobotPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/drive-robot)
   install(TARGETS PacerDriveRobotPlugin DESTINATION lib)
   set(REQURED_LIBS ${REQURED_LIBS} PacerDriveRobotPlugin)
@@ -130,6 +135,7 @@ if(USE_MOBY)
 
   add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp ${VISUALIZE_SRCS})
   target_link_libraries(PacerMobyPlugin ${REQURED_LIBS} ${VISUALIZE_LIBS})
+  set_target_properties(PacerMobyPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
   install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
   install(TARGETS PacerMobyPlugin DESTINATION lib)
 endif(USE_MOBY)
@@ -164,8 +170,4 @@ endif(USE_GAZEBO)
 #  add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
 #  target_link_libraries(test-pacer-model PacerModel Ravelin)
 #  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
-
-  #  install(TARGETS PacerModel DESTINATION lib)
-  # install(TARGETS Pacer DESTINATION lib)
-
 

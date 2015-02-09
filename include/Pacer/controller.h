@@ -18,9 +18,12 @@ class Controller : public Robot{
      * @brief Controller constructor
      * @see Robot()
      */
-    Controller() : Robot(){}
-    Controller(const std::string& model_f, const std::string& vars_f) : Robot(model_f, vars_f){
+    Controller(){}
+    Controller(const std::string& model_f, const std::string& vars_f){
       std::cout << "initing controller";
+      robot_model_file = std::string(model_f);
+      robot_vars_file = std::string(vars_f);
+      Init();
     }
 
     void control(double dt,

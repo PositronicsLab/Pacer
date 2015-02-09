@@ -8,7 +8,6 @@
 
 #include <Pacer/project_common.h>
 namespace Pacer{
-class Robot;
 
 /**
  * @brief The EndEffector struct
@@ -93,16 +92,11 @@ struct RobotData{
   Ravelin::Origin3d roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
 };
 
-class Robot /*: public boost::enable_shared_from_this<Robot>*/{
+class Robot {
   public:
    std::vector<Visualizable> visualize;
 
-//    boost::shared_ptr<Robot> ptr(){ return shared_from_this(); }
     Robot(){
-    }
-    Robot(const std::string& model_f, const std::string& vars_f) : robot_model_file(model_f), robot_vars_file(vars_f) {
-      std::cout << "initing robot";
-      Init();
     }
 
     /// ---------------------------  Getters  ---------------------------
@@ -233,12 +227,13 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
 
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that
+    
+  // Import necessary info and then compile model
+    void Init();
 
 private:
     boost::shared_ptr<RobotData> new_data;
 
-    // Import necessary info and then compile model
-    void Init();
 
     // set up internal models after kineamtic model is set (called from init)
     void compile();

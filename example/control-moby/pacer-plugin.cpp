@@ -5,7 +5,9 @@
  ****************************************************************************/
 #include <Pacer/controller.h>
 
-using namespace Pacer;
+using Pacer::Controller;
+using Pacer::Robot;
+using Pacer::EndEffector;
 
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
  boost::shared_ptr<Controller> robot_ptr;
@@ -307,10 +309,8 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 //void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty);
 
 /// plugin must be "extern C"
-extern "C" {
 
-void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
-{
+void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
   // If use robot is active also init dynamixel controllers
   // get a reference to the EventDrivenSimulator instance
@@ -370,5 +370,12 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
     }
   }
   abrobot->update_link_poses();
+}
+
+extern "C" {
+
+void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
+{
+  init_cpp(read_map,time);
 }
 } // end extern C

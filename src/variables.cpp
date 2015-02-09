@@ -153,19 +153,19 @@ void Utility::load_variables(std::string fname){
 }
 
 std::vector<double>& Utility::get_variable(const char* tag,std::vector<double>& val){
-  return (val = CVarUtils::GetCVar<std::vector<double>>(tag));
+  return (val = CVarUtils::GetCVar<std::vector<double> >(tag));
 }
 double& Utility::get_variable(const char* tag,double& val){
   return (val = CVarUtils::GetCVar<double>(tag));
 }
 std::vector<std::string>& Utility::get_variable(const char* tag,std::vector<std::string>& val){
-  return (val = CVarUtils::GetCVar<std::vector<std::string>>(tag));
+  return (val = CVarUtils::GetCVar<std::vector<std::string> >(tag));
 }
 std::string& Utility::get_variable(const char* tag,std::string& val){
   return (val = CVarUtils::GetCVar<std::string>(tag));
 }
 std::vector<int>& Utility::get_variable(const char* tag,std::vector<int>& val){
-  return (val = CVarUtils::GetCVar<std::vector<int>>(tag));
+  return (val = CVarUtils::GetCVar<std::vector<int> >(tag));
 }
 int& Utility::get_variable(const char* tag,int& val){
   return (val = CVarUtils::GetCVar<int>(tag));

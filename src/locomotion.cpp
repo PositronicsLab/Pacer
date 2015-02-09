@@ -615,18 +615,10 @@ void Controller::walk_toward(
     xdd.pose = foot_acc[i].pose;
   }
 
-#ifdef VISUALIZE_MOBY
-  if(true){
-//  for(int i=0;i<footholds.size();i++){
-//    Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,footholds[i]);
-//    visualize_ray(    p, p,   Ravelin::Vector3d(1,1,0), sim);
-//  }
+  {
+
 
   for(int i=0;i<NUM_FEET;i++){
-
-//    for(int i=0;i<feet[i]->chain.size();i++)
-//      joints_[feet[i]->chain[i]]->q[0] = q[feet[i]->chain[i]];
-//    abrobot_->update_link_poses();
 
     Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,feet[i]->link->get_pose()));
 
@@ -646,27 +638,12 @@ void Controller::walk_toward(
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
       Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      visualize_ray(    p, p,   Ravelin::Vector3d(0,1,0), sim);
-      visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
-//      visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
+      visualize.push_back(Point( p,   Ravelin::Vector3d(0,1,0)));
+      visualize.push_back(Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0)));
+//     visualize.push_back(Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
-
-//    Ravelin::Vector3d x,xd,xdd;
-//    for(int d=0;d<3;d++){
-//      Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
-//    }
-//    x.pose = foot_pos[i].pose;
-//    xd.pose = foot_vel[i].pose;
-//    xdd.pose = foot_acc[i].pose;
-//    Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-//    Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-//    Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-//    visualize_ray(    p, p,   Ravelin::Vector3d(0,1,0), sim);
-//    visualize_ray(  v+p,   p,   Ravelin::Vector3d(1,0,0), sim);
-//    visualize_ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0), sim);
   }
   }
-#endif
 
   last_time = t;
   inited = true;

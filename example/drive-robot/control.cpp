@@ -13,7 +13,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     int n = q.rows();
     int nq = n - 7;
-    
+
     // World frame
     boost::shared_ptr<Ravelin::Pose3d>
         environment_frame(new Ravelin::Pose3d());
@@ -22,7 +22,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     Ravelin::Quatd quat(q[nq+3],q[nq+4],q[nq+5],q[nq+6]);
     Ravelin::Vector3d rpy;
     quat.to_rpy(rpy[0],rpy[1],rpy[2]);
-    
+
     // Frame colocated with robot, preserves only yaw of robot.
     boost::shared_ptr<Ravelin::Pose3d>
         base_horizontal_frame(new Ravelin::Pose3d(Ravelin::AAngled(0,0,1,rpy[2]),x.data(),environment_frame));
@@ -31,18 +31,18 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     OUT_LOG(logDEBUG1) << "quat = " << quat ;
     OUT_LOG(logDEBUG1) << "rpy = " << rpy ;
 
-    
+
 
     // Command robot to walk in a direction
     command.set_zero(6);
-
+    command[0] = 0.05;
     // ================= EXAMPLES ================
 
     double max_turn_speed = 1.0; // rad/sec
     double max_forward_speed = 0.05;
     double max_strafe_speed = 0.025;
 //#define WALK_ON_LINE
-#define WAYPOINTS
+//#define WAYPOINTS
 //#define WALK_TO_POINT
 
 #ifdef WALK_ON_LINE
@@ -58,7 +58,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     // if NORTH of line and facing WEST
     if( (position_err > 0) && (fabs(heading_err) < M_PI ) ){
 
-    } 
+    }
     // if NORTH of line facing EAST
     else if( (position_err > 0) && (fabs(heading_err) > M_PI ) ){
 
@@ -98,16 +98,16 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     //}
 
     // Or walk in a bowtie pattern
-    patrol_points.push_back(0); 
+    patrol_points.push_back(0);
     patrol_points.push_back(1);
 
-    patrol_points.push_back(1); 
+    patrol_points.push_back(1);
     patrol_points.push_back(0);
 
-    patrol_points.push_back(-1); 
+    patrol_points.push_back(-1);
     patrol_points.push_back(0);
 
-    patrol_points.push_back(0); 
+    patrol_points.push_back(0);
     patrol_points.push_back(-1);
     /// HANDLE WAYPOINTS
     assert(patrol_points.size() >= 4);
@@ -127,28 +127,18 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],x[2],environment_frame);
     }
-    //#ifdef VISUALIZE_MOBY
+
     OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
     OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
     OUT_LOG(logDEBUG1) << "patrol_index = " << patrol_index;
-    //    visualize_ray(  next_waypoint,
-    //                  data->center_of_mass_x,
-    //                  Ravelin::Vector3d(1,0.5,0),
-    //                  sim
-    //                  );
+    Robot::visualize.push_back(Ray(next_waypoint,data->center_of_mass_x,Ravelin::Vector3d(1,0.5,0)));
     OUTLOG(next_waypoint,"next_wp",logDEBUG1);
 
     for(int i=0;i<num_waypoints;i++){
         Ravelin::Vector3d wp(patrol_points[i*2],patrol_points[i*2+1],x[2],environment_frame);
         OUTLOG(wp,"wp",logDEBUG1);
-        //        visualize_ray(  wp,
-        //                      wp,
-        //                      Ravelin::Vector3d(1,0.5,0),
-        //                      1.0,
-        //                      sim
-        //                      );
+        Robot::visualize.push_back(Point(wp,Ravelin::Vector3d(1,0.5,0),1.0);
     }
-    //#endif
     goto_point.resize(2);
     goto_point[0] = next_waypoint[0];
     goto_point[1] = next_waypoint[1];
@@ -199,6 +189,6 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 #endif
 
     OUT_LOG(logDEBUG1) << "command = " << command ;
-    
+
     OUT_LOG(logDEBUG1) << "<< EXIT USER CONTROLLER" ;
 }

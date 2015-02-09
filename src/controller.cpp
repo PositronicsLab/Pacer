@@ -7,18 +7,6 @@
 #include <Pacer/utilities.h>
 #include <sys/time.h>
 
-#ifdef VISUALIZE_MOBY
-#ifdef APPLE
-# include <OpenGL/gl.h>
-# include <OpenGL/glu.h>
-# include <GLUT/glut.h>
-#else
-# include <GL/gl.h>
-# include <GL/glu.h>
-# include <GL/glut.h>
-#endif
-#endif
-
 using namespace Pacer;
 
 
@@ -92,12 +80,8 @@ void Controller::control(double t,
     xd_des[i].set_zero();
     xdd_des[i].set_zero();
     x_des[i].pose = xd_des[i].pose = xdd_des[i].pose = base_frame;
-#  ifdef VISUALIZE_MOBY
-    workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,1,0),0.2,sim);
-    workv3_ = Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin);
-    visualize_ray(workv3_,workv3_,Ravelin::Vector3d(1,0,0),0.2,sim);
-#  endif
+    visualize.push_back(Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2));
+    visualize.push_back(Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2));
   }
 
   std::vector<EndEffector*> feet;
@@ -111,14 +95,10 @@ void Controller::control(double t,
   // =================== BEGIN PLANNING FUNCTIONS =====================
 
 
-#ifdef VISUALIZE_MOBY
-    visualize_ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
-                    Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
+    visualize.push_back(Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
                     Ravelin::Vector3d(1,0,0),
-                    0.1,
-                    sim
-                  );
-#endif
+                    0.1));
+
     ii++;
   }
 
@@ -140,98 +120,11 @@ void Controller::control(double t,
   static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("locomotion.active");
   if(USE_LOCOMOTION){
     static std::vector<double>
-        &patrol_points = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.patrol"),
-        &goto_command = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.command"),
-        &goto_point = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.point"),
         &duty_factor = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.duty-factor"),
         &this_gait = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.gait");
-    static int &HOLONOMIC = CVarUtils::GetCVarRef<int>("locomotion.holonomic");
     static double &gait_time = CVarUtils::GetCVarRef<double>("locomotion.gait-duration");
     static double &step_height = CVarUtils::GetCVarRef<double>("locomotion.step-height");
     static std::vector<Ravelin::Vector3d> footholds(0);
-    OUTLOG(goto_command ,"goto_command",logINFO);
-
-    go_to = Ravelin::VectorNd(goto_command.size(),&goto_command[0]);
-
-    // FOOTHOLDS
-
-    /// HANDLE WAYPOINTS
-    if(patrol_points.size() >= 4){
-      int num_waypoints = patrol_points.size()/2;
-      static int patrol_index = 0;
-      static Ravelin::Vector3d
-          next_waypoint(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],data->center_of_mass_x[2],environment_frame);
-      next_waypoint[2] = data->center_of_mass_x[2];
-
-      double distance_to_wp = (next_waypoint - data->center_of_mass_x).norm();
-
-      if( distance_to_wp < 0.025){
-        OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
-        OUTLOG(next_waypoint,"this_wp",logDEBUG1);
-        OUTLOG(next_waypoint,"center_of_mass_x",logDEBUG1);
-
-        patrol_index = (patrol_index+1) % num_waypoints;
-
-        next_waypoint = Ravelin::Vector3d(patrol_points[patrol_index*2],patrol_points[patrol_index*2+1],data->center_of_mass_x[2],environment_frame);
-      }
-# ifdef VISUALIZE_MOBY
-      OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
-      OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
-      OUT_LOG(logDEBUG1) << "patrol_index = " << patrol_index;
-    visualize_ray(  next_waypoint,
-                    data->center_of_mass_x,
-                    Ravelin::Vector3d(1,0.5,0),
-                    sim
-                  );
-    OUTLOG(next_waypoint,"next_wp",logDEBUG1);
-
-    for(int i=0;i<num_waypoints;i++){
-      Ravelin::Vector3d wp(patrol_points[i*2],patrol_points[i*2+1],next_waypoint[2],environment_frame);
-      OUTLOG(wp,"wp",logDEBUG1);
-      visualize_ray(  wp,
-                      wp,
-                      Ravelin::Vector3d(1,0.5,0),
-                      1.0,
-                      sim
-                    );
-    }
-# endif
-      goto_point.resize(2);
-      goto_point[0] = next_waypoint[0];
-      goto_point[1] = next_waypoint[1];
-    }
-
-    if(goto_point.size() == 2){
-      Ravelin::Vector3d goto_direction =
-          Ravelin::Vector3d(goto_point[0],goto_point[1],0,environment_frame)
-          - Ravelin::Vector3d(data->center_of_mass_x[0],data->center_of_mass_x[1],0,environment_frame);
-      goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
-      goto_direction.normalize();
-
-      double angle_to_goal = atan2(goto_direction[1],goto_direction[0]);
-      if(fabs(angle_to_goal) < M_PI_8){
-        if(HOLONOMIC){
-          go_to[1] = goto_direction[1]*goto_command[0];
-          // goal-centric coords
-          go_to[0] =-goto_direction[1]*goto_command[1];
-          go_to[2] = goto_direction[0]*goto_command[1];
-        }
-        go_to[0] = goto_direction[0]*goto_command[0];
-        go_to[5] = angle_to_goal/gait_time;
-      } else {
-        go_to[5] = Utility::sign(angle_to_goal)*1.5;
-        if(!HOLONOMIC){
-          go_to[0] = 0;
-          go_to[1] = 0;
-        } else {
-          go_to[0] = goto_direction[0]*goto_command[0];
-          go_to[1] = goto_direction[1]*goto_command[0];
-          // goal-centric coords
-          go_to[0] =-goto_direction[1]*goto_command[1];
-          go_to[2] = goto_direction[0]*goto_command[1];
-        }
-      }
-    }
 
     // Robot attempts to align base with force and then walk along force axis
 //    Ravelin::SForced lead_base_force = Ravelin::Pose3d::transform(base_link_frame,lead_force_);
@@ -256,9 +149,6 @@ void Controller::control(double t,
       foot_pos[ii] = x_des[i];
       foot_vel[ii] = xd_des[i];
       foot_acc[ii] = xdd_des[i];
-//      foot_pos[ii] = Ravelin::Pose3d::transform_point(base_horizontal_frame,x_des[i]);
-//      foot_vel[ii] = Ravelin::Pose3d::transform_vector(base_horizontal_frame,xd_des[i]);
-//      foot_acc[ii] = Ravelin::Pose3d::transform_vector(base_horizontal_frame,xdd_des[i]);
       double gait_progress = t/gait_time;
       gait_progress = gait_progress - (double) ((int) gait_progress);
       ii++;
@@ -274,9 +164,6 @@ void Controller::control(double t,
       x_des[i] = foot_pos[ii];
       xd_des[i] = foot_vel[ii];
       xdd_des[i] = foot_acc[ii];
-//      x_des[i] = Ravelin::Pose3d::transform_point(base_frame,foot_pos[ii]);
-//      xd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,foot_vel[ii]);
-//      xdd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,foot_acc[ii]);
       ii++;
     }
   }
@@ -297,27 +184,16 @@ void Controller::control(double t,
     for(int i=0;i<NUM_EEFS;i++){
       if(is_foot[i] == 0 || !eefs_[i].stance) continue;
       workv3_ = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-#ifdef VISUALIZE_MOBY
-      visualize_ray(  workv3_,
-                      workv3_,
+      visualize.push_back(Point(workv3_,
                       Ravelin::Vector3d(1,0,1),
-                      0.5,
-                      sim
-                    );
-#endif
+                      0.5));
       CoF_x += workv3_;
       ii++;
     }
     CoF_x /= (double)ii;
 
-#ifdef VISUALIZE_MOBY
-  visualize_ray(  CoF_x,
-                  CoF_x,
-                  Ravelin::Vector3d(1,0.5,0),
-                  1,
-                  sim
-                );
-#endif
+  visualize.push_back(Point(CoF_x,
+                  Ravelin::Vector3d(1,0.5,0)));
 
     center_of_feet_queue.push(CoF_x);
     sum_center_of_feet += CoF_x;
@@ -332,16 +208,13 @@ void Controller::control(double t,
     center_of_feet_xd = (center_of_feet_x - workv3_)*dt;
     if(center_of_feet_queue.size() == 0 || ii == 0)
       center_of_feet_x = data->center_of_mass_x;
-#ifdef VISUALIZE_MOBY
-  visualize_ray(  center_of_feet_x,
-                  center_of_feet_x,
-                  Ravelin::Vector3d(1,0,0),
-                  1,
-                  sim
-                );
-#endif
-  OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
-  OUTLOG(center_of_feet_x,"center_of_feet_x (avg 1 sec)",logDEBUG);
+
+    visualize.push_back(Point(center_of_feet_x,
+                  Ravelin::Vector3d(1,0,0)));
+
+    OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
+
+    OUTLOG(center_of_feet_x,"center_of_feet_x (avg 1 sec)",logDEBUG);
   }
 
 
@@ -736,7 +609,7 @@ if(inf_friction){
     }
 #endif
 }
-   
+
 {
       unsigned ii = 0;
 #ifdef USE_NO_SLIP_MODEL
@@ -754,7 +627,7 @@ if(inf_friction){
 #ifdef USE_AP_MODEL
       OUT_LOG(logERROR) << ii << " -- USE_AP_MODEL";
       ii++;
-#endif    
+#endif
 }
 
 
@@ -762,80 +635,6 @@ if(inf_friction){
       double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);
       OUT_LOG(logERROR) << i << ", Sum normal force: " << sum ;
     }
-
-    ////////////////////////// H IDYN ////////////////////////////////////////
-
-//#ifdef USE_NO_SLIP_LCP_MODEL
-//    // NO-SLIP FAST LCP MODEL
-//    cf.set_zero(NC*5);
-//    id.set_zero(NUM_JOINT_DOFS);
-//    {
-//      solve_flag = inverse_dynamics_no_slip_fast(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)/= h_dt,DT,id,cf,false);
-//      cf /= h_dt;
-//      id *= h_dt;
-//      OUTLOG(id,"uff_lcp_noslip",logERROR);
-//      OUTLOG(cf,"cf_lcp_noslip",logERROR);
-//      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
-//      if(last_cf.rows() == NC){
-//        Ravelin::VectorNd diff_cf  = last_cf;
-//        diff_cf -= cf.segment(0,NC);
-//        if(diff_cf.norm() > 0.01)
-//          OUT_LOG(logERROR) << "-- Torque chatter detected!";
-//      }
-//      last_cf = cf.segment(0,NC);
-//    }
-//    compare_cf_vec.push_back(cf.segment(0,NC));
-//#endif
-
-//#ifdef USE_AP_MODEL
-//    // A-P LCP MODEL
-//    cf.set_zero(NC*5);
-//    id.set_zero(NUM_JOINT_DOFS);
-//    if(NC>0){
-//      solve_flag = inverse_dynamics_ap(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)/= h_dt,DT,MU,id,cf);
-//      cf /= h_dt;
-//      id *= h_dt;
-//      OUTLOG(id,"uff_lcp_ap",logERROR);
-//      OUTLOG(cf,"cf_lcp_ap",logERROR);
-//      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
-//      if(last_cf.rows() == NC){
-//        Ravelin::VectorNd diff_cf  = last_cf;
-//        diff_cf -= cf.segment(0,NC);
-//        if(diff_cf.norm() > 0.01)
-//          OUT_LOG(logERROR) << "-- Torque chatter detected!";
-//      }
-//      last_cf = cf.segment(0,NC);
-//    } else {
-//      solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)/= h_dt,DT,MU,id,cf);
-//    }
-//    compare_cf_vec.push_back(cf.segment(0,NC));
-//#endif
-
-//#ifdef USE_NO_SLIP_MODEL
-//    // IDYN NO-SLIP QP MODEL
-//    cf.resize(0);
-//    id.set_zero(NUM_JOINT_DOFS);
-//    solve_flag = inverse_dynamics_no_slip(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)/= h_dt,DT,id,cf);
-//    cf /= h_dt;
-//    id *= h_dt;
-//    OUTLOG(id,"uff_qp_noslip",logERROR);
-//    OUTLOG(cf,"cf_qp_noslip",logERROR);
-//    compare_cf_vec.push_back(cf.segment(0,NC));
-//#endif
-
-
-//#ifdef USE_CLAWAR_MODEL
-//    // IDYN QP MODEL
-//    cf.resize(0);
-//    id.set_zero(NUM_JOINT_DOFS);
-//    solve_flag = inverse_dynamics(data->generalized_qd,qdd_des,data->M,N,D,(fext_scaled = data->generalized_fext)/= h_dt,DT,MU,id,cf);
-//    cf /= h_dt;
-//    id *= h_dt;
-//    OUTLOG(id,"uff_qp",logERROR);
-//    OUTLOG(cf,"cf_qp",logERROR);
-//    compare_cf_vec.push_back(cf.segment(0,NC));
-//#endif
-// /////////////////////////////////////////////////////////////////////////////
 
     uff += (id*=alpha);
 

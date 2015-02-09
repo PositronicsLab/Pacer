@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
+
 using namespace Pacer;
 
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
@@ -15,6 +16,12 @@ extern void controller(double time,
                        const Ravelin::VectorNd& q,
                        const Ravelin::VectorNd& qd,
                        Ravelin::VectorNd& command);
+#endif
+
+#ifdef VISUALIZE_MOBY
+extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
+extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
+extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
 #endif
 
 // ============================================================================
@@ -133,7 +140,9 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                     qdd_des(num_joints);
   Ravelin::VectorNd u(num_joints);
 
+#ifdef DRIVE_ROBOT
   controller(t,generalized_q,generalized_qd,robot_ptr->movement_command);
+#endif
   robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
 
   // Re-map goals robot->simulation joints
@@ -302,6 +311,7 @@ extern "C" {
 
 void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
 {
+  std::cout << "STARTING MOBY PLUGIN" << std::endl;
   // If use robot is active also init dynamixel controllers
   // get a reference to the EventDrivenSimulator instance
   for (std::map<std::string, Moby::BasePtr>::const_iterator i = read_map.begin();
@@ -318,12 +328,12 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
     }
   }
 
+
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
+
   robot_ptr = boost::shared_ptr<Controller>(new Controller("model","vars.xml"));
-#ifdef VISUALIZE_MOBY
-  robot_ptr->sim = sim;
-#endif
+
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
 #ifdef RANDOM_FRICTION
   sim->get_contact_parameters_callback_fn = &get_contact_parameters;

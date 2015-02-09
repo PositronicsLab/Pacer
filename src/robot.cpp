@@ -55,14 +55,12 @@ void Robot::calc_com(){
 
   new_data->center_of_mass_x.pose = new_data->center_of_mass_xd.pose = new_data->center_of_mass_xdd.pose = environment_frame;
 
-#ifdef VISUALIZE_MOBY
   // ZMP and COM
   Ravelin::Vector3d CoM_2D(new_data->center_of_mass_x[0],new_data->center_of_mass_x[1],new_data->center_of_mass_x[2]-0.10,environment_frame);
-  visualize_ray(CoM_2D,new_data->center_of_mass_x,Ravelin::Vector3d(0,0,1),sim);
-//  visualize_ray(CoM_2D + new_data->center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1),sim);
-//  visualize_ray(CoM_2D + new_data->center_of_mass_xd*0.1 + new_data->center_of_mass_xdd*0.01,CoM_2D + new_data->center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0),sim);
-  visualize_ray(CoM_2D+Ravelin::Vector3d(new_data->zero_moment_point[0],new_data->zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0),sim);
-#endif
+  visualize.push_back(Ray(CoM_2D,new_data->center_of_mass_x,Ravelin::Vector3d(0,0,1)));
+//  visualize.push_back(Ray(CoM_2D + new_data->center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
+//  visualize.push_back(Ray(CoM_2D + new_data->center_of_mass_xd*0.1 + new_data->center_of_mass_xdd*0.01,CoM_2D + new_data->center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
+  visualize.push_back(Ray(CoM_2D+Ravelin::Vector3d(new_data->zero_moment_point[0],new_data->zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0)));
 }
 
 double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const {
@@ -263,47 +261,40 @@ void Robot::update(
     center_of_contact.normal[0] = Ravelin::Vector3d(0,0,1,environment_frame);
     center_of_contact.active = false;
   }
-#ifdef VISUALIZE_MOBY
-  draw_pose(*base_frame,sim,0.8);
-  draw_pose(*base_horizontal_frame,sim,1.5);
-  draw_pose(Moby::GLOBAL,sim,1.0);
-#endif
+  visualize.push_back(Pose(*base_frame,0.8));
+  visualize.push_back(Pose(*base_horizontal_frame,1.5));
+  visualize.push_back(Pose(Moby::GLOBAL,1.0));
 
-#ifdef VISUALIZE_MOBY
        // CONTACTS
        if(NC != 0){
-//         std::vector<const EndEffector * > active_eefs;
-//         if(eefs_[0].active)
-//           active_eefs.push_back(&eefs_[0]);
-//         if(eefs_[1].active)
-//           active_eefs.push_back(&eefs_[1]);
-//         if(eefs_[3].active)
-//           active_eefs.push_back(&eefs_[3]);
-//         if(eefs_[2].active)
-//           active_eefs.push_back(&eefs_[2]);
+         std::vector<const EndEffector * > active_eefs;
+         if(eefs_[0].active)
+           active_eefs.push_back(&eefs_[0]);
+         if(eefs_[1].active)
+           active_eefs.push_back(&eefs_[1]);
+         if(eefs_[3].active)
+           active_eefs.push_back(&eefs_[3]);
+         if(eefs_[2].active)
+           active_eefs.push_back(&eefs_[2]);
 
-//         // Draw Contact Polygon
-//         for(int i=0;i<NC;i++){
-//           visualize_ray(active_eefs[i]->point + Ravelin::Vector3d(0,0,0.001),
-//                         active_eefs[(i+1)%NC]->point  + Ravelin::Vector3d(0,0,0.001),
-//                         Ravelin::Vector3d(0.5,0.5,1),
-//                         sim);
-//         }
-         // Draw all Contacts
-//         for(int i=0;i<NC;i++)
-//           for(int j=0;j<active_eefs[i]->contacts.size();j++){
-//             visualize_ray(active_eefs[i]->contacts[j],
-//                           active_eefs[i]->point,
-//                           Ravelin::Vector3d(1,1,1),
-//                           sim);
-//           }
-         visualize_ray(center_of_contact.point[0],
-                    center_of_contact.normal[0]*0.1 + center_of_contact.point[0],
-                    Ravelin::Vector3d(1,1,0),
-                    sim);
+         // Draw Contact Polygon
+         for(int i=0;i<NC;i++){
+           visualize.push_back(Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
+                         active_eefs[(i+1)%NC]->point[0]  + Ravelin::Vector3d(0,0,0.001),
+                         Ravelin::Vector3d(0.5,0.5,1)));
+         }
+//          Draw all Contacts
+         for(int i=0;i<NC;i++){
+           for(int j=0;j<active_eefs[i]->point.size();j++){
+//             visualize.push_back(Ray(active_eefs[i]->contacts[j],
+//                           active_eefs[i]->point[0],
+//                           Ravelin::Vector3d(1,1,1)));
+           }
+         }
+//         visualize.push_back(Ray(center_of_contact.point[0],
+//                    center_of_contact.normal[0]*0.1 + center_of_contact.point[0],
+//                    Ravelin::Vector3d(1,1,0)));
        }
-
-#endif
 
        data = boost::shared_ptr<const RobotData>(new_data);
 }
@@ -354,7 +345,7 @@ void Robot::reset_contact(){
 // ===========================  BEGIN ROBOT INIT  =============================
 #include <CVars/CVar.h>
 
-#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+#ifdef USE_GLCONSOLE
 # include <thread>
 # include <GLConsole/GLConsole.h>
   GLConsole theConsole;
@@ -364,11 +355,15 @@ void Robot::reset_contact(){
 
 #include <Moby/SDFReader.h>
 #include <Moby/XMLReader.h>
-void Robot::init(){
-#if defined(VISUALIZE_MOBY) && defined(USE_GLCONSOLE)
+void Robot::Init(){
+#ifdef USE_GLCONSOLE
    tglc = new std::thread(init_glconsole);
 #endif
   // ================= LOAD SCRIPT DATA ==========================
+  OUT_LOG(logERROR) << "model: " << robot_model_file;
+  OUT_LOG(logERROR) << "vars: " << robot_vars_file;
+  std::cerr << "model: " << robot_model_file << std::endl;
+  std::cerr << "vars: " << robot_vars_file << std::endl;
 
   Utility::load_variables(robot_vars_file);
 
@@ -457,7 +452,7 @@ void Robot::init(){
 // assert(joint_names.size() == joints_.size());
  assert(joint_names.size() == joints_start.size());
  assert(joint_names.size() == torque_limits.size());
-  
+
   torque_limits_l.resize(NUM_JOINT_DOFS);
   torque_limits_u.resize(NUM_JOINT_DOFS);
 
@@ -472,7 +467,7 @@ void Robot::init(){
       torque_limits_[joint_names[ii]] = torque_limits[ii];
       OUT_LOG(logINFO)<< "torque_limit: " << joint_names[ii] << " = " <<  torque_limits_[joint_names[ii]];
   }
-  
+
   for(int i=0,ii=0;i<NUM_JOINTS;i++){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){

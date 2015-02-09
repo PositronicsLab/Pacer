@@ -96,53 +96,53 @@ set(SOURCES ${SOURCES-BASIC}
 # install include dirs
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
 
-if(VISUALIZE_MOBY)
-  set(SOURCES ${SOURCES} src/visualize_moby.cpp)
-endif(VISUALIZE_MOBY)
+set(REQURED_LIBS Moby Ravelin)
 
+add_library(Pacer ${SOURCES})
+target_link_libraries(Pacer ${REQURED_LIBS} Opt OpenThreads cvars)
+
+#add_library(PacerModel ${SOURCES-BASIC})
+#target_link_libraries(PacerModel Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
+#install(TARGETS PacerModel DESTINATION lib)
+
+set(REQURED_LIBS ${REQURED_LIBS} Pacer)
+# EXAMPLES
+
+# Drive ROBOT
+if(DRIVE_ROBOT)
+  add_definitions(-DDRIVE_ROBOT)
+  add_library(PacerDriveRobotPlugin ${CMAKE_SOURCE_DIR}/example/drive-robot/control.cpp)
+  target_link_libraries(PacerDriveRobotPlugin ${REQURED_LIBS})
+  install(TARGETS PacerDriveRobotPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/drive-robot)
+  install(TARGETS PacerDriveRobotPlugin DESTINATION lib)
+  set(REQURED_LIBS ${REQURED_LIBS} PacerDriveRobotPlugin)
+endif(DRIVE_ROBOT)
+
+# Moby Plugin
 if(USE_MOBY)
   if(VISUALIZE_MOBY)
-    set(SOURCES ${SOURCES} src/visualize_moby.cpp)
+    set(VISUALIZE_SRCS ${CMAKE_SOURCE_DIR}/example/control-moby/visualize.cpp)
     set(VISUALIZE_LIBS glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
     FIND_PACKAGE( GLUT REQUIRED )
     FIND_PACKAGE( OpenGL REQUIRED )
     add_definitions( -DVISUALIZE_MOBY )
   endif(VISUALIZE_MOBY)
-endif(USE_MOBY)
 
-set(REQURED_LIBS Moby Ravelin)
-
-add_library(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} ${REQURED_LIBS} Opt OpenThreads cvars ${VISUALIZE_LIBS})
-
-add_library(${PROJECT_NAME}Model ${SOURCES-BASIC})
-target_link_libraries(${PROJECT_NAME}Model Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
-install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
-
-set(REQURED_LIBS ${REQURED_LIBS} ${PROJECT_NAME})
-# EXAMPLES
-
-# Drive ROBOT
-if(DRIVE_ROBOT)
-  
-  add_definitions(-DDRIVE_ROBOT)
-  add_library(${PROJECT_NAME}DriveRobotPlugin ${CMAKE_SOURCE_DIR}/example/drive-robot/control.cpp)
-  target_link_libraries(${PROJECT_NAME}DriveRobotPlugin ${REQURED_LIBS})
-  install(TARGETS ${PROJECT_NAME}DriveRobotPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/drive-robot)
-  install(TARGETS ${PROJECT_NAME}DriveRobotPlugin DESTINATION lib)
-  set(REQURED_LIBS ${REQURED_LIBS} ${PROJECT_NAME}DriveRobotPlugin)
-endif(DRIVE_ROBOT)
-# Moby Plugin
-if(USE_MOBY)
-  add_library(${PROJECT_NAME}MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
-  target_link_libraries(${PROJECT_NAME}MobyPlugin ${REQURED_LIBS})
-  install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
-  install(TARGETS ${PROJECT_NAME}MobyPlugin DESTINATION lib)
+  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp ${VISUALIZE_SRCS})
+  target_link_libraries(PacerMobyPlugin ${REQURED_LIBS} ${VISUALIZE_LIBS})
+  install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
+  install(TARGETS PacerMobyPlugin DESTINATION lib)
 endif(USE_MOBY)
 
 # Gazebo Plugin
 if(USE_GAZEBO)
-  set(VISUALIZE_MOBY off)
+#  if(VISUALIZE_GAZEBO)
+#    set(VISUALIZE_SRCS ${CMAKE_SOURCE_DIR}/example/control-gazebo/visualize.cpp)
+#    set(VISUALIZE_LIBS glut osg osgDB GLU ${GLUT_LIBRARIES} ${GLU_LIBRARIES} ${OPENGL_LIBRARIES})
+#    FIND_PACKAGE( GLUT REQUIRED )
+#    FIND_PACKAGE( OpenGL REQUIRED )
+#    add_definitions( -DVISUALIZE_GAZEBO )
+#  endif(VISUALIZE_GAZEBO)
 
   include (FindPkgConfig)
   if (PKG_CONFIG_FOUND)
@@ -151,21 +151,21 @@ if(USE_GAZEBO)
   include_directories(${GAZEBO_INCLUDE_DIRS})
   link_directories(${GAZEBO_LIBRARY_DIRS})
 
-  add_library(${PROJECT_NAME}GazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
-  target_link_libraries(${PROJECT_NAME}GazeboPlugin ${REQURED_LIBS} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
-  install(TARGETS ${PROJECT_NAME}GazeboPlugin DESTINATION lib)
+  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
+  target_link_libraries(PacerGazeboPlugin ${REQURED_LIBS} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
+  install(TARGETS PacerGazeboPlugin DESTINATION lib)
 
   add_library(contact SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/contact-plugin.cpp)
-  target_link_libraries(contact ${PROJECT_NAME} ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
+  target_link_libraries(contact Pacer ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} protobuf)
   install(TARGETS contact DESTINATION ${CMAKE_SOURCE_DIR}/example/control-gazebo)
 endif(USE_GAZEBO)
 
 # Test: Calling PacerModel only instead of using controller features
-  add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
-  target_link_libraries(test-pacer-model ${PROJECT_NAME}Model Ravelin)
-  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
+#  add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
+#  target_link_libraries(test-pacer-model PacerModel Ravelin)
+#  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
 
-  install(TARGETS ${PROJECT_NAME}Model DESTINATION lib)
-  install(TARGETS ${PROJECT_NAME} DESTINATION lib)
+  #  install(TARGETS PacerModel DESTINATION lib)
+  # install(TARGETS Pacer DESTINATION lib)
 
 

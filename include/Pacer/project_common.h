@@ -51,13 +51,6 @@ const double grav     = 9.8; // M/s.s
 const double M_PI_8   = 0.39269908169;
 const double M_PI_16  = 0.19634954084;
 
-#ifdef VISUALIZE_MOBY
-extern boost::shared_ptr<Moby::EventDrivenSimulator> sim;
-extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
-#endif
-
 // ----------------------------------------------------------------------------
 #include <Pacer/Log.h>
  void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);

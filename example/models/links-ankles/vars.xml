@@ -1,4 +1,11 @@
 <XML>
+  <logging type="string">DEBUG1</logging>
+
+  <sim>
+    <known-base-perturbation type="double">0 0 0 0 0 0</known-base-perturbation>
+    <unknown-base-perturbation type="double">0 0 0 0 0 0</unknown-base-perturbation>
+    <known-leading-force type="double">0.13 0 0 0 0 0</known-leading-force>
+  </sim>
   <quadruped>
     <init>
       <base>

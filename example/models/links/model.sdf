@@ -172,14 +172,14 @@
     </link>
 
     <joint name='LF_ANKLE4' type='revolute'>
-      <pose>0 0 0 0 0 0</pose>
+      <pose>0.05 0 0 0 0 0</pose>
       <parent>LF_LEG_3</parent>
       <child>LF_FOOT</child>
       <axis>
         <xyz>1 0 0</xyz>
         <limit>
-          <lower>0</lower>
-          <upper>0</upper>
+          <lower>-1e-8</lower>
+          <upper>1e-8</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -190,12 +190,12 @@
       <inertial>
         <mass>0.01</mass>
         <inertia>
-          <ixx>4e-7</ixx>
+          <ixx>4e-5</ixx>
           <ixy>0.0</ixy>
           <ixz>-0.0</ixz>
-          <iyy>4e-7</iyy>
+          <iyy>4e-5</iyy>
           <iyz>-0.0</iyz>
-          <izz>4e-7</izz>
+          <izz>4e-5</izz>
         </inertia>
       </inertial>
 
@@ -342,14 +342,14 @@
     </link>
 
     <joint name='RF_ANKLE4' type='revolute'>
-      <pose>0 0 0 0 0 0</pose>
+      <pose>0.05 0 0 0 0 0</pose>
       <parent>RF_LEG_3</parent>
       <child>RF_FOOT</child>
       <axis>
         <xyz>1 0 0</xyz>
         <limit>
-          <lower>0</lower>
-          <upper>0</upper>
+          <lower>-1e-8</lower>
+          <upper>1e-8</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -360,12 +360,12 @@
       <inertial>
         <mass>0.01</mass>
         <inertia>
-          <ixx>4e-7</ixx>
+          <ixx>4e-5</ixx>
           <ixy>0.0</ixy>
           <ixz>-0.0</ixz>
-          <iyy>4e-7</iyy>
+          <iyy>4e-5</iyy>
           <iyz>-0.0</iyz>
-          <izz>4e-7</izz>
+          <izz>4e-5</izz>
         </inertia>
       </inertial>
 
@@ -513,14 +513,14 @@
       </visual>
     </link>
     <joint name='LH_ANKLE4' type='revolute'>
-      <pose>0 0 0 0 0 0</pose>
+      <pose>0.05 0 0 0 0 0</pose>
       <parent>LH_LEG_3</parent>
       <child>LH_FOOT</child>
       <axis>
         <xyz>1 0 0</xyz>
         <limit>
-          <lower>0</lower>
-          <upper>0</upper>
+          <lower>-1e-8</lower>
+          <upper>1e-8</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -531,12 +531,12 @@
       <inertial>
         <mass>0.01</mass>
         <inertia>
-          <ixx>4e-7</ixx>
+          <ixx>4e-5</ixx>
           <ixy>0.0</ixy>
           <ixz>-0.0</ixz>
-          <iyy>4e-7</iyy>
+          <iyy>4e-5</iyy>
           <iyz>-0.0</iyz>
-          <izz>4e-7</izz>
+          <izz>4e-5</izz>
         </inertia>
       </inertial>
 
@@ -685,14 +685,14 @@
     </link>
 
     <joint name='RH_ANKLE4' type='revolute'>
-      <pose>0 0 0 0 0 0</pose>
+      <pose>0.05 0 0 0 0 0</pose>
       <parent>RH_LEG_3</parent>
       <child>RH_FOOT</child>
       <axis>
         <xyz>1 0 0</xyz>
         <limit>
-          <lower>0</lower>
-          <upper>0</upper>
+          <lower>-1e-8</lower>
+          <upper>1e-8</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -703,12 +703,12 @@
       <inertial>
         <mass>0.01</mass>
         <inertia>
-          <ixx>4e-7</ixx>
+          <ixx>4e-5</ixx>
           <ixy>0.0</ixy>
           <ixz>-0.0</ixz>
-          <iyy>4e-7</iyy>
+          <iyy>4e-5</iyy>
           <iyz>-0.0</iyz>
-          <izz>4e-7</izz>
+          <izz>4e-5</izz>
         </inertia>
       </inertial>
 

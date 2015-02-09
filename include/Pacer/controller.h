@@ -19,7 +19,9 @@ class Controller : public Robot{
      * @see Robot()
      */
     Controller() : Robot(){}
-    Controller(const std::string& model_f, const std::string& vars_f) : Robot(model_f, vars_f){}
+    Controller(const std::string& model_f, const std::string& vars_f) : Robot(model_f, vars_f){
+      std::cout << "initing controller";
+    }
 
     void control(double dt,
                                const Ravelin::VectorNd& generalized_q,

@@ -10,7 +10,7 @@
   <init>
     <base>
       <active type="bool">true</active>
-      <x type="double">0 0 0.18 0 0 0</x>
+      <x type="double">0 0 0.139 0 0 0</x>
     </base>
 
     <joint>

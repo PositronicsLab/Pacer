@@ -18,11 +18,8 @@
 #include <osg/LineSegment>
 #include <osg/LineWidth>
 
-#include <Pacer/project_common.h>
-
 using namespace Moby;
 using namespace Ravelin;
-extern double SIMULATION_TIME;
 const double VIBRANCY = 1;
 
 /// Draws a ray directed from a contact point along the contact normal

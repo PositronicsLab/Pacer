@@ -36,6 +36,41 @@ struct EndEffector{
     int                   nk;
 };
 
+class Visualizable{
+public:
+  double size;
+  double shade;
+  Ravelin::Vector3d color;
+};
+
+class Ray : public Visualizable{
+public:
+  Ravelin::Vector3d point1,point2;
+  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 1.0){
+    size = s;
+    color = c;
+  }
+};
+
+class Point : public Visualizable{
+public:
+  Ravelin::Vector3d point;
+  Point(Ravelin::Vector3d p,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 1.0){
+    size = s;
+    color = c;
+  }
+};
+
+class Pose : public Visualizable{
+public:
+  double shade;
+  Ravelin::Pose3d pose;
+  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 1.0){
+    shade = sd;
+    size = s;
+    pose = p;
+  }
+};
 /**
  * @brief The RobotData struct stores const data for use by the controller.
  */
@@ -60,14 +95,14 @@ struct RobotData{
 
 class Robot /*: public boost::enable_shared_from_this<Robot>*/{
   public:
+   std::vector<Visualizable> visualize;
+
 //    boost::shared_ptr<Robot> ptr(){ return shared_from_this(); }
-#ifdef VISUALIZE_MOBY
-    boost::shared_ptr<Moby::EventDrivenSimulator> sim;
-#endif
     Robot(){
     }
     Robot(const std::string& model_f, const std::string& vars_f) : robot_model_file(model_f), robot_vars_file(vars_f) {
-      init();
+      std::cout << "initing robot";
+      Init();
     }
 
     /// ---------------------------  Getters  ---------------------------
@@ -102,7 +137,6 @@ class Robot /*: public boost::enable_shared_from_this<Robot>*/{
         boost::shared_ptr<Robot>& robot);
 
     std::string robot_vars_file, robot_model_file;
-
   protected:
     /**
      * @brief Update robot internal model using 'generalized' (minimal) parameters
@@ -204,7 +238,7 @@ private:
     boost::shared_ptr<RobotData> new_data;
 
     // Import necessary info and then compile model
-    void init();
+    void Init();
 
     // set up internal models after kineamtic model is set (called from init)
     void compile();

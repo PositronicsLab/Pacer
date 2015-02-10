@@ -19,7 +19,7 @@ class Utility{
     template<typename T>
     T Mod(T x, T y)
     {
-        static_assert(!std::numeric_limits<T>::is_exact , "Mod: floating-point type expected");
+      //  static_assert(!std::numeric_limits<T>::is_exact , "Mod: floating-point type expected");
         
         if (0. == y)
             return x;

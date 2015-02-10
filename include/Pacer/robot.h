@@ -98,6 +98,11 @@ class Robot {
 
     Robot(){
     }
+    Robot(const std::string& model_f, const std::string& vars_f){
+      robot_model_file = std::string(model_f);
+      robot_vars_file = std::string(vars_f);
+      Init();
+    }
 
     /// ---------------------------  Getters  ---------------------------
     std::vector<EndEffector>& get_end_effectors()  { return eefs_; }

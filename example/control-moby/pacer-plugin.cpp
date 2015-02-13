@@ -4,6 +4,9 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
+#include <dxl/Dynamixel.h>
+
+#define DRIVE_ROBOT
 
 using Pacer::Controller;
 using Pacer::Robot;
@@ -25,6 +28,35 @@ extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vect
 extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
 #endif
+
+void render(std::vector<Pacer::Visualizable*> viz_vect){
+  std::cout << "VISUALIZING" << std::endl;
+  for(int i=0;i<viz_vect.size();i++){
+    switch(viz_vect[i]->type){
+    case Pacer::Visualizable::eRay:{
+      Pacer::Ray * v = static_cast<Pacer::Ray*>(viz_vect[i]);
+      visualize_ray(v->point1,v->point2,v->color,v->size,sim);
+      std::cout << "VISUALIZING RAY" << std::endl;
+      break;
+    }
+    case Pacer::Visualizable::ePoint:{
+      Pacer::Point * v = static_cast<Pacer::Point*>(viz_vect[i]);
+      visualize_ray(v->point,v->point,v->color,v->size,sim);
+      std::cout << "VISUALIZING POINT" << std::endl;
+      break;
+    }
+    case Pacer::Visualizable::ePose:{
+      Pacer::Pose * v = static_cast<Pacer::Pose*>(viz_vect[i]);
+      draw_pose(v->pose,sim,v->shade);
+      std::cout << "VISUALIZING POSE" << std::endl;
+      break;
+    }
+    default:   std::cout << "UNKNOWN VISUAL" << std::endl; break;
+    }
+//    delete viz_vect[i];
+  }
+  viz_vect.clear();
+}
 
 // ============================================================================
  // ================================ CUSTOM FNS ================================
@@ -142,6 +174,10 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                     qdd_des(num_joints);
   Ravelin::VectorNd u(num_joints);
 
+#ifdef VISUALIZE_MOBY
+//  render(robot_ptr->visualize);
+#endif
+
 #ifdef DRIVE_ROBOT
   controller(t,generalized_q,generalized_qd,robot_ptr->movement_command);
 #endif
@@ -155,15 +191,26 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
     u = remap_values(joint_map,u,workv_,true);
   }
 
-//  apply_sim_perturbations();
-  for(int i=0;i<joints.size();i++){
-    Ravelin::VectorNd U(joints[i]->num_dof());
-    for(int j=0;j<joints[i]->num_dof();j++)
-      U[j] = u[joints[i]->get_coord_index()+j];
-    joints[i]->add_force(U);
+  if(!abrobot->get_kinematic()){
+    for(int i=0;i<joints.size();i++){
+      Ravelin::VectorNd U(joints[i]->num_dof());
+      for(int j=0;j<joints[i]->num_dof();j++)
+        U[j] = u[joints[i]->get_coord_index()+j];
+      joints[i]->add_force(U);
+    }
+  } else {
+    for(int i=0;i<joints.size();i++){
+      Ravelin::VectorNd Q(joints[i]->num_dof());
+      Ravelin::VectorNd QD(joints[i]->num_dof());
+      for(int j=0;j<joints[i]->num_dof();j++){
+        Q[j] = q_des[joints[i]->get_coord_index()+j];
+        QD[j] = qd_des[joints[i]->get_coord_index()+j];
+      }
+      joints[i]->q = Q;
+      joints[i]->qd = QD;
+    }
+    abrobot->update_link_poses();
   }
-
-  std::cout << std::endl;
 }
 
 // ============================================================================
@@ -328,7 +375,6 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
     }
   }
 
-
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
 
@@ -350,9 +396,14 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
 
   std::map<std::string,double> q0 = robot_ptr->get_q0();
 
-  std::vector<double>
-      workvd,
-      base_start = Utility::get_variable("init.base.x",workvd);
+  std::vector<double> base_start;
+  Utility::get_variable("init.base.x",base_start);
+
+  int is_kinematic = 0;
+  Utility::get_variable("init.kinematic",is_kinematic);
+
+  if(is_kinematic)
+    abrobot->set_kinematic(true);
 
   Ravelin::VectorNd q_start;
   abrobot->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);

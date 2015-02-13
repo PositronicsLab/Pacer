@@ -50,11 +50,11 @@ inline Log::~Log()
     os << std::endl;
     //fprintf(stdout, "%s", os.str().c_str());
     //fflush(stdout);
-    FILE * pFile;
-    pFile = fopen ("out.log","a");
-    fprintf(pFile, "%s", os.str().c_str());
-    fflush(pFile);
-    fclose (pFile);
+//    FILE * pFile;
+//    pFile = fopen ("out.log","a");
+    fprintf(stdout, "%s", os.str().c_str());
+//    fflush(pFile);
+//    fclose (pFile);
 #endif
 }
 

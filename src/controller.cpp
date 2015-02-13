@@ -80,27 +80,26 @@ void Controller::control(double t,
     xd_des[i].set_zero();
     xdd_des[i].set_zero();
     x_des[i].pose = xd_des[i].pose = xdd_des[i].pose = base_frame;
-    visualize.push_back(Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2));
-    visualize.push_back(Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2));
+    visualize.push_back( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2));
+    visualize.push_back( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2));
   }
 
   std::vector<EndEffector*> feet;
   for(unsigned i=0,ii=0;i< NUM_EEFS;i++){
     if(is_foot[i] == 0) continue;
     feet.push_back(&eefs_[i]);
-    feet[ii]->origin.pose = base_horizontal_frame;
+    feet[ii]->origin.pose = base_frame;
 
-  // =================== END UPDATE & INIT ROBOT MODEL & CONTROL VARS =====================
-
-  // =================== BEGIN PLANNING FUNCTIONS =====================
-
-
-    visualize.push_back(Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
+    visualize.push_back( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
                     Ravelin::Vector3d(1,0,0),
                     0.1));
 
     ii++;
   }
+
+  // =================== END UPDATE & INIT ROBOT MODEL & CONTROL VARS =====================
+
+  // =================== BEGIN PLANNING FUNCTIONS =====================
 
   static Ravelin::Vector3d sum_base_velocity;
   static std::queue<Ravelin::Vector3d> base_vel_queue;
@@ -112,9 +111,6 @@ void Controller::control(double t,
   }
   OUTLOG(workv3_,"base_velocity (now)",logDEBUG);
   OUTLOG(sum_base_velocity/(double)base_vel_queue.size(),"base_velocity (avg 1 sec)",logDEBUG);
-
-  static std::vector<std::string>
-     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.joint.id");
 
   Ravelin::VectorNd go_to(6);
   static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("locomotion.active");
@@ -184,7 +180,7 @@ void Controller::control(double t,
     for(int i=0;i<NUM_EEFS;i++){
       if(is_foot[i] == 0 || !eefs_[i].stance) continue;
       workv3_ = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-      visualize.push_back(Point(workv3_,
+      visualize.push_back( new Point(workv3_,
                       Ravelin::Vector3d(1,0,1),
                       0.5));
       CoF_x += workv3_;
@@ -192,7 +188,7 @@ void Controller::control(double t,
     }
     CoF_x /= (double)ii;
 
-  visualize.push_back(Point(CoF_x,
+  visualize.push_back( new Point(CoF_x,
                   Ravelin::Vector3d(1,0.5,0)));
 
     center_of_feet_queue.push(CoF_x);
@@ -209,7 +205,7 @@ void Controller::control(double t,
     if(center_of_feet_queue.size() == 0 || ii == 0)
       center_of_feet_x = data->center_of_mass_x;
 
-    visualize.push_back(Point(center_of_feet_x,
+    visualize.push_back( new Point(center_of_feet_x,
                   Ravelin::Vector3d(1,0,0)));
 
     OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
@@ -757,6 +753,18 @@ if(inf_friction){
    // -----------------------------------------------------------------------------
 
    assert(data->generalized_fext.norm() < 1e+6);
+
+   q_joints.clear();
+   qd_joints.clear();
+   u_joints.clear();
+   for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
+     if(joints_[i])
+     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
+       q_joints[std::to_string(j)+joints_[i]->id] = q_des[ii];
+       qd_joints[std::to_string(j)+joints_[i]->id] = qd_des[ii];
+       u_joints[std::to_string(j)+joints_[i]->id] = u[ii];
+     }
+   }
 
    reset_contact();
    last_time = t;

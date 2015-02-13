@@ -123,6 +123,13 @@ if(DRIVE_ROBOT)
   set(REQURED_LIBS ${REQURED_LIBS} PacerDriveRobotPlugin)
 endif(DRIVE_ROBOT)
 
+#driver with no simulator
+add_executable(PacerDriver ${SOURCES} ${CMAKE_SOURCE_DIR}/example/pacer/driver.cpp)
+target_link_libraries(PacerDriver ${REQURED_LIBS} dxl)
+set_target_properties(PacerDriver PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(TARGETS PacerDriver DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer)
+install(TARGETS PacerDriver DESTINATION bin)
+
 # Moby Plugin
 if(USE_MOBY)
   if(VISUALIZE_MOBY)
@@ -133,8 +140,8 @@ if(USE_MOBY)
     add_definitions( -DVISUALIZE_MOBY )
   endif(VISUALIZE_MOBY)
 
-  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp ${VISUALIZE_SRCS})
-  target_link_libraries(PacerMobyPlugin ${REQURED_LIBS} ${VISUALIZE_LIBS})
+  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp ${VISUALIZE_SRCS} )
+  target_link_libraries(PacerMobyPlugin ${REQURED_LIBS} ${VISUALIZE_LIBS} dxl)
   set_target_properties(PacerMobyPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
   install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
   install(TARGETS PacerMobyPlugin DESTINATION lib)

@@ -37,6 +37,11 @@ struct EndEffector{
 
 class Visualizable{
 public:
+  enum Type{
+    ePoint,
+    eRay,
+    ePose
+  } type = ePoint;
   double size;
   double shade;
   Ravelin::Vector3d color;
@@ -45,8 +50,11 @@ public:
 class Ray : public Visualizable{
 public:
   Ravelin::Vector3d point1,point2;
-  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 1.0){
+  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.1){
+    type = eRay;
     size = s;
+    point2 = p2;
+    point1 = p1;
     color = c;
   }
 };
@@ -54,17 +62,21 @@ public:
 class Point : public Visualizable{
 public:
   Ravelin::Vector3d point;
-  Point(Ravelin::Vector3d p,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 1.0){
+  Point(Ravelin::Vector3d p,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.1){
+    type = ePoint;
     size = s;
+    point = p;
     color = c;
   }
 };
 
 class Pose : public Visualizable{
 public:
-  double shade;
+  double shade = 1;
   Ravelin::Pose3d pose;
-  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 1.0){
+  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1){
+    pose = Ravelin::Pose3d();
+    type = ePose;
     shade = sd;
     size = s;
     pose = p;
@@ -94,7 +106,8 @@ struct RobotData{
 
 class Robot {
   public:
-   std::vector<Visualizable> visualize;
+   std::vector<Visualizable*> visualize;
+   std::map<std::string, double> q_joints,qd_joints,u_joints;
 
     Robot(){
     }
@@ -183,6 +196,7 @@ class Robot {
     /// N x 6d kinematics
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
+
   protected:
     Moby::RCArticulatedBodyPtr        abrobot_;
     Moby::DynamicBodyPtr              dbrobot_;
@@ -227,7 +241,7 @@ class Robot {
 
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that
-    
+
   // Import necessary info and then compile model
     void Init();
 

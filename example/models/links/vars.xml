@@ -8,6 +8,8 @@
   </sim>
 
   <init>
+    <kinematic type="bool">false</kinematic>
+
     <base>
       <active type="bool">true</active>
       <x type="double">0 0 0.139 0 0 0</x>

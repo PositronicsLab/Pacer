@@ -456,13 +456,13 @@ void Controller::walk_toward(
       foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[i]->origin);
       Ravelin::Origin3d x0 = feet[i]->origin.data();
 
-      // Robot leans into movement
-      x0[0] += command[0]*-0.1;
-      x0[1] += command[1]*-0.1;
-      // lean forward on front feet if moving forward
-      if(x0[0] > 0 && command[0] > 0)
-        x0[2] += command[0]*0.1;
-      x0[1] += command[5]*-0.01;
+//      // Robot leans into movement
+//      x0[0] += command[0]*-0.1;
+//      x0[1] += command[1]*-0.1;
+//      // lean forward on front feet if moving forward
+//      if(x0[0] > 0 && command[0] > 0)
+//        x0[2] += command[0]*0.1;
+//      x0[1] += command[5]*-0.01;
 
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
@@ -638,9 +638,9 @@ void Controller::walk_toward(
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
       Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      visualize.push_back(Point( p,   Ravelin::Vector3d(0,1,0)));
-      visualize.push_back(Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0)));
-//     visualize.push_back(Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
+      visualize.push_back( new Point( p,   Ravelin::Vector3d(0,1,0)));
+      visualize.push_back( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0)));
+//     visualize.push_back( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
   }
   }

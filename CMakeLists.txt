@@ -104,10 +104,10 @@ set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(TARGETS Pacer DESTINATION lib)
 
 # PACER MODEL
-#add_library(PacerModel ${SOURCES-BASIC})
-#target_link_libraries(PacerModel Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
-#set_target_properties(PacerModel PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-#install(TARGETS PacerModel DESTINATION lib)
+add_library(PacerModel ${SOURCES-BASIC})
+target_link_libraries(PacerModel Moby Ravelin Opt OpenThreads cvars ${VISUALIZE_LIBS})
+set_target_properties(PacerModel PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(TARGETS PacerModel DESTINATION lib)
 
 set(REQURED_LIBS ${REQURED_LIBS} Pacer)
 # EXAMPLES
@@ -174,7 +174,7 @@ if(USE_GAZEBO)
 endif(USE_GAZEBO)
 
 # Test: Calling PacerModel only instead of using controller features
-#  add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
-#  target_link_libraries(test-pacer-model PacerModel Ravelin)
-#  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
+  add_executable(test-pacer-model ${CMAKE_SOURCE_DIR}/example/pacer-model/test.cpp)
+  target_link_libraries(test-pacer-model PacerModel Ravelin)
+  install(TARGETS test-pacer-model DESTINATION ${CMAKE_SOURCE_DIR}/example/pacer-model)
 

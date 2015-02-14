@@ -27,7 +27,6 @@ extern void controller(double time,
 extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
-#endif
 
 void render(std::vector<Pacer::Visualizable*> viz_vect){
   std::cout << "VISUALIZING" << std::endl;
@@ -57,6 +56,7 @@ void render(std::vector<Pacer::Visualizable*> viz_vect){
   }
   viz_vect.clear();
 }
+#endif
 
 // ============================================================================
  // ================================ CUSTOM FNS ================================

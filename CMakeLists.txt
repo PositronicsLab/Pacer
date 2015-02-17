@@ -34,6 +34,21 @@ find_package(Moby REQUIRED)
 link_directories(${MOBY_LIBRARY_DIRS})
 include_directories(SYSTEM ${MOBY_INCLUDE_DIRS})
 
+#add cvars
+find_package(CVars REQUIRED)
+link_directories(${CVARS_LIBRARY_DIRS})
+include_directories(SYSTEM ${CVARS_INCLUDE_DIRS})
+
+#add GLConsole
+find_package(GLConsole QUIET)
+link_directories(${GLConsole_LIBRARY_DIRS})
+include_directories(SYSTEM ${GLConsole_INCLUDE_DIRS})
+
+#add GLConsole
+find_package(LIBXML2 REQUIRED)
+link_directories(${LIBXML2_LIBRARY_DIRS})
+include_directories(SYSTEM ${LIBXML2_INCLUDE_DIRS})
+
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 # these are the setting for the in-source compiler flow control
@@ -116,20 +131,26 @@ IF(USE_DXL AND DXL_FOUND)
   add_definitions (-DUSE_DXL)
 ENDIF(USE_DXL AND DXL_FOUND)
 
-# libxml
+add_library(Pacer ${LIBSOURCES})
+
+# cvars
 IF(LIBXML2_FOUND)
   target_link_libraries (Pacer ${LIBXML2_LIBRARIES})
 ENDIF(LIBXML2_FOUND)
 
 # cvars
 IF(CVARS_FOUND)
-  target_link_libraries (Pacer ${LIBXML2_LIBRARIES})
+  target_link_libraries (Pacer ${CVARS_LIBRARIES})
 ENDIF(CVARS_FOUND)
+
+# cvars
+IF(GLConsole_FOUND)
+  target_link_libraries (Pacer ${GLConsole_LIBRARIES})
+ENDIF(GLConsole_FOUND)
 
 set(REQLIBS Moby Ravelin)
 
-add_library(Pacer ${LIBSOURCES})
-target_link_libraries(Pacer ${REQLIBS} Opt OpenThreads cvars)
+target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(TARGETS Pacer DESTINATION lib)
 

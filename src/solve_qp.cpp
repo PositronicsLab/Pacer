@@ -192,6 +192,7 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   return SOLVE_FLAG;
 }
 
+/*
 #include <Opt/QPActiveSet.h>
 
 Opt::QPActiveSet as_;
@@ -288,6 +289,7 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
   return SOLVE_FLAG;
 }
 
+*/
 // SPLITTING SOLVER
 #include <Moby/select>
 #include <Ravelin/MatrixNd.h>
@@ -379,6 +381,7 @@ bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravel
 
   return true;
 }
+
 /*
 void pgs(A, b, x0 = zeros(N,1), max_iter = floor(N/2), tol_rel = 0.0001, tol_abs= 10*eps, profile = false,
          x, err, iter, flag, convergence, msg){

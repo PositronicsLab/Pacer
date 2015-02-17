@@ -4,15 +4,22 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
+#include <random>
 
 using Pacer::Controller;
 using Pacer::Robot;
 using Pacer::EndEffector;
 
+// pointer to the simulator
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
- boost::shared_ptr<Controller> robot_ptr;
- Moby::RCArticulatedBodyPtr abrobot;
 
+// pointer to the Pacer controller
+ boost::shared_ptr<Controller> robot_ptr;
+
+// pointer to the articulated body in Moby
+Moby::RCArticulatedBodyPtr abrobot;
+
+// if this macro is defined, Pacer will interface to Moby to control the robot
 #ifdef DRIVE_ROBOT
 extern void controller(double time,
                        const Ravelin::VectorNd& q,
@@ -27,8 +34,6 @@ extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
-
-
 
 void render( std::vector<Pacer::VisualizablePtr> viz_vect){
    for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
@@ -60,6 +65,7 @@ void render( std::vector<Pacer::VisualizablePtr> viz_vect){
  // ================================ CUSTOM FNS ================================
  // ============================================================================
 
+ // adds perturbations to the robot for testing stability
  void apply_sim_perturbations(){
    static std::vector<Moby::JointPtr>& joints_ = robot_ptr->get_joints();
    int num_joints = joints_.size();
@@ -126,6 +132,7 @@ void render( std::vector<Pacer::VisualizablePtr> viz_vect){
  // ================================ CONTROLLER ================================
  // ============================================================================
 
+// implements a controller callback for Moby
 void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
   std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
@@ -172,11 +179,6 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                     qdd_des(num_joints);
   Ravelin::VectorNd u(num_joints);
 
-#ifdef USE_OSG_DISPLAY
-  //visualize.clear();
-#endif
-
-
 #ifdef DRIVE_ROBOT
   controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,*robot_ptr->gait_pose.get(),robot_ptr->gait_params);
 #endif
@@ -220,6 +222,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 // ================================ CALLBACKS =================================
 // ============================================================================
 
+// examines contact events (after they have been handled in Moby)
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
@@ -296,6 +299,8 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     }
   }
 
+  // adds additional contact points to the feet for testing ability of
+  // inverse dynamics controllers to handle extraneous points of contact
 //#define OVERSAMPLE_FEET
 #ifdef OVERSAMPLE_FEET
   static unsigned cpf = 1;
@@ -327,7 +332,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
 }
 
-#include <random>
+// sets friction parameters for the feet randomly (when used) 
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
 
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
@@ -340,6 +345,7 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
   return e;
 }
 
+// hooks into Moby's post integration step callback function
 void post_step_callback_fn(Moby::Simulator* s){}
 
 /// Event callback function for setting friction vars pre-event
@@ -360,6 +366,7 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 
 /// plugin must be "extern C"
 
+// this is called by Moby for a plugin
 void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
   // If use robot is active also init dynamixel controllers
@@ -426,6 +433,7 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   abrobot->update_link_poses();
 }
 
+// plugins must be declared 'extern "C"'
 extern "C" {
 
 void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)

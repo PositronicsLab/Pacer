@@ -1,0 +1,11 @@
+FILE/DIRECTORY	DESCRIPTION
+--------------------------------------------------------------------------
+atlas		A model of the Atlas robot (adapted from Gazebo)	
+atlas-pointfeet A model of the Atlas robot (adapted from Gazebo) with
+		  a point representation for the foot geometry
+links		
+links-ankles	A model of the R. Links robot with ankles
+links-moby
+setup.sh	Bash script to setup Gazebo environment variables
+	
+

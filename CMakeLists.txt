@@ -151,7 +151,6 @@ IF(DRIVE_ROBOT)
   set(REQLIBS ${REQLIBS} PacerDriveRobotPlugin)
 ENDIF(DRIVE_ROBOT)
 
-
 # Moby Plugin
 IF(USE_MOBY)
   add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)

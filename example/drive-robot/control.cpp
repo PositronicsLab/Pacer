@@ -2,6 +2,9 @@
  * Copyright 2014 Samuel Zapolsky
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * This code shows how to control Pacer to get a robot to walk in a Figure-8
+ * pattern.
  ****************************************************************************/
 #include <Pacer/utilities.h>
 #include <Pacer/Log.h>
@@ -22,7 +25,10 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     OUT_LOG(logDEBUG1) << ">> ENTERED USER CONTROLLER" ;
 
+    // n is the number of independent coordinates in the robot
     int n = qd.rows();
+
+    // nq is the number of joints in the robot
     int nq = n - 6;
 
     // World frame
@@ -30,15 +36,21 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
         environment_frame(new Ravelin::Pose3d());
     visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(*environment_frame.get())));
 
+    // com is the current position of the center-of-mass of the robot's base
     Ravelin::Vector3d com(q[nq+X],q[nq+Y],q[nq+Z],environment_frame);
+
+    // quat is the current orientation of the robot's base
     Ravelin::Quatd quat(q[nq+3],q[nq+4],q[nq+5],q[nq+6]);
+
+    // make a rigid body pose out of com and quat
     Ravelin::Pose3d pose(quat,com.data(),environment_frame);
     visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(pose)));
 
+    // get the base orientation as roll-pitch-yaw
     Ravelin::Vector3d rpy;
     quat.to_rpy(rpy[0],rpy[1],rpy[2]);
 
-    // Frame collocated with robot, preserves only yaw of robot.
+    // Collocate frame with robot, preserving only the yaw of robot.
     boost::shared_ptr<Ravelin::Pose3d>
         base_horizontal_frame(new Ravelin::Pose3d(Ravelin::AAngled(0,0,1,rpy[2]),com.data(),environment_frame));
 
@@ -59,11 +71,15 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     double max_strafe_speed = 0.025;
 
     // if FALSE, drive like a car (x and theta)
+    // Q: if TRUE, ???
     bool HOLONOMIC = false;
 
-    ////////////////////////
-    /// Assign WAYPOINTS ///
+    /////////////////////////////////////
+    /// Assign WAYPOINTS in the plane ///
     std::vector<Point> waypoints;
+
+    // Q: Sam, is it possible to assign the waypoints only once? (the first
+    // time that the controller is called?)
 
     // points on a figure eight
     for (double t=0.01; t<1.0; t+=0.05) {
@@ -85,8 +101,8 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
       if( distance_to_wp < 0.025){
       OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
       OUTLOG(next_waypoint,"this_wp",logDEBUG1);
-      std::cout << "this_wp" << next_waypoint << std::endl;
-      std::cout << "robot_pos" << com << std::endl;
+      std::cout << "this waypoint: " << next_waypoint << std::endl;
+      std::cout << "robot position: " << com << std::endl;
 
       waypoint_index = (waypoint_index+1)% num_waypoints;
 
@@ -122,6 +138,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     goto_direction.normalize();
 
     // Find difference
+    // Q: difference betwen what?
     double angle_to_goal = atan2(goto_direction[Y],goto_direction[X]);
 
     // If robot is facing toward goal already, walk in that direction
@@ -146,3 +163,4 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     std::cout << "<< EXIT USER CONTROLLER" ;
 }
+

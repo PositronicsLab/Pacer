@@ -537,8 +537,11 @@ void Robot::Init(){
   OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
   OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
+
+  
   // Init some values that need initing.
   movement_command.set_zero(6);
+  gait_pose = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d());
 
 }
 

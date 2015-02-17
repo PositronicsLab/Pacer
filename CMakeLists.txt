@@ -39,27 +39,31 @@ option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 # these are the setting for the in-source compiler flow control
 option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
 #option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
-option(LOGGING "Logging" ON)
-option(CONSOLE "GLConsole" OFF)
+option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(TIMING "use ctime timing functions" OFF)
-option(USE_DXL "use dynamixel drivers" OFF)
-option(USE_MOBY "build Moby plugin" OFF)
-option(USE_GAZEBO "build Gazebo plugin" OFF)
-option(DRIVE_ROBOT "Use drive-robot controller plugin" OFF)
-option(BUILD_EXAMPLES "Build simulation examples" OFF)
+option(BUILD_EXAMPLES "Build simulation examples" ON)
+  option(USE_DXL "use dynamixel drivers" OFF)
+  option(USE_MOBY "build Moby plugin" ON)
+  option(USE_GAZEBO "build Gazebo plugin" OFF)
+  option(DRIVE_ROBOT "Use drive-robot controller plugin" OFF)
+  #option(CONSOLE "Display a Console window for controlling robot CVars =EXPERIMENTAL=" OFF)
 
 # fix the C++ linking error on 64-bit Linux
 set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 
+# These are invisible options *experimental*
 IF(RANDOM_FRICTION)
   add_definitions( -DRANDOM_FRICTION)
 ENDIF(RANDOM_FRICTION)
-
 
 IF(CONSOLE)
   add_definitions( -DUSE_GLCONSOLE)
 ENDIF(CONSOLE)
 
+IF(SPLITTING_METHOD)
+  add_definitions( -DSPLITTING_METHOD )
+ENDIF(SPLITTING_METHOD)
+# end 
 add_definitions(-DBUILD_DOUBLE)
 add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
@@ -72,9 +76,6 @@ IF(LOGGING)
   add_definitions( -DLOGGING )
 ENDIF(LOGGING)
 
-IF(SPLITTING_METHOD)
-  add_definitions( -DSPLITTING_METHOD )
-ENDIF(SPLITTING_METHOD)
 
 include_directories(
                     include

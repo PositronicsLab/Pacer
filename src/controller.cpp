@@ -165,6 +165,16 @@ void Controller::control(double t,
       xdd_des[i] = foot_acc[ii];
       ii++;
     }
+
+    boost::shared_ptr<Ravelin::Pose3d> new_gait_pose(new Ravelin::Pose3d(gait_pose->q,gait_pose->x,base_horizontal_frame));
+    visualize.push_back( Pacer::VisualizablePtr( new Pose(*new_gait_pose.get(),0.25,0.2)));
+
+//    for(int i=0,ii=0;i<NUM_EEFS;i++){
+//      if(is_foot[i] == 0) continue;
+//      x_des[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(foot_pos[ii].data(),new_gait_pose));
+//      xd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,Ravelin::Vector3d(foot_vel[ii].data(),new_gait_pose));
+//      xdd_des[i] = Ravelin::Pose3d::transform_vector(base_frame,Ravelin::Vector3d(foot_acc[ii].data(),new_gait_pose));
+//   }
   }
   trajectory_ik(x_des,xd_des, xdd_des,data->q,q_des,qd_des,qdd_des);
 

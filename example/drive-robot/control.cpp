@@ -15,13 +15,13 @@ extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
 typedef std::pair<double,double> Point;
 void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd& qd,
                 Ravelin::VectorNd& command,
-                Ravelin::Pose3d& gait_pose,
+                boost::shared_ptr<Ravelin::Pose3d>& gait_pose,
                 Ravelin::VectorNd& params)
 {
-//  gait_pose = Ravelin::Pose3d();
-//  gait_pose.q = Ravelin::AAngled(0,1,0,0.3);
- // gait_pose.x[2] = 0.05;
-    const unsigned X=0,Y=1,Z=2,THETA=5;
+
+  gait_pose = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::AAngled(1,1,0,M_PI_8/2.0),Ravelin::Origin3d(0,0,0.01),Moby::GLOBAL));
+
+  const unsigned X=0,Y=1,Z=2,THETA=5;
 
     OUT_LOG(logDEBUG1) << ">> ENTERED USER CONTROLLER" ;
 

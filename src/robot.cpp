@@ -323,11 +323,6 @@ void Robot::update_poses(){
 //  base_frame = base_horizontal_frame;
 //  base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
   base_frame = base_link_frame;
-
-  //gait_pose->rpose = base_frame;
-
-  for(int i=0;i<NUM_EEFS;i++)
-    eefs_[i].origin.pose = base_frame;//gait_pose;
 }
 
 void Robot::reset_contact(){

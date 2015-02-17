@@ -25,7 +25,7 @@ extern void controller(double time,
                        const Ravelin::VectorNd& q,
                        const Ravelin::VectorNd& qd,
                        Ravelin::VectorNd& command,
-                       Ravelin::Pose3d& pose,
+                       boost::shared_ptr<Ravelin::Pose3d>& pose,
                        Ravelin::VectorNd& params);
 #endif
 
@@ -33,9 +33,9 @@ extern void controller(double time,
 extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
+void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1, double size=0.1);
 
-void render( std::vector<Pacer::VisualizablePtr> viz_vect){
+void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
    for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
    {
     switch((*it)->eType){
@@ -51,7 +51,7 @@ void render( std::vector<Pacer::VisualizablePtr> viz_vect){
     }
     case Pacer::Visualizable::ePose:{
       Pacer::Pose * v = static_cast<Pacer::Pose*>((it)->get());
-      draw_pose(v->pose,sim,v->shade);
+      draw_pose(v->pose,sim,v->shade,v->size);
       break;
     }
     default:   std::cout << "UNKNOWN VISUAL: " << (*it)->eType << std::endl; break;
@@ -180,7 +180,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   Ravelin::VectorNd u(num_joints);
 
 #ifdef DRIVE_ROBOT
-  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,*robot_ptr->gait_pose.get(),robot_ptr->gait_params);
+  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,robot_ptr->gait_pose,robot_ptr->gait_params);
 #endif
 
 #ifdef USE_OSG_DISPLAY
@@ -332,7 +332,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
 }
 
-// sets friction parameters for the feet randomly (when used) 
+// sets friction parameters for the feet randomly (when used)
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
 
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
@@ -552,7 +552,7 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   visualize_ray(point,vec,c,0.1,sim);
 }
 
-void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ,double lightness){
+void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ,double lightness, double size){
   Ravelin::Pose3d pose(p);
   assert(lightness >= 0.0 && lightness <= 2.0);
   pose.update_relative_pose(Moby::GLOBAL);
@@ -561,8 +561,8 @@ void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator>
   double alpha = (lightness > 1.0)? 1.0 : lightness,
          beta = (lightness > 1.0)? lightness-1.0 : 0.0;
 
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Moby::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),size,sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),size,sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),size,sim);
 }
 #endif // USE_OSG_DISPLAY

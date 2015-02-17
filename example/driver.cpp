@@ -23,7 +23,7 @@ extern void controller(double time,
                        const Ravelin::VectorNd& q,
                        const Ravelin::VectorNd& qd,
                        Ravelin::VectorNd& command,
-                       Ravelin::Pose3d& pose,
+                       boost::shared_ptr<Ravelin::Pose3d>& pose,
                        Ravelin::VectorNd& params);
 #endif
 
@@ -76,51 +76,29 @@ void init(std::string model_f,std::string vars_f){
 
 #ifdef USE_DXL
   // LINKS robot
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
 
-  dxl_->tare.push_back(M_PI/4 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI/4 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI/4 * MX_64R_RAD2UNIT+40);
-  dxl_->tare.push_back(M_PI/4 * MX_64R_RAD2UNIT+250);
+  // Set Dynamixel Names
+  std::vector<std::string> dxl_name = boost::assign::list_of
+     ("0LF_X_1")("0RF_X_1")("0LH_X_1")("0RH_X_1")
+     ("0LF_Y_2")("0RF_Y_2")("0LH_Y_2")("0RH_Y_2")
+     ("0LF_Y_3")("0RF_Y_3")("0LH_Y_3")("0RH_Y_3");
 
-  dxl_->tare.push_back(M_PI/2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI/2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI/2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(M_PI/2 * RX_24F_RAD2UNIT);
+  dxl_->names = dxl_name;
+  // Set Joint Angles
+  std::vector<int> dxl_tare = boost::assign::list_of
+      (0)(0)(0)(0)
+      (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
+      (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
 
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->tare = dxl_tare;
 
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::MX_64R);
-  dxl_->stype.push_back(DXL::Dynamixel::MX_64R);
+  // Set Dynamixel Type
+  std::vector<DXL::Dynamixel::Type> dxl_type = boost::assign::list_of
+    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)
+    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::MX_64R)(DXL::Dynamixel::MX_64R)
+    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F);
 
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-
-
-  dxl_->names.push_back("0LF_X_1");
-  dxl_->names.push_back("0RF_X_1");
-  dxl_->names.push_back("0LH_X_1");
-  dxl_->names.push_back("0RH_X_1");
-
-  dxl_->names.push_back("0LF_Y_2");
-  dxl_->names.push_back("0RF_Y_2");
-  dxl_->names.push_back("0LH_Y_2");
-  dxl_->names.push_back("0RH_Y_2");
-
-  dxl_->names.push_back("0LF_Y_3");
-  dxl_->names.push_back("0RF_Y_3");
-  dxl_->names.push_back("0LH_Y_3");
-  dxl_->names.push_back("0RH_Y_3");
+  dxl_->stype = dxl_type;
 
   for(int i=1;i<=dxl_->names.size();i++){
     dxl_->ids.push_back(i);
@@ -157,7 +135,7 @@ void controller(double t)
   static Ravelin::VectorNd u;
 
 #ifdef DRIVE_ROBOT
-  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,*robot_ptr->gait_pose.get(),robot_ptr->gait_params);
+  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,robot_ptr->gait_pose,robot_ptr->gait_params);
 #endif
   robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
 

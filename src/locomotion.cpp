@@ -426,45 +426,34 @@ void Controller::walk_toward(
 
       OUT_LOG(logDEBUG) << "\tPlanning next Spline";
       // creat new spline at top of history
+
       // take time at end of spline_t history
       double t0 = 0;
 
+      // Get starting point of spline
+
       if(!inited){ // first iteration
-        // Get Current Foot pos, Velocities & Accelerations
-//        foot_jacobian(x,feet[i],Moby::GLOBAL,workM_);
-//        workM_.transpose_mult(qd.select(feet[i]->chain_bool,workv_),xd);
-//        workM_.transpose_mult(qdd.select(feet[i]->chain_bool,workv_),xdd);
         xd.set_zero();
         xdd.set_zero();
       } else {
         if(STANCE_ON_CONTACT && t < *(spline_t[i].rbegin()->end()-1)){
           t0 = t;
-          x = foot_pos[i];
-          xd = foot_vel[i];
-          xdd = foot_acc[i];
         } else {
         // continue off of the end of the last spline
         t0 = *(spline_t[i].rbegin()->end()-1) - Moby::NEAR_ZERO;
+        }
         for(int d=0; d<3;d++){
           bool pass = Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x[d],xd[d],xdd[d]);
           assert(pass);
         }
-       }
       }
 
-      // Calculate foot-step info
+      // Calculate foot step info
+
       // Determine linear portion of step
-      boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame));
+      boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame));
       foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[i]->origin);
       Ravelin::Origin3d x0 = feet[i]->origin.data();
-
-//      // Robot leans into movement
-//      x0[0] += command[0]*-0.1;
-//      x0[1] += command[1]*-0.1;
-//      // lean forward on front feet if moving forward
-//      if(x0[0] > 0 && command[0] > 0)
-//        x0[2] += command[0]*0.1;
-//      x0[1] += command[5]*-0.01;
 
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 

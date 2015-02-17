@@ -153,7 +153,7 @@ ENDIF(DRIVE_ROBOT)
 
 # Moby Plugin
 IF(USE_MOBY)
-  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/pacer-plugin.cpp)
+  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/plugin.cpp)
 # osg
 IF(USE_OSG_DISPLAY AND OSG_FOUND)
     target_link_libraries (PacerMobyPlugin ${OSG_LIBRARIES})
@@ -172,7 +172,7 @@ ENDIF(USE_MOBY)
 
 # Gazebo Plugin
 IF(USE_GAZEBO)
-  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/pacer-plugin.cpp)
+  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/plugin.cpp)
 # NO USE FOR OSG YET
 # IF(USE_OSG_DISPLAY AND OSG_FOUND)
 #   target_link_libraries (PacerGazeboPlugin ${OSG_LIBRARIES})
@@ -194,11 +194,6 @@ IF(USE_GAZEBO)
 
   target_link_libraries(PacerGazeboPlugin ${REQLIBS} ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf ${EXTRA_LIBS})
   install(TARGETS PacerGazeboPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-gazebo)
-
-  add_library(contact SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/contact-plugin.cpp)
-
-  target_link_libraries(contact Pacer ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf)
-  install(TARGETS contact DESTINATION ${CMAKE_SOURCE_DIR}/example/control-gazebo)
 ENDIF(USE_GAZEBO)
 
 #driver with no simulator

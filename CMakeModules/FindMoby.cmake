@@ -9,7 +9,7 @@
 
 find_path(
   MOBY_INCLUDE_DIR
-  NAMES Simulator.h
+  NAMES Moby/EventDrivenSimulator.h
   PATHS /usr/local/include /usr/include
 )
 
@@ -28,15 +28,15 @@ if( MOBY_INCLUDE_DIR )
     set(MOBY_LIBRARIES ${MOBY_LIBRARY})
   endif(MOBY_LIBRARY)
 else(MOBY_INCLUDE_DIR)
-  message(FATAL_ERROR "FindMoby: Could not find Simulator.h")
+  message(FATAL_ERROR "FindMoby: Could not find EventDrivenSimulator.h")
 endif(MOBY_INCLUDE_DIR)
 	    
 if(MOBY_FOUND)
   if(NOT MOBY_FIND_QUIETLY)
-    message(STATUS "FindMoby: Found both Simulator.h and libMoby")
+    message(STATUS "FindMoby: Found both EventDrivenSimulator.h and libMoby")
   endif(NOT MOBY_FIND_QUIETLY)
 else(MOBY_FOUND)
   if(MOBY_FIND_REQUIRED)
-    message(FATAL_ERROR "FindMoby: Could not find Simulator.h and/or libMoby")
+    message(FATAL_ERROR "FindMoby: Could not find EventDrivenSimulator.h and/or libMoby")
   endif(MOBY_FIND_REQUIRED)
 endif(MOBY_FOUND)

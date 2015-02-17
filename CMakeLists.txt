@@ -17,37 +17,37 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
 find_package(Boost COMPONENTS system REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
-include_directories(SYSTEM ${BOOST_INCLUDE_DIR})
+include_directories(${BOOST_INCLUDE_DIR})
 
 #find OSG
-find_package(OSG)
+find_package(osg)
 link_directories(${OSG_LIBRARY_DIRS})
-include_directories(SYSTEM ${OSG_INCLUDE_DIR})
+include_directories(${OSG_INCLUDE_DIR})
 
 #add ravelin
 find_package(Ravelin REQUIRED)
-link_directories(${RAVELIN_LIBRARY_DIRS})
-include_directories(SYSTEM ${RAVELIN_INCLUDE_DIRS})
+link_directories(${RAVELIN_LIBRARY_DIR})
+include_directories(${RAVELIN_INCLUDE_DIR})
 
 #add moby
 find_package(Moby REQUIRED)
-link_directories(${MOBY_LIBRARY_DIRS})
-include_directories(SYSTEM ${MOBY_INCLUDE_DIRS})
+link_directories(${MOBY_LIBRARY_DIR})
+include_directories(${MOBY_INCLUDE_DIR})
 
 #add cvars
 find_package(CVars REQUIRED)
 link_directories(${CVARS_LIBRARY_DIRS})
-include_directories(SYSTEM ${CVARS_INCLUDE_DIRS})
+include_directories(${CVARS_INCLUDE_DIRS})
 
 #add GLConsole
 find_package(GLConsole QUIET)
 link_directories(${GLConsole_LIBRARY_DIRS})
-include_directories(SYSTEM ${GLConsole_INCLUDE_DIRS})
+include_directories(${GLConsole_INCLUDE_DIRS})
 
 #add GLConsole
-find_package(LIBXML2 REQUIRED)
-link_directories(${LIBXML2_LIBRARY_DIRS})
-include_directories(SYSTEM ${LIBXML2_INCLUDE_DIRS})
+find_package(LibXml2 REQUIRED)
+link_directories(${LIBXML2_LIBRARY_DIR})
+include_directories(${LIBXML2_INCLUDE_DIR})
 
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
@@ -148,7 +148,7 @@ IF(GLConsole_FOUND)
   target_link_libraries (Pacer ${GLConsole_LIBRARIES})
 ENDIF(GLConsole_FOUND)
 
-set(REQLIBS Moby Ravelin)
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES})
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

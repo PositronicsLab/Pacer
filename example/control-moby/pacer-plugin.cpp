@@ -4,9 +4,6 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
-#include <dxl/Dynamixel.h>
-
-#define DRIVE_ROBOT
 
 using Pacer::Controller;
 using Pacer::Robot;
@@ -20,43 +17,44 @@ using Pacer::EndEffector;
 extern void controller(double time,
                        const Ravelin::VectorNd& q,
                        const Ravelin::VectorNd& qd,
-                       Ravelin::VectorNd& command);
+                       Ravelin::VectorNd& command,
+                       Ravelin::Pose3d& pose,
+                       Ravelin::VectorNd& params);
 #endif
 
-#ifdef VISUALIZE_MOBY
-extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-extern void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-extern void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
-#endif
+#ifdef USE_OSG_DISPLAY
+extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
+void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
+void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
+void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1);
 
-void render(std::vector<Pacer::Visualizable*> viz_vect){
-  std::cout << "VISUALIZING" << std::endl;
-  for(int i=0;i<viz_vect.size();i++){
-    switch(viz_vect[i]->type){
+
+
+void render( std::vector<Pacer::VisualizablePtr> viz_vect){
+   for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
+   {
+    switch((*it)->eType){
     case Pacer::Visualizable::eRay:{
-      Pacer::Ray * v = static_cast<Pacer::Ray*>(viz_vect[i]);
+      Pacer::Ray * v = static_cast<Pacer::Ray*>((it)->get());
       visualize_ray(v->point1,v->point2,v->color,v->size,sim);
-      std::cout << "VISUALIZING RAY" << std::endl;
       break;
     }
     case Pacer::Visualizable::ePoint:{
-      Pacer::Point * v = static_cast<Pacer::Point*>(viz_vect[i]);
+      Pacer::Point * v = static_cast<Pacer::Point*>((it)->get());
       visualize_ray(v->point,v->point,v->color,v->size,sim);
-      std::cout << "VISUALIZING POINT" << std::endl;
       break;
     }
     case Pacer::Visualizable::ePose:{
-      Pacer::Pose * v = static_cast<Pacer::Pose*>(viz_vect[i]);
+      Pacer::Pose * v = static_cast<Pacer::Pose*>((it)->get());
       draw_pose(v->pose,sim,v->shade);
-      std::cout << "VISUALIZING POSE" << std::endl;
       break;
     }
-    default:   std::cout << "UNKNOWN VISUAL" << std::endl; break;
+    default:   std::cout << "UNKNOWN VISUAL: " << (*it)->eType << std::endl; break;
     }
-//    delete viz_vect[i];
-  }
-  viz_vect.clear();
+   }
+   viz_vect.clear();
 }
+#endif
 
 // ============================================================================
  // ================================ CUSTOM FNS ================================
@@ -174,15 +172,20 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
                     qdd_des(num_joints);
   Ravelin::VectorNd u(num_joints);
 
-#ifdef VISUALIZE_MOBY
-//  render(robot_ptr->visualize);
+#ifdef USE_OSG_DISPLAY
+  //visualize.clear();
 #endif
+
 
 #ifdef DRIVE_ROBOT
-  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command);
+  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,*robot_ptr->gait_pose.get(),robot_ptr->gait_params);
 #endif
-  robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
 
+#ifdef USE_OSG_DISPLAY
+  render(visualize);
+#endif
+
+  robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
   // Re-map goals robot->simulation joints
   {
     q_des = remap_values(joint_map,q_des,workv_,true);
@@ -280,7 +283,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   for(int i=0, ii = 0;i<eefs_.size();i++){
     if(eefs_[i].active){
       for(int j=0;j<eefs_[i].point.size();j++){
-#ifdef VISUALIZE_MOBY
+#ifdef USE_OSG_DISPLAY
       visualize_ray(  eefs_[i].point[j],
                       eefs_[i].point[j] + eefs_[i].impulse[j]*10.0,
                       Ravelin::Vector3d(1,0.5,0),
@@ -430,3 +433,128 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   init_cpp(read_map,time);
 }
 } // end extern C
+
+
+#ifdef USE_OSG_DISPLAY
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// Visualization /////////////////////////////////
+
+#include <boost/shared_ptr.hpp>
+#include <Moby/EventDrivenSimulator.h>
+
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+#include <osg/MatrixTransform>
+#include <osg/ShapeDrawable>
+#include <osg/PositionAttitudeTransform>
+#include <osg/Plane>
+#include <osg/LineSegment>
+#include <osg/LineWidth>
+
+using namespace Moby;
+using namespace Ravelin;
+const double VIBRANCY = 1;
+
+/// Draws a ray directed from a contact point along the contact normal
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c,double point_radius, boost::shared_ptr<EventDrivenSimulator> sim ) {
+
+  // random color for this contact visualization
+  double r = c[0] * VIBRANCY;
+  double g = c[1] * VIBRANCY;
+  double b = c[2] * VIBRANCY;
+  osg::Vec4 color = osg::Vec4( r, g, b, 1.0/point_radius );
+
+  const double point_scale = 0.01;
+
+  // the osg node this event visualization will attach to
+  osg::Group* group_root = new osg::Group();
+
+  // turn off lighting for this node
+  osg::StateSet *point_state = group_root->getOrCreateStateSet();
+  point_state->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
+
+  // a geode for the visualization geometry
+  osg::Geode* point_geode = new osg::Geode();
+
+  // add some hints to reduce the polygonal complexity of the visualization
+  osg::TessellationHints *hints = new osg::TessellationHints();
+  hints->setTessellationMode( osg::TessellationHints::USE_TARGET_NUM_FACES );
+  hints->setCreateNormals( true );
+  hints->setDetailRatio( 0.001 );
+
+  osg::Sphere* point_geometry = new osg::Sphere( osg::Vec3( 0,0,0 ), point_radius );
+  osg::ShapeDrawable* point_shape = new osg::ShapeDrawable( point_geometry, hints );
+  point_shape->setColor( color );
+  point_geode->addDrawable( point_shape );
+
+  osg::PositionAttitudeTransform* point_transform;
+  point_transform = new osg::PositionAttitudeTransform();
+  point_transform->setPosition( osg::Vec3( point[0], point[1], point[2] ) );
+  point_transform->setScale( osg::Vec3( point_scale, point_scale, point_scale ) );
+
+  // add the geode to the transform
+  point_transform->addChild( point_geode );
+
+  // add the transform to the root
+  group_root->addChild( point_transform );
+
+  // add the root to the transient data scene graph
+  sim->add_transient_vdata( group_root );
+
+  // ----- LINE -------
+
+//  osg::Group* vec_root = new osg::Group();
+  osg::Geode* vec_geode = new osg::Geode();
+  osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+  osg::ref_ptr<osg::DrawArrays> drawArrayLines =
+      new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP);
+
+  osg::ref_ptr<osg::Vec3Array> vertexData = new osg::Vec3Array;
+
+  geom->addPrimitiveSet(drawArrayLines);
+  geom->setVertexArray(vertexData);
+
+  //loop through points
+  vertexData->push_back(osg::Vec3d(point[0],point[1],point[2]));
+  vertexData->push_back(osg::Vec3d(vec[0],vec[1],vec[2]));
+
+  drawArrayLines->setFirst(0);
+  drawArrayLines->setCount(vertexData->size());
+
+  // Add the Geometry (Drawable) to a Geode and return the Geode.
+  vec_geode->addDrawable( geom.get() );
+  // the osg node this event visualization will attach to
+
+  // add the root to the transient data scene graph
+  // create the visualization transform
+  osg::PositionAttitudeTransform* vec_transform;
+  vec_transform = new osg::PositionAttitudeTransform();
+
+  // add the geode to the transform
+  vec_transform->addChild( vec_geode );
+
+  // add the transform to the root
+  group_root->addChild( vec_transform );
+
+  // add the root to the transient data scene graph
+  sim->add_transient_vdata( group_root );
+}
+
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
+  visualize_ray(point,vec,c,0.1,sim);
+}
+
+void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ,double lightness){
+  Ravelin::Pose3d pose(p);
+  assert(lightness >= 0.0 && lightness <= 2.0);
+  pose.update_relative_pose(Moby::GLOBAL);
+  Ravelin::Matrix3d Rot(pose.q);
+  Rot*= 0.3;
+  double alpha = (lightness > 1.0)? 1.0 : lightness,
+         beta = (lightness > 1.0)? lightness-1.0 : 0.0;
+
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Moby::GLOBAL)/10,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),sim);
+}
+#endif // USE_OSG_DISPLAY

@@ -7,6 +7,8 @@
 #include<Pacer/utilities.h>
 using namespace Pacer;
 
+extern std::vector<Pacer::VisualizablePtr> visualize;
+
 void Controller::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
   if(dt==0)
@@ -627,7 +629,7 @@ void Controller::walk_toward(
 
     OUT_LOG(logDEBUG) << T1[0] <<" : " << t << " : "<< T2[T2.rows()-1] << " -- " << spline_t[i].size();
 
-    for(double t=T1[0]+Moby::NEAR_ZERO ; t<=T2[T2.rows()-1] ; t += 0.01){
+    for(double t=T1[0]+Moby::NEAR_ZERO ; t<=T2[T2.rows()-1] ; t += 0.05){
       Ravelin::Vector3d x,xd,xdd;
       for(int d=0;d<3;d++){
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
@@ -636,11 +638,11 @@ void Controller::walk_toward(
       xd.pose = foot_vel[i].pose;
       xdd.pose = foot_acc[i].pose;
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+//      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      visualize.push_back( new Point( p,   Ravelin::Vector3d(0,1,0)));
-      visualize.push_back( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0)));
-//     visualize.push_back( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
+      visualize.push_back( Pacer::VisualizablePtr( new Point( p,   Ravelin::Vector3d(0,1,0))));
+//      visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
+//     visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
   }
   }

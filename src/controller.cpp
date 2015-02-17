@@ -7,8 +7,11 @@
 #include <Pacer/utilities.h>
 #include <sys/time.h>
 
+
 using namespace Pacer;
 
+
+extern std::vector<Pacer::VisualizablePtr> visualize;
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================
@@ -80,8 +83,8 @@ void Controller::control(double t,
     xd_des[i].set_zero();
     xdd_des[i].set_zero();
     x_des[i].pose = xd_des[i].pose = xdd_des[i].pose = base_frame;
-    visualize.push_back( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2));
-    visualize.push_back( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2));
+    visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2)));
+    visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2)));
   }
 
   std::vector<EndEffector*> feet;
@@ -90,9 +93,9 @@ void Controller::control(double t,
     feet.push_back(&eefs_[i]);
     feet[ii]->origin.pose = base_frame;
 
-    visualize.push_back( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
+    visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
                     Ravelin::Vector3d(1,0,0),
-                    0.1));
+                    0.1)));
 
     ii++;
   }
@@ -180,16 +183,16 @@ void Controller::control(double t,
     for(int i=0;i<NUM_EEFS;i++){
       if(is_foot[i] == 0 || !eefs_[i].stance) continue;
       workv3_ = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-      visualize.push_back( new Point(workv3_,
+      visualize.push_back( Pacer::VisualizablePtr( new Point(workv3_,
                       Ravelin::Vector3d(1,0,1),
-                      0.5));
+                      0.5)));
       CoF_x += workv3_;
       ii++;
     }
     CoF_x /= (double)ii;
 
-  visualize.push_back( new Point(CoF_x,
-                  Ravelin::Vector3d(1,0.5,0)));
+  visualize.push_back( Pacer::VisualizablePtr( new Point(CoF_x,
+                  Ravelin::Vector3d(1,0.5,0))));
 
     center_of_feet_queue.push(CoF_x);
     sum_center_of_feet += CoF_x;
@@ -205,8 +208,8 @@ void Controller::control(double t,
     if(center_of_feet_queue.size() == 0 || ii == 0)
       center_of_feet_x = data->center_of_mass_x;
 
-    visualize.push_back( new Point(center_of_feet_x,
-                  Ravelin::Vector3d(1,0,0)));
+    visualize.push_back( Pacer::VisualizablePtr( new Point(center_of_feet_x,
+                  Ravelin::Vector3d(1,0,0))));
 
     OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
 

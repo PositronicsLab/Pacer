@@ -7,6 +7,7 @@
 #define ROBOT_H
 
 #include <Pacer/project_common.h>
+#include <Pacer/Visualizable.h>
 namespace Pacer{
 
 /**
@@ -35,53 +36,6 @@ struct EndEffector{
     int                   nk;
 };
 
-class Visualizable{
-public:
-  enum Type{
-    ePoint,
-    eRay,
-    ePose
-  } type = ePoint;
-  double size;
-  double shade;
-  Ravelin::Vector3d color;
-};
-
-class Ray : public Visualizable{
-public:
-  Ravelin::Vector3d point1,point2;
-  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.1){
-    type = eRay;
-    size = s;
-    point2 = p2;
-    point1 = p1;
-    color = c;
-  }
-};
-
-class Point : public Visualizable{
-public:
-  Ravelin::Vector3d point;
-  Point(Ravelin::Vector3d p,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.1){
-    type = ePoint;
-    size = s;
-    point = p;
-    color = c;
-  }
-};
-
-class Pose : public Visualizable{
-public:
-  double shade = 1;
-  Ravelin::Pose3d pose;
-  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1){
-    pose = Ravelin::Pose3d();
-    type = ePose;
-    shade = sd;
-    size = s;
-    pose = p;
-  }
-};
 /**
  * @brief The RobotData struct stores const data for use by the controller.
  */
@@ -106,11 +60,18 @@ struct RobotData{
 
 class Robot {
   public:
-   std::vector<Visualizable*> visualize;
-   std::map<std::string, double> q_joints,qd_joints,u_joints;
 
-    Robot(){
-    }
+    Ravelin::VectorNd movement_command;
+    boost::shared_ptr<Ravelin::Pose3d> gait_pose;
+    // width, length, df, step_height,
+    Ravelin::VectorNd gait_params;
+
+    std::map<std::string, double> q_joints,qd_joints,u_joints;
+
+    std::string robot_vars_file, robot_model_file;
+
+    Robot(){}
+
     Robot(const std::string& model_f, const std::string& vars_f){
       robot_model_file = std::string(model_f);
       robot_vars_file = std::string(vars_f);
@@ -147,8 +108,6 @@ class Robot {
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
         boost::shared_ptr<Robot>& robot);
-
-    std::string robot_vars_file, robot_model_file;
   protected:
     /**
      * @brief Update robot internal model using 'generalized' (minimal) parameters
@@ -258,7 +217,6 @@ private:
     void compile();
 
     void init_end_effector(EndEffector& eef);
-
 };
 }
 #endif // ROBOT_H

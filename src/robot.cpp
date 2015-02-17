@@ -7,6 +7,7 @@
 #include <Pacer/utilities.h>
 using namespace Pacer;
 
+std::vector<Pacer::VisualizablePtr> visualize;
 void Robot::calc_com(){
 
   new_data->center_of_mass_x.set_zero();
@@ -57,10 +58,10 @@ void Robot::calc_com(){
 
   // ZMP and COM
   Ravelin::Vector3d CoM_2D(new_data->center_of_mass_x[0],new_data->center_of_mass_x[1],new_data->center_of_mass_x[2]-0.10,environment_frame);
-  visualize.push_back( new Ray(CoM_2D,new_data->center_of_mass_x,Ravelin::Vector3d(0,0,1)));
-//  visualize.push_back( new Ray(CoM_2D + new_data->center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
-//  visualize.push_back( new Ray(CoM_2D + new_data->center_of_mass_xd*0.1 + new_data->center_of_mass_xdd*0.01,CoM_2D + new_data->center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
-  visualize.push_back( new Ray(CoM_2D+Ravelin::Vector3d(new_data->zero_moment_point[0],new_data->zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0)));
+  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D,new_data->center_of_mass_x,Ravelin::Vector3d(0,0,1))));
+//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + new_data->center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
+//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + new_data->center_of_mass_xd*0.1 + new_data->center_of_mass_xdd*0.01,CoM_2D + new_data->center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
+  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D+Ravelin::Vector3d(new_data->zero_moment_point[0],new_data->zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
 }
 
 double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const {
@@ -261,9 +262,9 @@ void Robot::update(
     center_of_contact.normal[0] = Ravelin::Vector3d(0,0,1,environment_frame);
     center_of_contact.active = false;
   }
-  visualize.push_back( new Pose(*base_frame,0.8));
-  visualize.push_back( new Pose(*base_horizontal_frame,1.5));
-  visualize.push_back( new Pose(Moby::GLOBAL,1.0));
+  visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_frame,0.8)));
+  visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_horizontal_frame,1.5)));
+  visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
 
        // CONTACTS
        if(NC != 0){
@@ -279,19 +280,19 @@ void Robot::update(
 
          // Draw Contact Polygon
          for(int i=0;i<NC;i++){
-           visualize.push_back( new Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
+           visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
                          active_eefs[(i+1)%NC]->point[0]  + Ravelin::Vector3d(0,0,0.001),
-                         Ravelin::Vector3d(0.5,0.5,1)));
+                         Ravelin::Vector3d(0.5,0.5,1))));
          }
 //          Draw all Contacts
          for(int i=0;i<NC;i++){
            for(int j=0;j<active_eefs[i]->point.size();j++){
-//             visualize.push_back( new Ray(active_eefs[i]->contacts[j],
+//             visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->contacts[j],
 //                           active_eefs[i]->point[0],
 //                           Ravelin::Vector3d(1,1,1)));
            }
          }
-//         visualize.push_back( new Ray(center_of_contact.point[0],
+//         visualize.push_back( Pacer::VisualizablePtr( new Ray(center_of_contact.point[0],
 //                    center_of_contact.normal[0]*0.1 + center_of_contact.point[0],
 //                    Ravelin::Vector3d(1,1,0)));
        }
@@ -323,8 +324,10 @@ void Robot::update_poses(){
 //  base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
   base_frame = base_link_frame;
 
+  //gait_pose->rpose = base_frame;
+
   for(int i=0;i<NUM_EEFS;i++)
-    eefs_[i].origin.pose = base_frame;
+    eefs_[i].origin.pose = base_frame;//gait_pose;
 }
 
 void Robot::reset_contact(){
@@ -373,6 +376,14 @@ void Robot::Init(){
 
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
+
+#ifdef LOGGING
+    FILE * pFile;
+    pFile = fopen ("out.log","w");
+    fprintf(pFile, "");
+    fflush(pFile);
+    fclose (pFile);
+#endif
 
   OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
   OUT_LOG(logDEBUG1) << "logDEBUG1";
@@ -531,6 +542,9 @@ void Robot::Init(){
   OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
   OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
+  // Init some values that need initing.
+  movement_command.set_zero(6);
+
 }
 
 boost::shared_ptr<const RobotData> Robot::gen_vars_from_model(const std::map<std::string, double>& q,

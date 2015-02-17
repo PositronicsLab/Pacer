@@ -5,10 +5,19 @@
  ****************************************************************************/
 #include <Pacer/utilities.h>
 #include <Pacer/Log.h>
+#include <Pacer/Visualizable.h>
+
+extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
 
 typedef std::pair<double,double> Point;
-void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd& qd, Ravelin::VectorNd& command)
+void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd& qd,
+                Ravelin::VectorNd& command,
+                Ravelin::Pose3d& gait_pose,
+                Ravelin::VectorNd& params)
 {
+//  gait_pose = Ravelin::Pose3d();
+//  gait_pose.q = Ravelin::AAngled(0,1,0,0.3);
+ // gait_pose.x[2] = 0.05;
     const unsigned X=0,Y=1,Z=2,THETA=5;
 
     OUT_LOG(logDEBUG1) << ">> ENTERED USER CONTROLLER" ;
@@ -19,10 +28,12 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     // World frame
     boost::shared_ptr<Ravelin::Pose3d>
         environment_frame(new Ravelin::Pose3d());
+    visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(*environment_frame.get())));
 
     Ravelin::Vector3d com(q[nq+X],q[nq+Y],q[nq+Z],environment_frame);
     Ravelin::Quatd quat(q[nq+3],q[nq+4],q[nq+5],q[nq+6]);
     Ravelin::Pose3d pose(quat,com.data(),environment_frame);
+    visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(pose)));
 
     Ravelin::Vector3d rpy;
     quat.to_rpy(rpy[0],rpy[1],rpy[2]);
@@ -85,13 +96,13 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
       OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
       OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
       OUT_LOG(logDEBUG1) << "waypoint_index = " << waypoint_index;
-//      Robot::visualize.push_back( new Ray(next_waypoint,data->center_of_mass_x,Ravelin::Vector3d(1,0.5,0)));
+      visualize.push_back(Pacer::VisualizablePtr(new Pacer::Ray(next_waypoint,com,Ravelin::Vector3d(1,0.5,0))));
       std::cout << "next_wp" << next_waypoint << std::endl;
 
       for(int i=0;i<num_waypoints;i++){
           Ravelin::Vector3d wp(waypoints[i].first,waypoints[i].second,0,environment_frame);
           std::cout << "\twp" << wp << std::endl;
-//      Robot::visualize.push_back( new Point(wp,Ravelin::Vector3d(1,0.5,0),1.0);
+      visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),1.0)));
       }
 
       goto_point = next_waypoint;

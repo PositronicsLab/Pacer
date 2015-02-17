@@ -127,9 +127,6 @@ class Controller : public Robot{
     bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& NT,
                              const Ravelin::MatrixNd& D_, const Ravelin::VectorNd& fext, double dt, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf);
 
-  public:
-    Ravelin::VectorNd movement_command;
-
   private:
     std::vector<boost::shared_ptr<ControllerModule> > controllers;
     Ravelin::SForced lead_force_;

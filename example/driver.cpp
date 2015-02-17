@@ -4,9 +4,9 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
-#include <dxl/Dynamixel.h>
 
 #ifdef USE_DXL
+#include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;
 # define DEVICE_NAME "/dev/tty.usbserial-A9YL9ZZV"
 #endif

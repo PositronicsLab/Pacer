@@ -1,7 +1,0 @@
-FILE/DIRECTORY	DESCRIPTION
---------------------------------------------------------------------------
-CMakeLists.txt	CMake build file for Pacer
-example		Data files and examples for Pacer
-include		Header files for calling functions in Pacer
-src		Pacer source code
-

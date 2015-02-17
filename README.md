@@ -1,35 +1,24 @@
 #Pacer Project Repository
-by Sam Zapolsky
+by Sam Zapolsky @ the [Positronics Lab]
+
+[Positronics Lab]: http://robotics.gwu.edu/positronics/
 
 This repository hosts code for [Pacer] an open source robot locomotion library for simulation and physical robots.
 
 [Pacer]: https://github.com/PositronicsLab/Pacer
 
-Originally developed on a 64 bit Ubuntu 14.04. 
+###Dependencies 
 
-###Usage
+##Required 
 
-After running, from the root directory of the rlinks library,
+- [Ravelin] 
+- [Moby] 
+- Boost 
+- [CVars] 
 
-```
-mkdir build && cd build
-```
-```
-cmake ..
-sudo make install
-```
+##Optional 
 
-you can access the library by using the examples found in the [test] directory.
-
-[test]: https://github.com/gwsd2015/rlinks/tree/master/test
-
-###Dependencies (* required) 
-
-- [Ravelin] *
-- [Moby] *
-- Boost *
 - Open Scene Graph
-- [CVars] *
 - [GLConsole] 
 - [DXL]
 
@@ -38,6 +27,26 @@ you can access the library by using the examples found in the [test] directory.
 [CVars]: https://github.com/arpg/GLConsole
 [GLConsole]: https://github.com/arpg/GLConsole
 [DXL]: https://github.com/samzapo/DynamixelDriver
+
+###Usage
+
+access the library by using the examples found in the [examples] directory:
+
+ EXAMPLE       | LOCATION |  DESCRIPTION
+-------------- | -------- | ---------------------------------------------------------
+ control-moby  |          |  Moby controller plugin that communictes with Pacer
+ control-gazebo|          |  Gazebo Model Plugin for an SDF model that communicates with Pacer
+ driver.cpp    |          |  Stand-alone Pacer with no simulator, example for use with hardware
+ models        |          |  Pre-implemented robot models and vars files (see [models/README])
+ drive-robot   |          |  Simple library for driving the locomotion system of Pacer (called by the simulation plugins and driver.cpp).
+
+ [models/README]: https://github.com/PositronicsLab/Pacer/tree/master/examples/models/README
+
+## Exporting Data to MATLAB
+ 
+ Vectors and Matrices are output in a syntax readable by Matlab for copy and pasting.  The examples in [scripts] demonstrate exporting output from pacer logs to MATLAB readable delimited files.
+
+[scripts]: https://github.com/PositronicsLab/Pacer/tree/master/examples/test-scripts
 
 ### File Structure
 

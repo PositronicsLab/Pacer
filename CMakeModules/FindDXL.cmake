@@ -28,7 +28,7 @@ if( DXL_INCLUDE_DIR )
     set(DXL_LIBRARIES ${DXL_LIBRARY})
   endif(DXL_LIBRARY)
 else(DXL_INCLUDE_DIR)
-  message(FATAL_ERROR "FindDXL: Could not find VectorNd.h")
+  message(FATAL_ERROR "FindDXL: Could not find dxl/Dynamixel.h")
 endif(DXL_INCLUDE_DIR)
 	    
 if(DXL_FOUND)

@@ -1,0 +1,91 @@
+<!-- A box just sitting on the ground.  -->
+<!-- The Links(Lynx) robot -->
+
+<XML>
+  <DRIVER>
+    <camera position="-8 8 6" target="0 0 0" up="0 0 1" />
+    <window location="0 0" size="1000 700" />
+  </DRIVER>
+
+  <MOBY>
+    <!-- multiple servo rigid bodies -->
+    <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+    <EulerIntegrator id="euler" />
+    <RungeKuttaIntegrator id="rk4" />
+    <RungeKuttaFehlbergIntegrator id="rkf" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+    <BulirschStoerIntegrator id="bs" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+
+    <GravityForce id="gravity" accel="0 0 -9.81" />
+<!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
+
+   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
+      <Body body-id="hopper" />
+      <Body body-id="ground" />
+      <DisabledPair object1-id="hopper" object2-id="hopper"/>
+    </GeneralizedCCD>
+
+    <CollisionDetectionPlugin id="simpleccd" plugin="../libHopperColdetPlugin.so" >
+      <Body body-id="hopper" />
+      <Body body-id="ground" />
+      <DisabledPair object1-id="hopper" object2-id="hopper"/>
+    </CollisionDetectionPlugin>
+
+  <EventDrivenSimulator integrator-id="rkf" collision-detector-id="simpleccd" max-event-time="1">
+    <RecurrentForce recurrent-force-id="gravity" />
+<!--    <RecurrentForce recurrent-force-id="drag" />-->
+    <DisabledPair object1-id="hopper" object2-id="hopper"/>
+    <DynamicBody dynamic-body-id="hopper" />
+    <DynamicBody dynamic-body-id="ground" />
+    <ContactParameters object1-id="hopper" object2-id="ground" mu-coulomb="10" mu-viscous="10" epsilon="0.0"/>
+  </EventDrivenSimulator>
+
+    <!-- the ROBOT [R. LINKS] "LYNX" -->
+    <Box id="base" xlen="1" ylen="1" zlen="0.25" mass="10"/>
+    <Box id="joint" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.1"/>
+    <!-- Leg Primitives -->
+    <Box id="leg" xlen="1" ylen="0.03" zlen="0.03" mass="0.3"/>
+    <Sphere id="foot" radius="0.03" mass="0.05" num-points="100"/>
+
+    <RCArticulatedBody id="hopper" floating-base="true" fdyn-algorithm="crb"
+      fdyn-algorithm-frame="link" translate="0.0 0.0 2">
+
+      <!-- the body -->
+      <RigidBody id="BASE" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0.1 0.1 0" visualization-id="base" >
+        <CollisionGeometry primitive-id="base" />
+        <InertiaFromPrimitive primitive-id="base" />
+      </RigidBody>
+      <!-- LF leg -->
+      <RevoluteJoint id="ROLL_JOINT" q-tare="0"  location="0 0 0" inboard-link-id="BASE" outboard-link-id="ROLL_LINK" axis="1 0 0" />
+      <RigidBody id="ROLL_LINK" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="joint">
+        <CollisionGeometry primitive-id="joint" />
+        <InertiaFromPrimitive primitive-id="joint" />
+      </RigidBody>
+      <RevoluteJoint id="PITCH_JOINT" q-tare="0"  location="0 0 0" inboard-link-id="ROLL_LINK" outboard-link-id="PITCH_LINK" axis="0 1 0" />
+      <RigidBody id="PITCH_LINK" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="joint">
+        <CollisionGeometry primitive-id="joint" />
+        <InertiaFromPrimitive primitive-id="joint" />
+      </RigidBody>
+      <PrismaticJoint id="PISTON_JOINT" q-tare="0" location="0 0 0" inboard-link-id="PITCH_LINK" outboard-link-id="LEG" axis="1 0 0" />
+      <RigidBody id="LEG" position="-0.5 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg">
+        <CollisionGeometry primitive-id="leg" />
+        <InertiaFromPrimitive primitive-id="leg" />
+      </RigidBody>
+
+      <FixedJoint id="ANKLE" location="0 0 0" inboard-link-id="LEG" outboard-link-id="FOOT" />
+      <RigidBody id="FOOT" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot">
+        <CollisionGeometry primitive-id="foot" />
+        <InertiaFromPrimitive primitive-id="foot" />
+      </RigidBody>
+    </RCArticulatedBody>
+
+  <!-- setup the platform rigid body; it is not active -->
+  <Box id="globe" xlen="10" ylen="10" zlen="0.1" />
+<!--  <Sphere id="globe" radius="100" />-->
+
+  <RigidBody id="ground" enabled="false"
+    position="0 0 -0.05" visualization-id="globe">
+    <CollisionGeometry primitive-id="globe" />
+  </RigidBody>
+
+  </MOBY>
+</XML>

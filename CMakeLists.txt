@@ -63,6 +63,7 @@ option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(DRIVE_ROBOT "Use drive-robot controller plugin" OFF)
   #option(CONSOLE "Display a Console window for controlling robot CVars =EXPERIMENTAL=" OFF)
 
+
 # fix the C++ linking error on 64-bit Linux
 set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 
@@ -124,16 +125,10 @@ FOREACH(i ${SOURCES})
   set(LIBSOURCES ${LIBSOURCES} "${CMAKE_SOURCE_DIR}/src/${i}")
 ENDFOREACH(i)
 
-# look for DXL
-find_library(DXL_FOUND dxl /usr/local/lib /usr/lib)
-IF(USE_DXL AND DXL_FOUND)
-  set(EXTRA_LIBS ${EXTRA_LIBS} dxl)
-  add_definitions (-DUSE_DXL)
-ENDIF(USE_DXL AND DXL_FOUND)
 
 add_library(Pacer ${LIBSOURCES})
 
-# cvars
+# LibXml2
 IF(LIBXML2_FOUND)
   target_link_libraries (Pacer ${LIBXML2_LIBRARIES})
 ENDIF(LIBXML2_FOUND)
@@ -143,7 +138,14 @@ IF(CVARS_FOUND)
   target_link_libraries (Pacer ${CVARS_LIBRARIES})
 ENDIF(CVARS_FOUND)
 
-# cvars
+# look for DXL
+find_package(DXL)
+IF(USE_DXL AND DXL_FOUND)
+  set(EXTRA_LIBS ${EXTRA_LIBS} dxl)
+  add_definitions (-DUSE_DXL)
+ENDIF(USE_DXL AND DXL_FOUND)
+
+# GLConsole
 IF(GLConsole_FOUND)
   target_link_libraries (Pacer ${GLConsole_LIBRARIES})
 ENDIF(GLConsole_FOUND)
@@ -176,6 +178,7 @@ ENDIF(DRIVE_ROBOT)
 # Moby Plugin
 IF(USE_MOBY)
   add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/plugin.cpp)
+  add_executable(PacerMobyDriver ${CMAKE_SOURCE_DIR}/example/moby.cpp)
 # osg
 IF(USE_OSG_DISPLAY AND OSG_FOUND)
     target_link_libraries (PacerMobyPlugin ${OSG_LIBRARIES})
@@ -185,11 +188,30 @@ IF(USE_OSG_DISPLAY AND OSG_FOUND)
     target_link_libraries (PacerMobyPlugin ${OPENTHREADS_LIBRARY})
     target_link_libraries (PacerMobyPlugin ${OSGUTIL_LIBRARIES})
     target_link_libraries (PacerMobyPlugin ${OSGMANIPULATOR_LIBRARIES})
+    target_link_libraries (PacerMobyPlugin OpenThreads)
+   
+    find_package (osg)
+    find_package (osgViewer)
+    find_package (osgDB)
+    find_package (osgGA)
+    find_package (osgFX)
+    find_package (osgUtil)
+    find_package (OpenThreads)
+    target_link_libraries (PacerMobyDriver ${OSG_LIBRARIES})
+    target_link_libraries (PacerMobyDriver ${OSGVIEWER_LIBRARIES})
+    target_link_libraries (PacerMobyDriver ${OSGDB_LIBRARIES})
+    target_link_libraries (PacerMobyDriver ${OSGGA_LIBRARIES})
+    target_link_libraries (PacerMobyDriver ${OPENTHREADS_LIBRARY})
+    target_link_libraries (PacerMobyDriver ${OSGUTIL_LIBRARIES})
+    target_link_libraries (PacerMobyDriver ${OSGMANIPULATOR_LIBRARIES})
+    target_link_libraries (PacerMobyDriver OpenThreads)
     add_definitions (-DUSE_OSG_DISPLAY)
   ENDIF(USE_OSG_DISPLAY AND OSG_FOUND)
   target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS})
   set_target_properties(PacerMobyPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
   install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
+  
+  target_link_libraries(PacerMobyDriver ${REQLIBS} ${EXTRA_LIBS})
 ENDIF(USE_MOBY)
 
 # Gazebo Plugin

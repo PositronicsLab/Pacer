@@ -12,6 +12,21 @@ using namespace Pacer;
 
 
 extern std::vector<Pacer::VisualizablePtr> visualize;
+  
+  std::string MODEL_FILE("model");
+  std::string VARS_FILE("vars.xml");
+  Controller::Controller(){
+      std::cout << "initing controller";
+      robot_model_file = std::string(MODEL_FILE);
+      robot_vars_file = std::string(VARS_FILE);
+      Init();
+    }
+  Controller::Controller(const std::string& model_f, const std::string& vars_f){
+      std::cout << "initing controller";
+      robot_model_file = std::string(model_f);
+      robot_vars_file = std::string(vars_f);
+      Init();
+    }
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================

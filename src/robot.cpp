@@ -280,9 +280,9 @@ void Robot::update(
 
          // Draw Contact Polygon
          for(int i=0;i<NC;i++){
-           visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
-                         active_eefs[(i+1)%NC]->point[0]  + Ravelin::Vector3d(0,0,0.001),
-                         Ravelin::Vector3d(0.5,0.5,1))));
+     //      visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
+       //                  active_eefs[(i+1)%NC]->point[0]  + Ravelin::Vector3d(0,0,0.001),
+         //                Ravelin::Vector3d(0.5,0.5,1))));
          }
 //          Draw all Contacts
          for(int i=0;i<NC;i++){
@@ -353,7 +353,8 @@ void Robot::reset_contact(){
 
 #include <Moby/SDFReader.h>
 #include <Moby/XMLReader.h>
-void Robot::Init(){
+
+  void Robot::Init(){
 #ifdef USE_GLCONSOLE
    tglc = new std::thread(init_glconsole);
 #endif

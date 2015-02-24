@@ -179,6 +179,9 @@ int main(int argc, char* argv[])
     init("model","vars.xml");
   }
 
+  
+
+#ifdef USE_DXL
   double t=0;
 //  struct timeval start_t, now_t;
 //  gettimeofday(&start_t, NULL);
@@ -188,5 +191,6 @@ int main(int argc, char* argv[])
 //    double t = (now_t.tv_sec - start_t.tv_sec) + (now_t.tv_usec - start_t.tv_usec) * 1E-6;
     controller(t);
   }
+#endif
 }
 

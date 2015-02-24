@@ -18,13 +18,9 @@ class Controller : public Robot{
      * @brief Controller constructor
      * @see Robot()
      */
-    Controller(){}
-    Controller(const std::string& model_f, const std::string& vars_f){
-      std::cout << "initing controller";
-      robot_model_file = std::string(model_f);
-      robot_vars_file = std::string(vars_f);
-      Init();
-    }
+    Controller();
+
+    Controller(const std::string& model_f, const std::string& vars_f);
 
     void control(double dt,
                                const Ravelin::VectorNd& generalized_q,

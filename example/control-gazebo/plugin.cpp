@@ -20,7 +20,7 @@ using namespace Pacer;
  {
    /// Set up quadruped robot, linking data from moby's articulated body
    /// to the quadruped model used by Control-Moby
-   robot_ptr = boost::shared_ptr<Controller>(new Controller("model","vars.xml"));
+   robot_ptr = boost::shared_ptr<Controller>(new Controller());
  }
 
  namespace gazebo

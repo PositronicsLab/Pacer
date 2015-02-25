@@ -233,6 +233,12 @@ void keyfunc( unsigned char key, int, int )
   }
 }
 
+# include <thread>
+# include <GLConsole/GLConsole.h>
+  GLConsole theConsole;
+  extern void init_glconsole();
+  std::thread * tglc;
+   tglc = new std::thread(init_glconsole);
 void init_glconsole(){
   int argc = 0;
   const char * argv[] = {};

@@ -6,27 +6,93 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 #include <sys/time.h>
+#include <dlfcn.h>
+#include <errno.h>
+#include <boost/foreach.hpp>
+#include <stdlib.h>     /* getenv */
 
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+#include <vector>
 
 using namespace Pacer;
 
-
 extern std::vector<Pacer::VisualizablePtr> visualize;
   
-  std::string MODEL_FILE("model");
-  std::string VARS_FILE("vars.xml");
-  Controller::Controller(){
-      std::cout << "initing controller";
-      robot_model_file = std::string(MODEL_FILE);
-      robot_vars_file = std::string(VARS_FILE);
-      Init();
+Controller::Controller(){
+  init_robot();
+}
+
+
+Controller::~Controller(){
+    // close the loaded plugin libraries
+    for(size_t i = 0; i < handles.size(); ++i){
+      dlclose(handles[i]);
     }
-  Controller::Controller(const std::string& model_f, const std::string& vars_f){
-      std::cout << "initing controller";
-      robot_model_file = std::string(model_f);
-      robot_vars_file = std::string(vars_f);
-      Init();
-    }
+}
+
+typedef void (*init_t)(boost::shared_ptr<Controller>&);
+std::vector<boost::function<init_t> > INIT;
+
+typedef void (*update_t)(boost::shared_ptr<Controller>&, double*);
+std::vector<boost::function<init_t> > UPDATE;
+
+bool Controller::load_plugin(const char * filename){
+  
+  char* pPath;
+  pPath = getenv ("PACER_PLUGIN_PATH");
+  assert(pPath!=NULL);
+  OUT_LOG(logDEBUG) << "PACER_PLUGIN_PATH = " << pPath;
+  
+  // attempt to read the file
+  void* HANDLE = dlopen(strcat(pPath,filename.c_str()), RTLD_LAZY);
+  if (!HANDLE)
+  {
+    std::cerr << "driver: failed to read plugin from " << filename << std::endl;
+    std::cerr << "  " << dlerror() << std::endl;
+    exit(-1);
+  }
+
+  handles.push_back(HANDLE);
+
+  // attempt to load the initializer
+  dlerror();
+  INIT.push_back(boost::bind(&((init_t) dlsym(HANDLE, "init")), _1));
+  const char* dlsym_error1 = dlerror();
+  UPDATE.push_back(boost::bind(&((update_t) dlsym(HANDLE, "update")), _2));
+  const char* dlsym_error2 = dlerror();
+  if (dlsym_error1)
+  {
+    std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
+    std::cerr << "        error follows: " << std::endl << dlsym_error1 << std::endl;
+    INIT.pop_back();
+    UPDATE.pop_back();
+  } else if (dlsym_error2)
+  {
+    std::cerr << "driver warning: cannot load symbol 'update' from " << filename << std::endl;
+    std::cerr << "        error follows: " << std::endl << dlsym_error2 << std::endl;
+    INIT.pop_back();
+    UPDATE.pop_back();
+  }
+}
+
+bool Controller::init_plugins(){
+  // call the initializers, if any
+  if (!INIT.empty())
+  {
+    BOOST_FOREACH(boost::function<init_t> i, INIT)
+      i(ptr());
+  }
+}
+
+bool Controller::update_plugins(double t){
+  // call the controller plugins, if any
+  if (!UPDATE.empty())
+  {
+    BOOST_FOREACH(boost::function<update_t> i, UPDATE)
+      i(ptr(),t);
+  }
+}
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================

@@ -9,11 +9,17 @@
 #include <Pacer/robot.h>
 #include <CVars/CVar.h>
 #include <Pacer/Module.h>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/shared_ptr.hpp>
+#include <cassert>
 
 namespace Pacer{
-class Controller : public Robot{
+class Controller : public Robot, public boost::enable_shared_from_this<Controller>{
   public:
-
+    boost::shared_ptr<Controller> ptr()
+    {
+      return shared_from_this();
+    }
     /**
      * @brief Controller constructor
      * @see Robot()

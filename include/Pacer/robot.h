@@ -61,14 +61,6 @@ struct RobotData{
 class Robot {
   public:
 
-    Ravelin::VectorNd movement_command;
-    boost::shared_ptr<Ravelin::Pose3d> gait_pose;
-    // width, length, df, step_height,
-    Ravelin::VectorNd gait_params;
-
-    std::map<std::string, double> q_joints,qd_joints,u_joints;
-
-    std::string robot_vars_file, robot_model_file;
 
     Robot(){}
 
@@ -107,6 +99,16 @@ class Robot {
         const std::map<std::string, double>& qd,
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
+    
+        
+    Ravelin::VectorNd movement_command;
+    boost::shared_ptr<Ravelin::Pose3d> gait_pose;
+    // width, length, df, step_height,
+    Ravelin::VectorNd gait_params;
+
+    std::map<std::string, double> q_joints,qd_joints,u_joints;
+
+    std::string robot_vars_file, robot_model_file;
         boost::shared_ptr<Robot>& robot);
   protected:
     /**
@@ -133,6 +135,11 @@ class Robot {
 
     /// Calculate Center of mass(x,xd,xdd,zmp)
     void calc_com();
+  
+    // Import necessary info and then compile model
+    void Init();
+
+  public:
 
     /// Set Plugin internal model to input state
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
@@ -160,8 +167,6 @@ class Robot {
     /// N x 6d kinematics
     Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
-
-  protected:
     Moby::RCArticulatedBodyPtr        abrobot_;
     Moby::DynamicBodyPtr              dbrobot_;
     std::vector<Moby::JointPtr>       joints_;
@@ -187,10 +192,6 @@ class Robot {
                                                environment_frame,
                                                base_link_frame;
 
-    EndEffector       center_of_contact;
-    Ravelin::Vector3d center_of_feet_x,
-                      center_of_feet_xd;
-
     boost::shared_ptr<const RobotData> data;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS,NUM_JOINT_DOFS;
@@ -206,12 +207,9 @@ class Robot {
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that
 
-  // Import necessary info and then compile model
-    void Init();
 
 private:
     boost::shared_ptr<RobotData> new_data;
-
 
     // set up internal models after kineamtic model is set (called from init)
     void compile();

@@ -342,29 +342,16 @@ void Robot::reset_contact(){
 // ============================================================================
 // ===========================  BEGIN ROBOT INIT  =============================
 #include <CVars/CVar.h>
-
-#ifdef USE_GLCONSOLE
-# include <thread>
-# include <GLConsole/GLConsole.h>
-  GLConsole theConsole;
-  extern void init_glconsole();
-  std::thread * tglc;
-#endif
+#include <stdlib.h>     /* getenv */
+#include <boost/filesystem.hpp>
 
 #include <Moby/SDFReader.h>
 #include <Moby/XMLReader.h>
 
   void Robot::Init(){
-#ifdef USE_GLCONSOLE
-   tglc = new std::thread(init_glconsole);
-#endif
   // ================= LOAD SCRIPT DATA ==========================
-  OUT_LOG(logERROR) << "model: " << robot_model_file;
-  OUT_LOG(logERROR) << "vars: " << robot_vars_file;
-  std::cerr << "model: " << robot_model_file << std::endl;
-  std::cerr << "vars: " << robot_vars_file << std::endl;
-
-  Utility::load_variables(robot_vars_file);
+  std::string pPath(getenv ("PACER_MODELS_PATH"));
+  Utility::load_variables("vars.xml");
 
   // ================= SETUP LOGGING ==========================
 
@@ -372,7 +359,6 @@ void Robot::reset_contact(){
 
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
-
 #ifdef LOGGING
     FILE * pFile;
     pFile = fopen ("out.log","w");
@@ -380,16 +366,19 @@ void Robot::reset_contact(){
     fflush(pFile);
     fclose (pFile);
 #endif
-
   OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
-  OUT_LOG(logDEBUG1) << "logDEBUG1";
-  OUT_LOG(logINFO) << "logINFO";
-  OUT_LOG(logDEBUG) << "logDEBUG";
-  OUT_LOG(logDEBUG1) << "logDEBUG1";
 
   // ================= BUILD ROBOT ==========================
+  std::string robot_model_file = CVarUtils::GetCVarRef<std::string>("robot-model");
+  
+  // Get Model type
+  std::string model_type = boost::filesystem::extension(robot_model_file);
+  robot_model_file = robot_model_file+pPath;
+  OUT_LOG(logINFO) << "Using robot model : " << robot_model_file;
+
+  (robot_model_file.substr(robot_model_file.size()-4,robot_model_file.size()));
   /// The map of objects read from the simulation XML file
-  if(robot_model_file.substr(robot_model_file.size()-4,robot_model_file.size()).compare(".sdf") == 0){
+  if(model_type.compare("sdf") == 0){
     std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file);
 
     for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
@@ -405,7 +394,7 @@ void Robot::reset_contact(){
     if (!abrobot_){
       throw std::runtime_error("could not find RCArticulatedBody for robot SDF");
     }
-  } else if(robot_model_file.substr(robot_model_file.size()-4,robot_model_file.size()).compare(".xml") == 0){
+  } else if(model_type.compare(".xml") == 0){
     std::cerr << "look for model: " << robot_model_file << std::endl;
 
     std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(robot_model_file));
@@ -423,42 +412,7 @@ void Robot::reset_contact(){
       throw std::runtime_error("could not find RCArticulatedBody for robot XML");
     }
   } else {
-    try{
-      std::cerr << "look for model: " << robot_model_file << ".sdf" << std::endl;
-
-      std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file+".sdf");
-
-      for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
-           i !=READ_MAP.end(); i++)
-      {
-        // find the robot reference
-        if (!abrobot_)
-        {
-          abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
-        }
-      }
-
-      if (!abrobot_){
-        throw std::runtime_error("could not find RCArticulatedBody for robot");
-      }
-    } catch (std::runtime_error& e){
-      std::cerr << "look for model: " << robot_model_file << ".xml" << std::endl;
-
-      std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(robot_model_file+".xml"));
-      for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
-         i !=READ_MAP.end(); i++)
-      {
-        // find the robot reference
-        if (!abrobot_)
-        {
-          abrobot_ = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
-        }
-      }
-
-      if (!abrobot_){
-        throw std::runtime_error("could not find RCArticulatedBody for robot");
-      }
-    }
+    throw std::runtime_error("Robot model file has unknown extension : " + model_type);
   }
   compile();
 

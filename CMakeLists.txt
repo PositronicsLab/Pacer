@@ -66,7 +66,7 @@ option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(USE_DXL "use dynamixel drivers" OFF)
   option(USE_MOBY "build Moby plugin" ON)
   option(USE_GAZEBO "build Gazebo plugin" OFF)
-  option(DRIVE_ROBOT "Use drive-robot controller plugin" OFF)
+  option(BUILD_PLUGINS "Build pacer plugins?" ON)
   #option(CONSOLE "Display a Console window for controlling robot CVars =EXPERIMENTAL=" OFF)
 
 
@@ -170,16 +170,9 @@ set(REQLIBS ${REQLIBS} Pacer)
 # EXAMPLES
 IF(BUILD_EXAMPLES)
 # Drive ROBOT
-IF(DRIVE_ROBOT)
-  #  add_subdirectory( example/drive_robot )
-  add_definitions(-DDRIVE_ROBOT)
-  add_library(PacerDriveRobotPlugin ${CMAKE_SOURCE_DIR}/example/drive-robot/control.cpp)
-  target_link_libraries(PacerDriveRobotPlugin ${REQLIBS})
-  set_target_properties(PacerDriveRobotPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-  install(TARGETS PacerDriveRobotPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/drive-robot)
-  install(TARGETS PacerDriveRobotPlugin DESTINATION lib)
-  set(REQLIBS ${REQLIBS} PacerDriveRobotPlugin)
-ENDIF(DRIVE_ROBOT)
+IF(BUILD_PLUGINS)
+  add_subdirectory( example/plugins )
+ENDIF(BUILD_PLUGINS)
 
 # Moby Plugin
 IF(USE_MOBY)

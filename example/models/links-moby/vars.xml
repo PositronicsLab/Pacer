@@ -34,71 +34,13 @@
     </end-effector>
   </init>
 
-  <controller>
-  <error-feedback>
-    <active type="bool">true</active>
-    <configuration-space>
-      <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3   0RH_X_1 0RH_Y_2 0RH_Y_3 </id>
-      <active type="bool">true</active>
-      <accel type="bool">false</accel>
-      <!-- Gains are for the q of joint ids respectively -->
-      <force>
-        <gains>
-          <kp type="double">2e1 2e1 2e1     2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1</kp>
-          <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
-          <ki type="double">3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3</ki>
-        </gains>
-      </force>
-      <accel>
-        <gains>
-          <kp type="double">1e3 1e3 1e3  1e3 1e3 1e3  1e3 1e3 1e3  1e3 1e3 1e3</kp>
-          <kv type="double">1e1 1e1 1e1  1e1 1e1 1e1  1e1 1e1 1e1  1e1 1e1 1e1</kv>
-          <ki type="double">1e0 1e0 1e0  1e0 1e0 1e0  1e0 1e0 1e0  1e0 1e0 1e0</ki>
-        </gains>
-      </accel>
-    </configuration-space>
-    <operational-space>
-      <active type="bool">true</active>
-      <accel type="bool">false</accel>
-      <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
-      <gains>
-        <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e3 1e3 1e3     1e3 1e3 1e3</kp>
-        <kv type="double">1e1 1e1 1e1      1e1 1e1 1e1      1e1 1e1 1e1     1e1 1e1 1e1</kv>
-        <ki type="double">1e-2 1e-2 1e-2      1e-2 1e-2 1e-2      1e-2 1e-2 1e-2     1e-2 1e-2 1e-2</ki>
-      </gains>
-    </operational-space>
-  </error-feedback>
+  <plugin>
+    <!-- ordered by execution order -->
+    <name type="string">gait-planner viip-balance joint-PID-controller eef-PID-controller idyn-controller</name>
+    <library type="string">libgait-planner.so libviip-balance.so libjoint-PID-controller.so libeef-PID-controller.so libidyn-controller.so</library>
+  </plugin>
 
-  <stabilization>
-    <active type="bool">true</active>
-    <viip>
-      <active type="bool">true</active>
-      <accel type="bool">false</accel>
-      <des-contact type="bool">false</des-contact>
-      <!-- Gains are for the [X Y Z r p y] of base -->
-      <gains>
-        <kp type="double">0 0 0  0 0 0</kp>
-        <kv type="double">0 0 0  5e1 5e1 0</kv>
-        <ki type="double">0 0 0  0   0   0</ki>
-      </gains>
-      <desired>
-        <x type="double">0 0 0  0 0 0</x>
-        <xd type="double">0 0 0  0 0 0</xd>
-      </desired>
-    </viip>
-  </stabilization>
-
-  <inverse-dynamics>
-    <active type="bool">false</active>
-    <dt type="double">0.001</dt>
-    <alpha type="double">1</alpha>
-    <last-cfs type="bool">false</last-cfs>
-    <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">false</des-contact>
-  </inverse-dynamics>
-  </controller>
-
-  <locomotion>
+  <gait-planner>
     <active type="bool">true</active>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
@@ -109,5 +51,60 @@
     <!--walking gait-->
     <gait type="double">0.25  0.75  0.0  0.5</gait>
     <duty-factor type="double">0.75 0.75 0.75 0.75</duty-factor>
-  </locomotion>
+  </gait-planner>
+  
+  <viip-balance>
+    <active type="bool">true</active>
+    <accel type="bool">false</accel>
+    <des-contact type="bool">false</des-contact>
+    <!-- Gains are for the [X Y Z r p y] of base -->
+    <gains>
+      <kp type="double">0 0 0  0 0 0</kp>
+      <kv type="double">0 0 0  5e1 5e1 0</kv>
+      <ki type="double">0 0 0  0   0   0</ki>
+    </gains>
+  </viip-balance>
+
+  <joint-PID-controller>
+    <active type="bool">true</active>
+    <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3   0RH_X_1 0RH_Y_2 0RH_Y_3 </id>
+    <active type="bool">true</active>
+    <accel type="bool">false</accel>
+    <!-- Gains are for the q of joint ids respectively -->
+    <force>
+      <gains>
+        <kp type="double">2e1 2e1 2e1     2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1</kp>
+        <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
+        <ki type="double">3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3</ki>
+      </gains>
+    </force>
+    <accel>
+      <gains>
+        <kp type="double">1e3 1e3 1e3  1e3 1e3 1e3  1e3 1e3 1e3  1e3 1e3 1e3</kp>
+        <kv type="double">1e1 1e1 1e1  1e1 1e1 1e1  1e1 1e1 1e1  1e1 1e1 1e1</kv>
+        <ki type="double">1e0 1e0 1e0  1e0 1e0 1e0  1e0 1e0 1e0  1e0 1e0 1e0</ki>
+      </gains>
+    </accel>
+  </joint-PID-controller>
+
+  <eef-PID-controller>
+    <active type="bool">true</active>
+    <accel type="bool">false</accel>
+    <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
+    <gains>
+      <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e3 1e3 1e3     1e3 1e3 1e3</kp>
+      <kv type="double">1e1 1e1 1e1      1e1 1e1 1e1      1e1 1e1 1e1     1e1 1e1 1e1</kv>
+      <ki type="double">1e-2 1e-2 1e-2      1e-2 1e-2 1e-2      1e-2 1e-2 1e-2     1e-2 1e-2 1e-2</ki>
+    </gains>
+  </eef-PID-controller>
+
+  <idyn-controller>
+    <active type="bool">false</active>
+    <dt type="double">0.001</dt>
+    <alpha type="double">1</alpha>
+    <last-cfs type="bool">false</last-cfs>
+    <last-cfs-filter type="bool">false</last-cfs-filter>
+    <des-contact type="bool">false</des-contact>
+    <type type="string">AP</des-contact>
+  </idyn-controller>
 </XML>

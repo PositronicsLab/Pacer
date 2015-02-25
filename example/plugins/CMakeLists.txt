@@ -1,6 +1,6 @@
-
-     add_definitions(-DUSE_PLUGINS)
-  add_library(PacerDriveRobotPlugin ${CMAKE_SOURCE_DIR}/example/drive-robot/control.cpp)
-  target_link_libraries(PacerDriveRobotPlugin ${REQLIBS})
-  set_target_properties(PacerDriveRobotPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-  install(TARGETS PacerDriveRobotPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/plugins)
+#add_library(drive-robot drive-robot.cpp)
+#target_link_libraries(drive-robot ${REQLIBS})
+add_library(gait-planner gait-planner.cpp)
+target_link_libraries(gait-planner ${REQLIBS})
+add_library(joint-PID-controller joint-PID-controller.cpp)
+target_link_libraries(joint-PID-controller ${REQLIBS})

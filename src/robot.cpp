@@ -240,28 +240,6 @@ void Robot::update(
   calc_energy(new_data->generalized_qd,new_data->M);
   calc_com();
 
-  center_of_contact.point.resize(1);
-  center_of_contact.normal.resize(1);
-  if(NC != 0) {
-    center_of_contact.point[0] = Ravelin::Vector3d::zero();
-    center_of_contact.normal[0] = Ravelin::Vector3d::zero();
-    center_of_contact.point[0].pose = environment_frame;
-    center_of_contact.normal[0].pose = environment_frame;
-    for(int i=0;i<NUM_EEFS;i++){
-      // set gait centers
-      if(eefs_[i].active){
-        for(int j=0;j<eefs_[i].point.size();j++){
-          center_of_contact.point[0] += Ravelin::Vector3d(eefs_[i].point[j].data(),environment_frame)/NC;
-          center_of_contact.normal[0] += Ravelin::Vector3d(eefs_[i].normal[j].data(),environment_frame)/NC;
-        }
-      }
-    }
-    center_of_contact.active = true;
-  }
-  else {
-    center_of_contact.normal[0] = Ravelin::Vector3d(0,0,1,environment_frame);
-    center_of_contact.active = false;
-  }
   visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_frame,0.8)));
   visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_horizontal_frame,1.5)));
   visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
@@ -292,9 +270,6 @@ void Robot::update(
 //                           Ravelin::Vector3d(1,1,1)));
            }
          }
-//         visualize.push_back( Pacer::VisualizablePtr( new Ray(center_of_contact.point[0],
-//                    center_of_contact.normal[0]*0.1 + center_of_contact.point[0],
-//                    Ravelin::Vector3d(1,1,0)));
        }
 
        data = boost::shared_ptr<const RobotData>(new_data);
@@ -336,9 +311,6 @@ void Robot::reset_contact(){
   }
 }
 
-
-
-
 // ============================================================================
 // ===========================  BEGIN ROBOT INIT  =============================
 #include <CVars/CVar.h>
@@ -348,10 +320,10 @@ void Robot::reset_contact(){
 #include <Moby/SDFReader.h>
 #include <Moby/XMLReader.h>
 
-  void Robot::Init(){
+  void Robot::init_robot(){
   // ================= LOAD SCRIPT DATA ==========================
   std::string pPath(getenv ("PACER_MODELS_PATH"));
-  Utility::load_variables("vars.xml");
+  OUT_LOG(logDEBUG) << "PACER_MODELS_PATH = " << pPath;
 
   // ================= SETUP LOGGING ==========================
 

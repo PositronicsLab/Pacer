@@ -62,12 +62,8 @@ class Robot {
   public:
 
 
-    Robot(){}
-
-    Robot(const std::string& model_f, const std::string& vars_f){
-      robot_model_file = std::string(model_f);
-      robot_vars_file = std::string(vars_f);
-      Init();
+    Robot(){
+      init_robot();
     }
 
     /// ---------------------------  Getters  ---------------------------
@@ -99,8 +95,8 @@ class Robot {
         const std::map<std::string, double>& qd,
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
+        boost::shared_ptr<Robot>& robot);
     
-        
     Ravelin::VectorNd movement_command;
     boost::shared_ptr<Ravelin::Pose3d> gait_pose;
     // width, length, df, step_height,
@@ -109,7 +105,6 @@ class Robot {
     std::map<std::string, double> q_joints,qd_joints,u_joints;
 
     std::string robot_vars_file, robot_model_file;
-        boost::shared_ptr<Robot>& robot);
   protected:
     /**
      * @brief Update robot internal model using 'generalized' (minimal) parameters
@@ -137,7 +132,7 @@ class Robot {
     void calc_com();
   
     // Import necessary info and then compile model
-    void Init();
+    void init_robot();
 
   public:
 

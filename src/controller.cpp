@@ -19,79 +19,92 @@ using namespace Pacer;
 
 extern std::vector<Pacer::VisualizablePtr> visualize;
   
+std::string VARS_FILE("vars.xml");
 Controller::Controller(){
+  // Grab CVars from local directory
+  Utility::load_variables(VARS_FILE);
+  
+  // Setup robot
   init_robot();
-}
 
+  // After Robot loads, load plugins
+  init_plugins();
+}
 
 Controller::~Controller(){
-    // close the loaded plugin libraries
-    for(size_t i = 0; i < handles.size(); ++i){
-      dlclose(handles[i]);
-    }
+  close_plugins();
 }
 
-typedef void (*init_t)(boost::shared_ptr<Controller>&);
-std::vector<boost::function<init_t> > INIT;
 
-typedef void (*update_t)(boost::shared_ptr<Controller>&, double*);
-std::vector<boost::function<init_t> > UPDATE;
-
-bool Controller::load_plugin(const char * filename){
-  
-  char* pPath;
-  pPath = getenv ("PACER_PLUGIN_PATH");
-  assert(pPath!=NULL);
-  OUT_LOG(logDEBUG) << "PACER_PLUGIN_PATH = " << pPath;
-  
-  // attempt to read the file
-  void* HANDLE = dlopen(strcat(pPath,filename.c_str()), RTLD_LAZY);
-  if (!HANDLE)
-  {
-    std::cerr << "driver: failed to read plugin from " << filename << std::endl;
-    std::cerr << "  " << dlerror() << std::endl;
-    exit(-1);
+std::vector<void*> handles;
+bool Controller::close_plugins(){
+  // close the loaded plugin libraries
+  for(size_t i = 0; i < handles.size(); ++i){
+    dlclose(handles[i]);
   }
+  handles.clear();
 
-  handles.push_back(HANDLE);
-
-  // attempt to load the initializer
-  dlerror();
-  INIT.push_back(boost::bind(&((init_t) dlsym(HANDLE, "init")), _1));
-  const char* dlsym_error1 = dlerror();
-  UPDATE.push_back(boost::bind(&((update_t) dlsym(HANDLE, "update")), _2));
-  const char* dlsym_error2 = dlerror();
-  if (dlsym_error1)
-  {
-    std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
-    std::cerr << "        error follows: " << std::endl << dlsym_error1 << std::endl;
-    INIT.pop_back();
-    UPDATE.pop_back();
-  } else if (dlsym_error2)
-  {
-    std::cerr << "driver warning: cannot load symbol 'update' from " << filename << std::endl;
-    std::cerr << "        error follows: " << std::endl << dlsym_error2 << std::endl;
-    INIT.pop_back();
-    UPDATE.pop_back();
-  }
+  return true;
 }
-
 bool Controller::init_plugins(){
+  close_plugins();
+  UPDATE.clear();
+  INIT.clear();
+
   // call the initializers, if any
-  if (!INIT.empty())
-  {
-    BOOST_FOREACH(boost::function<init_t> i, INIT)
-      i(ptr());
+  std::vector<std::string> &plugin_names = CVarUtils::GetCVarRef<std::vector<std::string> >("plugin.id");
+  std::vector<std::string> &plugin_files = CVarUtils::GetCVarRef<std::vector<std::string> >("plugin.file");
+
+  // Load all the plugins
+  for(unsigned i=0;i<plugin_names.size();i++){
+    const std::string &filename = plugin_names[i];
+    char* pPath;
+    pPath = getenv ("PACER_PLUGIN_PATH");
+    assert(pPath!=NULL);
+    OUT_LOG(logDEBUG) << "PACER_PLUGIN_PATH = " << pPath;
+    
+    // attempt to read the file
+    void* HANDLE = dlopen(strcat(pPath,filename.c_str()), RTLD_LAZY);
+    if (!HANDLE)
+    {
+      std::cerr << "driver: failed to read plugin from " << filename << std::endl;
+      std::cerr << "  " << dlerror() << std::endl;
+      exit(-1);
+    }
+ 
+    handles.push_back(HANDLE);
+ 
+    // attempt to load the initializer
+    dlerror();
+    INIT.push_back((init_t) dlsym(HANDLE, "init"));
+    const char* dlsym_error1 = dlerror();
+    UPDATE.push_back((update_t) dlsym(HANDLE, "update"));
+    const char* dlsym_error2 = dlerror();
+    if (dlsym_error1)
+    {
+      std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
+      std::cerr << "        error follows: " << std::endl << dlsym_error1 << std::endl;
+      INIT.pop_back();
+      UPDATE.pop_back();
+    } else if (dlsym_error2)
+    {
+      std::cerr << "driver warning: cannot load symbol 'update' from " << filename << std::endl;
+      std::cerr << "        error follows: " << std::endl << dlsym_error2 << std::endl;
+      INIT.pop_back();
+      UPDATE.pop_back();
+    } else {
+      // The plugin loaded properly 
+      (*INIT.back())(this->ptr(),plugin_names[i].c_str());
+    }
   }
+  return true;
 }
 
 bool Controller::update_plugins(double t){
   // call the controller plugins, if any
-  if (!UPDATE.empty())
-  {
-    BOOST_FOREACH(boost::function<update_t> i, UPDATE)
-      i(ptr(),t);
-  }
+  for(unsigned i=0;i<UPDATE.size();i++)
+    (*UPDATE[i])(this->ptr(),t);
+  return true;
 }
 
 // ============================================================================
@@ -260,54 +273,6 @@ void Controller::control(double t,
   trajectory_ik(x_des,xd_des, xdd_des,data->q,q_des,qd_des,qdd_des);
 
   // =================== END PLANNING FUNCTIONS =====================
-
-  // Find center of stance feet
-  {
-    static Ravelin::Vector3d sum_center_of_feet(0,0,0,environment_frame);
-    static std::queue<Ravelin::Vector3d> center_of_feet_queue;
-
-    Ravelin::Vector3d CoF_x;
-    CoF_x.set_zero();
-    CoF_x.pose = environment_frame;
-
-    int ii = 0;
-    for(int i=0;i<NUM_EEFS;i++){
-      if(is_foot[i] == 0 || !eefs_[i].stance) continue;
-      workv3_ = Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-      visualize.push_back( Pacer::VisualizablePtr( new Point(workv3_,
-                      Ravelin::Vector3d(1,0,1),
-                      0.5)));
-      CoF_x += workv3_;
-      ii++;
-    }
-    CoF_x /= (double)ii;
-
-  visualize.push_back( Pacer::VisualizablePtr( new Point(CoF_x,
-                  Ravelin::Vector3d(1,0.5,0))));
-
-    center_of_feet_queue.push(CoF_x);
-    sum_center_of_feet += CoF_x;
-    if(center_of_feet_queue.size() > 100){
-       sum_center_of_feet -= center_of_feet_queue.front();
-       center_of_feet_queue.pop();
-    }
-
-    workv3_ = center_of_feet_x;
-    center_of_feet_x = sum_center_of_feet /  (double) center_of_feet_queue.size();
-    workv3_.pose = center_of_feet_x.pose;
-    center_of_feet_xd = (center_of_feet_x - workv3_)*dt;
-    if(center_of_feet_queue.size() == 0 || ii == 0)
-      center_of_feet_x = data->center_of_mass_x;
-
-    visualize.push_back( Pacer::VisualizablePtr( new Point(center_of_feet_x,
-                  Ravelin::Vector3d(1,0,0))));
-
-    OUTLOG(CoF_x,"CoF_x (now)",logDEBUG);
-
-    OUTLOG(center_of_feet_x,"center_of_feet_x (avg 1 sec)",logDEBUG);
-  }
-
-
   // ----------------------------- STABILIZATION -------------------------------
   static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("controller.stabilization.active");
   if(USE_STABILIZATION){
@@ -323,13 +288,6 @@ void Controller::control(double t,
           &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.kv"),
           &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.ki");
 
-
-        for(int i=0;i<3;i++){
-          x_des[i] = center_of_feet_x[i];
-  //        xd_des[i] = center_of_feet_xd[i];
-        }
-
-  //      xd_des[0] = 0;
 
         Ravelin::MatrixNd N = data->N,
                           D = data->D,
@@ -780,7 +738,6 @@ if(inf_friction){
    OUTLOG(data->roll_pitch_yaw,"roll_pitch_yaw",logINFO);
    OUTLOG(data->zero_moment_point,"ZmP",logINFO);
    OUTLOG(data->center_of_mass_x,"CoM_x",logINFO);
-   OUTLOG(center_of_feet_x,"center_of_feet_x",logINFO);
    OUTLOG(data->center_of_mass_xd,"CoM_xd",logINFO);
    OUTLOG(data->center_of_mass_xdd,"CoM_xdd",logINFO);
    OUTLOG(data->q,"q",logINFO);

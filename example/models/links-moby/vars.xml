@@ -1,11 +1,7 @@
 <XML>
   <logging type="string">DEBUG1</logging>
-
-  <sim>
-    <known-base-perturbation type="double">0 0 0 0 0 0</known-base-perturbation>
-    <unknown-base-perturbation type="double">0 0 0 0 0 0</unknown-base-perturbation>
-    <known-leading-force type="double">0.13 0 0 0 0 0</known-leading-force>
-  </sim>
+  
+  <robot-model type="string">links-moby/model.xml</robot-model>
 
   <init>
     <kinematic type="bool">false</kinematic>
@@ -36,11 +32,14 @@
 
   <plugin>
     <!-- ordered by execution order -->
-    <name type="string">gait-planner viip-balance joint-PID-controller eef-PID-controller idyn-controller</name>
-    <library type="string">libgait-planner.so libviip-balance.so libjoint-PID-controller.so libeef-PID-controller.so libidyn-controller.so</library>
+    <!--<name type="string">gait-planner viip-balance joint-PID-controller eef-PID-controller idyn-controller</name>
+    <library type="string">libgait-planner.so libviip-balance.so libjoint-PID-controller.so libeef-PID-controller.so libidyn-controller.so</library> -->
+    <id type="string">gait-planner joint-PID-controller</id>
+    <file type="string">libgait-planner.so libjoint-PID-controller.so</file>
   </plugin>
 
   <gait-planner>
+    <real-time-factor type="double">1</real-time-factor>
     <active type="bool">true</active>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
@@ -54,6 +53,7 @@
   </gait-planner>
   
   <viip-balance>
+    <real-time-factor type="double">1</real-time-factor>
     <active type="bool">true</active>
     <accel type="bool">false</accel>
     <des-contact type="bool">false</des-contact>
@@ -66,6 +66,7 @@
   </viip-balance>
 
   <joint-PID-controller>
+    <real-time-factor type="double">1</real-time-factor>
     <active type="bool">true</active>
     <id type="string">0LF_X_1 0LF_Y_2 0LF_Y_3  0RF_X_1 0RF_Y_2 0RF_Y_3   0LH_X_1 0LH_Y_2 0LH_Y_3   0RH_X_1 0RH_Y_2 0RH_Y_3 </id>
     <active type="bool">true</active>
@@ -88,6 +89,7 @@
   </joint-PID-controller>
 
   <eef-PID-controller>
+    <real-time-factor type="double">1</real-time-factor>
     <active type="bool">true</active>
     <accel type="bool">false</accel>
     <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
@@ -99,6 +101,7 @@
   </eef-PID-controller>
 
   <idyn-controller>
+    <real-time-factor type="double">1</real-time-factor>
     <active type="bool">false</active>
     <dt type="double">0.001</dt>
     <alpha type="double">1</alpha>

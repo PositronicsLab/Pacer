@@ -640,3 +640,14 @@ void Controller::walk_toward(
   inited = true;
   OUT_LOG(logDEBUG) << " -- Controller::walk_toward() exited";
 }
+#include <Pacer/Controller.h>
+
+extern "C"{
+  init(boost::shared_ptr<Pacer::Controller>& robot){
+
+  }
+  
+  update(boost::shared_ptr<Pacer::Controller>& robot, double t){
+  
+  }
+}

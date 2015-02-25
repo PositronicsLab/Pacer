@@ -116,14 +116,10 @@ set(SOURCES
             kinematics.cpp
             utilities.cpp
             variables.cpp
-            inverse_dynamics.cpp
-            stabilization.cpp
             splines.cpp
             solve_qp.cpp
             solve_lcp_fast.cpp
             controller.cpp
-            locomotion.cpp
-            wcpg.cpp
            )
 
 # prepend "src/" to each source file
@@ -156,7 +152,7 @@ IF(GLConsole_FOUND)
   target_link_libraries (Pacer ${GLConsole_LIBRARIES})
 ENDIF(GLConsole_FOUND)
 
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES})
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${CVARS_LIBRARIES})
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

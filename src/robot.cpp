@@ -76,10 +76,8 @@ double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M
   }
   M.mult(v, workv_);
   double KE = workv_.dot(v)*0.5;
-//#ifndef NDEBUG
-  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
-  std::cout << "Total Energy = " << (KE + PE) << std::endl;
-//#endif
+//  std::cout << "KE = " << KE << ", PE = " << PE << std::endl;
+//  std::cout << "Total Energy = " << (KE + PE) << std::endl;
   return (KE + PE);
   // Kinetic Energy
 }

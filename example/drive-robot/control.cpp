@@ -23,8 +23,6 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
   const unsigned X=0,Y=1,Z=2,THETA=5;
 
-    OUT_LOG(logDEBUG1) << ">> ENTERED USER CONTROLLER" ;
-
     // n is the number of independent coordinates in the robot
     int n = qd.rows();
 
@@ -101,8 +99,8 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
       if( distance_to_wp < 0.025){
       OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
       OUTLOG(next_waypoint,"this_wp",logDEBUG1);
-      std::cout << "this waypoint: " << next_waypoint << std::endl;
-      std::cout << "robot position: " << com << std::endl;
+      OUT_LOG(logDEBUG1) << "this waypoint: " << next_waypoint ;
+      OUT_LOG(logDEBUG1) << "robot position: " << com ;
 
       waypoint_index = (waypoint_index+1)% num_waypoints;
 
@@ -113,11 +111,11 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
       OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
       OUT_LOG(logDEBUG1) << "waypoint_index = " << waypoint_index;
       visualize.push_back(Pacer::VisualizablePtr(new Pacer::Ray(next_waypoint,com,Ravelin::Vector3d(1,0.5,0))));
-      std::cout << "next_wp" << next_waypoint << std::endl;
+      OUT_LOG(logDEBUG1) << "next_wp" << next_waypoint ;
 
       for(int i=0;i<num_waypoints;i++){
           Ravelin::Vector3d wp(waypoints[i].first,waypoints[i].second,0,environment_frame);
-          std::cout << "\twp" << wp << std::endl;
+          OUT_LOG(logDEBUG1) << "\twp" << wp ;
       visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),1.0)));
       }
 
@@ -158,9 +156,5 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
         command[Y] = 0;
       }
     }
-
-    std::cout << "command = " << command ;
-
-    std::cout << "<< EXIT USER CONTROLLER" ;
 }
 

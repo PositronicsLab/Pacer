@@ -9,11 +9,11 @@
     <EulerIntegrator id="euler" />
     <RungeKuttaIntegrator id="rk4" />
     <RungeKuttaFehlbergIntegrator id="rkf" abs-err-tol="1e-1" rel-err-tol="1e-1" />
-    <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
-
+    <BulirschStoerIntegrator id="bsi" abs-err-tol="1e-3" rel-err-tol="1e-1" />
+    
     <GravityForce id="gravity" accel="0 0 -9.81" />
 
-    <EventDrivenSimulator integrator-id="rk4" max-event-time="inf" Euler-step="0.001">
+    <EventDrivenSimulator integrator-id="bsi" max-event-time="inf" Euler-step="1e-4">
       <RecurrentForce recurrent-force-id="gravity" />
       <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
       <DynamicBody dynamic-body-id="LINKS" />

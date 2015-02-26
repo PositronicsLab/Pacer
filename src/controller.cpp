@@ -19,7 +19,6 @@ using namespace Pacer;
 
 extern std::vector<Pacer::VisualizablePtr> visualize;
   
-std::string VARS_FILE("vars.xml");
 Controller::Controller(){
   // Grab CVars from local directory
   Utility::load_variables(VARS_FILE);
@@ -28,7 +27,7 @@ Controller::Controller(){
   init_robot();
 
   // After Robot loads, load plugins
-  init_plugins();
+  assert(init_plugins());
 }
 
 Controller::~Controller(){
@@ -43,13 +42,16 @@ bool Controller::close_plugins(){
     dlclose(handles[i]);
   }
   handles.clear();
-
+  _update_priority_map.clear();
   return true;
 }
+
+typedef void (*init_t)(const boost::shared_ptr<Controller>&, const char*);
+
 bool Controller::init_plugins(){
+  bool RETURN_FLAG = true;
   close_plugins();
-  UPDATE.clear();
-  INIT.clear();
+  std::vector<init_t> INIT;
 
   // call the initializers, if any
   std::vector<std::string> &plugin_names = CVarUtils::GetCVarRef<std::vector<std::string> >("plugin.id");
@@ -69,7 +71,7 @@ bool Controller::init_plugins(){
     {
       std::cerr << "driver: failed to read plugin from " << filename << std::endl;
       std::cerr << "  " << dlerror() << std::endl;
-      exit(-1);
+      RETURN_FLAG = false;
     }
  
     handles.push_back(HANDLE);
@@ -77,41 +79,26 @@ bool Controller::init_plugins(){
     // attempt to load the initializer
     dlerror();
     INIT.push_back((init_t) dlsym(HANDLE, "init"));
-    const char* dlsym_error1 = dlerror();
-    UPDATE.push_back((update_t) dlsym(HANDLE, "update"));
-    const char* dlsym_error2 = dlerror();
-    if (dlsym_error1)
+    const char* dlsym_error = dlerror();
+    if (dlsym_error)
     {
       std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
-      std::cerr << "        error follows: " << std::endl << dlsym_error1 << std::endl;
+      std::cerr << "        error follows: " << std::endl << dlsym_error << std::endl;
       INIT.pop_back();
-      UPDATE.pop_back();
-    } else if (dlsym_error2)
-    {
-      std::cerr << "driver warning: cannot load symbol 'update' from " << filename << std::endl;
-      std::cerr << "        error follows: " << std::endl << dlsym_error2 << std::endl;
-      INIT.pop_back();
-      UPDATE.pop_back();
+      RETURN_FLAG = false;
     } else {
-      // The plugin loaded properly 
+      // Init the plugin
       (*INIT.back())(this->ptr(),plugin_names[i].c_str());
     }
   }
-  return true;
-}
-
-bool Controller::update_plugins(double t){
-  // call the controller plugins, if any
-  for(unsigned i=0;i<UPDATE.size();i++)
-    (*UPDATE[i])(this->ptr(),t);
-  return true;
+  return RETURN_FLAG;
 }
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================
 // ============================================================================
 
-void Controller::control(double t,
+void Controller::control(double t
                                       const Ravelin::VectorNd& generalized_q_in,
                                       const Ravelin::VectorNd& generalized_qd_in,
                                       const Ravelin::VectorNd& generalized_qdd_in,

@@ -41,6 +41,8 @@
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
+#include <CVars/CVar.h>
+
 #ifdef TIMING
 #include <ctime>
 #endif

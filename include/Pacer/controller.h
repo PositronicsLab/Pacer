@@ -7,19 +7,22 @@
 #define CONTROL_H
 
 #include <Pacer/robot.h>
-#include <CVars/CVar.h>
-#include <Pacer/Module.h>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
-#include <cassert>
 
 namespace Pacer{
+
 class Controller;
 
-typedef void (*init_t)(boost::shared_ptr<Controller>, const char*);
-typedef void (*update_t)(boost::shared_ptr<Controller>, double);
+typedef void (*update_t)(const boost::shared_ptr<Controller>&, double);
 
-class Controller : public Robot, public boost::enable_shared_from_this<Controller>{
+enum niceness{
+  HIGHEST_PRIORITY = -20,
+  LOWEST_PRIORITY = 19
+};
+
+class Controller : public Robot, public boost::enable_shared_from_this<Controller>
+{
   public:
     boost::shared_ptr<Controller> ptr()
     {
@@ -32,31 +35,55 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
     Controller();
     ~Controller();
 
+    // call Pacer at time t
+    void control(double t);
+
+    bool reload_plugins(){
+      close_plugins();
+      return init_plugins();
+    }
+
+    void add_plugin_update(int priority,std::string& name,update_t f){
+      // Fix priority
+      if(priority > 19 || priority < -20){
+        OUT_LOG(logERROR) << "Set priorities to \"niceness\" range [-20..19]";
+        if(priority < -20)
+          priority = -20;
+        else if(priority > 19)
+          priority = 19;
+      }
+
+      // Check if this function already has an updater
+      if(_name_priority_map.find(name) != _name_priority_map.end())
+        remove_plugin_update(name);
+
+      // add plugin back in at new priority
+      _update_priority_map[priority][name] = f;
+      _name_priority_map[name] = priority;
+    }
+    
+    void remove_plugin_update(std::string& name){
+      //delete _update_priority_map.at(_name_priority_map.at(name)).at(name)->second;
+      _update_priority_map[_name_priority_map[name]].erase(name);
+      _name_priority_map.erase(name);
+    }
+    
+  private:
+    typedef std::map<std::string , update_t> name_update_t;
+    std::map<int , name_update_t> _update_priority_map;
+    std::map< std::string , int > _name_priority_map;
+    
     bool close_plugins();
     bool init_plugins();
-    bool update_plugins(double t);
-
-    void control(double dt,
-                               const Ravelin::VectorNd& generalized_q,
-                               const Ravelin::VectorNd& generalized_qd,
-                               const Ravelin::VectorNd& generalized_qdd,
-                               const Ravelin::VectorNd& generalized_fext,
-                               Ravelin::VectorNd& q_des,
-                               Ravelin::VectorNd& qd_des,
-                               Ravelin::VectorNd& qdd_des,
-                               Ravelin::VectorNd& u);
-
-  private:
-    std::vector<update_t> UPDATE;
-    std::vector<init_t>   INIT;
     
-    void trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,
-                       const std::vector<Ravelin::Vector3d>& foot_vel,
-                       const std::vector<Ravelin::Vector3d>& foot_acc,
-                       const Ravelin::VectorNd& q, 
-                       Ravelin::VectorNd& q_des,
-                       Ravelin::VectorNd& qd_des,
-                       Ravelin::VectorNd& qdd_des);
+    bool update_plugins(double t){
+      for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++)
+        if(!_update_priority_map[i].empty()) // SRZ: do I need this line?
+          BOOST_FOREACH( const name_update_t::value_type& update, _update_priority_map[i])
+          {  
+            (*(update.second))(this->ptr(),t);
+          }
+    }
 };
 }
 #endif // CONTROL_H

@@ -58,29 +58,102 @@ struct RobotData{
   Ravelin::Origin3d roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
 };
 
-class Robot {
-  public:
 
+class Robot {
+
+  public:
+    std::string VARS_FILE("vars.h");
 
     Robot(){
+      Utility::load_variables(VARS_FILE);
       init_robot();
     }
 
+    /// Data storage
+
+  private:
+    std::map<std::string,Ravelin::MatrixNd> _matrix_data;
+    std::map<std::string,Ravelin::VectorNd> _vector_data;
+    std::map<std::string,Ravelin::Vector3d> _vector3_data;
+    std::map<std::string,boost::shared_ptr<Ravelin::Pose3d> > _pose_data;
+    
+  public:
+    void set_data(std::string& n, Ravelin::MatrixNd& v){
+      _matrix_data[n] = v;
+    }
+    void set_data(std::string& n, Ravelin::VectorNd& v){
+      _vector_data[n] = v;
+    }
+    void set_data(std::string& n, Ravelin::Vector3d& v){
+      _vector3_data[n] = v;
+    }
+    void set_data(std::string& n, boost::shared_ptr<Ravelin::Pose3d>& v){
+      _pose_data[n] = v;
+    }
+   
+    void get_data(std::string& n, Ravelin::MatrixNd& v){  
+      std::map<std::string,Ravelin::MatrixNd>::iterator it;
+      if((it = _matrix_data.find(n)) != _matrix_data.end())
+        v = *it;
+    }
+    void get_data(std::string& n, Ravelin::VectorNd& v){
+      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      if((it = _vector_data.find(n)) != _vector_data.end())
+        v = *it;
+    }
+    void get_data(std::string& n, Ravelin::Vector3d& v){
+      std::map<std::string,Ravelin::Vector3d>::iterator it;
+      if((it = _vector3_data.find(n)) != _vector3_data.end())
+        v = *it;
+    }
+    void get_data(std::string& n, boost::shared_ptr<Ravelin::Pose3d>& v){
+      std::map<std::string,boost::shared_ptr<Ravelin::Pose3d> >::iterator it;
+      if((it = _pose_data.find(n)) != _pose_data.end())
+        v = *it;
+    }
+
+
     /// ---------------------------  Getters  ---------------------------
-    std::vector<EndEffector>& get_end_effectors()  { return eefs_; }
-    std::map<std::string, EndEffector*>& get_end_effectors_map()  { return eefs_map_; }
+  private:
+    struct contact_s{
+      std::string link_id;
+      Ravelin::Vector3d point;
+      Ravelin::Vector3d normal;
+      Ravelin::Vector3d impulse;
+      double mu_coulomb;
+      double mu_viscous;
+    };
+    std::map<std::string,std::vector< boost::shared_ptr<const contact_s> > > _link_contacts_map
+    std::vector<boost::shared_ptr<const contact_s> > _contacts
+
+  public:
+    void add_contact(
+        std::string& id;
+        const Ravelin::Vector3d& point,
+        const Ravelin::Vector3d& normal,
+        const Ravelin::Vector3d& impulse,
+        double mu_coulomb,double mu_viscous)
+    {
+      boost::shared_ptr<contact_s> c(new contact_s);
+      c->link_id    = id; 
+      c->point      = point; 
+      c->normal     = normal; 
+      c->impulse    = impulse; 
+      c->mu_coulomb = mu_coulomb; 
+      c->mu_viscous = mu_viscous;
+
+      _link_contacts_map[c->link_id] = c;
+      _contacts.push_back(c);
+    }
+
     std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
     std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
     std::vector<Moby::RigidBodyPtr>& get_links()  { return links_; }
-
     std::vector<std::string>& get_joint_names()  { return joint_names_; }
 
     /// Return Robot's internal model
     Moby::RCArticulatedBodyPtr get_articulated_body()  { return abrobot_; }
-    Moby::DynamicBodyPtr get_dynamic_body()  { return dbrobot_; }
-
-    boost::shared_ptr<const Ravelin::Pose3d> get_base_link_frame(){return base_link_frame;}
-    boost::shared_ptr<const RobotData> get_robot_data(){return data;}
+    Moby::DynamicBodyPtr       get_dynamic_body()      { return dbrobot_; }
 
     std::map<int, int>& get_joint_map()  { return joint_map_; }
     std::map<std::string, double>& get_q0()  { return q0_; }
@@ -96,16 +169,45 @@ class Robot {
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
         boost::shared_ptr<Robot>& robot);
+   
+
+    enum unit{        //  REV  |  PRIS
+      position_e,     //  rad  |   m 
+      velocity_e,     // rad/s |  m/s
+      acceleration_e, // rad/ss|  m/ss
+      torque_e        //  N.m  |   N
+    }
     
-    Ravelin::VectorNd movement_command;
-    boost::shared_ptr<Ravelin::Pose3d> gait_pose;
-    // width, length, df, step_height,
-    Ravelin::VectorNd gait_params;
+    double get_joint_param(std::string id,unit u, int dof = 0)
+    {
+      switch(u){
+        case position_e:
+          return q[_id_coord_map[id]+dof];
+          break;
+        case velocity_e:
+          return qd[_id_coord_map[id]+dof];
+          break;
+        case acceleration_e:
+          return qdd[_id_coord_map[id]+dof];
+          break;
+        case torque_e:
+          return tau[_id_coord_map[id]+dof];
+          break;
+        default: break;
+      }
+    }
 
-    std::map<std::string, double> q_joints,qd_joints,u_joints;
-
-    std::string robot_vars_file, robot_model_file;
   protected:
+
+    /// @brief Pulls data from q_joints,qd_joints,qdd_joints and sets up generalized vector
+    void update(); // SRZ: TODO
+
+  private:
+
+    // TODO: Populate these values in compile
+    std::map<std::string,int> _id_coord_map;
+    std::map<int,std::string> _coord_id_map;
+
     /**
      * @brief Update robot internal model using 'generalized' (minimal) parameters
      * @param generalized_q_in

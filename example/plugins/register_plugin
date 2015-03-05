@@ -1,0 +1,16 @@
+void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  static int ITER = 0;
+  int RTF = (int) CVarUtils::GetCVar<double>(plugin_namespace+"real-time-factor");
+  if(ITER%RTF == 0)
+    Update(ctrl,t);
+}
+
+extern "C" {
+  void init(const boost::shared_ptr<Pacer::Controller>& ctrl, const char* name){
+    plugin_namespace = std::string("plugin."+std::string(name)+".");
+
+    int priority = CVarUtils::GetCVarRef<double>(plugin_namespace+"priority");
+
+    ctrl->add_plugin_update(priority,name,&update);
+  }
+}

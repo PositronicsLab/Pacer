@@ -79,54 +79,6 @@ class Utility{
     {
         return Mod(fAng ,360.);
     }
-  /**
-   * @brief Convert Rotation Matrix to roll pitch yaw Euler Angles
-   * @param R 3x3 orthonormal rotation matrix
-   * @param rpy: roll pitch yaw (return value)
-   * @return
-   */
-//  static Ravelin::Vector3d& R2rpy(const Ravelin::Matrix3d& R, Ravelin::Vector3d& rpy);
-  static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
-
-  /**
-   * @brief Convert Quaternion to roll pitch yaw (Tait Bryan) Euler Angles
-   * @param q: quaternion
-   * @param rpy: roll pitch yaw (return value)
-   * @return
-   */
-//  static Ravelin::Vector3d& quat2TaitBryanZ(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
-
-  /**
-   * @brief Convert Quaternion to roll pitch yaw
-   * @param q: quaternion
-   * @param rpy: roll pitch yaw (return value)
-   * @return
-   */
-//  static Ravelin::Vector3d& quat2rpy(const Ravelin::Quatd& q, Ravelin::Vector3d& rpy);
-
-  /**
-   * @brief Rotation matrix of x radians about the local z-axis
-   * @param x radian value of rotation about axis
-   * @param R 3x3 orthonormal rotation matrix (return value)
-   * @return reference to R parameter
-   */
-//  static Ravelin::Matrix3d& Rz(double x,Ravelin::Matrix3d& R);
-
-  /**
-   * @brief Rotation matrix of x radians about the local y-axis
-   * @param x radian value of rotation about axis
-   * @param R 3x3 orthonormal rotation matrix (return value)
-   * @return reference to R parameter
-   */
-//  static Ravelin::Matrix3d& Ry(double x,Ravelin::Matrix3d& R);
-
-  /**
-   * @brief Rotation matrix of x radians about the local x-axis
-   * @param x radian value of rotation about axis
-   * @param R 3x3 orthonormal rotation matrix (return value)
-   * @return reference to R parameter
-   */
-//  static Ravelin::Matrix3d& Rx(double x,Ravelin::Matrix3d& R);
 
   /// Calculates The null pace for matrix M and places it in Vk
   /// returns the number of columns in Vk
@@ -169,7 +121,7 @@ class Utility{
 
   static void calc_cubic_spline_coefs(const Ravelin::VectorNd& T,const Ravelin::VectorNd& X,
                                              const Ravelin::Vector2d& Xd,const Ravelin::Vector2d& Xdd,
-                                             Ravelin::VectorNd& B);
+											 Ravelin::VectorNd& B);
   static void calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, Ravelin::VectorNd &B);
 
   static void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
@@ -208,6 +160,20 @@ class Utility{
       return (T) 0.0;
   }
 
+	bool isvalid(const Ravelin::VectorNd& v){
+	  if(v.norm() > NEAR_INF || !std::isfinite(v.norm()))
+		return false;
+	  return true;
+	}
+
+
+	// Solvers
+	bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+	bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
+	bool Utility::solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+	bool Utility::lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
+
+  //////////////  Variables ///////////////
   static void load_variables(std::string fname);
 
   static std::vector<double>& get_variable(const char* tag,std::vector<double>& val);

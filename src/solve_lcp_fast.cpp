@@ -94,7 +94,7 @@ unsigned select_pivot(const VectorNd& znbas, const std::vector<unsigned>& nonbas
  * \param zero_tol the tolerance for solving to zero
  * \return true if the solver is successful
  */
-bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol)
+bool Utility::lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol)
 {
   const unsigned N = q.rows();
   const unsigned UINF = std::numeric_limits<unsigned>::max();

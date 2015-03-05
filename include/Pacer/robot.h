@@ -10,55 +10,6 @@
 #include <Pacer/Visualizable.h>
 namespace Pacer{
 
-/**
- * @brief The EndEffector struct
- *
- * Stores relevent contact and link data for an end effector.
- */
-struct EndEffector{
-    // permanent data
-    std::string           id;
-    Ravelin::Vector3d     origin;
-    // Rigid Body (moby data)
-    Moby::RigidBodyPtr    link;
-    // kinematic chain indexing data
-    std::vector<unsigned> chain;
-    std::vector<bool>     chain_bool;
-    // Contact Data
-    std::vector<Ravelin::Vector3d>    point,
-                                      normal,tan1,tan2,
-                                      impulse;
-
-    bool                  active;
-    bool                  stance;
-    std::vector<double>   mu_viscous,
-                          mu_coulomb;
-    int                   nk;
-};
-
-/**
- * @brief The RobotData struct stores const data for use by the controller.
- */
-struct RobotData{
-  Ravelin::Vector3d zero_moment_point;
-  Ravelin::VectorNd q   /*!< position of robot joint dofs, size: [NUM_JOINT_DOFS] */ ,
-                    qd  /*!< velocity of robot joint dofs, size: [NUM_JOINT_DOFS] */ ,
-                    qdd /*!< acceleration of robot joint dofs, size: [NUM_JOINT_DOFS] */ ;
-  Ravelin::VectorNd generalized_q   /*!< generalized coordinates of robot, size: [NUM_JOINT_DOFS ,7 base dofs (3 linear, 4 angular) ] */,
-                    generalized_qd  /*!< generalized velocity of robot, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */,
-                    generalized_qdd /*!< generalized acceleration of robot, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */;
-  Ravelin::MatrixNd N /*!< Normal Contact Jacobian, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] x [Num Contacts] */,
-                    D /*!< Tangent Contact Jacobian, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] x [Num Contacts x 4] */,
-                    M /*!< generalized inertia matrix, size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */,
-                    R /*!< Contact Jacobian [N,D] */;
-  Ravelin::VectorNd generalized_fext /*!< generalized external forces on robot (excluding contact), size: [NUM_JOINT_DOFS ,6 base dofs (3 linear, 3 angular) ] */;
-  Moby::Point3d center_of_mass_x /*!< Global frame coordinates of the center of mass of robot links */;
-  Ravelin::Vector3d center_of_mass_xd /*!< Global frame velocity of the center of mass of robot links */,
-                    center_of_mass_xdd /*!< Global frame acceleration of the center of mass of robot links */;
-  Ravelin::Origin3d roll_pitch_yaw /*!< Roll Pitch Yaw (Tait Bryan) of robot base link */;
-};
-
-
 class Robot {
 
   public:
@@ -70,51 +21,34 @@ class Robot {
     }
 
     /// Data storage
-
   private:
-    std::map<std::string,Ravelin::MatrixNd> _matrix_data;
-    std::map<std::string,Ravelin::VectorNd> _vector_data;
-    std::map<std::string,Ravelin::Vector3d> _vector3_data;
-    std::map<std::string,boost::shared_ptr<Ravelin::Pose3d> > _pose_data;
-    
-  public:
-    void set_data(std::string& n, Ravelin::MatrixNd& v){
-      _matrix_data[n] = v;
-    }
-    void set_data(std::string& n, Ravelin::VectorNd& v){
-      _vector_data[n] = v;
-    }
-    void set_data(std::string& n, Ravelin::Vector3d& v){
-      _vector3_data[n] = v;
-    }
-    void set_data(std::string& n, boost::shared_ptr<Ravelin::Pose3d>& v){
-      _pose_data[n] = v;
-    }
+    std::map<std::string,boost::shared_ptr<void> > _data_map;
+    std::mutex _data_map_mutex;
    
-    void get_data(std::string& n, Ravelin::MatrixNd& v){  
-      std::map<std::string,Ravelin::MatrixNd>::iterator it;
-      if((it = _matrix_data.find(n)) != _matrix_data.end())
-        v = *it;
+  public:   
+	template<class T>
+    void set_data(std::string& n, T& v){
+	  _data_map_mutex.lock();
+      _data_map[n] = boost::shared_ptr<void>(new T(v));
+      _data_map_mutex.unlock();
     }
-    void get_data(std::string& n, Ravelin::VectorNd& v){
-      std::map<std::string,Ravelin::VectorNd>::iterator it;
-      if((it = _vector_data.find(n)) != _vector_data.end())
-        v = *it;
-    }
-    void get_data(std::string& n, Ravelin::Vector3d& v){
-      std::map<std::string,Ravelin::Vector3d>::iterator it;
-      if((it = _vector3_data.find(n)) != _vector3_data.end())
-        v = *it;
-    }
-    void get_data(std::string& n, boost::shared_ptr<Ravelin::Pose3d>& v){
-      std::map<std::string,boost::shared_ptr<Ravelin::Pose3d> >::iterator it;
-      if((it = _pose_data.find(n)) != _pose_data.end())
-        v = *it;
+    
+     template<class T>
+     T get_data(std::string& n){
+      std::map<std::string,boost::shared_ptr<void> >::iterator it;
+      _data_map_mutex.lock();
+      it = _data_map.find(n);
+      _data_map_mutex.unlock();
+      if(it != _data_map.end())
+        return T(*(it->second.get()));
+      else
+        std::runtime_error("Variable: \"" + n + "\" not found in data!")
+      return true;
     }
 
 
     /// ---------------------------  Getters  ---------------------------
-  private:
+  public:
     struct contact_s{
       std::string link_id;
       Ravelin::Vector3d point;
@@ -122,17 +56,46 @@ class Robot {
       Ravelin::Vector3d impulse;
       double mu_coulomb;
       double mu_viscous;
+      double restitution;
     };
-    std::map<std::string,std::vector< boost::shared_ptr<const contact_s> > > _link_contacts_map
-    std::vector<boost::shared_ptr<const contact_s> > _contacts
 
-  public:
+   /**
+	 * @brief The EndEffector struct
+	 *
+	 * Stores relevent contact and link data for an end effector.
+	 */
+	struct end_effector_s{
+		// permanent data
+		std::string            id;
+		// Foot link pointer
+		Moby::RigidBodyPtr     link;
+		// End effector location on link;
+		Ravelin::Vector3d      origin;
+		// kinematic chain indexing generalized coordinates
+		std::vector<unsigned> chain;
+		std::vector<bool>      chain_bool;
+
+		// For locomotion, this informs us if this link should be used to calculate a jocobian
+		bool                   active;
+		bool                   stance;
+		
+		// Contact Data
+		std::vector<boost::shared_ptr<const contact_s> > contacts;
+	};
+	
+	
+	private:
+		std::map<std::string,std::vector< boost::shared_ptr<const contact_s> > > _link_contacts_map
+		std::vector<boost::shared_ptr<const contact_s> > _contacts
+		std::map<std::string,boost::shared_ptr<end_effector_s> > _end_effector_map;
+	
+	public:
     void add_contact(
         std::string& id;
-        const Ravelin::Vector3d& point,
-        const Ravelin::Vector3d& normal,
-        const Ravelin::Vector3d& impulse,
-        double mu_coulomb,double mu_viscous)
+        const Ravelin::Vector3d point,
+        const Ravelin::Vector3d normal,
+        const Ravelin::Vector3d impulse = Ravelin::Vector3d(),
+        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
     {
       boost::shared_ptr<contact_s> c(new contact_s);
       c->link_id    = id; 
@@ -141,10 +104,25 @@ class Robot {
       c->impulse    = impulse; 
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
+      c->restitution= restitution;
 
       _link_contacts_map[c->link_id] = c;
       _contacts.push_back(c);
+      
+      // This will fail if there is no end effector by this name
+      
+	  std::map<std::string,boost::shared_ptr<end_effector_s> > it = _end_effector_map.find(c->link_id);
+      if(it != _end_effector_map.end())
+		it->second->contacts.push_back(c);      
     }
+    
+    const std::vector<boost::shared_ptr<const contact_s> >& get_contacts(){
+      return _contacts;
+	}
+
+	const std::vector<boost::shared_ptr<const contact_s> >& get_contacts(){
+	  return _contacts;
+	}
 
     std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
     std::vector<Moby::JointPtr>& get_joints()  { return joints_; }

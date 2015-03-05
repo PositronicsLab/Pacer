@@ -12,15 +12,9 @@ const int MAX_ITER = 100;
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
 const double NEAR_INF = 1.0/NEAR_ZERO;
 
-bool isvalid(const Ravelin::VectorNd& v){
-  if(v.norm() > NEAR_INF || !std::isfinite(v.norm()))
-    return false;
-  return true;
-}
-
 //#define SPLITTING_METHOD
 
-bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
+bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 {
      const int n = Q.rows();
      const int m = A.rows();
@@ -82,8 +76,9 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const 
 #endif
   return SOLVE_FLAG;
 }
+bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 
-bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x)
+bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x)
 {
      const int n = Q.rows();
      const int m = 0;
@@ -113,7 +108,7 @@ bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Raveli
   return SOLVE_FLAG;
 }
 
-bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
+bool Utility::solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 {
   const int n = Q.rows();
   const int m = A.rows();
@@ -233,8 +228,6 @@ bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Rave
 #include<Opt/QP.h>
 //#include<Opt/ConvexOpt.h>
 
-extern void solve_qp_matlab(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b,const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& x);
-
 bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb_, const Ravelin::VectorNd& ub_, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b,const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& x)
 {
   const int n = Q.rows();
@@ -311,7 +304,7 @@ using namespace Moby;
  * \note this method is via [Murty 1988]
  */
 
-bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER)
+bool Utility::lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER)
 {
   unsigned n = q.size();
 

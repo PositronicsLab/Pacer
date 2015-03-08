@@ -4,7 +4,6 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/robot.h>
-#include <Pacer/utilities.h>
 using namespace Pacer;
 
 std::vector<Pacer::VisualizablePtr> visualize;
@@ -20,13 +19,16 @@ void Robot::calc_com(){
   }
   center_of_mass_x /= total_mass;
 
+  boost::shared_ptr<Ravelin::Pose3d> base_com_w = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(environment_frame));
   base_com_w->x = Ravelin::Origin3d(center_of_mass_x);
-  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(environment_frame, links_[0]->get_velocity());
+  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_velocity());
   
   Ravelin::Vector3d center_of_mass_xd = com_vel.get_upper();
 
-  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(environment_frame, links_[0]->get_accel());
+  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_accel());
   Ravelin::Vector3d center_of_mass_xdd = com_acc.get_linear();
+
+  center_of_mass_xd.pose = center_of_mass_xdd.pose = environment_frame;
 
   set_data<Ravelin::Vector3d>("center_of_mass.x",center_of_mass_x);
   set_data<Ravelin::Vector3d>("center_of_mass.xd",center_of_mass_xd);
@@ -165,7 +167,7 @@ void Robot::compile(){
 //  environment_frame->q.set_identity();
 }
 
-void Robot::init_end_effector(EndEffector& eef){
+void Robot::init_end_effector(end_effector_s& eef){
   eef.id = eef.link->id;
 
   Moby::JointPtr joint_ptr = eef.link->get_inner_joint_explicit();
@@ -204,7 +206,6 @@ void Robot::update(
     const Ravelin::VectorNd& generalized_qd,
     const Ravelin::VectorNd& generalized_qdd,
     const Ravelin::VectorNd& generalized_fext){
-  new_data = boost::shared_ptr<RobotData>(new RobotData());
 
   set_data<Ravelin::VectorNd>("generalized_q", generalized_q);
   set_data<Ravelin::VectorNd>("generalized_qd", generalized_qd);
@@ -226,8 +227,9 @@ void Robot::update(
   
   update_poses();
   
-  boost::shared_ptr<Ravelin::Pose3d> base_link_frame(get_data<Ravelin::Pose3d>("base_link_frame"));
-  boost::shared_ptr<Ravelin::Pose3d> base_horizontal_frame(get_data<Ravelin::Pose3d>("base_horizontal_frame"));
+  boost::shared_ptr<Ravelin::Pose3d> base_link_frame = get_data<boost::shared_ptr<Ravelin::Pose3d> >("base_link_frame");
+  boost::shared_ptr<Ravelin::Pose3d> base_horizontal_frame =
+      boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(get_data<Ravelin::Pose3d>("base_horizontal_frame")));
 #ifndef NDEBUG
   visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_frame.get()),0.8)));
   visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_horizontal_frame.get()),1.5)));
@@ -245,16 +247,20 @@ void Robot::update(
 //  abrobot_->calc_fwd_dyn();
 
   // fetch robot state vectors
-  Ravelin::MatrixNd N,D,R;
-  calc_contact_jacobians(base_link_frame,_contacts,N,S,T);
+  Ravelin::MatrixNd N,S,T;
+  calc_contact_jacobians(_contacts,N,S,T);
+
+  set_data<Ravelin::MatrixNd>("N",N);
+  set_data<Ravelin::MatrixNd>("S",S);
+  set_data<Ravelin::MatrixNd>("T",T);
 
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   // SRZ: updating generalized_fext disabled (for now)
   // generalized_fext is supplied by Sim (controller input)
   Ravelin::MatrixNd M;
-  Ravelin::Vector3d generalized_fext;
-  calculate_dyn_properties(M,generalized_fext);
+  Ravelin::VectorNd fext;
+  calculate_dyn_properties(M,fext);
   set_data<Ravelin::VectorNd>("generalized_inertia",M);
   
   calc_com();
@@ -267,7 +273,7 @@ void Robot::update(
 
 void Robot::update_poses(){
   // Get base frame
-  base_link_frame = links_[0]->get_pose();
+  boost::shared_ptr<const Ravelin::Pose3d> base_link_frame = links_[0]->get_pose();
 
   Ravelin::Matrix3d R_base(base_link_frame->q),
       R_pitch = Ravelin::Matrix3d::rot_Y(displace_base_link[4]),
@@ -276,25 +282,26 @@ void Robot::update_poses(){
   R_base.mult(R_pitch,new_R);
   base_link_frame = boost::shared_ptr<const Ravelin::Pose3d>(
                          new Ravelin::Pose3d( new_R,base_link_frame->x,Moby::GLOBAL));
-  base_link_frame->q.to_rpy(new_data->roll_pitch_yaw);
+  Ravelin::Origin3d roll_pitch_yaw;
+  base_link_frame->q.to_rpy(roll_pitch_yaw);
+
 
   // preserve yaw
   base_horizontal_frame
       = boost::shared_ptr<const Ravelin::Pose3d>(
           new Ravelin::Pose3d(
-            Ravelin::Matrix3d::rot_Z(new_data->roll_pitch_yaw[2]),
+            Ravelin::Matrix3d::rot_Z(roll_pitch_yaw[2]),
           base_link_frame->x,Moby::GLOBAL));
 
-//  base_frame = base_horizontal_frame;
-//  base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(base_horizontal_frame->q,Ravelin::Origin3d(Ravelin::Pose3d::transform_point(base_link_frame,center_of_mass_x)),base_link_frame));
-  base_frame = base_link_frame;
+  set_data<Ravelin::Pose3d>("base_link_frame",base_link_frame);
+  set_data<Ravelin::Origin3d>("base_link_frame",roll_pitch_yaw);
+  set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);
 }
 
 void Robot::reset_contact(){
-	std::map<std::string,boost::shared_ptr<end_effector_s> > it = _end_effector_map.begin();
-	for(;it != _end_effector_map.end();i++)
-      eefs_[i]->contacts.clear();
-  }
+	std::map<std::string,boost::shared_ptr<end_effector_s> >::iterator it = _end_effector_map.begin();
+	for(;it != _end_effector_map.end();it++)
+      (*it).second->contacts.clear();
 }
 
 // ============================================================================
@@ -390,7 +397,9 @@ void Robot::reset_contact(){
  std::vector<int>
     &active_joints = CVarUtils::GetCVarRef<std::vector<int> >("init.joint.active");
 
- displace_base_link = Ravelin::SVector6d(&base_start.front(););
+
+ displace_base_link = Ravelin::SVector6d(
+     Ravelin::VectorNd(base_start.size(),&base_start[0]));
 
  OUTLOG(joint_names,"joint_names",logDEBUG1);
  OUTLOG(joints_start,"joints_start",logDEBUG1);
@@ -410,7 +419,7 @@ void Robot::reset_contact(){
   for(unsigned j=0;j<eef_names_.size();j++){
     for(unsigned i=0;i<links_.size();i++){
       if(eef_names_[j].compare(links_[i]->id) == 0){
-        EndEffector eef;
+        end_effector_s eef;
         eef.link = links_[i];
         init_end_effector(eef);
         eefs_.push_back(eef);
@@ -428,14 +437,8 @@ void Robot::reset_contact(){
   OUT_LOG(logINFO)<< "NDOFS: " << NDOFS ;
   OUT_LOG(logINFO)<< "NSPATIAL: " << NSPATIAL ;
   OUT_LOG(logINFO)<< "NEULER: " << NEULER ;
-
-  
-  // Init some values that need initing.
-  movement_command.set_zero(6);
-  gait_pose = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d());
-
 }
-
+/*
 boost::shared_ptr<const RobotData> Robot::gen_vars_from_model(const std::map<std::string, double>& q,
     const std::map<std::string, double>& qd,
     boost::shared_ptr<const Ravelin::Pose3d> base_pose,
@@ -472,4 +475,4 @@ boost::shared_ptr<const RobotData> Robot::gen_vars_from_model(const std::map<std
 
   return robot->get_robot_data();
 }
-
+*/

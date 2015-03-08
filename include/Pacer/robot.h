@@ -7,6 +7,7 @@
 #define ROBOT_H
 
 #include <Pacer/project_common.h>
+#include <Pacer/utilities.h>
 #include <Pacer/Visualizable.h>
 namespace Pacer{
 
@@ -28,33 +29,39 @@ public:
    
   public:   
     template<class T>
-    const T& set_data(std::string& n, T& v){
+    const T& set_data(std::string n, const T& v){
       _data_map_mutex.lock();
       // TODO: Improve this functionality, shouldn't be copying into new class
-      _data_map[n] = boost::shared_ptr<void>(new T(v));  
+      _data_map[n] = boost::shared_ptr<T>(new T(v));  
       _data_map_mutex.unlock();
-      return T;
+      return v;
     }
     
     template<class T>
-    const T& get_data(std::string& n){
+    const T& get_data(std::string n){
       std::map<std::string,boost::shared_ptr<void> >::iterator it;
       //_data_map_mutex.lock(); // Read Only
       it = _data_map.find(n);
       //_data_map_mutex.unlock();
-      if(it != _data_map.end())
-        return (const T) *(it->second.get());
-      // else
-      std::runtime_error("Variable: \"" + n + "\" not found in data!")
+      if(it != _data_map.end()){
+        // smart_ptr<void> --> void* --> T*
+        T* v = (T*) (((*it).second).get());
+        //boost::shared_ptr<T> val = boost::dynamic_pointer_cast<T>((*it).second);
+        // T* --> const T&
+        return *v;//*(val.get());
+      }
+        // else
+      throw std::runtime_error("Variable: \"" + n + "\" not found in data!");
     }
     
     template<class T>
-    const T& get_data_try(std::string& n){
-      try
-        return get_data(n);
-      catch(std::runtime_error& e)
-        OUT_LOG(logDEBUG) << e.what << std::endl;
-      end  
+    const T& get_data_try(std::string n){
+      try {
+        const T& val = get_data<T>(n);
+        return val;
+      } catch(std::runtime_error& e) {
+        OUT_LOG(logDEBUG) << e.what() << std::endl;
+      }
     }
 
 
@@ -71,7 +78,7 @@ public:
     };
 
    /**
-	 * @brief The EndEffector struct
+	 * @brief The end_effector_s struct
 	 *
 	 * Stores relevent contact and link data for an end effector.
 	 */
@@ -117,14 +124,13 @@ public:
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;
 
-      _link_contacts_map[c->link_id] = c;
       _contacts.push_back(c);
       
       // This will fail if there is no end effector by this name
       
-	  std::map<std::string,boost::shared_ptr<end_effector_s> > it = _end_effector_map.find(c->link_id);
+	    std::map<std::string,boost::shared_ptr<end_effector_s> >::iterator it = _end_effector_map.find(c->link_id);
       if(it != _end_effector_map.end())
-		it->second->contacts.push_back(c);      
+		    it->second->contacts.push_back(c);      
     }
     
     const std::vector<boost::shared_ptr<const contact_s> >& get_contacts(){
@@ -152,39 +158,40 @@ public:
     void reset_contact();
 
     /// Function Warm Starts
+    /*
     static boost::shared_ptr<const RobotData> gen_vars_from_model(
         const std::map<std::string, double>& q,
         const std::map<std::string, double>& qd,
         boost::shared_ptr<const Ravelin::Pose3d> base_x,
         const Ravelin::SVector6d &base_xd,
         boost::shared_ptr<Robot>& robot);
-   
+   */
 
     enum unit_e{        //  REV  |  PRIS
       position,     //  rad  |   m 
       velocity,     // rad/s |  m/s
       acceleration, // rad/ss|  m/ss
       torque        //  N.m  |   N
-    }
+    };
     
-    double get_joint_param(const std::string& id, unit u, int dof)
+    double get_joint_param(const std::string& id, unit_e u, int dof)
     {
 	  return _state[u][_id_coord_map[id]][dof];
     }
     
-    const Ravelin::VectorNd& get_joint_param(const std::string& id, unit u)
+    const Ravelin::VectorNd& get_joint_param(const std::string& id, unit_e u)
     {
 	  return _state[u][_id_coord_map[id]];
     }
     
-    double set_joint_param(const std::string& id, unit u, int dof, double val)
+    void set_joint_param(const std::string& id, unit_e u, int dof, double val)
     {
 	  _state_mutex.lock();
-	  return _state[u][_id_coord_map[id]][dof] = val;
-   	  _state_mutex.unlock();
+	  _state[u][_id_coord_map[id]][dof] = val;
+   	_state_mutex.unlock();
 	}
     
-    const Ravelin::VectorNd& set_joint_param(const std::string& id, unit u, const Ravelin::VectorNd& val)
+    void set_joint_param(const std::string& id, unit_e u, const Ravelin::VectorNd& val)
     {
 	  _state_mutex.lock();
 	  _state[u][_id_coord_map[id]] = Ravelin::VectorNd(val);
@@ -211,7 +218,7 @@ public:
         
   private:
 	
-	std::map<unit , std::map<int, Ravelin::VectorNd > > _state;
+	std::map<unit_e , std::map<int, Ravelin::VectorNd > > _state;
 	std::mutex _state_mutex;
   
     // TODO: Populate these values in compile
@@ -234,39 +241,40 @@ public:
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
 
     /// Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
-    static void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+    void calc_contact_jacobians(std::vector<boost::shared_ptr<const contact_s> > c , Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
 
     /// Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal
-    void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_s& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
     /// Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 6d (linear and angular) goal
-    void RMRC(const EndEffector& foot,const Ravelin::VectorNd& q,const Ravelin::SVector6d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_s& foot,const Ravelin::VectorNd& q,const Ravelin::SVector6d& goal,Ravelin::VectorNd& q_des);
 
     /// N x (3/6)d kinematics for RMRC
-    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const end_effector_s& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     /// N x 3d kinematics
-    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const end_effector_s& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     /// N x 6d Jacobian
-    Ravelin::MatrixNd& foot_jacobian(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
+    Ravelin::MatrixNd& foot_jacobian(const Ravelin::VectorNd& x,const end_effector_s& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
 
     /// N x 6d kinematics
-    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const EndEffector& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const end_effector_s& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     Moby::RCArticulatedBodyPtr        abrobot_;
     Moby::DynamicBodyPtr              dbrobot_;
     std::vector<Moby::JointPtr>       joints_;
     std::vector<Moby::RigidBodyPtr>   links_;
+    std::map<std::string,Moby::RigidBodyPtr>      _link_id_map;
 
     std::vector<std::string>          joint_names_;
 
     // End Effector data
     std::vector<std::string>          eef_names_;
-    std::vector<EndEffector>          eefs_;
-    std::map<std::string,EndEffector*> eefs_map_;
+    std::vector<end_effector_s>          eefs_;
+    std::map<std::string,end_effector_s*> eefs_map_;
     std::map<std::string, bool>       active_joints_;
 
 
@@ -281,7 +289,6 @@ public:
                                                environment_frame,
                                                base_link_frame;
 
-    boost::shared_ptr<const RobotData> data;
     // NDFOFS for forces, accel, & velocities
     unsigned                          NDOFS,NUM_JOINT_DOFS;
     unsigned                          NSPATIAL;
@@ -296,14 +303,15 @@ public:
   // All Names, vectors and, maps must be aligned,
   // this function sorts everything to be sure of that
 
+protected:
+   void init_robot();
 
 private:
-    boost::shared_ptr<RobotData> new_data;
 
     // set up internal models after kineamtic model is set (called from init)
     void compile();
 
-    void init_end_effector(EndEffector& eef);
+    void init_end_effector(end_effector_s& eef);
 };
 }
 #endif // ROBOT_H

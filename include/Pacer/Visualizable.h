@@ -19,7 +19,7 @@ public:
     ePoint = 1,
     eRay = 2,
     ePose = 3
-  } eType = eUnknown;
+  } eType;
   double size;
   Ravelin::Vector3d color;
 };
@@ -49,7 +49,7 @@ public:
 
 class Pose : public Visualizable{
 public:
-  double shade = 1;
+  double shade;
   Ravelin::Pose3d pose;
   Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1){
     pose = Ravelin::Pose3d();

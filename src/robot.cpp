@@ -10,23 +10,28 @@ using namespace Pacer;
 std::vector<Pacer::VisualizablePtr> visualize;
 void Robot::calc_com(){
 
-  new_data->center_of_mass_x.set_zero();
-  new_data->center_of_mass_x.pose = environment_frame;
+  Ravelin::Vector3d center_of_mass_x;
+  center_of_mass_x.pose = environment_frame;
   double total_mass=0;
   for(int i=0;i<links_.size();i++){
     double m = links_[i]->get_mass();
     total_mass += m;
-    new_data->center_of_mass_x += (Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_inertial_pose())) *= m);
+    center_of_mass_x += (Ravelin::Pose3d::transform_point(environment_frame,Ravelin::Vector3d(0,0,0,links_[i]->get_inertial_pose())) *= m);
   }
-  new_data->center_of_mass_x /= total_mass;
+  center_of_mass_x /= total_mass;
 
-  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(environment_frame));
-  base_com_w->x = Ravelin::Origin3d(new_data->center_of_mass_x);
-  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_velocity());
-  new_data->center_of_mass_xd = com_vel.get_upper();
+  base_com_w->x = Ravelin::Origin3d(center_of_mass_x);
+  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(environment_frame, links_[0]->get_velocity());
+  
+  Ravelin::Vector3d center_of_mass_xd = com_vel.get_upper();
 
-  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w, links_[0]->get_accel());
-  new_data->center_of_mass_xdd = com_acc.get_linear();
+  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(environment_frame, links_[0]->get_accel());
+  Ravelin::Vector3d center_of_mass_xdd = com_acc.get_linear();
+
+  set_data<Ravelin::Vector3d>("center_of_mass.x",center_of_mass_x);
+  set_data<Ravelin::Vector3d>("center_of_mass.xd",center_of_mass_xd);
+  set_data<Ravelin::Vector3d>("center_of_mass.xdd",center_of_mass_xdd);
+
 //  center_of_mass_wd = com_acc.get_angular();
 //  center_of_mass_w = com_vel.get_angular();
 
@@ -48,20 +53,19 @@ void Robot::calc_com(){
 
   // e = p - p_ref
   //
-  Ravelin::Vector3d C(1,0,-new_data->center_of_mass_x[2]/grav,environment_frame);
-  new_data->zero_moment_point =
-      Ravelin::Vector3d(C.dot(Ravelin::Vector3d(new_data->center_of_mass_x[0],new_data->center_of_mass_xd[0],new_data->center_of_mass_xdd[0],environment_frame)),
-                        C.dot(Ravelin::Vector3d(new_data->center_of_mass_x[1],new_data->center_of_mass_xd[1],new_data->center_of_mass_xdd[1],environment_frame)),
+  Ravelin::Vector3d C(1,0,-center_of_mass_x[2]/grav,environment_frame);
+  Ravelin::Vector3d zero_moment_point =
+      Ravelin::Vector3d(C.dot(Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_xd[0],center_of_mass_xdd[0],environment_frame)),
+                        C.dot(Ravelin::Vector3d(center_of_mass_x[1],center_of_mass_xd[1],center_of_mass_xdd[1],environment_frame)),
                         0,environment_frame);
-
-  new_data->center_of_mass_x.pose = new_data->center_of_mass_xd.pose = new_data->center_of_mass_xdd.pose = environment_frame;
+  set_data<Ravelin::Vector3d>("zero_moment_point",zero_moment_point);
 
   // ZMP and COM
-  Ravelin::Vector3d CoM_2D(new_data->center_of_mass_x[0],new_data->center_of_mass_x[1],new_data->center_of_mass_x[2]-0.10,environment_frame);
-  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D,new_data->center_of_mass_x,Ravelin::Vector3d(0,0,1))));
-//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + new_data->center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
-//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + new_data->center_of_mass_xd*0.1 + new_data->center_of_mass_xdd*0.01,CoM_2D + new_data->center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
-  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D+Ravelin::Vector3d(new_data->zero_moment_point[0],new_data->zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
+  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.10,environment_frame);
+  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1))));
+//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
+//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + center_of_mass_xd*0.1 + center_of_mass_xdd*0.01,CoM_2D + center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
+  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,environment_frame)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
 }
 
 double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const {
@@ -185,94 +189,80 @@ void Robot::init_end_effector(EndEffector& eef){
         }
       }
     }
-    OUT_LOG(logDEBUG) ;
+    OUT_LOG(logDEBUG);
     rb_ptr = joint_ptr->get_inboard_link();
   }
-  OUT_LOG(logDEBUG) ;
-  OUT_LOG(logDEBUG) ;
+  OUT_LOG(logDEBUG);
+}
 
-  eef.active = false;
+void Robot::update(){
+	
 }
 
 void Robot::update(
-    const Ravelin::VectorNd& generalized_q_in,
-    const Ravelin::VectorNd& generalized_qd_in,
-    const Ravelin::VectorNd& generalized_qdd_in,
-    const Ravelin::VectorNd& generalized_fext_in){
+    const Ravelin::VectorNd& generalized_q,
+    const Ravelin::VectorNd& generalized_qd,
+    const Ravelin::VectorNd& generalized_qdd,
+    const Ravelin::VectorNd& generalized_fext){
   new_data = boost::shared_ptr<RobotData>(new RobotData());
 
-  new_data->generalized_q = generalized_q_in;
-  new_data->generalized_qd = generalized_qd_in;
-  new_data->generalized_qdd = generalized_qdd_in;
-  new_data->generalized_fext = generalized_fext_in;
+  set_data<Ravelin::VectorNd>("generalized_q", generalized_q);
+  set_data<Ravelin::VectorNd>("generalized_qd", generalized_qd);
+  set_data<Ravelin::VectorNd>("generalized_qdd", generalized_qdd);
+  set_data<Ravelin::VectorNd>("generalized_fext", generalized_fext);
 
-  new_data->q   = new_data->generalized_q.segment(0,NUM_JOINT_DOFS);
-  new_data->qd  = new_data->generalized_qd.segment(0,NUM_JOINT_DOFS);
-  new_data->qdd = new_data->generalized_qdd.segment(0,NUM_JOINT_DOFS);
+  const Ravelin::VectorNd& q 
+	= set_data<Ravelin::VectorNd>("q",generalized_q.segment(0,NUM_JOINT_DOFS));
+  const Ravelin::VectorNd& qd 
+	= set_data<Ravelin::VectorNd>("qd",generalized_qd.segment(0,NUM_JOINT_DOFS));
+  const Ravelin::VectorNd& qdd 
+	= set_data<Ravelin::VectorNd>("qdd",generalized_qdd.segment(0,NUM_JOINT_DOFS));
 
   abrobot_->reset_accumulators();
-  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,new_data->generalized_q);
-  abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,new_data->generalized_qd);
+  abrobot_->set_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
+  abrobot_->set_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
   abrobot_->update_link_poses();
   abrobot_->update_link_velocities();
+  
   update_poses();
-
+  
+  boost::shared_ptr<Ravelin::Pose3d> base_link_frame(get_data<Ravelin::Pose3d>("base_link_frame"));
+  boost::shared_ptr<Ravelin::Pose3d> base_horizontal_frame(get_data<Ravelin::Pose3d>("base_horizontal_frame"));
+#ifndef NDEBUG
+  visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_frame.get()),0.8)));
+  visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_horizontal_frame.get()),1.5)));
+  visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
+#endif
 //  abrobot_->set_generalized_acceleration(generalized_qdd);
   for(int i=0,ii=0;i<NUM_JOINTS;i++){
     if(joints_[i])
     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-      joints_[i]->qdd[j] = new_data->generalized_qdd[ii];
+      joints_[i]->qdd[j] = generalized_qdd[ii];
     }
   }
-  abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(new_data->generalized_qdd.segment(NUM_JOINT_DOFS,NDOFS)));
+  abrobot_->get_base_link()->set_accel(Ravelin::SAcceld(generalized_qdd.segment(NUM_JOINT_DOFS,NDOFS)));
 //  abrobot_->add_generalized_force(generalized_fext);
 //  abrobot_->calc_fwd_dyn();
 
   // fetch robot state vectors
-  calc_contact_jacobians(new_data->N,new_data->D,new_data->R);
+  Ravelin::MatrixNd N,D,R;
+  calc_contact_jacobians(base_link_frame,_contacts,N,S,T);
 
-  int NC = new_data->N.columns();
   // Get robot dynamics state
   // SRZ: Very Heavy Computation
   // SRZ: updating generalized_fext disabled (for now)
   // generalized_fext is supplied by Sim (controller input)
-  calculate_dyn_properties(new_data->M,new_data->generalized_fext);
-  calc_energy(new_data->generalized_qd,new_data->M);
+  Ravelin::MatrixNd M;
+  Ravelin::Vector3d generalized_fext;
+  calculate_dyn_properties(M,generalized_fext);
+  set_data<Ravelin::VectorNd>("generalized_inertia",M);
+  
   calc_com();
 
-  visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_frame,0.8)));
-  visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_horizontal_frame,1.5)));
-  visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
+#ifndef NDEBUG
+  calc_energy(generalized_qd,M);
+#endif
 
-       // CONTACTS
-       if(NC != 0){
-         std::vector<const EndEffector * > active_eefs;
-         if(eefs_[0].active)
-           active_eefs.push_back(&eefs_[0]);
-         if(eefs_[1].active)
-           active_eefs.push_back(&eefs_[1]);
-         if(eefs_[3].active)
-           active_eefs.push_back(&eefs_[3]);
-         if(eefs_[2].active)
-           active_eefs.push_back(&eefs_[2]);
-
-         // Draw Contact Polygon
-         for(int i=0;i<NC;i++){
-     //      visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
-       //                  active_eefs[(i+1)%NC]->point[0]  + Ravelin::Vector3d(0,0,0.001),
-         //                Ravelin::Vector3d(0.5,0.5,1))));
-         }
-//          Draw all Contacts
-         for(int i=0;i<NC;i++){
-           for(int j=0;j<active_eefs[i]->point.size();j++){
-//             visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->contacts[j],
-//                           active_eefs[i]->point[0],
-//                           Ravelin::Vector3d(1,1,1)));
-           }
-         }
-       }
-
-       data = boost::shared_ptr<const RobotData>(new_data);
 }
 
 void Robot::update_poses(){
@@ -301,13 +291,9 @@ void Robot::update_poses(){
 }
 
 void Robot::reset_contact(){
-  for(int i=0;i<eefs_.size();i++){
-    eefs_[i].active = false;
-    eefs_[i].point.clear();
-    eefs_[i].normal.clear();
-    eefs_[i].impulse.clear();
-    eefs_[i].tan1.clear();
-    eefs_[i].tan2.clear();
+	std::map<std::string,boost::shared_ptr<end_effector_s> > it = _end_effector_map.begin();
+	for(;it != _end_effector_map.end();i++)
+      eefs_[i]->contacts.clear();
   }
 }
 
@@ -320,7 +306,7 @@ void Robot::reset_contact(){
 #include <Moby/SDFReader.h>
 #include <Moby/XMLReader.h>
 
-  void Robot::init_robot(){
+ void Robot::init_robot(){
   // ================= LOAD SCRIPT DATA ==========================
   std::string pPath(getenv ("PACER_MODELS_PATH"));
   OUT_LOG(logDEBUG) << "PACER_MODELS_PATH = " << pPath;
@@ -393,52 +379,30 @@ void Robot::reset_contact(){
   eef_names_
       = CVarUtils::GetCVarRef<std::vector<std::string> >("init.end-effector.id");
 
-  static std::vector<std::string>
+  std::vector<std::string>
      &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.joint.id");
 
- static std::vector<double>
-    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.q"),
-    &torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.max-torque"),
-    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("init.base.x");
+	std::vector<double>
+		&joints_start = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.q"),
+		&torque_limits = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.max-torque"),
+		&base_start = CVarUtils::GetCVarRef<std::vector<double> >("init.base.x");
 
- static std::vector<int>
+ std::vector<int>
     &active_joints = CVarUtils::GetCVarRef<std::vector<int> >("init.joint.active");
 
- const double* data = &base_start.front();
- displace_base_link = Ravelin::SVector6d(data);
+ displace_base_link = Ravelin::SVector6d(&base_start.front(););
 
  OUTLOG(joint_names,"joint_names",logDEBUG1);
  OUTLOG(joints_start,"joints_start",logDEBUG1);
 
- // MAKE SURE DATA PARSED PROPERLY
-
-// assert(joint_names.size() == joints_.size());
  assert(joint_names.size() == joints_start.size());
- assert(joint_names.size() == torque_limits.size());
 
-  torque_limits_l.resize(NUM_JOINT_DOFS);
-  torque_limits_u.resize(NUM_JOINT_DOFS);
-
-  std::map<std::string, double> torque_limits_;
   for(int ii=0;ii<joint_names.size();ii++){
       OUT_LOG(logDEBUG) << joint_names[ii] << " " << ((active_joints[ii] == 0)? "false":"true") << std::endl;
 
       active_joints_[joint_names[ii]] = (active_joints[ii] == 0)? false:true;
 
       q0_[joint_names[ii]] = joints_start[ii];
-
-      torque_limits_[joint_names[ii]] = torque_limits[ii];
-      OUT_LOG(logINFO)<< "torque_limit: " << joint_names[ii] << " = " <<  torque_limits_[joint_names[ii]];
-  }
-
-  for(int i=0,ii=0;i<NUM_JOINTS;i++){
-    if(joints_[i])
-    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-      OUT_LOG(logINFO)<< "\t -- torque_limit: " << std::to_string(j)+joints_[i]->id << " = " <<  torque_limits_[std::to_string(j)+joints_[i]->id];
-
-      torque_limits_l[ii] = -torque_limits_[std::to_string(j)+joints_[i]->id];
-      torque_limits_u[ii] =  torque_limits_[std::to_string(j)+joints_[i]->id];
-    }
   }
 
   // Initialize Foot Data Structures

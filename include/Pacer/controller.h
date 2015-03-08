@@ -67,7 +67,7 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
       _update_priority_map[_name_priority_map[name]].erase(name);
       _name_priority_map.erase(name);
     }
-    
+      
   private:
     typedef std::map<std::string , update_t> name_update_t;
     std::map<int , name_update_t> _update_priority_map;

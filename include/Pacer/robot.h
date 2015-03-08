@@ -12,38 +12,49 @@ namespace Pacer{
 
 class Robot {
 
-  public:
-    std::string VARS_FILE("vars.h");
+public:
+	std::string VARS_FILE;
+	
+	Robot(){
+	  VARS_FILE = std::string("vars.h");
+	  Utility::load_variables(VARS_FILE);
+	  init_robot();
+	}
 
-    Robot(){
-      Utility::load_variables(VARS_FILE);
-      init_robot();
-    }
-
-    /// Data storage
+    /// ---------------------------  Data Storage  ---------------------------
   private:
     std::map<std::string,boost::shared_ptr<void> > _data_map;
     std::mutex _data_map_mutex;
    
   public:   
-	template<class T>
-    void set_data(std::string& n, T& v){
-	  _data_map_mutex.lock();
-      _data_map[n] = boost::shared_ptr<void>(new T(v));
+    template<class T>
+    const T& set_data(std::string& n, T& v){
+      _data_map_mutex.lock();
+      // TODO: Improve this functionality, shouldn't be copying into new class
+      _data_map[n] = boost::shared_ptr<void>(new T(v));  
       _data_map_mutex.unlock();
+      return T;
     }
     
-     template<class T>
-     T get_data(std::string& n){
+    template<class T>
+    const T& get_data(std::string& n){
       std::map<std::string,boost::shared_ptr<void> >::iterator it;
-      _data_map_mutex.lock();
+      //_data_map_mutex.lock(); // Read Only
       it = _data_map.find(n);
-      _data_map_mutex.unlock();
+      //_data_map_mutex.unlock();
       if(it != _data_map.end())
-        return T(*(it->second.get()));
-      else
-        std::runtime_error("Variable: \"" + n + "\" not found in data!")
-      return true;
+        return (const T) *(it->second.get());
+      // else
+      std::runtime_error("Variable: \"" + n + "\" not found in data!")
+    }
+    
+    template<class T>
+    const T& get_data_try(std::string& n){
+      try
+        return get_data(n);
+      catch(std::runtime_error& e)
+        OUT_LOG(logDEBUG) << e.what << std::endl;
+      end  
     }
 
 
@@ -85,13 +96,13 @@ class Robot {
 	
 	
 	private:
-		std::map<std::string,std::vector< boost::shared_ptr<const contact_s> > > _link_contacts_map
-		std::vector<boost::shared_ptr<const contact_s> > _contacts
+		std::map<std::string,std::vector< boost::shared_ptr<const contact_s> > > _link_contacts_map;
+		std::vector<boost::shared_ptr<const contact_s> > _contacts;
 		std::map<std::string,boost::shared_ptr<end_effector_s> > _end_effector_map;
 	
 	public:
     void add_contact(
-        std::string& id;
+        std::string& id,
         const Ravelin::Vector3d point,
         const Ravelin::Vector3d normal,
         const Ravelin::Vector3d impulse = Ravelin::Vector3d(),
@@ -120,14 +131,14 @@ class Robot {
       return _contacts;
 	}
 
-	const std::vector<boost::shared_ptr<const contact_s> >& get_contacts(){
-	  return _contacts;
+	const std::map<std::string,boost::shared_ptr<end_effector_s> >& get_end_effectors(){
+	  return _end_effector_map;
 	}
 
-    std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
-    std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
-    std::vector<Moby::RigidBodyPtr>& get_links()  { return links_; }
-    std::vector<std::string>& get_joint_names()  { return joint_names_; }
+    //std::vector<std::string>& get_end_effector_names()  { return eef_names_; }
+    //std::vector<Moby::JointPtr>& get_joints()  { return joints_; }
+    //std::vector<Moby::RigidBodyPtr>& get_links()  { return links_; }
+    //std::vector<std::string>& get_joint_names()  { return joint_names_; }
 
     /// Return Robot's internal model
     Moby::RCArticulatedBodyPtr get_articulated_body()  { return abrobot_; }
@@ -149,42 +160,41 @@ class Robot {
         boost::shared_ptr<Robot>& robot);
    
 
-    enum unit{        //  REV  |  PRIS
-      position_e,     //  rad  |   m 
-      velocity_e,     // rad/s |  m/s
-      acceleration_e, // rad/ss|  m/ss
-      torque_e        //  N.m  |   N
+    enum unit_e{        //  REV  |  PRIS
+      position,     //  rad  |   m 
+      velocity,     // rad/s |  m/s
+      acceleration, // rad/ss|  m/ss
+      torque        //  N.m  |   N
     }
     
-    double get_joint_param(std::string id,unit u, int dof = 0)
+    double get_joint_param(const std::string& id, unit u, int dof)
     {
-      switch(u){
-        case position_e:
-          return q[_id_coord_map[id]+dof];
-          break;
-        case velocity_e:
-          return qd[_id_coord_map[id]+dof];
-          break;
-        case acceleration_e:
-          return qdd[_id_coord_map[id]+dof];
-          break;
-        case torque_e:
-          return tau[_id_coord_map[id]+dof];
-          break;
-        default: break;
-      }
+	  return _state[u][_id_coord_map[id]][dof];
+    }
+    
+    const Ravelin::VectorNd& get_joint_param(const std::string& id, unit u)
+    {
+	  return _state[u][_id_coord_map[id]];
+    }
+    
+    double set_joint_param(const std::string& id, unit u, int dof, double val)
+    {
+	  _state_mutex.lock();
+	  return _state[u][_id_coord_map[id]][dof] = val;
+   	  _state_mutex.unlock();
+	}
+    
+    const Ravelin::VectorNd& set_joint_param(const std::string& id, unit u, const Ravelin::VectorNd& val)
+    {
+	  _state_mutex.lock();
+	  _state[u][_id_coord_map[id]] = Ravelin::VectorNd(val);
+	  _state_mutex.unlock();
     }
 
   protected:
 
     /// @brief Pulls data from q_joints,qd_joints,qdd_joints and sets up generalized vector
-    void update(); // SRZ: TODO
-
-  private:
-
-    // TODO: Populate these values in compile
-    std::map<std::string,int> _id_coord_map;
-    std::map<int,std::string> _coord_id_map;
+    void update();
 
     /**
      * @brief Update robot internal model using 'generalized' (minimal) parameters
@@ -198,6 +208,15 @@ class Robot {
         const Ravelin::VectorNd& generalized_qd_in,
         const Ravelin::VectorNd& generalized_qdd_in,
         const Ravelin::VectorNd& generalized_fext_in);
+        
+  private:
+	
+	std::map<unit , std::map<int, Ravelin::VectorNd > > _state;
+	std::mutex _state_mutex;
+  
+    // TODO: Populate these values in compile
+    std::map<std::string,int> _id_coord_map;
+    std::map<int,std::string> _coord_id_map;
 
     /// Update poses of robot based on  currently set 'generalized' parameters
     void update_poses();
@@ -210,17 +229,12 @@ class Robot {
 
     /// Calculate Center of mass(x,xd,xdd,zmp)
     void calc_com();
-  
-    // Import necessary info and then compile model
-    void init_robot();
-
-  public:
 
     /// Set Plugin internal model to input state
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
 
-    /// Calculate N (normal), D (positive tangent), R ([N D]) contact jacobians
-    void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
+    /// Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
+    static void calc_contact_jacobians(Ravelin::MatrixNd& N,Ravelin::MatrixNd& D,Ravelin::MatrixNd& R);
 
     /// Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal

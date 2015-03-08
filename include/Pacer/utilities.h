@@ -8,11 +8,33 @@
 
     static const double     _PI= 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348;
     static const double _TWO_PI= 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696;
-#include <Pacer/project_common.h>
+#include <Ravelin/MatrixNd.h>
+#include <Ravelin/Transform3d.h>
+#include <Ravelin/VectorNd.h>
+#include <Ravelin/SVector6d.h>
+#include <Ravelin/Vector3d.h>
+#include <mutex>
+#include <Pacer/Log.h>
+#include <boost/assign/std/vector.hpp>
+#include <boost/assign/list_of.hpp>
+
+#include <boost/shared_ptr.hpp>
+#include <math.h>
+#include <cmath>
+#include <sys/types.h>
+#include <sys/times.h>
+#include <fstream>
+#include <string>
+#include <iostream>     // std::cout, std::fixed
+#include <iomanip>      // std::setprecision
+#include <math.h>
+#include <numeric>
+#include <CVars/CVar.h>
+
 class Utility{
-  public:
 
-
+    /// Data storage
+public:
     // Floating-point modulo
     // The result (the remainder) has same sign as the divisor.
     // Similar to matlab's mod(); Not similar to fmod() -   Mod(-3,4)= 1   fmod(-3,4)= -3
@@ -160,18 +182,18 @@ class Utility{
       return (T) 0.0;
   }
 
-	bool isvalid(const Ravelin::VectorNd& v){
-	  if(v.norm() > NEAR_INF || !std::isfinite(v.norm()))
-		return false;
+	static bool isvalid(const Ravelin::VectorNd& v){
+	  if(v.norm() > std::numeric_limits<double>::epsilon() || !std::isfinite(v.norm()))
+      return false;
 	  return true;
 	}
 
 
 	// Solvers
-	bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-	bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
-	bool Utility::solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-	bool Utility::lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
+	bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+	bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
+	bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+	bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
 
   //////////////  Variables ///////////////
   static void load_variables(std::string fname);

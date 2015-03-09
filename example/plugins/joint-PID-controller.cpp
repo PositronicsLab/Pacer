@@ -10,8 +10,9 @@
 std::string plugin_namespace;
 
 class PIDController {
-  PIDController();
-private:
+  public:
+    Ravelin::VectorNd value;
+  protected:
 
   struct Gains
   {
@@ -39,8 +40,7 @@ private:
 
 class JointPID : public PIDController {
 public:
-  JointPID(std::string n) : PIDController(n){ init(); }
-
+  JointPID(std::string n) { init(); }
 
   Ravelin::VectorNd q_des,
                     qd_des,
@@ -50,7 +50,6 @@ public:
   std::vector<std::string> joint_names;
 
   void init(){
-    type = CONTROLLER;
     std::vector<std::string>
         &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >(plugin_namespace+".id");
 
@@ -62,16 +61,16 @@ public:
         &Ki = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.ki");
 
     for(int i=0;i<joint_names.size();i++){
-      gains[joint_names[i]].kp = Kp[i];
-      gains[joint_names[i]].kv = Kv[i];
-      gains[joint_names[i]].ki = Ki[i];
-      gains[joint_names[i]].perr_sum = 0;
+      _gains[joint_names[i]].kp = Kp[i];
+      _gains[joint_names[i]].kv = Kv[i];
+      _gains[joint_names[i]].ki = Ki[i];
+      _gains[joint_names[i]].perr_sum = 0;
     }
 
     OUTLOG(Kp,"Kp",logERROR);
     OUTLOG(Kv,"Kv",logERROR);
     OUTLOG(Ki,"Ki",logERROR);
-    OUT_LOG(logERROR) << "Controller: " << name << " inited!";
+    OUT_LOG(logERROR) << "Controller: " << plugin_namespace << " inited!";
   }
 
   void update(){
@@ -89,10 +88,56 @@ public:
     }
   }
 };
-}
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.active");
+  if (ERROR_FEEDBACK){
+    // --------------------------- JOINT FEEDBACK ------------------------------
+    int &JOINT_FEEDBACK = CVarUtils::GetCVarRef<int>(plugin_namespace+".active");
+    if(JOINT_FEEDBACK){
+      int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>(plugin_namespace+".accel");
+
+      static boost::shared_ptr<JointPID> pid;
+      if(!pid){
+         if(FEEDBACK_ACCEL)
+           pid = boost::shared_ptr<JointPID>( new JointPID(std::string(plugin_namespace+".accel")));
+         else
+           pid = boost::shared_ptr<JointPID>( new JointPID(std::string(plugin_namespace+".force")));
+      }
+
+      pid->q = Ravelin::VectorNd(q;
+      pid->qd = Ravelin::VectorNd(qd;
+      pid->q_des = Ravelin::VectorNd(q_des;
+      pid->qd_des = Ravelin::VectorNd(qd_des;
+      pid->joint_names = ;
+      pid->update();
+
+    }
+
+/*
+    // --------------------------- WORKSPACE FEEDBACK --------------------------
+    static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.active");
+    if(WORKSPACE_FEEDBACK){
+      // CURRENTLY THIS IS ONLY FORCE
+      // BUT IT CAN BE ACCELERATIONS TOO
+      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.accel");
+      std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
+      static std::vector<double>
+          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kp"),
+          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kv"),
+          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.ki");
+
+      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
+      eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,data->q,data->qd,fb);
+
+      if(FEEDBACK_ACCEL)
+        qdd_des += fb;
+      else
+        ufb += fb;
+    }
+  }
   
+  */
 }
 
 /** This is a quick way to register your plugin function of the form:

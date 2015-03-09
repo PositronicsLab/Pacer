@@ -97,8 +97,7 @@ bool Controller::init_plugins(){
 // ============================================================================
 // =========================== Begin Robot Controller =========================
 // ============================================================================
-
-void Controller::control(double t
+void Controller::control(double t,
                                       const Ravelin::VectorNd& generalized_q_in,
                                       const Ravelin::VectorNd& generalized_qd_in,
                                       const Ravelin::VectorNd& generalized_qdd_in,
@@ -107,10 +106,14 @@ void Controller::control(double t
                                       Ravelin::VectorNd& qd_des,
                                       Ravelin::VectorNd& qdd_des,
                                       Ravelin::VectorNd& u){
+control(t);
+}
+void Controller::control(double t){
   // Import Robot Data
   static double last_time = -0.001;
   const double dt = t - last_time;
 
+  /*
   // Select end effectors that are feet and set them as active contacts
   static std::vector<int>
       &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("init.end-effector.foot");
@@ -319,83 +322,6 @@ void Controller::control(double t
     }
   }
 
-  // --------------------------- ERROR FEEDBACK --------------------------------
-
-  for(int i=0,ii=0;i<NUM_JOINTS;i++){
-    if(joints_[i])
-    for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-      if(!get_active_joints()[std::to_string(j)+joints_[i]->id]){
-        q_des[ii] = get_q0()[std::to_string(j)+joints_[i]->id];
-        qd_des[ii] = 0;
-        qdd_des[ii] = 0;
-      }
-    }
-  }
-
-  static int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.active");
-  if (ERROR_FEEDBACK){
-    // --------------------------- JOINT FEEDBACK ------------------------------
-    static int &JOINT_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.configuration-space.active");
-    if(JOINT_FEEDBACK){
-      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.error-feedback.configuration-space.accel");
-
-      static boost::shared_ptr<JointPID> pid;
-      if(!pid){
-         if(FEEDBACK_ACCEL)
-           pid = boost::shared_ptr<JointPID>( new JointPID(std::string("controller.error-feedback.configuration-space.accel")));
-         else
-           pid = boost::shared_ptr<JointPID>( new JointPID(std::string("controller.error-feedback.configuration-space.force")));
-
-         controllers.push_back(pid->ptr());
-      }
-      pid->q = data->q;
-      pid->qd = data->qd;
-      pid->q_des = q_des;
-      pid->qd_des = qd_des;
-      pid->joint_names = get_joint_names();
-      pid->update();
-      if(FEEDBACK_ACCEL)
-        qdd_des += pid->value;
-      else
-        ufb += pid->value;
-      OUTLOG(ufb,"controller-ufb",logERROR);
-
-      }
-
-//    BOOST_FOREACH(boost::shared_ptr<ControllerModule> m,controllers){
-//      if(m->type == CONTROLLER){
-////        boost::shared_ptr<ControllerModule> c = std::make_shared<ControllerModule>();
-////        c = boost::dynamic_pointer_cast<ControllerModule>(m);
-//        if(false)
-//          qdd_des += m->value;
-//        else
-//          ufb += m->value;
-//        OUTLOG(ufb,"controller-ufb",logERROR);
-//      }
-//    }
-
-
-    // --------------------------- WORKSPACE FEEDBACK --------------------------
-    static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.active");
-    if(WORKSPACE_FEEDBACK){
-      // CURRENTLY THIS IS ONLY FORCE
-      // BUT IT CAN BE ACCELERATIONS TOO
-      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.accel");
-      std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
-      static std::vector<double>
-          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kp"),
-          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kv"),
-          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.ki");
-
-      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-      eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,data->q,data->qd,fb);
-
-      if(FEEDBACK_ACCEL)
-        qdd_des += fb;
-      else
-        ufb += fb;
-    }
-  }
 
   // ------------------------ INVERSE DYNAMICS ---------------------------------
 
@@ -803,7 +729,7 @@ if(inf_friction){
        u_joints[std::to_string(j)+joints_[i]->id] = u[ii];
      }
    }
-
+*/
    reset_contact();
    last_time = t;
 }

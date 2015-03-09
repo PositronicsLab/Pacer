@@ -152,7 +152,7 @@ IF(GLConsole_FOUND)
   target_link_libraries (Pacer ${GLConsole_LIBRARIES})
 ENDIF(GLConsole_FOUND)
 
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${CVARS_LIBRARIES})
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${CVARS_LIBRARIES} ${BOOST_LIBRARIES} boost_filesystem boost_system)
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

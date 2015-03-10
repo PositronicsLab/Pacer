@@ -91,14 +91,6 @@ double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M
 }
 
 void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
-//  for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
-//    if(joints_[i])
-//    for(unsigned j=0;i<joints_[i]->num_dof();j++,ii++){
-//      joints_[i]->q[j] = q[ii];
-//      if(!qd.rows() > 0)
-//        joints_[i]->qd[j] = qd[ii];
-//    }
-//  }
   Ravelin::VectorNd set_q,set_qd;
   abrobot_->get_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
   abrobot_->get_generalized_velocity(Moby::DynamicBody::eSpatial,set_qd);
@@ -112,34 +104,40 @@ void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& 
   abrobot_->update_link_velocities();
 }
 
-void Robot::calculate_dyn_properties(Ravelin::MatrixNd& M, Ravelin::VectorNd& fext){
-  //   fext.resize(NDOFS);
-   M.resize(NDOFS,NDOFS);
-   abrobot_->get_generalized_inertia(M);
-//   abrobot_->get_generalized_forces(fext);
+void Robot::calculate_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M){
+  set_model_state(q);
+  M.resize(NDOFS,NDOFS);
+  abrobot->get_generalized_inertia(M);
 }
 
 void Robot::compile(){
-
-  NSPATIAL = 6;
-  NEULER = 7;
-  NDOFS = abrobot_->num_generalized_coordinates(Moby::DynamicBody::eSpatial); // for generalized velocity, forces. accel
+  NDOFS = abrobot_->num_generalized_coordinates(Moby::DynamicBody::eSpatial);
   NUM_JOINT_DOFS = NDOFS - NSPATIAL;
 
-  dbrobot_ = boost::dynamic_pointer_cast<Moby::DynamicBody>(abrobot_);
+  _dbrobot = boost::dynamic_pointer_cast<Moby::DynamicBody>(_abrobot);
   std::vector<Moby::JointPtr> joints = abrobot_->get_joints();
-  joints_.resize(NUM_JOINT_DOFS);
-
-  NUM_FIXED_JOINTS = 0;
+    
   for(unsigned i=0;i<joints.size();i++){
-    OUT_LOG(logINFO)  << joints[i]->id;
-    if(joints[i]->num_dof() == 0){
-      OUT_LOG(logINFO) <<"\tFixed: "<< joints[i]->id;
-
-      NUM_FIXED_JOINTS ++;
-      continue;
+    OUT_LOG(logINFO) << joints[i]->id << ", dofs = " << joints[i]->num_dof();
+    if(joints[i]->num_dof() != 0){
+      _id_joint_map[joints[i]->id] = joints[i];
     }
-    joints_[joints[i]->get_coord_index()] = joints[i];
+  }
+
+  // Init robot params based on joint map
+  std
+  for(unsigned i=0;i<_joints.size();i++){
+    for(int j=0;j<_joints[i]->num_dof();j++){
+      _id_coord_map
+    }
+  }
+
+
+  std::map<unit_e , std::map<int, Ravelin::VectorNd > >::iterator it;
+  std::map<int, Ravelin::VectorNd >::iterator jt;
+  for(it=_state.begin();it!=_state.end();it++){
+    for(jt=(*it).second.begin();jt!=(*it).second.end();jt++)
+      (*jt).second.set_zero();
   }
 
   OUT_LOG(logINFO) <<"\tNum Fixed: "<< NUM_FIXED_JOINTS;

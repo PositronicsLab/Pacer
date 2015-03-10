@@ -40,7 +40,7 @@ class PIDController {
 
 class JointPID : public PIDController {
 public:
-  JointPID(std::string n) { init(); }
+  JointPID() { init(); }
 
   Ravelin::VectorNd q_des,
                     qd_des,
@@ -50,8 +50,7 @@ public:
   std::vector<std::string> joint_names;
 
   void init(){
-    std::vector<std::string>
-        &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >(plugin_namespace+".id");
+    joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >(plugin_namespace+".id");
 
     OUTLOG(joint_names,"joint_names",logERROR);
 
@@ -98,20 +97,43 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>(plugin_namespace+".accel");
 
       static boost::shared_ptr<JointPID> pid;
-      if(!pid){
-         if(FEEDBACK_ACCEL)
-           pid = boost::shared_ptr<JointPID>( new JointPID(std::string(plugin_namespace+".accel")));
-         else
-           pid = boost::shared_ptr<JointPID>( new JointPID(std::string(plugin_namespace+".force")));
+      if(!pid)
+        pid = boost::shared_ptr<JointPID>( new JointPID());
+
+
+      unsigned N = pid->joint_names.size();
+      
+      pid->q.set_zero(N);
+      pid->qd.set_zero(N);
+      pid->q_des.set_zero(N);
+      pid->qd_des.set_zero(N);
+
+      // Get data from pacer
+      for(int i=0,ii=0;i<N;i++){
+        Ravelin::VectorNd Qi = ctrl->get_joint_param(joint_names[ii],Pacer::Controller::position);
+        Ravelin::VectorNd QDi = ctrl->get_joint_param(joint_names[ii],Pacer::Controller::velocity);
+        Ravelin::VectorNd Qi_des = ctrl->get_joint_param(joint_names[ii],Pacer::Controller::position_goal);
+        Ravelin::VectorNd QDi_des = ctrl->get_joint_param(joint_names[ii],Pacer::Controller::velocity_goal);
+        for(int j=0;j<Qi.rows();j++,ii++){
+          pid->q[ii] = Qi[j];
+          pid->qd[ii] = QDi[j];
+          pid->q_des[ii] = Qi_des[j];
+          pid->qd_des[ii] = QDi_des[j];
+        }
       }
 
-      pid->q = Ravelin::VectorNd(q;
-      pid->qd = Ravelin::VectorNd(qd;
-      pid->q_des = Ravelin::VectorNd(q_des;
-      pid->qd_des = Ravelin::VectorNd(qd_des;
-      pid->joint_names = ;
       pid->update();
 
+      // Set new torques in pacer
+      for(int i=0,ii=0;i<N;i++){
+        Ravelin::VectorNd Ui = Ravelin::VectorNd(ctrl->get_joint_param(&joint_names[ii][1],Pacer::Controller::torque));
+
+        for(int j=0;j<Qi.rows();j++,ii++){
+          Ui[j] += pid->value[ii];
+        }
+        
+        ctrl->set_joint_param(&joint_names[ii][1],Pacer::Controller::torque,Ui);
+      }
     }
 
 /*

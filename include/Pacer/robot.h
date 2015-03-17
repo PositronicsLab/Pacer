@@ -22,7 +22,7 @@ class Robot {
   public:
 
 	Robot(){
-	  VARS_FILE = std::string("vars.h");
+	  PARAMS_FILE = std::string("vars.h");
 	  Utility::load_variables(PARAMS_FILE);
 	  init_robot();
 	}
@@ -39,7 +39,6 @@ class Robot {
       // TODO: Improve this functionality, shouldn't be copying into new class
       _data_map[n] = boost::shared_ptr<T>(new T(v));  
       _data_map_mutex.unlock();
-      return v;
     }
     
     template<class T>
@@ -71,7 +70,7 @@ class Robot {
 
     /// ---------------------------  Getters  ---------------------------
   public:
-    struct contact_s{
+    struct contact_t{
       std::string id;
       Ravelin::Vector3d point;
       Ravelin::Vector3d normal;
@@ -108,7 +107,7 @@ class Robot {
     };
     
 		std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > > _id_contacts_map;
-		std::map<std::string,boost::shared_ptr<end_effector_t> > _end_effector_map;
+		std::map<std::string,boost::shared_ptr<end_effector_t> > _id_end_effector_map;
     std::vector<std::string> _end_effector_names;
 
 	public:
@@ -119,7 +118,9 @@ class Robot {
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
         double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
     {
-      boost::shared_ptr<contact_t> c(new contac_t);
+      if(_lock_state)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      boost::shared_ptr<contact_t> c(new contact_t);
       c->id         = id; 
       c->point      = point; 
       c->normal     = normal; 
@@ -130,7 +131,14 @@ class Robot {
 
       _id_contacts_map[id].push_back(c);
     }
-      
+    
+    void add_contact(boost::shared_ptr<const contact_t>& c)
+    {
+      if(_lock_state)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      _id_contacts_map[c->id].push_back(c);
+    }
+    
     void get_contacts(std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > >& id_contacts_map){
       id_contacts_map = _id_contacts_map;
     }
@@ -139,7 +147,7 @@ class Robot {
       contacts = _id_contacts_map[link_id];
     }
     
-    void get_link_contacts(std::vector<std::string> link_id,std::vector< boost::shared_ptr<const contact_t> >& contacts){
+    void get_link_contacts(const std::vector<std::string> link_id,std::vector< boost::shared_ptr<const contact_t> >& contacts){
       contacts.clear();
       for(int i=0;i<link_id.size();i++){
         std::vector< boost::shared_ptr<const contact_t> >& c = _id_contacts_map[link_id[i]];
@@ -148,27 +156,33 @@ class Robot {
     }
     
     void reset_contact(){
+      if(_lock_state)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
       _id_contacts_map.clear();
     }
 
   public:
-    enum unit_e{          //  REV  |  PRIS
-      position,           //  rad  |   m 
+    enum unit_e{          //  ang  |  lin
+     // SET OUTSIDE CONTROL LOOP
+      position=0,           //  rad  |   m 
       velocity,           // rad/s |  m/s
       acceleration,       // rad/ss|  m/ss
       load,               //  N.m  |   N
+     // SET IN CONROLLER
       position_goal,      //  rad  |   m 
       velocity_goal,      // rad/s |  m/s
       acceleration_goal,  // rad/ss|  m/ss
-      torque,             //  N.m  |   N
+      load_goal,// TORQUE //  N.m  |   N
     };
     
   private:
 	
-    std::map<unit_e , std::map<int, Ravelin::VectorNd > > _state;    
+    std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;    
+    std::map<unit_e , Ravelin::VectorNd> _base_state;    
     std::mutex _state_mutex;
-  
-    // TODO: Populate these values in Robot::compile()
+    bool _lock_state;
+
+    // TODO: Populate these value in Robot::compile()
     
     // JOINT_NAME --> {gcoord_dof1,...}
     std::map<std::string,std::vector<int> > _id_dof_coord_map;
@@ -176,8 +190,13 @@ class Robot {
     // gcoord --> (JOINT_NAME,dof)
     std::map<int,std::pair<std::string, int> > _coord_id_map;
 
+  protected:
+
+    void lock_state(){_lock_state = true;};
+    void unlock_state(){_lock_state = false;};
+
   public:
-    /// ------------ GET/SET JOINT VALUES  ------------ ///
+    /// ------------ GET/SET JOINT value  ------------ ///
 
     double get_joint_value(const std::string& id, unit_e u, int dof)
     {
@@ -204,6 +223,8 @@ class Robot {
     
     void set_joint_value(const std::string& id, unit_e u, int dof, double val)
     {
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
       _state_mutex.lock();
       _state[u][id][dof] = val;
       _state_mutex.unlock();
@@ -211,36 +232,87 @@ class Robot {
     
     void set_joint_value(const std::string& id, unit_e u, const Ravelin::VectorNd& dof_val)
     {
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
       _state_mutex.lock();
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.rows())
-        std::runtime_error("Missized dofs in joint "+id+": internal="+dof.rows()+" , provided="+dof_val.rows());
-      dof = val;
+        throw std::runtime_error("Missized dofs in joint "+id+": internal="+std::to_string(dof.rows())+" , provided="+std::to_string(dof_val.rows()));
+      dof = dof_val;
       _state_mutex.unlock();
     }
     
     void set_joint_value(const std::string& id, unit_e u, const std::vector<double>& dof_val)
     {
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
       _state_mutex.lock();
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.size())
-        std::runtime_error("Missized dofs in joint "+id+": internal="+dof.rows()+" , provided="+dof_val.size());
-      for(int i=0;i<dofs.rows();i++)
+        throw std::runtime_error("Missized dofs in joint "+id+": internal="+std::to_string(dof.rows())+" , provided="+std::to_string(dof_val.size()));
+      for(int i=0;i<dof.rows();i++)
         dof[i] = dof_val[i];
       _state_mutex.unlock();
     }
     
+    void get_joint_value(unit_e u, std::map<std::string,std::vector<double> >& id_dof_val_map){
+      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      for(it=_state[u].begin();it!=_state[u].end();it++){
+        const Ravelin::VectorNd& dof_val_internal = (*it).second;
+        std::vector<double>& dof_val = id_dof_val_map[(*it).first];
+        dof_val.resize(dof_val_internal.size());
+        for(int j=0;j<(*it).second.rows();j++){
+          dof_val[j] = dof_val_internal[j]; 
+        }
+      }
+    }
+    
+    void get_joint_value(unit_e u, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
+      std::map<std::string,Ravelin::VectorNd >::iterator it;
+      for(it=_state[u].begin();it!=_state[u].end();it++){
+        const Ravelin::VectorNd& dof_val_internal = (*it).second;
+        id_dof_val_map[(*it).first] = dof_val_internal;
+      }
+    }
+
+    void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
+      _state_mutex.lock();
+      std::map<std::string,std::vector<double>>::const_iterator it;
+      for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
+        Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
+        const std::vector<double>& dof_val = (*it).second;
+        if(dof_val_internal.rows() != dof_val.size())
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string(dof_val.size()));
+        for(int j=0;j<(*it).second.size();j++){
+          dof_val_internal[j] = dof_val[j]; 
+        }
+      }
+      _state_mutex.unlock();
+    }
+    
+    void set_joint_value(unit_e u,const std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
+      _state_mutex.lock();
+      std::map<std::string,Ravelin::VectorNd >::const_iterator it;
+      for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
+        Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
+        if(dof_val_internal.rows() != (*it).second.rows())
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string((*it).second.rows()));
+        dof_val_internal = (*it).second;
+      }
+      _state_mutex.unlock();
+    }
+
     /// ------------- GENERALIZED VECTOR CONVERSIONS  ------------- ///
 
     
     void convert_to_generalized(const std::map<std::string,std::vector<double> >& id_dof_val_map, Ravelin::VectorNd& generalized_vec){
       generalized_vec.set_zero(NUM_JOINT_DOFS);
-      std::map<std::string,std::vector<double> >::iterator it;
+      std::map<std::string,std::vector<double> >::const_iterator it;
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         const std::vector<double>& dof_val = (*it).second;
         if(dof.size() != dof_val.size())
-          std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+dof.size()+" , provided="+dof_val.size());
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.size()));
         for(int j=0;j<(*it).second.size();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
@@ -249,13 +321,14 @@ class Robot {
 
     template <class T>
     void convert_to_generalized(const std::map<std::string,std::vector<T> >& id_dof_val_map, std::vector<T>& generalized_vec){
+      typename std::map<std::string,std::vector<T> >::const_iterator it;
       generalized_vec.resize(NUM_JOINT_DOFS);
-      std::map<std::string,std::vector<T> >::iterator it;
+      it = id_dof_val_map.begin();
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         const std::vector<T>& dof_val = (*it).second;
         if(dof.size() != dof_val.size())
-          std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+dof.size()+" , provided="+dof_val.size());
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.size()));
         for(int j=0;j<(*it).second.size();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
@@ -265,12 +338,12 @@ class Robot {
     
     void convert_to_generalized(const std::map<std::string,Ravelin::VectorNd >& id_dof_val_map, Ravelin::VectorNd& generalized_vec){
       generalized_vec.set_zero(NUM_JOINT_DOFS);
-      std::map<std::string,std::vector<double> >::iterator it;
+      std::map<std::string,Ravelin::VectorNd >::const_iterator it;
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         const Ravelin::VectorNd& dof_val = (*it).second;
         if(dof.size() != dof_val.rows())
-          std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+dof.size()+" , provided="+dof_val.rows());
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.rows()));
         for(int j=0;j<(*it).second.rows();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
@@ -280,7 +353,7 @@ class Robot {
     template <class T>
     void convert_from_generalized(const std::vector<T>& generalized_vec, std::map<std::string,std::vector<T> >& id_dof_val_map){
       if(generalized_vec.size() != NUM_JOINT_DOFS)
-        std::runtime_error("Missized generalized vector: internal="+NUM_JOINT_DOFS+" , provided="+generalized_vec.size());
+        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.size()));
 
       std::map<std::string,std::vector<int> >::iterator it;
       for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
@@ -295,7 +368,7 @@ class Robot {
     
     void convert_from_generalized(const Ravelin::VectorNd& generalized_vec, std::map<std::string,std::vector<double> >& id_dof_val_map){
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
-        std::runtime_error("Missized generalized vector: internal="+NUM_JOINT_DOFS+" , provided="+generalized_vec.rows());
+        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.rows()));
 
       std::map<std::string,std::vector<int> >::iterator it;
       for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
@@ -310,7 +383,7 @@ class Robot {
     
     void convert_from_generalized(const Ravelin::VectorNd& generalized_vec, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
-        std::runtime_error("Missized generalized vector: internal="+NUM_JOINT_DOFS+" , provided="+generalized_vec.rows());
+        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.rows()));
 
       std::map<std::string,std::vector<int> >::iterator it;
       for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
@@ -323,20 +396,22 @@ class Robot {
       }
     }
     
-    /// ------------ GET/SET JOINT GENERALIZED VALUES  ------------ ///
+    /// ------------ GET/SET JOINT GENERALIZED value  ------------ ///
 
-    void set_joint_generalized_values(unit_e u, const Ravelin::VectorNd& generalized_vec)
+    void set_joint_generalized_value(unit_e u, const Ravelin::VectorNd& generalized_vec)
     {
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
-        std::runtime_error("Missized generalized vector: internal="+NUM_JOINT_DOFS+" , provided="+generalized_vec.rows());
+        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.rows()));
 
       _state_mutex.lock();
-      std::map<std::string,std::vector<int> >::iterator it;
-      for(it=_state.begin();it!=_state.end();it++){
+      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      for(it=_state[u].begin();it!=_state[u].end();it++){
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         Ravelin::VectorNd& dof_val = (*it).second;
         if(dof.size() != dof_val.rows())
-          std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+dof.size()+" , provided="+dof_val.rows());
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.rows()));
         for(int j=0;j<(*it).second.rows();j++){
           dof_val[j] = generalized_vec[dof[j]]; 
         }
@@ -344,59 +419,102 @@ class Robot {
       _state_mutex.unlock();
     }
     
-    void get_joint_generalized_values(unit_e u, Ravelin::VectorNd& generalized_vec){
+    void get_joint_generalized_value(unit_e u, Ravelin::VectorNd& generalized_vec){
       generalized_vec.set_zero(NUM_JOINT_DOFS);
-      std::map<std::string,std::vector<double> >::iterator it;
-      for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
+      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      for(it=_state[u].begin();it!=_state[u].end();it++){
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
-        const std::vector<double>& dof_val = (*it).second;
+        const Ravelin::VectorNd& dof_val = (*it).second;
         for(int j=0;j<(*it).second.size();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
       }
     }
     
-    Ravelin::VectorNd get_joint_generalized_values(unit_e u){
-      Ravelin::VectorNd generalized_vec(NUM_JOINT_DOFS);
-      std::map<std::string,std::vector<double> >::iterator it;
-      for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
-        const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
-        const std::vector<double>& dof_val = (*it).second;
-        for(int j=0;j<(*it).second.size();j++){
-          generalized_vec[dof[j]] = dof_val[j];
-        }
-      }
+    Ravelin::VectorNd get_joint_generalized_value(unit_e u){
+      Ravelin::VectorNd generalized_vec;
+      get_joint_generalized_value(u,generalized_vec);
       return generalized_vec;
     }
-    
-    void get_joint_values(unit_e u, std::map<std::string,std::vector<double> >& id_dof_val_map){
-      std::map<std::string,std::vector<int> >::iterator it;
-      for(it=_state[u].begin();it!=_state[u].end();it++){
-        const Ravelin::VectorNd& dof_val_internal = (*it).second;
-        std::vector<double>& dof_val = id_dof_val_map[(*it).first];
-        dof_val.resize(dof.size());
-        for(int j=0;j<(*it).second.rows();j++){
-          dof_val[j] = dof_val_internal[j]; 
-        }
+   
+    /// With Base
+    void set_generalized_value(unit_e u,const Ravelin::VectorNd& generalized_vec){
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      if(generalized_vec.rows() > NUM_JOINT_DOFS)
+        OUT_LOG(logERROR) << "set_generalized_value(.) does not set base state"; 
+      switch(u){
+        case(position_goal):
+        case(position):
+          set_base_value(u,generalized_vec.segment(NUM_JOINT_DOFS,NUM_JOINT_DOFS+NEULER));
+          break;
+        default:
+          set_base_value(u,generalized_vec.segment(NUM_JOINT_DOFS,NUM_JOINT_DOFS+NSPATIAL));
+          break;
       }
+      set_joint_generalized_value(u,generalized_vec.segment(0,NUM_JOINT_DOFS));
+    }
+
+    /// With Base
+    void get_generalized_value(unit_e u, Ravelin::VectorNd& generalized_vec){
+      switch(u){
+        case(position_goal):
+        case(position):
+          generalized_vec.set_zero(NUM_JOINT_DOFS+NEULER); 
+          break;
+        default:
+          generalized_vec.set_zero(NUM_JOINT_DOFS+NSPATIAL);
+          break;
+      }
+      generalized_vec.set_sub_vec(0,get_joint_generalized_value(u));
+      generalized_vec.set_sub_vec(NUM_JOINT_DOFS,get_base_value(u));
     }
     
-    void get_joint_values(unit_e u, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
-      std::map<std::string,std::vector<int> >::iterator it;
-      for(it=_state[u].begin();it!=_state[u].end();it++){
-        const Ravelin::VectorNd& dof_val_internal = (*it).second;
-        id_dof_val_map[(*it).first] = dof_val_internal;
+    /// With Base
+    Ravelin::VectorNd get_generalized_value(unit_e u){
+      Ravelin::VectorNd generalized_vec;
+      get_generalized_value(u,generalized_vec);
+      return generalized_vec;
+    }
+
+    void set_base_value(unit_e u,const Ravelin::VectorNd& vec){
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      switch(u){
+        case(position_goal):
+        case(position):
+          if(vec.rows() != NEULER)
+            throw std::runtime_error("position vector should have 7 rows [lin(x y z), quat(x y z w)]");
+          break;
+        default:
+          if(vec.rows() != NSPATIAL)
+            throw std::runtime_error("position vector should have 7 rows [lin(x y z), ang(x y z)]");
+          break;
       }
+       
+      _state_mutex.lock();
+      _base_state[u] = vec;  
+      _state_mutex.unlock();
+    }
+
+    void get_base_value(unit_e u, Ravelin::VectorNd& vec){
+      vec = _base_state[u];  
+    }
+
+    Ravelin::VectorNd get_base_value(unit_e u){
+      Ravelin::VectorNd vec;
+      get_base_value(u,vec);
+      return vec;
     }
 
 
   private:
     void reset_state(){
-      std::map<unit_e , std::map<int, Ravelin::VectorNd > >::iterator it;
-      std::map<int, Ravelin::VectorNd >::iterator jt;
+      std::map<unit_e , std::map<std::string, Ravelin::VectorNd > >::iterator it;
+      std::map<std::string, Ravelin::VectorNd >::iterator jt;
       for(it=_state.begin();it!=_state.end();it++){
         for(jt=(*it).second.begin();jt!=(*it).second.end();jt++){
-          int dofs = _id_dof_coord_map[(*jt).first].size();
+          int N = _id_dof_coord_map[(*jt).first].size();
           (*jt).second.set_zero(N);
         }
       }
@@ -407,6 +525,13 @@ class Robot {
     /// @brief Sets up robot after construction and parameter import
     void init_robot();
 
+    void update(
+    const Ravelin::VectorNd& generalized_q,
+    const Ravelin::VectorNd& generalized_qd,
+    const Ravelin::VectorNd& generalized_qdd,
+    const Ravelin::VectorNd& generalized_fext,
+    std::vector< boost::shared_ptr<const contact_t> >& contacts
+    );
     /// @brief Pulls data from _state and updates robot data
     void update();
 
@@ -425,35 +550,47 @@ class Robot {
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
 
     /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
-    void calc_contact_jacobians(const std::vector<boost::shared_ptr<const contact_s> >& c, Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
+    void calc_contact_jacobians(const Ravelin::VectorNd& q , const std::vector<boost::shared_ptr<const contact_t> >& c, Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal
-    void RMRC(const end_effector_s& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 6d (linear and angular) goal
-    void RMRC(const end_effector_s& foot,const Ravelin::VectorNd& q,const Ravelin::SVector6d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des);
 
     /// @brief N x 3d kinematics
-    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const end_effector_s& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     /// @brief N x 6d Jacobian
-    Ravelin::MatrixNd& foot_jacobian(const Ravelin::VectorNd& x,const end_effector_s& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
+    Ravelin::MatrixNd& contact_jacobian(const Ravelin::VectorNd& x,const std::string& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
 
     /// @brief N x 6d kinematics
-    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const end_effector_s& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::SVector6d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::VectorNd& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
-    void calculate_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
+    void end_effector_inverse_kinematics(
+      const std::vector<std::string>& foot_id,
+      const std::vector<Ravelin::Vector3d>& foot_pos,
+      const std::vector<Ravelin::Vector3d>& foot_vel,
+      const std::vector<Ravelin::Vector3d>& foot_acc,
+      const Ravelin::VectorNd& q,
+      Ravelin::VectorNd& q_des,
+      Ravelin::VectorNd& qd_des,
+      Ravelin::VectorNd& qdd_des);
+
+    void calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
     
   private:
     /// @brief N x (3/6)d kinematics for RMRC
-    Ravelin::VectorNd& foot_kinematics(const Ravelin::VectorNd& x,const end_effector_s& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
   
     Moby::RCArticulatedBodyPtr        _abrobot;
     Moby::DynamicBodyPtr              _dbrobot;
-
-    std::map<std::string,Moby::RigidBodyPtr> _link_id_map;
+    
+    std::map<std::string,Moby::RigidBodyPtr> _id_link_map;
+    Moby::RigidBodyPtr _root_link;
+    std::map<std::string,Moby::JointPtr> _id_joint_map;
 
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;
@@ -461,7 +598,7 @@ class Robot {
     /// set up internal models after kineamtic model is set (called from init)
     void compile();
 
-    void init_end_effector(end_effector_s& eef);
+    void init_end_effector(boost::shared_ptr<end_effector_t>& eef_ptr);
 };
 }
 #endif // ROBOT_H

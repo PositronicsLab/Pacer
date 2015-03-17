@@ -29,7 +29,6 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
-#include <CVars/CVar.h>
 
 class Utility{
 
@@ -188,9 +187,8 @@ public:
 	  return true;
 	}
 
-
 	// Solvers
-static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
+  static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 	static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 	static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
 	static bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
@@ -199,15 +197,9 @@ static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
 
   //////////////  Variables ///////////////
   static void load_variables(std::string fname);
-
-  static std::vector<double>& get_variable(const char* tag,std::vector<double>& val);
-  static double& get_variable(const char* tag,double& val);
-
-  static std::vector<std::string>& get_variable(const char* tag,std::vector<std::string>& val);
-  static std::string& get_variable(const char* tag,std::string& val);
-
-  static std::vector<int>& get_variable(const char* tag,std::vector<int>& val);
-  static int& get_variable(const char* tag,int& val);
-
+  
+  template <class T>
+  static T& get_variable(std::string tag);
+  
 };
 #endif // UTILITIES_H

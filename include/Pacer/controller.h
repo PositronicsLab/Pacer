@@ -37,15 +37,6 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
 
     // call Pacer at time t
     void control(double t);
-    void control(double t,
-                                      const Ravelin::VectorNd& generalized_q_in,
-                                      const Ravelin::VectorNd& generalized_qd_in,
-                                      const Ravelin::VectorNd& generalized_qdd_in,
-                                      const Ravelin::VectorNd& generalized_fext_in,
-                                      Ravelin::VectorNd& q_des,
-                                      Ravelin::VectorNd& qd_des,
-                                      Ravelin::VectorNd& qdd_des,
-                                      Ravelin::VectorNd& u);
 
     bool reload_plugins(){
       close_plugins();

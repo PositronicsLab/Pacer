@@ -173,7 +173,7 @@ ENDIF(BUILD_PLUGINS)
 # Moby Plugin
 IF(USE_MOBY)
   add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/plugin.cpp)
-  add_executable(PacerMobyDriver ${CMAKE_SOURCE_DIR}/example/moby.cpp)
+#  add_executable(PacerMobyDriver ${CMAKE_SOURCE_DIR}/example/moby.cpp)
 # osg
 IF(USE_OSG_DISPLAY AND OSG_FOUND)
     target_link_libraries (PacerMobyPlugin ${OSG_LIBRARIES})

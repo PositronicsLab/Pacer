@@ -40,7 +40,7 @@ public:
 };
 
 
-#include <CVars/CVar.h>
+
 struct Gains
 {
   double perr_sum;
@@ -80,14 +80,14 @@ public:
   void init(){
     type = CONTROLLER;
     std::vector<std::string>
-        &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("controller.error-feedback.configuration-space.id");
+        &joint_names = Utility::get_variable<std::vector<std::string> >("controller.error-feedback.configuration-space.id");
 
     OUTLOG(joint_names,"joint_names",logERROR);
 
     std::vector<double>
-        &Kp = CVarUtils::GetCVarRef<std::vector<double> >(name+".gains.kp"),
-        &Kv = CVarUtils::GetCVarRef<std::vector<double> >(name+".gains.kv"),
-        &Ki = CVarUtils::GetCVarRef<std::vector<double> >(name+".gains.ki");
+        &Kp = Utility::get_variable<std::vector<double> >(name+".gains.kp"),
+        &Kv = Utility::get_variable<std::vector<double> >(name+".gains.kv"),
+        &Ki = Utility::get_variable<std::vector<double> >(name+".gains.ki");
 
     for(int i=0;i<joint_names.size();i++){
       gains[joint_names[i]].kp = Kp[i];
@@ -158,12 +158,12 @@ public:
 
   void init(){
     std::vector<std::string>
-        &eef_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.end-effector.id");
+        &eef_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
 
     std::vector<double>
-        &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller."+name+".gains.kp"),
-        &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller."+name+".gains.kp"),
-        &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller."+name+".gains.kp");
+        &Kp = Utility::get_variable<std::vector<double> >("controller."+name+".gains.kp"),
+        &Kv = Utility::get_variable<std::vector<double> >("controller."+name+".gains.kp"),
+        &Ki = Utility::get_variable<std::vector<double> >("controller."+name+".gains.kp");
 
     for(int i=0;i<eef_names.size();i++){
         gains[eef_names[i]].kp = Kp[i];

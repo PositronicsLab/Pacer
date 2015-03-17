@@ -19,8 +19,6 @@
 #include <Ravelin/SForced.h>
 #include <Ravelin/Pose3d.h>
 
-#include <Moby/Simulator.h>
-#include <Moby/EventDrivenSimulator.h>
 #include <Moby/RCArticulatedBody.h>
 #include <Moby/DynamicBody.h>
 #include <Moby/RNEAlgorithm.h>
@@ -41,42 +39,15 @@
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
-#include <CVars/CVar.h>
-
 #ifdef TIMING
 #include <ctime>
 #endif
 
-// ----------------------------------------------------------------------------
-
-const double grav     = 9.81; // M/s.s
+const double grav     = 9.81; // m / s*s
 const double M_PI_8   = 0.39269908169;
 const double M_PI_16  = 0.19634954084;
 
-// ----------------------------------------------------------------------------
 #include <Pacer/Log.h>
- void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::SharedConstMatrixNd& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
- void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
- void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL);
- void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL);
- void OUTLOG(double x, std::string name,TLogLevel LL);
- void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
-extern std::string LOG_TYPE;
-// ----------------------------------------------------------------------------
 
-// STATIC declarations to be used in each src file
-
-static Ravelin::VectorNd workv_;
-static Ravelin::Vector3d workv3_;
-static Ravelin::MatrixNd workM_;
 static Ravelin::LinAlgd LA_;
 #endif // PROJECT_COMMON_H

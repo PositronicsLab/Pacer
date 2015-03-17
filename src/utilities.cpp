@@ -6,6 +6,10 @@
 #include <Pacer/project_common.h>
 #include <Pacer/utilities.h>
 
+static Ravelin::VectorNd workv_;
+static Ravelin::Vector3d workv3_;
+static Ravelin::MatrixNd workM_;
+
 //Ravelin::Vector3d& Utility::quat2TaitBryanZ(const Ravelin::Quatd& q_, Ravelin::Vector3d& rpy){
 
 //  Ravelin::VectorNd q(4);

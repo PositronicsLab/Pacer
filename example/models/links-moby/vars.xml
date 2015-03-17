@@ -108,6 +108,6 @@
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">false</des-contact>
-    <type type="string">AP</des-contact>
+    <type type="string">AP</type>
   </idyn-controller>
 </XML>

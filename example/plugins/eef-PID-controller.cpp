@@ -19,12 +19,12 @@ public:
 
   void init(){
     std::vector<std::string>
-        &eef_names = CVarUtils::GetCVarRef<std::vector<std::string> >(plugin_namespace+".id");
+        &eef_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+".id");
 
     std::vector<double>
-        &Kp = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.kp"),
-        &Kv = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.kp"),
-        &Ki = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.kp");
+        &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kp"),
+        &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kp"),
+        &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kp");
 
     for(int i=0;i<eef_names.size();i++){
         gains[eef_names[i]].kp = Kp[i];

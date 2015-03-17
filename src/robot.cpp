@@ -175,7 +175,7 @@ void Robot::init_end_effector(boost::shared_ptr<end_effector_t>& eef_ptr){
     rb_ptr = joint_ptr->get_inboard_link();
   }
 }
-
+/*
 void Robot::update(
     const Ravelin::VectorNd& generalized_q,
     const Ravelin::VectorNd& generalized_qd,
@@ -193,6 +193,7 @@ void Robot::update(
   }
   lock_state();
 }
+*/
 
 void Robot::update(){
 
@@ -247,7 +248,7 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   Ravelin::Pose3d base_link_frame(*(_root_link->get_pose().get()));
 
   const std::vector<double>
-    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("init.base.x");
+    &base_start = Utility::get_variable<std::vector<double> >("init.base.x");
 
   Ravelin::Matrix3d R_base(base_link_frame.q),
       R_pitch = Ravelin::Matrix3d::rot_Y(base_start[4]),
@@ -271,7 +272,7 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
 
 // ============================================================================
 // ===========================  BEGIN ROBOT INIT  =============================
-#include <CVars/CVar.h>
+
 #include <stdlib.h>     /* getenv */
 #include <boost/filesystem.hpp>
 
@@ -279,13 +280,14 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
 #include <Moby/XMLReader.h>
 
  void Robot::init_robot(){
+  OUT_LOG(logDEBUG) << ">> Robot::init_robot(.)";
   // ================= LOAD SCRIPT DATA ==========================
-  std::string pPath(getenv ("PACER_MODELS_PATH"));
-  OUT_LOG(logDEBUG) << "PACER_MODELS_PATH = " << pPath;
+  std::string pPath(getenv ("PACER_MODEL_PATH"));
+  OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
 
   // ================= SETUP LOGGING ==========================
 
-  std::string LOG_TYPE = CVarUtils::GetCVarRef<std::string>("logging");
+  std::string& LOG_TYPE = Utility::get_variable<std::string>("logging");
 
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
@@ -299,7 +301,7 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
 
   // ================= BUILD ROBOT ==========================
-  std::string robot_model_file = CVarUtils::GetCVarRef<std::string>("robot-model");
+  std::string robot_model_file = Utility::get_variable<std::string>("robot-model");
   
   // Get Model type
   std::string model_type = boost::filesystem::extension(robot_model_file);
@@ -349,7 +351,7 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   // ================= SET UP END EFFECTORS ==========================
 
   const std::vector<std::string> 
-    &eef_names_ = CVarUtils::GetCVarRef<std::vector<std::string> >("init.end-effector.id");
+    &eef_names_ = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
 
   // Initialize end effectors
   for(unsigned i=0;i<eef_names_.size();i++){
@@ -361,11 +363,11 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
 
   // Initialized Joints
   const std::vector<std::string>
-     &joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >("init.joint.id");
+     &joint_names = Utility::get_variable<std::vector<std::string> >("init.joint.id");
   const std::vector<int>
-     &joint_dofs = CVarUtils::GetCVarRef<std::vector<int> >("init.joint.dofs");
+     &joint_dofs = Utility::get_variable<std::vector<int> >("init.joint.dofs");
   const std::vector<double>
-    &joints_start = CVarUtils::GetCVarRef<std::vector<double> >("init.joint.q");
+    &joints_start = Utility::get_variable<std::vector<double> >("init.joint.q");
 
   std::map<std::string, std::vector<double> > init_q;
   for(int i=0,ii=0;i<joint_names.size();i++){
@@ -380,7 +382,7 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   
   // Initialize base
   const std::vector<double>
-    &base_start = CVarUtils::GetCVarRef<std::vector<double> >("init.base.x");
+    &base_start = Utility::get_variable<std::vector<double> >("init.base.x");
 
   Ravelin::Quatd init_quat =
     Ravelin::Quatd::rpy(base_start[3],base_start[4],base_start[5]);
@@ -398,4 +400,6 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   set_joint_value(position,init_q);
   set_base_value(position,init_base);
   lock_state();
+  OUT_LOG(logDEBUG) << "<< Robot::init_robot(.)";
+
 }

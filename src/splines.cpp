@@ -11,6 +11,10 @@
 #include <Pacer/project_common.h>
 #include <Pacer/utilities.h>
 
+static Ravelin::VectorNd workv_;
+static Ravelin::Vector3d workv3_;
+static Ravelin::MatrixNd workM_;
+
 void Utility::evalBernstein(const Ravelin::Vector3d& A, const Ravelin::Vector3d& B, const Ravelin::Vector3d& C, const Ravelin::Vector3d& D, double t,Ravelin::Vector3d& P,Ravelin::Vector3d& dP,Ravelin::Vector3d& ddP) {
 
   // Position

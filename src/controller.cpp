@@ -19,12 +19,8 @@ using namespace Pacer;
 
 extern std::vector<Pacer::VisualizablePtr> visualize;
   
-Controller::Controller(){
-  // Grab CVars from local directory
-  Utility::load_variables(VARS_FILE);
-  
-  // Setup robot
-  init_robot();
+Controller::Controller(): Robot(){
+
 
   // After Robot loads, load plugins
   assert(init_plugins());
@@ -49,13 +45,15 @@ bool Controller::close_plugins(){
 typedef void (*init_t)(const boost::shared_ptr<Controller>&, const char*);
 
 bool Controller::init_plugins(){
+  OUT_LOG(logDEBUG) << ">> Controller::init_plugins()";
+
   bool RETURN_FLAG = true;
   close_plugins();
   std::vector<init_t> INIT;
 
   // call the initializers, if any
-  std::vector<std::string> &plugin_names = CVarUtils::GetCVarRef<std::vector<std::string> >("plugin.id");
-  std::vector<std::string> &plugin_files = CVarUtils::GetCVarRef<std::vector<std::string> >("plugin.file");
+  std::vector<std::string> &plugin_names = Utility::get_variable<std::vector<std::string> >("plugin.id");
+  std::vector<std::string> &plugin_files = Utility::get_variable<std::vector<std::string> >("plugin.file");
 
   // Load all the plugins
   for(unsigned i=0;i<plugin_names.size();i++){
@@ -91,32 +89,26 @@ bool Controller::init_plugins(){
       (*INIT.back())(this->ptr(),plugin_names[i].c_str());
     }
   }
+    
+  OUT_LOG(logDEBUG) << "<< Controller::init_plugins()";
   return RETURN_FLAG;
 }
 
 // ============================================================================
 // =========================== Begin Robot Controller =========================
 // ============================================================================
-void Controller::control(double t,
-                                      const Ravelin::VectorNd& generalized_q_in,
-                                      const Ravelin::VectorNd& generalized_qd_in,
-                                      const Ravelin::VectorNd& generalized_qdd_in,
-                                      const Ravelin::VectorNd& generalized_fext_in,
-                                      Ravelin::VectorNd& q_des,
-                                      Ravelin::VectorNd& qd_des,
-                                      Ravelin::VectorNd& qdd_des,
-                                      Ravelin::VectorNd& u){
-control(t);
-}
+
 void Controller::control(double t){
+    OUT_LOG(logDEBUG) << ">> Controller::control(.)";
   // Import Robot Data
   static double last_time = -0.001;
   const double dt = t - last_time;
-
+  update();
+  update_plugins(t);
   /*
   // Select end effectors that are feet and set them as active contacts
   static std::vector<int>
-      &is_foot = CVarUtils::GetCVarRef<std::vector<int> >("init.end-effector.foot");
+      &is_foot = Utility::get_variable<std::vector<int> >("init.end-effector.foot");
 
   for(int i=0;i<NUM_EEFS;i++)
     eefs_[i].active = is_foot[i];
@@ -200,13 +192,13 @@ void Controller::control(double t){
   OUTLOG(sum_base_velocity/(double)base_vel_queue.size(),"base_velocity (avg 1 sec)",logDEBUG);
 
   Ravelin::VectorNd go_to(6);
-  static int &USE_LOCOMOTION = CVarUtils::GetCVarRef<int>("locomotion.active");
+  static int &USE_LOCOMOTION = Utility::get_variable<int>("locomotion.active");
   if(USE_LOCOMOTION){
     static std::vector<double>
-        &duty_factor = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.duty-factor"),
-        &this_gait = CVarUtils::GetCVarRef<std::vector<double> >("locomotion.gait");
-    static double &gait_time = CVarUtils::GetCVarRef<double>("locomotion.gait-duration");
-    static double &step_height = CVarUtils::GetCVarRef<double>("locomotion.step-height");
+        &duty_factor = Utility::get_variable<std::vector<double> >("locomotion.duty-factor"),
+        &this_gait = Utility::get_variable<std::vector<double> >("locomotion.gait");
+    static double &gait_time = Utility::get_variable<double>("locomotion.gait-duration");
+    static double &step_height = Utility::get_variable<double>("locomotion.step-height");
     static std::vector<Ravelin::Vector3d> footholds(0);
 
     // Robot attempts to align base with force and then walk along force axis
@@ -239,7 +231,7 @@ void Controller::control(double t){
       Ravelin::SVector6d goto_6d = (movement_command.rows() == 6 )? movement_command : go_to;
     goto_6d.pose = base_frame;
 
-    int STANCE_ON_CONTACT = CVarUtils::GetCVarRef<int>("locomotion.stance-on-contact");
+    int STANCE_ON_CONTACT = Utility::get_variable<int>("locomotion.stance-on-contact");
     walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,feet,sum_base_velocity/ (double)base_vel_queue.size(),data->center_of_mass_x,t,foot_pos,foot_vel, foot_acc);
 //    cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
     for(int i=0,ii=0;i<NUM_EEFS;i++){
@@ -264,19 +256,19 @@ void Controller::control(double t){
 
   // =================== END PLANNING FUNCTIONS =====================
   // ----------------------------- STABILIZATION -------------------------------
-  static int &USE_STABILIZATION = CVarUtils::GetCVarRef<int>("controller.stabilization.active");
+  static int &USE_STABILIZATION = Utility::get_variable<int>("controller.stabilization.active");
   if(USE_STABILIZATION){
-    static int &USE_VIIP = CVarUtils::GetCVarRef<int>("controller.stabilization.viip.active");
+    static int &USE_VIIP = Utility::get_variable<int>("controller.stabilization.viip.active");
     if(USE_VIIP){
-      static std::vector<double> &x_des = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.desired.x");
-      static std::vector<double> &xd_des = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.desired.xd");
-      static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("controller.stabilization.viip.des-contact");
+      static std::vector<double> &x_des = Utility::get_variable<std::vector<double> >("controller.stabilization.viip.desired.x");
+      static std::vector<double> &xd_des = Utility::get_variable<std::vector<double> >("controller.stabilization.viip.desired.xd");
+      static int &USE_DES_CONTACT = Utility::get_variable<int>("controller.stabilization.viip.des-contact");
 
 
       static std::vector<double>
-          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.kp"),
-          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.kv"),
-          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.stabilization.viip.gains.ki");
+          &Kp = Utility::get_variable<std::vector<double> >("controller.stabilization.viip.gains.kp"),
+          &Kv = Utility::get_variable<std::vector<double> >("controller.stabilization.viip.gains.kv"),
+          &Ki = Utility::get_variable<std::vector<double> >("controller.stabilization.viip.gains.ki");
 
 
         Ravelin::MatrixNd N = data->N,
@@ -312,7 +304,7 @@ void Controller::control(double t){
         Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
         contact_jacobian_stabilizer(Jb,Jq,Kp,Kv,Ki,pos_base,x_des,vel_base,xd_des,fb);
 
-        static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.stabilization.viip.accel");
+        static int &FEEDBACK_ACCEL = Utility::get_variable<int>("controller.stabilization.viip.accel");
         if(FEEDBACK_ACCEL)
           qdd_des += fb;
         else
@@ -325,12 +317,12 @@ void Controller::control(double t){
 
   // ------------------------ INVERSE DYNAMICS ---------------------------------
 
-  static int &CONTROL_IDYN = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.active");
+  static int &CONTROL_IDYN = Utility::get_variable<int>("controller.inverse-dynamics.active");
   if(CONTROL_IDYN){
-    static double &dt_idyn = CVarUtils::GetCVarRef<double>("controller.inverse-dynamics.dt");
-    static double &alpha = CVarUtils::GetCVarRef<double>("controller.inverse-dynamics.alpha");
-    static int &USE_DES_CONTACT = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.des-contact");
-    static int &USE_LAST_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs");
+    static double &dt_idyn = Utility::get_variable<double>("controller.inverse-dynamics.dt");
+    static double &alpha = Utility::get_variable<double>("controller.inverse-dynamics.alpha");
+    static int &USE_DES_CONTACT = Utility::get_variable<int>("controller.inverse-dynamics.des-contact");
+    static int &USE_LAST_CFS = Utility::get_variable<int>("controller.inverse-dynamics.last-cfs");
     double DT = (dt_idyn == 0)? dt : dt_idyn;
 
 
@@ -398,7 +390,7 @@ void Controller::control(double t){
           N_delay_queue,
           D_delay_queue,
           MU_delay_queue;
-      static int &FILTER_CFS = CVarUtils::GetCVarRef<int>("controller.inverse-dynamics.last-cfs-filter");
+      static int &FILTER_CFS = Utility::get_variable<int>("controller.inverse-dynamics.last-cfs-filter");
 
       if(FILTER_CFS && NC>0){
 
@@ -730,8 +722,9 @@ if(inf_friction){
      }
    }
 */
-   reset_contact();
-   last_time = t;
+  reset_contact();
+  last_time = t;
+  OUT_LOG(logDEBUG) << "<< Controller::control(.)";
 }
 // ===========================  END CONTROLLER  ===============================
 // ============================================================================

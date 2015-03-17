@@ -11,8 +11,8 @@
 #include <Pacer/Visualizable.h>
 namespace Pacer{
   
-  unsigned NSPATIAL = 6;
-  unsigned NEULER = 7;
+ static const unsigned NSPATIAL = 6;
+ static const unsigned NEULER = 7;
 
 class Robot {
 	
@@ -22,9 +22,11 @@ class Robot {
   public:
 
 	Robot(){
-	  PARAMS_FILE = std::string("vars.h");
+    OUT_LOG(logDEBUG) << ">> Robot::Robot(.)";
+	  PARAMS_FILE = std::string("vars.xml");
 	  Utility::load_variables(PARAMS_FILE);
 	  init_robot();
+    OUT_LOG(logDEBUG) << "<< Robot::Robot(.)";
 	}
 
   /// --------------------  Data Storage  -------------------- ///
@@ -108,9 +110,16 @@ class Robot {
     
 		std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > > _id_contacts_map;
 		std::map<std::string,boost::shared_ptr<end_effector_t> > _id_end_effector_map;
-    std::vector<std::string> _end_effector_names;
 
 	public:
+    bool is_end_effector(const std::string& id){
+      std::map<std::string,boost::shared_ptr<end_effector_t> >::iterator 
+        it = _id_end_effector_map.find(id);
+      if(it != _id_end_effector_map.end())
+        return true;
+      return false;
+    }
+  
     void add_contact(
         std::string& id,
         Ravelin::Vector3d point,
@@ -525,13 +534,6 @@ class Robot {
     /// @brief Sets up robot after construction and parameter import
     void init_robot();
 
-    void update(
-    const Ravelin::VectorNd& generalized_q,
-    const Ravelin::VectorNd& generalized_qd,
-    const Ravelin::VectorNd& generalized_qdd,
-    const Ravelin::VectorNd& generalized_fext,
-    std::vector< boost::shared_ptr<const contact_t> >& contacts
-    );
     /// @brief Pulls data from _state and updates robot data
     void update();
 
@@ -550,7 +552,7 @@ class Robot {
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
 
     /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
-    void calc_contact_jacobians(const Ravelin::VectorNd& q , const std::vector<boost::shared_ptr<const contact_t> >& c, Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
+    void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal
@@ -561,13 +563,13 @@ class Robot {
     void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des);
 
     /// @brief N x 3d kinematics
-    Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     /// @brief N x 6d Jacobian
-    Ravelin::MatrixNd& contact_jacobian(const Ravelin::VectorNd& x,const std::string& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
+    Ravelin::MatrixNd& link_jacobian(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
 
     /// @brief N x 6d kinematics
-    Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::VectorNd& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::VectorNd& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     void end_effector_inverse_kinematics(
       const std::vector<std::string>& foot_id,

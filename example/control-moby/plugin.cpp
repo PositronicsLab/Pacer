@@ -3,31 +3,20 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
+#include <Moby/EventDrivenSimulator.h>
 #include <Pacer/controller.h>
 #include <random>
 
 using Pacer::Controller;
-using Pacer::Robot;
-using Pacer::EndEffector;
 
 // pointer to the simulator
  boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+// pointer to the articulated body in Moby
+Moby::RCArticulatedBodyPtr abrobot;
 
 // pointer to the Pacer controller
  boost::shared_ptr<Controller> robot_ptr;
 
-// pointer to the articulated body in Moby
-Moby::RCArticulatedBodyPtr abrobot;
-
-// if this macro is defined, Pacer will interface to Moby to control the robot
-#ifdef DRIVE_ROBOT
-extern void controller(double time,
-                       const Ravelin::VectorNd& q,
-                       const Ravelin::VectorNd& qd,
-                       Ravelin::VectorNd& command,
-                       boost::shared_ptr<Ravelin::Pose3d>& pose,
-                       Ravelin::VectorNd& params);
-#endif
 
 #ifdef USE_OSG_DISPLAY
 extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
@@ -66,6 +55,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
  // ============================================================================
 
  // adds perturbations to the robot for testing stability
+ /*
  void apply_sim_perturbations(){
    static std::vector<Moby::JointPtr>& joints_ = robot_ptr->get_joints();
    int num_joints = joints_.size();
@@ -85,6 +75,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
                                     known_leading_force[1],
                                     known_leading_force[2],
                                     robot_ptr->get_base_link_frame());
+                                    
    boost::shared_ptr<Ravelin::Pose3d> lead_transform =
        boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(
          Ravelin::Quatd::identity(),
@@ -92,16 +83,16 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
            Ravelin::Pose3d::transform_point(Moby::GLOBAL,point_on_robot)
          )
        ));
+       
    Ravelin::SForced lead_force = Ravelin::SForced(0,0,0,0,0,0,Moby::GLOBAL);
    if(lead.norm() > Moby::NEAR_ZERO)
      lead_force = Ravelin::Pose3d::transform(
                                               Moby::GLOBAL,
                                               Ravelin::SForced(lead,Ravelin::Vector3d(0,0,0),lead_transform)
                                             );
-   robot_ptr->set_leading_force(lead_force);
+   
 
    Ravelin::SForced known_force(&known_leading_force[0],Moby::GLOBAL);
-   robot_ptr->set_known_force(known_force);
 
    OUTLOG(lead,"LEAD_bt",logDEBUG);
 
@@ -127,6 +118,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
    }
     return v2;
  }
+*/
 
  // ============================================================================
  // ================================ CONTROLLER ================================
@@ -135,86 +127,75 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
 // implements a controller callback for Moby
 void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
-  std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
+
   std::vector<Moby::JointPtr> joints = abrobot->get_joints();
 
-  std::map<int,int> joint_map;
-  if(joint_map.empty())
-    for(int i=0;i<joints.size();i++){
-      if(joints[i]->num_dof() == 0) continue;
-      for(int j=0;j<joints_quad.size();j++){
-        if(!joints_quad[j]) continue;
-        if(joints_quad[j]->num_dof() == 0) continue;
-        if(joints_quad[j]->id.compare(joints[i]->id) == 0){
-          for(int d = 0;d<joints_quad[j]->num_dof();d++)
-            joint_map[joints[i]->get_coord_index()+d] = joints_quad[j]->get_coord_index()+d;
-        }
-      }
-    }
-
-  Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
-  int num_joints = joints_quad.size();
   static double last_time = -0.001;
   double dt = t - last_time;
   last_time = t;
 
-  // Re-map state simulation->robot joints
+  Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
+
   {
     abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
-    generalized_q = remap_values(joint_map,generalized_q,workv_);
     abrobot->get_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
-    generalized_qd = remap_values(joint_map,generalized_qd,workv_);
     abrobot->get_generalized_forces(generalized_fext);
-    generalized_fext = remap_values(joint_map,generalized_fext,workv_);
   }
+  
+  {
+    // Re-map state simulation->robot joints
+    std::map<std::string, Ravelin::VectorNd> q,qd,fext;
+    Ravelin::VectorNd q_joints,qd_joints,fext_joints;
+    for (int i=0;i<joints.size();i++){
+      q[joints[i]->id] = joints[i]->q;
+      qd[joints[i]->id] = joints[i]->qd;
+      Ravelin::VectorNd& dofs
+        = (fext[joints[i]->id] = Ravelin::VectorNd(joints[i]->num_dof()));
+      for (int j=0;j<joints[i]->num_dof();j++)
+        dofs[j] = generalized_fext[joints[i]->get_coord_index()+j];
+    }
+    
+    robot_ptr->convert_to_generalized(q,q_joints);
+    robot_ptr->convert_to_generalized(qd,qd_joints);
+    robot_ptr->convert_to_generalized(fext,fext_joints);
+    
+    generalized_q.set_sub_vec(0,q_joints);
+    generalized_qd.set_sub_vec(0,qd_joints);
+    generalized_fext.set_sub_vec(0,fext_joints);
+}
 
   static Ravelin::VectorNd  generalized_qd_last = generalized_qd;
-  //NOTE: Pre-contact    abrobot->get_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
+  //NOTE: Pre-contact accel abrobot->get_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
   ((generalized_qdd = generalized_qd) -= generalized_qd_last) /= dt;
   generalized_qd_last = generalized_qd;
-
-
-  Ravelin::VectorNd q_des(num_joints),
-                    qd_des(num_joints),
-                    qdd_des(num_joints);
-  Ravelin::VectorNd u(num_joints);
-
-#ifdef DRIVE_ROBOT
-  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,robot_ptr->gait_pose,robot_ptr->gait_params);
-#endif
 
 #ifdef USE_OSG_DISPLAY
   render(visualize);
 #endif
 
-  robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
-  // Re-map goals robot->simulation joints
-  {
-    q_des = remap_values(joint_map,q_des,workv_,true);
-    qd_des = remap_values(joint_map,qd_des,workv_,true);
-    qdd_des = remap_values(joint_map,qdd_des,workv_,true);
-    u = remap_values(joint_map,u,workv_,true);
-  }
+  robot_ptr->set_generalized_value(Pacer::Robot::position,generalized_q);
+  robot_ptr->set_generalized_value(Pacer::Robot::velocity,generalized_qd);
+  robot_ptr->set_generalized_value(Pacer::Robot::acceleration,generalized_qdd);
+  robot_ptr->set_generalized_value(Pacer::Robot::load,generalized_fext);
 
-  if(!abrobot->get_kinematic()){
-    for(int i=0;i<joints.size();i++){
-      Ravelin::VectorNd U(joints[i]->num_dof());
-      for(int j=0;j<joints[i]->num_dof();j++)
-        U[j] = u[joints[i]->get_coord_index()+j];
-      joints[i]->add_force(U);
-    }
-  } else {
-    for(int i=0;i<joints.size();i++){
-      Ravelin::VectorNd Q(joints[i]->num_dof());
-      Ravelin::VectorNd QD(joints[i]->num_dof());
-      for(int j=0;j<joints[i]->num_dof();j++){
-        Q[j] = q_des[joints[i]->get_coord_index()+j];
-        QD[j] = qd_des[joints[i]->get_coord_index()+j];
+  robot_ptr->control(t);
+
+  {
+    std::map<std::string, Ravelin::VectorNd > q, qd, u; 
+    robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
+    robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
+    robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
+
+    if(!abrobot->get_kinematic()){
+      for(int i=0;i<joints.size();i++)
+        joints[i]->add_force(u[joints[i]->id]);
+    } else {
+      for(int i=0;i<joints.size();i++){
+        joints[i]->q = q[joints[i]->id];
+        joints[i]->qd = qd[joints[i]->id];
       }
-      joints[i]->q = Q;
-      joints[i]->qd = QD;
+      abrobot->update_link_poses();
     }
-    abrobot->update_link_poses();
   }
 }
 
@@ -226,110 +207,40 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
-
-  std::vector<std::string>& eef_names_ = robot_ptr->get_end_effector_names();
-  std::vector<EndEffector>& eefs_ = robot_ptr->get_end_effectors();
-  robot_ptr->reset_contact();
   // PROCESS CONTACTS
   for(unsigned i=0;i<e.size();i++){
     if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
-      bool MIRROR_FLAG = false;
-
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
-
-      std::vector<std::string>::iterator iter =
-          std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
-      //if end effector doesnt exist, check other SB
-      if(iter  == eef_names_.end()){
-        iter = std::find(eef_names_.begin(), eef_names_.end(), sb2->id);
-        if(iter  == eef_names_.end())
-          continue;  // Contact doesn't include an end-effector
-        else{
-          // contact is upside-down, mark for negation
-          MIRROR_FLAG = true;
-          std::swap(sb1,sb2);
-        }
-      }
-
-      size_t index = std::distance(eef_names_.begin(), iter);
-
-      if(MIRROR_FLAG){
-        eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
+      
+      Ravelin::Vector3d normal = e[i].contact_normal, impulse = e[i].contact_impulse.get_linear();
+      impulse.pose = e[i].contact_point.pose;
+      
+      if(robot_ptr->is_end_effector(sb1->id)){
+        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous);
+      } else if(robot_ptr->is_end_effector(sb2->id)){
+        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous);
       } else {
-        eefs_[index].impulse.push_back( e[i].contact_impulse.get_linear());
+        continue;  // Contact doesn't include an end-effector  
       }
-
-      // Push Active contact info to EEF
-      eefs_[index].active = true;
-
-      eefs_[index].point.push_back(e[i].contact_point);
-      if(MIRROR_FLAG){
-        eefs_[index].impulse.push_back(-e[i].contact_impulse.get_linear());
-        eefs_[index].normal.push_back(-e[i].contact_normal);
-        eefs_[index].tan1.push_back(-e[i].contact_tan1);
-        eefs_[index].tan2.push_back(-e[i].contact_tan2);
-
-      } else {
-        eefs_[index].impulse.push_back(e[i].contact_impulse.get_linear());
-        eefs_[index].normal.push_back(e[i].contact_normal);
-        eefs_[index].tan1.push_back(e[i].contact_tan1);
-        eefs_[index].tan2.push_back(e[i].contact_tan2);
-      }
-      eefs_[index].mu_coulomb.push_back(e[i].contact_mu_coulomb);
-      eefs_[index].mu_viscous.push_back(e[i].contact_mu_viscous);
-      eefs_[index].impulse[eefs_[index].impulse.size()-1].pose = eefs_[index].point[eefs_[index].point.size()-1].pose;
-    }
-  }
-
-  for(int i=0, ii = 0;i<eefs_.size();i++){
-    if(eefs_[i].active){
-      for(int j=0;j<eefs_[i].point.size();j++){
+      
 #ifdef USE_OSG_DISPLAY
-      visualize_ray(  eefs_[i].point[j],
-                      eefs_[i].point[j] + eefs_[i].impulse[j]*10.0,
+      visualize_ray(  e[i].contact_point,
+                      e[i].contact_point + impulse*10.0,
                       Ravelin::Vector3d(1,0.5,0),
                       0.1,
                       sim
                     );
-#endif
-      ii++;
-      }
+      visualize_ray(  e[i].contact_point,
+                      e[i].contact_point + normal*0.1,
+                      Ravelin::Vector3d(1,1,0),
+                      0.1,
+                      sim
+                    );
+  #endif
     }
   }
-
-  // adds additional contact points to the feet for testing ability of
-  // inverse dynamics controllers to handle extraneous points of contact
-//#define OVERSAMPLE_FEET
-#ifdef OVERSAMPLE_FEET
-  static unsigned cpf = 1;
-  static unsigned counter = 0;
-  const unsigned obs = 10;
-  counter += 1;
-  if(counter%obs == 0)
-    cpf += 1;
-
-  for(int i=0;i<eefs_.size();i++){
-    double sample_step = 0;
-    if(eefs_[i].active){
-      while(cpf > eefs_[i].point.size()){
-        sample_step = -sample_step*1.01;
-        Moby::Point3d new_point(eefs_[i].point[0][0],eefs_[i].point[0][1]+sample_step,eefs_[i].point[0][2],eefs_[i].point[0].pose);
-        eefs_[i].point.push_back(new_point);
-        eefs_[i].impulse.push_back(eefs_[i].impulse[0]);
-        eefs_[i].normal.push_back(eefs_[i].normal[0]);
-        eefs_[i].tan1.push_back(eefs_[i].tan1[0]);
-        eefs_[i].tan2.push_back(eefs_[i].tan2[0]);
-        eefs_[i].mu_coulomb.push_back(eefs_[i].mu_coulomb[0]);
-        eefs_[i].mu_viscous.push_back(eefs_[i].mu_viscous[0]);
-        eefs_[i].impulse[eefs_[i].impulse.size()-1].pose = eefs_[i].point[eefs_[i].point.size()-1].pose;
-      }
-    }
-  }
-#endif
-
-
 }
 
 // sets friction parameters for the feet randomly (when used)
@@ -388,7 +299,11 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
 
+  std::cout << "STARTING ROBOT" << std::endl;
+
   robot_ptr = boost::shared_ptr<Controller>(new Controller());
+
+  std::cout << "ROBOT INITED" << std::endl;
 
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
 #ifdef RANDOM_FRICTION
@@ -401,35 +316,15 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   abrobot->controller                     = &controller_callback;
 
   // ================= INIT ROBOT STATE ==========================
-  std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
-  std::vector<Moby::JointPtr> joints = abrobot->get_joints();
-
-  std::map<std::string,double> q0 = robot_ptr->get_q0();
-
-  std::vector<double> base_start;
-  Utility::get_variable("init.base.x",base_start);
-
-  int is_kinematic = 0;
-  Utility::get_variable("init.kinematic",is_kinematic);
+  int is_kinematic = Utility::get_variable<int>("init.kinematic");
 
   if(is_kinematic)
     abrobot->set_kinematic(true);
 
   Ravelin::VectorNd q_start;
-  abrobot->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
-  unsigned NDOFS = abrobot->num_generalized_coordinates(Moby::DynamicBody::eSpatial) - 6;
+  robot_ptr->get_generalized_value(Pacer::Robot::position,q_start);
 
-
-  for(unsigned i=NDOFS;i<q_start.rows();i++)
-    q_start[i] = base_start[i-NDOFS];
-
-  abrobot->set_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
-  abrobot->update_link_poses();
-  for(int i=0,ii=0;i<joints.size();i++){
-    for(int j=0;j<joints[i]->num_dof();j++,ii++){
-      joints[i]->q[j] = q0[std::to_string(j)+joints[i]->id];
-    }
-  }
+  abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
   abrobot->update_link_poses();
 }
 

@@ -4,7 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
-#include <CVars/CVar.h>
+
 
 #include <Moby/XMLTree.h>
 #include <Moby/XMLReader.h>
@@ -16,6 +16,8 @@ using boost::shared_ptr;
 using Moby::XMLTree;
 using Moby::XMLTreePtr;
 using Moby::XMLAttrib;
+
+#include <CVars/CVar.h>
 
 constexpr unsigned int str2int(const char* str, int h = 0)
 {
@@ -42,7 +44,7 @@ std::vector<std::string> split(std::string const &input) {
 //template <class X>
 //X& var(std::string tag){
 //  if(CVarUtils::CVarExists(tag))
-//    return CVarUtils::GetCVarRef<X>(tag);
+//    return Utility::get_variable<X>(tag);
 //  assert(CVarUtils::CVarExists(tag));
 //  return X();
 //}
@@ -152,22 +154,8 @@ void Utility::load_variables(std::string fname){
     process_tag("",root_tree);
 }
 
-std::vector<double>& Utility::get_variable(const char* tag,std::vector<double>& val){
-  return (val = CVarUtils::GetCVar<std::vector<double> >(tag));
-}
-double& Utility::get_variable(const char* tag,double& val){
-  return (val = CVarUtils::GetCVar<double>(tag));
-}
-std::vector<std::string>& Utility::get_variable(const char* tag,std::vector<std::string>& val){
-  return (val = CVarUtils::GetCVar<std::vector<std::string> >(tag));
-}
-std::string& Utility::get_variable(const char* tag,std::string& val){
-  return (val = CVarUtils::GetCVar<std::string>(tag));
-}
-std::vector<int>& Utility::get_variable(const char* tag,std::vector<int>& val){
-  return (val = CVarUtils::GetCVar<std::vector<int> >(tag));
-}
-int& Utility::get_variable(const char* tag,int& val){
-  return (val = CVarUtils::GetCVar<int>(tag));
+template <class T>
+T& Utility::get_variable(std::string tag){
+  return CVarUtils::GetCVarRef<std::vector<T> >(tag.c_str());
 }
 

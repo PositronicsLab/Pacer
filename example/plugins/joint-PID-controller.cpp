@@ -50,14 +50,14 @@ public:
   std::vector<std::string> joint_names;
 
   void init(){
-    joint_names = CVarUtils::GetCVarRef<std::vector<std::string> >(plugin_namespace+".id");
+    joint_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+".id");
 
     OUTLOG(joint_names,"joint_names",logERROR);
 
     std::vector<double>
-        &Kp = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.kp"),
-        &Kv = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.kv"),
-        &Ki = CVarUtils::GetCVarRef<std::vector<double> >(plugin_namespace+".gains.ki");
+        &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kp"),
+        &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kv"),
+        &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.ki");
 
     for(int i=0;i<joint_names.size();i++){
       _gains[joint_names[i]].kp = Kp[i];
@@ -89,12 +89,12 @@ public:
 };
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  int &ERROR_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.active");
+  int &ERROR_FEEDBACK = Utility::get_variable<int>("controller.error-feedback.active");
   if (ERROR_FEEDBACK){
     // --------------------------- JOINT FEEDBACK ------------------------------
-    int &JOINT_FEEDBACK = CVarUtils::GetCVarRef<int>(plugin_namespace+".active");
+    int &JOINT_FEEDBACK = Utility::get_variable<int>(plugin_namespace+".active");
     if(JOINT_FEEDBACK){
-      int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>(plugin_namespace+".accel");
+      int &FEEDBACK_ACCEL = Utility::get_variable<int>(plugin_namespace+".accel");
 
       static boost::shared_ptr<JointPID> pid;
       if(!pid)
@@ -138,16 +138,16 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
 /*
     // --------------------------- WORKSPACE FEEDBACK --------------------------
-    static int &WORKSPACE_FEEDBACK = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.active");
+    static int &WORKSPACE_FEEDBACK = Utility::get_variable<int>("controller.error-feedback.operational-space.active");
     if(WORKSPACE_FEEDBACK){
       // CURRENTLY THIS IS ONLY FORCE
       // BUT IT CAN BE ACCELERATIONS TOO
-      static int &FEEDBACK_ACCEL = CVarUtils::GetCVarRef<int>("controller.error-feedback.operational-space.accel");
+      static int &FEEDBACK_ACCEL = Utility::get_variable<int>("controller.error-feedback.operational-space.accel");
       std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
       static std::vector<double>
-          &Kp = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kp"),
-          &Kv = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.kv"),
-          &Ki = CVarUtils::GetCVarRef<std::vector<double> >("controller.error-feedback.operational-space.gains.ki");
+          &Kp = Utility::get_variable<std::vector<double> >("controller.error-feedback.operational-space.gains.kp"),
+          &Kv = Utility::get_variable<std::vector<double> >("controller.error-feedback.operational-space.gains.kv"),
+          &Ki = Utility::get_variable<std::vector<double> >("controller.error-feedback.operational-space.gains.ki");
 
       Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
       eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,data->q,data->qd,fb);

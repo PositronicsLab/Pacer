@@ -154,8 +154,32 @@ void Utility::load_variables(std::string fname){
     process_tag("",root_tree);
 }
 
-template <class T>
-T& Utility::get_variable(std::string tag){
-  return CVarUtils::GetCVarRef<std::vector<T> >(tag.c_str());
+template <>
+std::string& Utility::get_variable<std::string>(std::string tag){
+  return CVarUtils::GetCVarRef<std::string>(tag.c_str());
 }
 
+template <>
+std::vector<std::string>& Utility::get_variable<std::vector<std::string> >(std::string tag){
+  return CVarUtils::GetCVarRef<std::vector<std::string> >(tag.c_str());
+}
+
+template <>
+int& Utility::get_variable<int>(std::string tag){
+  return CVarUtils::GetCVarRef<int>(tag.c_str());
+}
+
+template <>
+std::vector<int>& Utility::get_variable<std::vector<int> >(std::string tag){
+  return CVarUtils::GetCVarRef<std::vector<int> >(tag.c_str());
+}
+
+template <>
+double& Utility::get_variable<double>(std::string tag){
+  return CVarUtils::GetCVarRef<double>(tag.c_str());
+}
+
+template <>
+std::vector<double>& Utility::get_variable<std::vector<double> >(std::string tag){
+  return CVarUtils::GetCVarRef<std::vector<double> >(tag.c_str());
+}

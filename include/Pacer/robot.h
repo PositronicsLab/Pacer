@@ -174,16 +174,16 @@ class Robot {
     enum unit_e{          //  ang  |  lin
      // SET OUTSIDE CONTROL LOOP
       position=0,           //  rad  |   m 
-      velocity,           // rad/s |  m/s
-      acceleration,       // rad/ss|  m/ss
-      load,               //  N.m  |   N
+      velocity=1,           // rad/s |  m/s
+      acceleration=2,       // rad/ss|  m/ss
+      load=3,               //  N.m  |   N
      // SET IN CONROLLER
-      position_goal,      //  rad  |   m 
-      velocity_goal,      // rad/s |  m/s
-      acceleration_goal,  // rad/ss|  m/ss
-      load_goal,// TORQUE //  N.m  |   N
+      position_goal=4,      //  rad  |   m 
+      velocity_goal=5,      // rad/s |  m/s
+      acceleration_goal=6,  // rad/ss|  m/ss
+      load_goal=7,// TORQUE //  N.m  |   N
     };
-    
+
   private:
 	
     std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;    
@@ -199,6 +199,20 @@ class Robot {
     // gcoord --> (JOINT_NAME,dof)
     std::map<int,std::pair<std::string, int> > _coord_id_map;
 
+    void reset_state(){
+      OUT_LOG(logDEBUG) << ">> Robot::reset_state(.)";
+      std::map<unit_e , std::map<std::string, Ravelin::VectorNd > >::iterator it;
+      std::map<std::string, Ravelin::VectorNd >::iterator jt;
+      for(it=_state.begin();it!=_state.end();it++){
+        for(jt=(*it).second.begin();jt!=(*it).second.end();jt++){
+          int N = _id_dof_coord_map[(*jt).first].size();
+          OUTLOG(_id_dof_coord_map[(*jt).first],(*jt).first+"_dofs",logDEBUG1);
+          (*jt).second.set_zero(N);
+        }
+      }
+      OUT_LOG(logDEBUG) << "<< Robot::reset_state(.)";
+    }
+    
   protected:
 
     void lock_state(){_lock_state = true;};
@@ -328,7 +342,7 @@ class Robot {
       }
     }
 
-    template <class T>
+    template <typename T>
     void convert_to_generalized(const std::map<std::string,std::vector<T> >& id_dof_val_map, std::vector<T>& generalized_vec){
       typename std::map<std::string,std::vector<T> >::const_iterator it;
       generalized_vec.resize(NUM_JOINT_DOFS);
@@ -359,7 +373,7 @@ class Robot {
       }
     }
     
-    template <class T>
+    template <typename T>
     void convert_from_generalized(const std::vector<T>& generalized_vec, std::map<std::string,std::vector<T> >& id_dof_val_map){
       if(generalized_vec.size() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.size()));
@@ -450,8 +464,6 @@ class Robot {
     void set_generalized_value(unit_e u,const Ravelin::VectorNd& generalized_vec){
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      if(generalized_vec.rows() > NUM_JOINT_DOFS)
-        OUT_LOG(logERROR) << "set_generalized_value(.) does not set base state"; 
       switch(u){
         case(position_goal):
         case(position):
@@ -514,19 +526,6 @@ class Robot {
       Ravelin::VectorNd vec;
       get_base_value(u,vec);
       return vec;
-    }
-
-
-  private:
-    void reset_state(){
-      std::map<unit_e , std::map<std::string, Ravelin::VectorNd > >::iterator it;
-      std::map<std::string, Ravelin::VectorNd >::iterator jt;
-      for(it=_state.begin();it!=_state.end();it++){
-        for(jt=(*it).second.begin();jt!=(*it).second.end();jt++){
-          int N = _id_dof_coord_map[(*jt).first].size();
-          (*jt).second.set_zero(N);
-        }
-      }
     }
 
   protected:
@@ -599,8 +598,6 @@ class Robot {
 
     /// set up internal models after kineamtic model is set (called from init)
     void compile();
-
-    void init_end_effector(boost::shared_ptr<end_effector_t>& eef_ptr);
 };
 }
 #endif // ROBOT_H

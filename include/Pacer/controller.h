@@ -9,7 +9,6 @@
 #include <Pacer/robot.h>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
-
 namespace Pacer{
 
 class Controller;
@@ -34,6 +33,13 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
      */
     Controller();
     ~Controller();
+    void init(){
+      // After Robot loads, load plugins
+#ifdef USE_PLUGINS
+      assert(init_plugins());
+#endif
+      unlock_state();
+    }
 
     // call Pacer at time t
     void control(double t);
@@ -43,7 +49,7 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
       return init_plugins();
     }
 
-    void add_plugin_update(int priority,std::string& name,update_t f){
+    void add_plugin_update(int priority,std::string name,update_t f){
       // Fix priority
       if(priority > 19 || priority < -20){
         OUT_LOG(logERROR) << "Set priorities to \"niceness\" range [-20..19]";

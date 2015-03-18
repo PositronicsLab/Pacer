@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/robot.h>
+
 using namespace Pacer;
 
 std::vector<Pacer::VisualizablePtr> visualize;
@@ -130,6 +131,16 @@ void Robot::compile(){
     }
   }
 
+  {
+    OUT_LOG(logDEBUG1) << "Joint Map"; 
+    std::map<std::string, Moby::JointPtr>::iterator it;
+    for(it=_id_joint_map.begin();it!=_id_joint_map.end();it++)
+      OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
+  }
+
+  for(int i=0;i<8;i++)
+    _state[static_cast<unit_e>(i)] = std::map<std::string, Ravelin::VectorNd >();
+
   std::map<std::string, Moby::JointPtr>::iterator it;
   for(it=_id_joint_map.begin();it!=_id_joint_map.end();it++){
     const std::pair<std::string, Moby::JointPtr>& id_joint = (*it);
@@ -141,38 +152,63 @@ void Robot::compile(){
       _coord_id_map[id_joint.second->get_coord_index() + j] 
         = std::pair<std::string,int>(id_joint.first,j);
     }
+    OUTLOG(_id_dof_coord_map[id_joint.first],id_joint.first+"_dofs",logDEBUG1);
+    
+    std::map<unit_e , std::map<std::string, Ravelin::VectorNd > >::iterator it;
+    for(it=_state.begin();it!=_state.end();it++){
+      std::map<std::string, Ravelin::VectorNd >& dof = (*it).second;
+      dof[id_joint.first] = Ravelin::VectorNd(_id_dof_coord_map[id_joint.first].size());
+    }
   }
+
   reset_state();
 
   // Set up link references
   std::vector<Moby::RigidBodyPtr> links = _abrobot->get_links();
   _root_link = links[0];
-  for(unsigned i=0;i<joints.size();i++){
+  for(unsigned i=0;i<links.size();i++){
     _id_link_map[links[i]->id] = links[i];
   }
-}
+  
+  {
+    OUT_LOG(logDEBUG1) << "Link Map"; 
+    std::map<std::string, Moby::RigidBodyPtr>::iterator it;
+    for(it=_id_link_map.begin();it!=_id_link_map.end();it++)
+      OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
+  }
+  
+   const std::vector<std::string> 
+    &eef_names_ = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
 
-void Robot::init_end_effector(boost::shared_ptr<end_effector_t>& eef_ptr){
-  end_effector_t& eef = *(eef_ptr.get());
-  eef.id = eef.link->id;
+  // Initialize end effectors
+  for(unsigned i=0;i<eef_names_.size();i++){
+    boost::shared_ptr<end_effector_t> eef
+      = boost::shared_ptr<end_effector_t>(new end_effector_t);
+    eef->link = _id_link_map[eef_names_[i]];
+    OUT_LOG(logDEBUG1) << "eef link id = " << eef_names_[i] << ", " << eef->link; 
 
-  Moby::JointPtr joint_ptr = eef.link->get_inner_joint_explicit();
-  Moby::RigidBodyPtr rb_ptr = eef.link;
-  OUT_LOG(logDEBUG) << eef.id ;
-  eef.chain_bool.resize(NUM_JOINT_DOFS);
-  rb_ptr = joint_ptr->get_inboard_link();
-  while (rb_ptr != _abrobot->get_base_link()) {
-    OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
-    joint_ptr = rb_ptr->get_inner_joint_explicit();
-    OUT_LOG(logDEBUG) << "  " << joint_ptr->id;
+    eef->id = eef->link->id;
 
-    const std::vector<int>& dof = _id_dof_coord_map[joint_ptr->id];
-    for(int i=0;i<dof.size();i++){
-      OUT_LOG(logDEBUG) << "  " << dof[i] <<  " "<< joint_ptr->id;
-      eef.chain.push_back(dof[i]);
-      eef.chain_bool[dof[i]] = true;
-    }
+    Moby::JointPtr joint_ptr = eef->link->get_inner_joint_explicit();
+    Moby::RigidBodyPtr rb_ptr = eef->link;
+    OUT_LOG(logDEBUG) << eef->id ;
+    eef->chain_bool.resize(NUM_JOINT_DOFS);
     rb_ptr = joint_ptr->get_inboard_link();
+    while (rb_ptr != _abrobot->get_base_link()) {
+      OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
+      joint_ptr = rb_ptr->get_inner_joint_explicit();
+      OUT_LOG(logDEBUG) << "  " << joint_ptr->id;
+
+      const std::vector<int>& dof = _id_dof_coord_map[joint_ptr->id];
+      for(int i=0;i<dof.size();i++){
+        OUT_LOG(logDEBUG) << "  " << dof[i] <<  " "<< joint_ptr->id;
+        eef->chain.push_back(dof[i]);
+        eef->chain_bool[dof[i]] = true;
+      }
+      rb_ptr = joint_ptr->get_inboard_link();
+    }
+
+    _id_end_effector_map[eef_names_[i]] = eef;
   }
 }
 /*
@@ -268,6 +304,15 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   set_data<Ravelin::Pose3d>("base_link_frame",base_link_frame);
   set_data<Ravelin::Origin3d>("roll_pitch_yaw",roll_pitch_yaw);
   set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);
+  
+  base_link_frame = get_data<Ravelin::Pose3d>("base_link_frame");
+  roll_pitch_yaw = get_data<Ravelin::Origin3d>("roll_pitch_yaw");
+  base_horizontal_frame = get_data<Ravelin::Pose3d>("base_horizontal_frame");
+  
+  OUTLOG(q,"q",logDEBUG);
+  OUTLOG(base_link_frame,"base_link_frame",logDEBUG);
+  OUTLOG(roll_pitch_yaw,"roll_pitch_yaw",logDEBUG);
+  OUTLOG(base_horizontal_frame,"base_horizontal_frame",logDEBUG);
 }
 
 // ============================================================================
@@ -302,10 +347,10 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
 
   // ================= BUILD ROBOT ==========================
   std::string robot_model_file = Utility::get_variable<std::string>("robot-model");
-  
+  Utility::test_function(robot_model_file);
   // Get Model type
   std::string model_type = boost::filesystem::extension(robot_model_file);
-  robot_model_file = robot_model_file+pPath;
+  robot_model_file = pPath+"/"+robot_model_file;
   OUT_LOG(logINFO) << "Using robot model : " << robot_model_file;
 
   (robot_model_file.substr(robot_model_file.size()-4,robot_model_file.size()));
@@ -348,24 +393,11 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   }
   compile();
 
-  // ================= SET UP END EFFECTORS ==========================
-
-  const std::vector<std::string> 
-    &eef_names_ = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
-
-  // Initialize end effectors
-  for(unsigned i=0;i<eef_names_.size();i++){
-    boost::shared_ptr<end_effector_t> eef;
-    eef->link = _id_link_map[eef_names_[i]];
-    init_end_effector(eef);
-    _id_end_effector_map[eef_names_[i]] = eef;
-  }
-
   // Initialized Joints
   const std::vector<std::string>
      &joint_names = Utility::get_variable<std::vector<std::string> >("init.joint.id");
-  const std::vector<int>
-     &joint_dofs = Utility::get_variable<std::vector<int> >("init.joint.dofs");
+  const std::vector<double>
+     &joint_dofs = Utility::get_variable<std::vector<double> >("init.joint.dofs");
   const std::vector<double>
     &joints_start = Utility::get_variable<std::vector<double> >("init.joint.q");
 

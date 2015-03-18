@@ -63,3 +63,27 @@ public:
     }
   }
 };
+/*
+    // --------------------------- WORKSPACE FEEDBACK --------------------------
+    static int &WORKSPACE_FEEDBACK = Utility::get_variable<int>("controller.error-feedback.operational-space.active");
+    if(WORKSPACE_FEEDBACK){
+      // CURRENTLY THIS IS ONLY FORCE
+      // BUT IT CAN BE ACCELERATIONS TOO
+      static int &FEEDBACK_ACCEL = Utility::get_variable<int>("controller.error-feedback.operational-space.accel");
+      std::vector<Ravelin::Matrix3d> W(boost::assign::list_of(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity())(Ravelin::Matrix3d::identity()).convert_to_container<std::vector<Ravelin::Matrix3d> >() );
+      static std::vector<double>
+          &Kp = Utility::get_variable<std::vector<double> >("controller.error-feedback.operational-space.gains.kp"),
+          &Kv = Utility::get_variable<std::vector<double> >("controller.error-feedback.operational-space.gains.kv"),
+          &Ki = Utility::get_variable<std::vector<double> >("controller.error-feedback.operational-space.gains.ki");
+
+      Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
+      eef_stiffness_fb(Kp,Kv,Ki,x_des,xd_des,data->q,data->qd,fb);
+
+      if(FEEDBACK_ACCEL)
+        qdd_des += fb;
+      else
+        ufb += fb;
+    }
+  }
+  
+  */

@@ -302,7 +302,7 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   std::cout << "STARTING ROBOT" << std::endl;
 
   robot_ptr = boost::shared_ptr<Controller>(new Controller());
-
+  robot_ptr->init();
   std::cout << "ROBOT INITED" << std::endl;
 
   // CONTACT PARAMETER CALLBACK (MUST BE SET)

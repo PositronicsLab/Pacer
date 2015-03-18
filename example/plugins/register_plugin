@@ -15,7 +15,7 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 }
 
 extern "C" {
-  void init(const boost::shared_ptr<Pacer::Controller>& ctrl, const char* name){
+  void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
     plugin_namespace = std::string("plugin."+std::string(name)+".");
 
     int priority = Utility::get_variable<double>(plugin_namespace+"priority");

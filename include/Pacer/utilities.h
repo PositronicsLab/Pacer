@@ -198,8 +198,10 @@ public:
   //////////////  Variables ///////////////
   static void load_variables(std::string fname);
   
-  template <class T>
-  static T& get_variable(std::string tag);
+  static void test_function(std::string fname){}
   
+  template <typename T>
+  static T& get_variable(std::string tag);
+
 };
 #endif // UTILITIES_H

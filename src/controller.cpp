@@ -19,12 +19,7 @@ using namespace Pacer;
 
 extern std::vector<Pacer::VisualizablePtr> visualize;
   
-Controller::Controller(): Robot(){
-
-
-  // After Robot loads, load plugins
-  assert(init_plugins());
-}
+Controller::Controller(): Robot(){}
 
 Controller::~Controller(){
   close_plugins();
@@ -42,7 +37,7 @@ bool Controller::close_plugins(){
   return true;
 }
 
-typedef void (*init_t)(const boost::shared_ptr<Controller>&, const char*);
+typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
 
 bool Controller::init_plugins(){
   OUT_LOG(logDEBUG) << ">> Controller::init_plugins()";
@@ -54,17 +49,17 @@ bool Controller::init_plugins(){
   // call the initializers, if any
   std::vector<std::string> &plugin_names = Utility::get_variable<std::vector<std::string> >("plugin.id");
   std::vector<std::string> &plugin_files = Utility::get_variable<std::vector<std::string> >("plugin.file");
+  std::vector<int> &plugin_active = Utility::get_variable<std::vector<int> >("plugin.active");
 
   // Load all the plugins
   for(unsigned i=0;i<plugin_names.size();i++){
-    const std::string &filename = plugin_names[i];
-    char* pPath;
-    pPath = getenv ("PACER_PLUGIN_PATH");
-    assert(pPath!=NULL);
-    OUT_LOG(logDEBUG) << "PACER_PLUGIN_PATH = " << pPath;
-    
+    if(plugin_active[i] == 0) continue;
+    std::string filename = plugin_names[i];
+    std::string pPath(getenv("PACER_PLUGIN_PATH"));
+    const char* lib_path = (pPath+"/"+filename).c_str();
+    OUT_LOG(logDEBUG) << "Loading Plugin: " << lib_path;
     // attempt to read the file
-    void* HANDLE = dlopen(strcat(pPath,filename.c_str()), RTLD_LAZY);
+    void* HANDLE = dlopen(lib_path, RTLD_LAZY);
     if (!HANDLE)
     {
       std::cerr << "driver: failed to read plugin from " << filename << std::endl;
@@ -104,7 +99,12 @@ void Controller::control(double t){
   static double last_time = -0.001;
   const double dt = t - last_time;
   update();
+  lock_state();
+#ifdef USE_PLUGINS
   update_plugins(t);
+#endif
+  unlock_state();
+
   /*
   // Select end effectors that are feet and set them as active contacts
   static std::vector<int>

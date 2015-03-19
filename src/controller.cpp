@@ -16,8 +16,6 @@
 #include <vector>
 
 using namespace Pacer;
-
-extern std::vector<Pacer::VisualizablePtr> visualize;
   
 Controller::Controller(): Robot(){}
 
@@ -159,8 +157,8 @@ void Controller::control(double t){
     xd_des[i].set_zero();
     xdd_des[i].set_zero();
     x_des[i].pose = xd_des[i].pose = xdd_des[i].pose = base_frame;
-    visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2)));
-    visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose())),Ravelin::Vector3d(1,1,0),0.2)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,eefs_[i].origin),Ravelin::Vector3d(1,0,0),0.2)));
   }
 
   std::vector<EndEffector*> feet;
@@ -169,7 +167,7 @@ void Controller::control(double t){
     feet.push_back(&eefs_[i]);
     feet[ii]->origin.pose = base_frame;
 
-    visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Point(Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[ii]->origin),
                     Ravelin::Vector3d(1,0,0),
                     0.1)));
 
@@ -243,7 +241,7 @@ void Controller::control(double t){
     }
 
     boost::shared_ptr<Ravelin::Pose3d> new_gait_pose(new Ravelin::Pose3d(gait_pose->q,gait_pose->x,base_horizontal_frame));
-    visualize.push_back( Pacer::VisualizablePtr( new Pose(*new_gait_pose.get(),0.25,0.2)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(*new_gait_pose.get(),0.25,0.2)));
 
 //    for(int i=0,ii=0;i<NUM_EEFS;i++){
 //      if(is_foot[i] == 0) continue;

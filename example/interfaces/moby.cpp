@@ -19,7 +19,6 @@ Moby::RCArticulatedBodyPtr abrobot;
 
 
 #ifdef USE_OSG_DISPLAY
-extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
 void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1, double size=0.1);
@@ -169,16 +168,16 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   ((generalized_qdd = generalized_qd) -= generalized_qd_last) /= dt;
   generalized_qd_last = generalized_qd;
 
-#ifdef USE_OSG_DISPLAY
-  render(visualize);
-#endif
-
   robot_ptr->set_generalized_value(Pacer::Robot::position,generalized_q);
   robot_ptr->set_generalized_value(Pacer::Robot::velocity,generalized_qd);
   robot_ptr->set_generalized_value(Pacer::Robot::acceleration,generalized_qdd);
   robot_ptr->set_generalized_value(Pacer::Robot::load,generalized_fext);
 
   robot_ptr->control(t);
+
+#ifdef USE_OSG_DISPLAY
+  render(Utility::visualize);
+#endif
 
   {
     std::map<std::string, Ravelin::VectorNd > q, qd, u; 

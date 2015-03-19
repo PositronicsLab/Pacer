@@ -29,11 +29,14 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
+#include <Pacer/Visualizable.h>
 
 class Utility{
 
     /// Data storage
 public:
+    static std::vector<Pacer::VisualizablePtr> visualize;
+
     // Floating-point modulo
     // The result (the remainder) has same sign as the divisor.
     // Similar to matlab's mod(); Not similar to fmod() -   Mod(-3,4)= 1   fmod(-3,4)= -3

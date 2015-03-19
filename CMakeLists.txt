@@ -55,6 +55,12 @@ find_package(LibXml2 REQUIRED)
 link_directories(${LIBXML2_LIBRARY_DIR})
 include_directories(${LIBXML2_INCLUDE_DIR})
 
+include (FindPkgConfig)
+IF(PKG_CONFIG_FOUND)
+  pkg_check_modules(GAZEBO gazebo)
+ENDIF(PKG_CONFIG_FOUND)
+include_directories(${GAZEBO_INCLUDE_DIRS})
+link_directories(${GAZEBO_LIBRARY_DIRS})
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 # these are the setting for the in-source compiler flow control
@@ -63,10 +69,8 @@ option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
 option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(TIMING "use ctime timing functions" OFF)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
-  option(USE_DXL "use dynamixel drivers" OFF)
-  option(USE_MOBY "build Moby plugin" ON)
-  option(USE_GAZEBO "build Gazebo plugin" OFF)
   option(BUILD_PLUGINS "Build pacer plugins?" ON)
+  option(USE_DXL "use dynamixel drivers" OFF)
   #option(CONSOLE "Display a Console window for controlling robot CVars =EXPERIMENTAL=" OFF)
 
 
@@ -174,8 +178,7 @@ IF(BUILD_PLUGINS)
   add_subdirectory( example/plugins )
 ENDIF(BUILD_PLUGINS)
 
-# Moby Plugin
-IF(USE_MOBY)
+  # Gazebo Interface
   add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
 # osg
 IF(USE_OSG_DISPLAY AND OSG_FOUND)
@@ -200,36 +203,14 @@ IF(USE_OSG_DISPLAY AND OSG_FOUND)
   ENDIF(USE_OSG_DISPLAY AND OSG_FOUND)
   target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS})
   set_target_properties(PacerMobyPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-  install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-moby)
+  install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/interfaces)
   
-  #target_link_libraries(PacerMobyDriver ${REQLIBS} ${EXTRA_LIBS})
-ENDIF(USE_MOBY)
 
-# Gazebo Plugin
-IF(USE_GAZEBO)
+  # Gazebo Interface
+IF(GAZEBO_FOUND)
   add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/interfaces/gazebo.cpp)
-# NO USE FOR OSG YET
-# IF(USE_OSG_DISPLAY AND OSG_FOUND)
-#   target_link_libraries (PacerGazeboPlugin ${OSG_LIBRARIES})
-#   target_link_libraries (PacerGazeboPlugin ${OSGVIEWER_LIBRARIES})
-#   target_link_libraries (PacerGazeboPlugin ${OSGDB_LIBRARIES})
-#   target_link_libraries (PacerGazeboPlugin ${OSGGA_LIBRARIES})
-#   target_link_libraries (PacerGazeboPlugin ${OPENTHREADS_LIBRARY})
-#   target_link_libraries (PacerGazeboPlugin ${OSGUTIL_LIBRARIES})
-#   target_link_libraries (PacerGazeboPlugin ${OSGMANIPULATOR_LIBRARIES})
-#   add_definitions (-DUSE_OSG_DISPLAY)
-# ENDIF(USE_OSG_DISPLAY AND OSG_FOUND)
-
-  include (FindPkgConfig)
-  IF(PKG_CONFIG_FOUND)
-    pkg_check_modules(GAZEBO gazebo)
-  ENDIF(PKG_CONFIG_FOUND)
-  include_directories(${GAZEBO_INCLUDE_DIRS})
-  link_directories(${GAZEBO_LIBRARY_DIRS})
-
   target_link_libraries(PacerGazeboPlugin ${REQLIBS} ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf ${EXTRA_LIBS})
-  install(TARGETS PacerGazeboPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-gazebo)
-ENDIF(USE_GAZEBO)
+ENDIF(GAZEBO_FOUND)
 
 ENDIF(BUILD_EXAMPLES)
 

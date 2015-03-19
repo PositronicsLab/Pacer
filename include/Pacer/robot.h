@@ -59,13 +59,16 @@ class Robot {
       throw std::runtime_error("Variable: \"" + n + "\" not found in data!");
     }
     
+    /// @brief Get data we're not sure exists.  
+    /// Return false and do nothing to data if it doesnt exist
     template<class T>
-    T get_data_try(std::string n){
+    bool get_data(std::string n,T& val){
       try {
-        const T& val = get_data<T>(n);
-        return val;
+        val = get_data<T>(n);
+        return true;
       } catch(std::runtime_error& e) {
         OUT_LOG(logDEBUG) << e.what() << std::endl;
+        return false;
       }
     }
 
@@ -94,8 +97,6 @@ class Robot {
       std::string            id;
       // Foot link pointer
       Moby::RigidBodyPtr     link;
-      // End effector location on link;
-      Ravelin::Vector3d      origin;
       // kinematic chain indexing generalized coordinates
       std::vector<unsigned> chain;
       std::vector<bool>      chain_bool;
@@ -106,19 +107,38 @@ class Robot {
       // For locomotion, this informs us if this link should be used to calculate a jocobian
       bool                   active;
       bool                   stance;
+
     };
     
 		std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > > _id_contacts_map;
 		std::map<std::string,boost::shared_ptr<end_effector_t> > _id_end_effector_map;
 
 	public:
-    bool is_end_effector(const std::string& id){
+    bool is_end_effector(std::string id){
       std::map<std::string,boost::shared_ptr<end_effector_t> >::iterator 
         it = _id_end_effector_map.find(id);
       if(it != _id_end_effector_map.end())
         return true;
       return false;
     }
+    
+    std::vector<std::string> get_end_effector_names(){
+      std::vector<std::string> eefs;
+      std::map<std::string,boost::shared_ptr<end_effector_t> >::iterator 
+        it = _id_end_effector_map.begin();
+      for(;it != _id_end_effector_map.end();it++)
+        eefs.push_back((*it).first);
+      return eefs;
+    }
+      
+    Ravelin::MatrixNd get_link_jacobian(Ravelin::VectorNd q, std::string link){
+      return calc_jacobian(q,link,Ravelin::Vector3d(0,0,0,_id_link_map[link]->get_pose()));
+    }
+    
+    const Moby::RigidBodyPtr get_link(std::string link){
+      return _id_link_map[link];
+    }
+   
   
     void add_contact(
         std::string& id,
@@ -137,8 +157,25 @@ class Robot {
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;
-
       _id_contacts_map[id].push_back(c);
+    }
+    
+    boost::shared_ptr<contact_t> create_contact(
+        std::string& id,
+        Ravelin::Vector3d point,
+        Ravelin::Vector3d normal,
+        Ravelin::Vector3d impulse = Ravelin::Vector3d(),
+        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
+    {
+      boost::shared_ptr<contact_t> c(new contact_t);
+      c->id         = id; 
+      c->point      = point; 
+      c->normal     = normal; 
+      c->impulse    = impulse; 
+      c->mu_coulomb = mu_coulomb; 
+      c->mu_viscous = mu_viscous;
+      c->restitution= restitution;
+      return c;
     }
     
     void add_contact(boost::shared_ptr<const contact_t>& c)
@@ -219,24 +256,28 @@ class Robot {
     void unlock_state(){_lock_state = false;};
 
   public:
+    //void get_foot_value(std::string id,unit_e u, Ravelin::Vector3d val){
+    //  val = Ravelin::Vector3d(_foot_state[u].segment(0,3).data(),_id_end_effector_map[id]->link->get_pose());
+    //}
+
     /// ------------ GET/SET JOINT value  ------------ ///
 
-    double get_joint_value(const std::string& id, unit_e u, int dof)
+    double get_joint_value(std::string id, unit_e u, int dof)
     {
       return _state[u][id][dof];
     }
     
-    Ravelin::VectorNd get_joint_value(const std::string& id, unit_e u)
+    Ravelin::VectorNd get_joint_value(std::string id, unit_e u)
     {
       return _state[u][id];
     }
     
-    void get_joint_value(const std::string& id, unit_e u, Ravelin::VectorNd& dof_val)
+    void get_joint_value(std::string id, unit_e u, Ravelin::VectorNd& dof_val)
     {
       dof_val = _state[u][id];
     }
     
-    void get_joint_value(const std::string& id, unit_e u,std::vector<double>& dof_val)
+    void get_joint_value(std::string id, unit_e u,std::vector<double>& dof_val)
     {
       Ravelin::VectorNd& dof = _state[u][id];
       dof_val.resize(dof.rows());
@@ -244,7 +285,7 @@ class Robot {
         dof_val[i] = dof[i];
     }
     
-    void set_joint_value(const std::string& id, unit_e u, int dof, double val)
+    void set_joint_value(std::string id, unit_e u, int dof, double val)
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
@@ -253,7 +294,7 @@ class Robot {
       _state_mutex.unlock();
     }
     
-    void set_joint_value(const std::string& id, unit_e u, const Ravelin::VectorNd& dof_val)
+    void set_joint_value(std::string id, unit_e u, const Ravelin::VectorNd& dof_val)
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
@@ -265,7 +306,7 @@ class Robot {
       _state_mutex.unlock();
     }
     
-    void set_joint_value(const std::string& id, unit_e u, const std::vector<double>& dof_val)
+    void set_joint_value(std::string id, unit_e u, const std::vector<double>& dof_val)
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
@@ -552,6 +593,9 @@ class Robot {
 
     /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
     void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
+    
+    /// @brief Calculate 6x(N+6) jacobian for point(in frame) on link at state q
+    Ravelin::MatrixNd calc_jacobian(const Ravelin::VectorNd& q, std::string link, Ravelin::Vector3d point);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal

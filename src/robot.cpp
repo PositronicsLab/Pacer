@@ -7,7 +7,6 @@
 
 using namespace Pacer;
 
-std::vector<Pacer::VisualizablePtr> visualize;
 void Robot::calc_com(){
 
   Ravelin::Vector3d center_of_mass_x;
@@ -67,10 +66,10 @@ void Robot::calc_com(){
 
   // ZMP and COM
   Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.10,Moby::GLOBAL);
-  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1))));
-//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
-//  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + center_of_mass_xd*0.1 + center_of_mass_xdd*0.01,CoM_2D + center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
-  visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,Moby::GLOBAL)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1))));
+//  Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
+//  Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D + center_of_mass_xd*0.1 + center_of_mass_xdd*0.01,CoM_2D + center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,Moby::GLOBAL)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
 }
 
 double Robot::calc_energy(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M) const {
@@ -261,9 +260,9 @@ void Robot::update(){
         get_data<Ravelin::Pose3d>("base_horizontal_frame")));
 
 #ifndef NDEBUG
-  visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_link_frame.get()),0.8)));
-  visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_horizontal_frame.get()),1.5)));
-  visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_link_frame.get()),0.8)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_horizontal_frame.get()),1.5)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
 #endif
 
   //Ravelin::MatrixNd M;

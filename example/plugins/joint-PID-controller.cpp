@@ -11,10 +11,11 @@ std::string plugin_namespace;
 
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
 
-class PIDController {
-  public:
-    Ravelin::VectorNd value;
-  protected:
+class JointPID {
+public:
+  JointPID() { init(); }
+
+    Ravelin::VectorNd u;
 
   struct Gains
   {
@@ -26,24 +27,6 @@ class PIDController {
     
   std::vector<Gains> _gains;
   
-  double get_error_feedback(int n,double perr,double derr){
-      const double KP = _gains[n].kp;
-      const double KV = _gains[n].kv;
-      const double KI = _gains[n].ki;
-
-      _gains[n].perr_sum += perr;
-      double ierr = _gains[n].perr_sum;
-
-      return perr*KP + derr*KV + ierr*KI;
-  }
-};
-
-
-
-class JointPID : public PIDController {
-public:
-  JointPID() { init(); }
-
   Ravelin::VectorNd q_des,
                     qd_des,
                     q,
@@ -89,39 +72,59 @@ public:
   }
 
   void update(){
-    value.set_zero(q.rows());
+      qd_des.set_zero();
 
-    for (unsigned i=0; i< _gains.size(); i++)
+      OUTLOG(q,"*joint_pid_q",logDEBUG);
+      OUTLOG(q_des,"*joint_pid_q_des",logDEBUG);
+      OUTLOG(qd,"*joint_pid_qd",logDEBUG);
+      OUTLOG(qd_des,"*joint_pid_qd_des",logDEBUG);
+            
+      Ravelin::VectorNd perr = q;
+      perr -= q_des;
+      Ravelin::VectorNd derr = qd;
+      derr -= qd_des;
+
+      OUTLOG(perr,"*perr",logDEBUG);
+      OUTLOG(derr,"*derr",logDEBUG);
+      
+    assert(q.rows() == _gains.size());
+    u.set_zero(q.rows());
+
+    for (int i=0; i< q.rows(); i++)
     {
-      double perr = q_des[i] - q[i];
-      double derr = qd_des[i] - qd[i];
-      value[i] = get_error_feedback(i,perr,derr);
+      const double KP = _gains[i].kp;
+      const double KV = _gains[i].kv;
+      const double KI = _gains[i].ki;
+
+      _gains[i].perr_sum += perr[i];
+      double ierr = _gains[i].perr_sum;
+      
+      u[i] = perr[i]*KP + derr[i]*KV + ierr*KI;
     }
   }
 };
-
-boost::shared_ptr<JointPID> pid;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
     ctrl_ptr = ctrl;
     // --------------------------- JOINT FEEDBACK ------------------------------
-      if(!pid)
-        pid = boost::shared_ptr<JointPID>( new JointPID());
+      static JointPID pid;
       
-      pid->q_des  = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal);
-      pid->qd_des = ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal);
-      pid->q  = ctrl->get_joint_generalized_value(Pacer::Controller::position);
-      pid->qd = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
-
-      pid->update();
-
-      ctrl->set_joint_generalized_value(Pacer::Controller::load_goal, pid->value);
-      OUTLOG(pid->value,"joint_pid_U",logDEBUG);
-      OUTLOG(pid->q,"joint_pid_q",logDEBUG);
-      OUTLOG(pid->qd,"joint_pid_qd",logDEBUG);
-      OUTLOG(pid->q_des,"joint_pid_q_des",logDEBUG);
-      OUTLOG(pid->qd,"joint_pid_qd_des",logDEBUG);
+      pid.q_des  = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal);
+      pid.qd_des = ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal);
+      pid.q  = ctrl->get_joint_generalized_value(Pacer::Controller::position);
+      pid.qd = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
+      
+      OUTLOG(pid.q,"joint_pid_q",logDEBUG);
+      OUTLOG(pid.qd,"joint_pid_qd",logDEBUG);
+      OUTLOG(pid.q_des,"joint_pid_q_des",logDEBUG);
+      OUTLOG(pid.qd,"joint_pid_qd_des",logDEBUG);
+      
+      pid.update();
+    
+      OUTLOG(pid.u,"joint_pid_U",logDEBUG);
+      ctrl->set_joint_generalized_value(Pacer::Controller::load_goal, pid.u);
+      
 }
 
 /** This is a quick way to register your plugin function of the form:

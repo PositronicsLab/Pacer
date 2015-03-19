@@ -25,20 +25,42 @@
 
     <end-effector>
      <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
-     <!-- the [X Y Z] of end-effector ids respectively -->
-<!--     <x type="double">0.12 0.10 -0.14    0.12 -0.10 -0.14    -0.12 0.10 -0.14    -0.12 -0.10 -0.14</x>-->
-     <foot type="bool">true              true                true                true</foot>
     </end-effector>
   </init>
 
+ 
   <plugin>
-    <!-- ordered by execution order -->
-    <!--<name type="string">gait-planner viip-balance joint-PID-controller eef-PID-controller idyn-controller</name>
-    <library type="string">libgait-planner.so libviip-balance.so libjoint-PID-controller.so libeef-PID-controller.so libidyn-controller.so</library> -->
-    <id type="string">stand-trajectory joint-PID-controller</id>
-    <file type="string">libstand-trajectory.so libjoint-PID-controller.so</file>
-    <active type="bool">true true</active>
+    <id type="string">drive-robot gait-planner ik-feet stand-trajectory joint-PID-controller</id>
+    <file type="string">libdrive-robot.so libgait-planner.so libik-feet.so libstand-trajectory.so libjoint-PID-controller.so</file>
+    <active type="bool">false false true true true</active>
   </plugin>
+  
+  <drive-robot>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">0</priority>
+     <waypoints type="double">
+   0.06279052 -0.03133330 
+	 0.36812455 -0.17113678 
+	 0.63742399 -0.24557181 
+	 0.84432793 -0.22620676 
+	 0.96858316 -0.12043842 
+	 0.99802673  0.03133330 
+	 0.92977649  0.17113678 
+	 0.77051324  0.24557181 
+	 0.53582679  0.22620676 
+	 0.24868989  0.12043842 
+	-0.06279052 -0.03133330 
+	-0.36812455 -0.17113678 
+	-0.63742399 -0.24557181 
+	-0.84432793 -0.22620676 
+	-0.96858316 -0.12043842 
+	-0.99802673  0.03133330 
+	-0.92977649  0.17113678 
+	-0.77051324  0.24557181 
+	-0.53582679  0.22620676 
+	-0.24868989  0.12043842 
+    </waypoints>
+  </drive-robot>
   
   <stand-trajectory>
      <real-time-factor type="double">1</real-time-factor>
@@ -48,17 +70,28 @@
   <gait-planner>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">1</priority>
-    <active type="bool">true</active>
+    <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
     <step-height type="double">0.015</step-height>
     <gait-duration type="double">0.5</gait-duration>
+    
+    <width type="double">0.1</width>
+    <length type="double">0.30</length>
+    <height type="double">0.14</height>
+
+    
     <!--troting gait-->
-<!--       <gait type="double">0  0.5  0.5  0</gait>-->
+       <gait type="double">0  0.5  0.5  0</gait>
     <!--walking gait-->
-    <gait type="double">0.25  0.75  0.0  0.5</gait>
+    <!--<gait type="double">0.25  0.75  0.0  0.5</gait>-->
     <duty-factor type="double">0.75 0.75 0.75 0.75</duty-factor>
   </gait-planner>
+  
+  <ik-feet>
+    <priority type="double">2</priority>
+    <real-time-factor type="double">1</real-time-factor>
+  </ik-feet>
   
   <viip-balance>
     <priority type="double">3</priority>
@@ -79,7 +112,7 @@
     <real-time-factor type="double">1</real-time-factor>
     <!-- Gains are for the q of joint ids respectively -->
     <gains>
-      <kp type="double">2e1 2e1 2e1     2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1</kp>
+      <kp type="double">2e1 2e1 2e1      2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1   </kp>
       <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
       <ki type="double">3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3</ki>
     </gains>

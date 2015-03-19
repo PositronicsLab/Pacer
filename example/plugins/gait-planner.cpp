@@ -3,13 +3,18 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include<Pacer/controller.h>
-#include<Pacer/utilities.h>
+#include <Pacer/controller.h>
+#include <Pacer/utilities.h>
 using namespace Pacer;
 
-extern std::vector<Pacer::VisualizablePtr> visualize;
+static Ravelin::Vector3d workv3_;
 
-void Controller::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
+boost::shared_ptr<Pacer::Controller> ctrl_ptr;
+  boost::shared_ptr<Ravelin::Pose3d> base_frame;
+  std::string plugin_namespace;
+
+  /*
+void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
   static double t = 0;
   if(dt==0)
     t = 0;
@@ -89,7 +94,7 @@ void Controller::sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_
 }
 
 /// Generate a bunch of random points at z = 0 around the COM
-void Controller::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
+void find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
   footholds.clear();
   double rad = 0.2;
   if(data->N.columns()>0) center_of_contact.active = true;
@@ -105,8 +110,9 @@ void Controller::find_footholds(std::vector<Ravelin::Vector3d>& footholds,int nu
     footholds.push_back(Ravelin::Pose3d::transform_point(base_frame,fh));
   }
 }
+*/
 
-void Controller::select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh){
+void select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh){
   double min_dist = INFINITY;
   int    min_vec = 0;
   for(int i=0;i<footholds.size();i++){
@@ -119,86 +125,7 @@ void Controller::select_foothold(const std::vector<Ravelin::Vector3d>& footholds
   x_fh = Ravelin::Origin3d(footholds[min_vec]);
 }
 
-/*
-void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
-                              const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
-  ////////////////////// IK CONTROL ////////////////////////
-
-  for(int i=0;i<NUM_EEFS;i++){
-    EndEffector& foot = eefs_[i];
-
-
-    // POSITION
-    OUTLOG( foot_pos[i],foot.id + "_x",logDEBUG1);
-    RMRC(foot,q,Ravelin::SVector6d(foot_pos[i],Ravelin::Vector3d::zero()),q_des);
-    OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
-
-    // Calc jacobian for AB at this EEF
-    Ravelin::MatrixNd J;
-    Ravelin::VectorNd x(foot.chain.size());
-    for(int k=0;k<foot.chain.size();k++)                // actuated joints
-      x[k] = q[foot.chain[k]];
-    foot_jacobian(x,foot,base_frame,J);
-    J = J.get_sub_mat(0,6,0,J.columns(),workM_);
-
-    Ravelin::VectorNd qd_foot,qdd_foot;
-    // VELOCITY & ACCELERATION
-    OUTLOG(J,foot.id + "__J", logDEBUG1);
-    OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG1);
-    Utility::solve((workM_ = J),(qd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_vel[i],Ravelin::Vector3d::zero()).data())));
-    OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
-
-    OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG1);
-    Utility::solve((workM_ = J),(qdd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_acc[i],Ravelin::Vector3d::zero()).data())));
-    OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
-
-    for(int j=0;j<foot.chain.size();j++){
-      qd_des[foot.chain[j]] = qd_foot[j];
-      qdd_des[foot.chain[j]] = qdd_foot[j];
-    }
-  }
-}
-*/
-void Controller::trajectory_ik(const std::vector<Ravelin::Vector3d>& foot_pos,const std::vector<Ravelin::Vector3d>& foot_vel,const std::vector<Ravelin::Vector3d>& foot_acc,
-                              const Ravelin::VectorNd& q,Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd_des){
-  ////////////////////// IK CONTROL ////////////////////////
-
-  for(int i=0;i<NUM_EEFS;i++){
-    EndEffector& foot = eefs_[i];
-
-
-    // POSITION
-    OUTLOG( foot_pos[i],foot.id + "_x",logDEBUG1);
-    RMRC(foot,q,foot_pos[i],q_des);
-    OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
-
-    // Calc jacobian for AB at this EEF
-    Ravelin::MatrixNd J;
-    Ravelin::VectorNd x(foot.chain.size());
-    for(int k=0;k<foot.chain.size();k++)                // actuated joints
-      x[k] = q[foot.chain[k]];
-    foot_jacobian(x,foot,base_frame,J);
-    J = J.get_sub_mat(0,6,0,J.columns(),workM_);
-
-    Ravelin::VectorNd qd_foot,qdd_foot;
-    // VELOCITY & ACCELERATION
-    OUTLOG(foot_vel[i],foot.id + "_xd", logDEBUG1);
-    Utility::solve((workM_ = J),(qd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_vel[i],Ravelin::Vector3d::zero()).data())));
-    OUTLOG(qd_foot,foot.id + "_qd", logDEBUG1);
-
-    OUTLOG(foot_acc[i],foot.id + "_xdd", logDEBUG1);
-    Utility::solve((workM_ = J),(qdd_foot = Ravelin::VectorNd(6,Ravelin::SVector6d(foot_acc[i],Ravelin::Vector3d::zero()).data())));
-    OUTLOG(qdd_foot,foot.id + "_qdd", logDEBUG1);
-
-    for(int j=0;j<foot.chain.size();j++){
-      qd_des[foot.chain[j]] = qd_foot[j];
-      qdd_des[foot.chain[j]] = qdd_foot[j];
-    }
-  }
-}
-
-
-bool Controller::gait_phase(double touchdown,double duty_factor,double gait_progress){
+bool gait_phase(double touchdown,double duty_factor,double gait_progress){
   double liftoff = touchdown + duty_factor,left_in_phase = 0;
   liftoff = liftoff - (double) ((int) liftoff);
 
@@ -220,7 +147,7 @@ bool Controller::gait_phase(double touchdown,double duty_factor,double gait_prog
 
 }
 
-double Controller::gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
+double gait_phase(double touchdown,double duty_factor,double gait_progress,double stance_phase){
   double liftoff = touchdown + duty_factor,left_in_phase = 0;
   liftoff = liftoff - (double) ((int) liftoff);
 
@@ -247,59 +174,8 @@ double Controller::gait_phase(double touchdown,double duty_factor,double gait_pr
   return left_in_phase;
 }
 
-//void Controller::walk_to(const Ravelin::SVector6d& command,
-//                        const std::vector<double>& goto_point,
-//                        std::vector<Ravelin::Vector3d>& foot_pos,
-//                        std::vector<Ravelin::Vector3d>& foot_vel,
-//                        std::vector<Ravelin::Vector3d>& foot_acc,
-//                        const std::vector<std::vector<double>>& heightmap)
-//{
-//  Ravelin::SVector6d go_to(Ravelin::VectorNd(command.size(),&command[0]),base_horizontal_frame);
-//  Ravelin::Vector3d goto_direction =
-//      Ravelin::Vector3d(goto_point[0],goto_point[1],0,Moby::GLOBAL)
-//      - Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_x[1],0,environment_frame);
-//  goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
-//  goto_direction.normalize();
-
-//  double angle_to_goal = atan2(goto_direction[1],goto_direction[0]);
-//  if(fabs(angle_to_goal) < M_PI_8){
-//    if(HOLONOMIC){
-//      go_to[1] = goto_direction[1]*command[0];
-//      // goal-centric coords
-//      go_to[0] =-goto_direction[1]*command[1];
-//      go_to[2] = goto_direction[0]*command[1];
-//    }
-//    go_to[0] = goto_direction[0]*command[0];
-//    go_to[5] = angle_to_goal/gait_time;
-//  } else {
-//    go_to[5] = Utility::sign(angle_to_goal)*0.75;
-//    if(!HOLONOMIC){
-//      go_to[0] = 0;
-//      go_to[1] = 0;
-//    } else {
-//      go_to[0] = goto_direction[0]*command[0];
-//      go_to[1] = goto_direction[1]*command[0];
-//      // goal-centric coords
-//      go_to[0] =-goto_direction[1]*command[1];
-//      go_to[2] = goto_direction[0]*command[1];
-//    }
-//  }
-//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINT_DOFS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
-//}
-
-
-//void Controller::walk_toward(const Ravelin::SVector6d& command,const
-//                            std::vector<Ravelin::Vector3d>& foot_pos,
-//                            std::vector<Ravelin::Vector3d>& foot_vel,
-//                            std::vector<Ravelin::Vector3d>& foot_acc,
-//                            std::vector<std::vector<double>>& heightmap)
-//{
-
-//  walk_toward(goto_6d,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,foot_origin,generalized_qd.segment(NUM_JOINT_DOFS,NDOFS),t,q,qd,qdd,foot_pos,foot_vel, foot_acc);
-//}
-
 /**
- * @brief Controller::walk_toward : OSRF Locomotion System Implementation
+ * @brief walk_toward : OSRF Locomotion System Implementation
  * @param command : 6x1 vector of goal base velocity differential
  * @param touchdown : specify the moment in the gait where a foot touches down stance phase. touchdown_i \in [0..1)
  * @param footholds : vector of 3x1 points indicating locations for valid foot placement
@@ -315,9 +191,9 @@ double Controller::gait_phase(double touchdown,double duty_factor,double gait_pr
  * @param foot_vel : NUM_FEET length vector of 3x1 cartesian velocities for feet (populated with current values)
  * @param foot_acc : NUM_FEET length vector of 3x1 cartesian acceleration for feet (populated with current values)
  */
-void Controller::walk_toward(
+void walk_toward(
     // PARAMETERS
-    const Ravelin::SVector6d& command,
+    const Ravelin::VectorNd& command,
     const std::vector<double>& touchdown,
     const std::vector<Ravelin::Vector3d>& footholds,
     const std::vector<double>& duty_factor,
@@ -325,8 +201,7 @@ void Controller::walk_toward(
     double step_height,
     bool STANCE_ON_CONTACT,
     // MODEL
-    std::vector<EndEffector*>& feet,
-    const Ravelin::Vector3d& base_velocity,
+    std::vector<Ravelin::Vector3d>& origins,
     const Ravelin::Vector3d& center_of_mass_x,
     double t,
     // OUTPUT
@@ -334,11 +209,10 @@ void Controller::walk_toward(
     std::vector<Ravelin::Vector3d>& foot_vel,
     std::vector<Ravelin::Vector3d>& foot_acc)
 {
-  OUT_LOG(logDEBUG) << " -- Controller::walk_toward() entered";
-  const boost::shared_ptr<const Ravelin::Pose3d>& base_frame = command.pose;
+  OUT_LOG(logDEBUG) << " -- walk_toward() entered";
   static bool inited = false;
   int spline_plan_length = 1,
-      NUM_FEET = feet.size();
+      NUM_FEET = origins.size();
   static double last_time = t;
   static std::vector<bool> last_feet_active(NUM_FEET);
 
@@ -395,28 +269,27 @@ void Controller::walk_toward(
     bool replan_path = false;
     if(inited){
       // Set liftoff feet (opposite of stance_phase variable)
-      if(stance_phase[i] && feet[i]->active && !last_feet_active[i] && STANCE_ON_CONTACT){
-        replan_path = true;
-      } else {
+      //if(stance_phase[i] && feet[i]->active && !last_feet_active[i] && STANCE_ON_CONTACT){
+        //replan_path = true;
+      //} else {
         for(int d=0; d<3;d++){
           OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
           replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
           if(replan_path)
             break;
         }
-      }
+      //}
     }
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
 
-      OUTLOG(feet[i]->origin,"foot_origin_" + feet[i]->id,logDEBUG);
+      OUTLOG(origins[i],"foot_origin_" + std::to_string(i),logDEBUG);
 
       // What phase of the gait is the controller in?
       // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
       // truncates t/gait_duration at decimal; gait_progress \in [0,1)
 
-      OUT_LOG(logDEBUG) << "foot: " << i;
       OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }";
       // How much time is left in the current phase stance (-), swing (+)
       left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,stance_phase[i]);
@@ -452,8 +325,8 @@ void Controller::walk_toward(
 
       // Determine linear portion of step
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame));
-      foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,feet[i]->origin);
-      Ravelin::Origin3d x0 = feet[i]->origin.data();
+      foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,origins[i]);
+      Ravelin::Origin3d x0 = origins[i].data();
 
       Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
 
@@ -489,7 +362,7 @@ void Controller::walk_toward(
 
         foot_goal /= (1-duty_factor[i]);
         OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
-
+        /*
         // velocity correction
         // FEEDBACK CAPTURE POINT
 //        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
@@ -504,7 +377,7 @@ void Controller::walk_toward(
 //        rfb[2] = 0;
 //        rfb[1] = 0;
 //        foot_goal -= Ravelin::Origin3d(rfb);
-
+         */ 
           control_points.push_back(Ravelin::Origin3d(x));
           control_points.push_back(Ravelin::Origin3d(x) + Ravelin::Origin3d(0,0,step_height));
         if(footholds.empty()){
@@ -528,13 +401,6 @@ void Controller::walk_toward(
         // project foot goal 'a' onto walking plane (defined by normal 'b')
         // x = v{||} - w{_|_}
         // w = b * (a.a / b.b)
-//        if(center_of_contact.active)
-//          foot_goal = foot_goal - center_of_contact.normal * (Ravelin::Vector3d(foot_goal.data(),Moby::GLOBAL).dot(center_of_contact.normal) / center_of_contact.normal.dot(center_of_contact.normal));
-//        OUTLOG( foot_goal," foot_goal_new",logDEBUG);
-
-        // all stance phase cases
-//        double num_points = floor(foot_goal.norm()*100.0);
-//        if(num_points < 1.0) num_points = 1.0;
         control_points.resize(3);
         control_points[0] = Ravelin::Origin3d(x);
         control_points[2] = Ravelin::Origin3d(x) + Ravelin::Origin3d(foot_goal);
@@ -543,24 +409,7 @@ void Controller::walk_toward(
         control_points[1] *= (control_points[2].norm() + control_points[0].norm())/2.0;
         if( (control_points[2] - control_points[1]).norm() < Moby::NEAR_ZERO)
           control_points.pop_back();
-
-//        for(double pt=1.0;pt<=num_points;pt+=1.0){
-//          Ravelin::Origin3d segment = Ravelin::Origin3d(x) + foot_goal*pt/num_points;
-//          segment.normalize();
-//          control_points.push_back(segment * x0.norm()) ;
-//        }
       }
-      // Plane walking Terrain abstraction (3 lowest feet form the plane)
-      //  plane X + Y + c = z
-
-//      if(NC > 0){
-//        Ravelin::Vector3d hip_pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,links_[3+i]->get_pose()));
-//        center_of_contact.point[2] = 0.13;
-//        double ground_z = Utility::get_z_plane(hip_pos[0],hip_pos[1],center_of_contact.normal,center_of_contact.point);
-//        Ravelin::Vector3d ground_offset(0,0,ground_z - center_of_contact.point[2],Moby::GLOBAL);
-//        OUTLOG(ground_offset,"ground_offset",logDEBUG1);
-//        (*control_points.rbegin())[2] -= Ravelin::Pose3d::transform_vector(base_horizontal_frame,ground_offset)[2];
-//      }
 
       // create new spline!!
       // copy last spline to history erasing oldest spline
@@ -599,19 +448,19 @@ void Controller::walk_toward(
       }
       stance_phase[i] = !stance_phase[i];
     }
-    last_feet_active[i] = feet[i]->active;
-    feet[i]->stance = !stance_phase[i];
+    //last_feet_active[i] = feet[i]->active;
+    //feet[i]->stance = !stance_phase[i];
     x.pose = foot_pos[i].pose;
     xd.pose = foot_vel[i].pose;
     xdd.pose = foot_acc[i].pose;
   }
 
+///* VISUALIZE
   {
-
 
   for(int i=0;i<NUM_FEET;i++){
 
-    Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,feet[i]->link->get_pose()));
+    //Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
 
     Ravelin::VectorNd &T1 = *(spline_t[i].begin()),
                       &T2 = *(spline_t[i].rbegin());
@@ -629,25 +478,89 @@ void Controller::walk_toward(
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
 //      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      visualize.push_back( Pacer::VisualizablePtr( new Point( p,   Ravelin::Vector3d(0,1,0))));
-//      visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
-//     visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p,   Ravelin::Vector3d(0,1,0))));
+//      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
+//     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
   }
   }
+//  END VISUALIZE */
 
   last_time = t;
   inited = true;
-  OUT_LOG(logDEBUG) << " -- Controller::walk_toward() exited";
+  OUT_LOG(logDEBUG) << " -- walk_toward() exited";
 }
-#include <Pacer/Controller.h>
 
-extern "C"{
-  init(boost::shared_ptr<Pacer::Controller>& robot){
+void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  Ravelin::Origin3d command = Ravelin::Origin3d(0,0,0);
+  ctrl->get_data<Ravelin::Origin3d>("SE2_command",command);
+  Ravelin::VectorNd go_to;
+  go_to.set_zero(6);
+  go_to[0] = command[0];
+  go_to[1] = command[1];
+  go_to[5] = command[2];
 
+  static std::vector<double>
+      &duty_factor = Utility::get_variable<std::vector<double> >(plugin_namespace+"duty-factor"),
+      &this_gait = Utility::get_variable<std::vector<double> >(plugin_namespace+"gait");
+  static double &gait_time = Utility::get_variable<double>(plugin_namespace+"gait-duration");
+  static double &step_height = Utility::get_variable<double>(plugin_namespace+"step-height");
+  static std::vector<Ravelin::Vector3d> footholds(0);
+  static std::vector<std::string>
+      &foot_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+"feet");
+
+  static double &width = Utility::get_variable<double>(plugin_namespace+"width");
+  static double &length = Utility::get_variable<double>(plugin_namespace+"length");
+  static double &height = Utility::get_variable<double>(plugin_namespace+"height");
+
+  base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(
+        ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
+        //get_data<Ravelin::Pose3d>("base_horizontal_frame")));
+  
+  int NUM_FEET = foot_names.size();
+  std::vector<Ravelin::Vector3d>
+      foot_vel(NUM_FEET),
+      foot_pos(NUM_FEET),
+      foot_acc(NUM_FEET);
+  ctrl->set_model_state(ctrl->get_generalized_value(Pacer::Robot::position));
+  for(int i=0;i<NUM_FEET;i++){
+    foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,ctrl->get_link(foot_names[i])->get_pose()));
+    foot_vel[i] = Ravelin::Vector3d(0,0,0,base_frame);
+    foot_acc[i] = Ravelin::Vector3d(0,0,0,base_frame);
+    //double gait_progress = t/gait_time;
+    //gait_progress = gait_progress - (double) ((int) gait_progress);
   }
   
-  update(boost::shared_ptr<Pacer::Controller>& robot, double t){
-  
+  std::vector<Ravelin::Vector3d> origins;
+  if(origins.empty()){
+    origins.resize(NUM_FEET);
+    for(int i=0;i<NUM_FEET;i++){
+      //origins[i] = Ravelin::Vector3d(
+        //Utility::sign<double>(foot_pos[i][0])*length/2,
+        //Utility::sign<double>(foot_pos[i][1])*width/2,
+        //-height,base_frame);
+        origins[i] = foot_pos[i];
+    }
+  }
+
+
+  OUTLOG(this_gait,"this_gait",logINFO);
+  OUTLOG(duty_factor,"duty_factor",logINFO);
+
+  int STANCE_ON_CONTACT = Utility::get_variable<int>(plugin_namespace+"stance-on-contact");
+  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
+//  cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
+  for(int i=0;i<NUM_FEET;i++){
+    ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
+    ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
+    OUTLOG(foot_pos[i],foot_names[i]+"_goal_x"  ,logDEBUG);
+    OUTLOG(foot_vel[i],foot_names[i]+"_goal_xd" ,logDEBUG);
+    OUTLOG(foot_acc[i],foot_names[i]+"_goal_xdd",logDEBUG);
   }
 }
+
+/** This is a quick way to register your plugin function of the form:
+  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+  */
+#include "register_plugin"

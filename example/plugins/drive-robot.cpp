@@ -6,21 +6,19 @@
  * This code shows how to control Pacer to get a robot to walk in a Figure-8
  * pattern.
  ****************************************************************************/
+#include <Pacer/controller.h>
 #include <Pacer/utilities.h>
-#include <Pacer/Log.h>
-#include <Pacer/Visualizable.h>
 
-extern std::vector<boost::shared_ptr<Pacer::Visualizable> > visualize;
+std::string plugin_namespace;
 
 typedef std::pair<double,double> Point;
-void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd& qd,
-                Ravelin::VectorNd& command,
-                boost::shared_ptr<Ravelin::Pose3d>& gait_pose,
-                Ravelin::VectorNd& params)
-{
 
-  gait_pose = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::AAngled(1,1,0,M_PI_8/2.0),Ravelin::Origin3d(0,0,0.01),Moby::GLOBAL));
+void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
+  Ravelin::VectorNd q,qd;
+  ctrl->get_generalized_value(Pacer::Controller::position,q);
+  ctrl->get_generalized_value(Pacer::Controller::velocity,qd);
+  
   const unsigned X=0,Y=1,Z=2,THETA=5;
 
     OUT_LOG(logDEBUG1) << ">> ENTERED USER CONTROLLER" ;
@@ -34,7 +32,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     // World frame
     boost::shared_ptr<Ravelin::Pose3d>
         environment_frame(new Ravelin::Pose3d());
-    visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(*environment_frame.get())));
+    Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(*environment_frame.get())));
 
     // com is the current position of the center-of-mass of the robot's base
     Ravelin::Vector3d com(q[nq+X],q[nq+Y],q[nq+Z],environment_frame);
@@ -44,7 +42,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     // make a rigid body pose out of com and quat
     Ravelin::Pose3d pose(quat,com.data(),environment_frame);
-    visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(pose)));
+    Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(pose)));
 
     // get the base orientation as roll-pitch-yaw
     Ravelin::Vector3d rpy;
@@ -64,6 +62,7 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     /// SET VARIABLES ///
 
     // Command robot to walk in a direction
+    Ravelin::VectorNd command;
     command.set_zero(6);
 
     double max_turn_speed = 1.0; // rad/sec
@@ -76,16 +75,15 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     /////////////////////////////////////
     /// Assign WAYPOINTS in the plane ///
-    std::vector<Point> waypoints;
+    static std::vector<Point> waypoints;
 
-    // Q: Sam, is it possible to assign the waypoints only once? (the first
-    // time that the controller is called?)
+    static std::vector<double>
+      &waypoints_vec = Utility::get_variable<std::vector<double> >(plugin_namespace+"waypoints");
 
-    // points on a figure eight
-    for (double t=0.01; t<1.0; t+=0.05) {
-        waypoints.push_back(Point(sin(M_PI*2.0 * t),-sin(M_PI*2.0 * t * 2.0)*0.25));
-    }
-
+    if(waypoints.empty())
+      for(int i=0;i<waypoints_vec.size();i+=2)
+        waypoints.push_back(Point(waypoints_vec[i],waypoints_vec[i+1]));
+        
     /////////////////////////////
     /// CHOOSE NEXT WAYPOINT  ///
     Ravelin::Vector3d goto_point;
@@ -101,8 +99,8 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
       if( distance_to_wp < 0.025){
       OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
       OUTLOG(next_waypoint,"this_wp",logDEBUG1);
-      std::cout << "this waypoint: " << next_waypoint << std::endl;
-      std::cout << "robot position: " << com << std::endl;
+      OUT_LOG(logDEBUG1) << "this waypoint: " << next_waypoint;
+      OUT_LOG(logDEBUG1) << "robot position: " << com;
 
       waypoint_index = (waypoint_index+1)% num_waypoints;
 
@@ -112,13 +110,13 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
       OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
       OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
       OUT_LOG(logDEBUG1) << "waypoint_index = " << waypoint_index;
-      visualize.push_back(Pacer::VisualizablePtr(new Pacer::Ray(next_waypoint,com,Ravelin::Vector3d(1,0.5,0))));
-      std::cout << "next_wp" << next_waypoint << std::endl;
+      Utility::visualize.push_back(Pacer::VisualizablePtr(new Pacer::Ray(next_waypoint,com,Ravelin::Vector3d(1,0.5,0))));
+      OUT_LOG(logDEBUG1) << "next_wp" << next_waypoint;
 
       for(int i=0;i<num_waypoints;i++){
           Ravelin::Vector3d wp(waypoints[i].first,waypoints[i].second,0,environment_frame);
-          std::cout << "\twp" << wp << std::endl;
-      visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),1.0)));
+          OUT_LOG(logDEBUG1) << "\twp" << wp;
+      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),1.0)));
       }
 
       goto_point = next_waypoint;
@@ -161,6 +159,13 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
     std::cout << "command = " << command ;
 
+
+    Ravelin::Origin3d command_SE2(command[X],command[Y],command[THETA]);
+    ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
     std::cout << "<< EXIT USER CONTROLLER" ;
 }
 
+/** This is a quick way to register your plugin function of the form:
+  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+  */
+#include "register_plugin"

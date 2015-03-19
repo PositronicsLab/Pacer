@@ -54,12 +54,12 @@ bool Controller::init_plugins(){
   // Load all the plugins
   for(unsigned i=0;i<plugin_names.size();i++){
     if(plugin_active[i] == 0) continue;
-    std::string filename = plugin_names[i];
+    std::string filename = plugin_files[i];
     std::string pPath(getenv("PACER_PLUGIN_PATH"));
-    const char* lib_path = (pPath+"/"+filename).c_str();
-    OUT_LOG(logDEBUG) << "Loading Plugin: " << lib_path;
+    std::string lib_path = pPath+"/"+filename;
+    OUT_LOG(logDEBUG) << "Loading Plugin: " << lib_path.c_str();
     // attempt to read the file
-    void* HANDLE = dlopen(lib_path, RTLD_LAZY);
+    void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
     if (!HANDLE)
     {
       std::cerr << "driver: failed to read plugin from " << filename << std::endl;

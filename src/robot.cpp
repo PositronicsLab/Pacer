@@ -355,7 +355,7 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
 
   (robot_model_file.substr(robot_model_file.size()-4,robot_model_file.size()));
   /// The map of objects read from the simulation XML file
-  if(model_type.compare("sdf") == 0){
+  if(model_type.compare(".sdf") == 0){
     std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file);
 
     for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
@@ -410,7 +410,6 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
     OUTLOG(init_q[joint_names[i]],joint_names[i]+"_zero",logINFO);
   }
 
-  set_data<std::map<std::string, std::vector<double> > >("init.q",init_q);
   
   // Initialize base
   const std::vector<double>
@@ -432,6 +431,9 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
   set_joint_value(position,init_q);
   set_base_value(position,init_base);
   lock_state();
+    Ravelin::VectorNd init_q_vec;
+    convert_to_generalized(init_q,init_q_vec);
+    set_data<Ravelin::VectorNd>("init.q",init_q_vec);
   OUT_LOG(logDEBUG) << "<< Robot::init_robot(.)";
 
 }

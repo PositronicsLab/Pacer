@@ -156,7 +156,7 @@ IF(GLConsole_FOUND)
   target_link_libraries (Pacer ${GLConsole_LIBRARIES})
 ENDIF(GLConsole_FOUND)
 
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${CVARS_LIBRARIES} ${BOOST_LIBRARIES} boost_filesystem boost_system)
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES} boost_filesystem boost_system)
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -176,8 +176,7 @@ ENDIF(BUILD_PLUGINS)
 
 # Moby Plugin
 IF(USE_MOBY)
-  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/control-moby/plugin.cpp)
-#  add_executable(PacerMobyDriver ${CMAKE_SOURCE_DIR}/example/moby.cpp)
+  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
 # osg
 IF(USE_OSG_DISPLAY AND OSG_FOUND)
     target_link_libraries (PacerMobyPlugin ${OSG_LIBRARIES})
@@ -208,7 +207,7 @@ ENDIF(USE_MOBY)
 
 # Gazebo Plugin
 IF(USE_GAZEBO)
-  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/control-gazebo/plugin.cpp)
+  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/interfaces/gazebo.cpp)
 # NO USE FOR OSG YET
 # IF(USE_OSG_DISPLAY AND OSG_FOUND)
 #   target_link_libraries (PacerGazeboPlugin ${OSG_LIBRARIES})
@@ -232,19 +231,6 @@ IF(USE_GAZEBO)
   install(TARGETS PacerGazeboPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/control-gazebo)
 ENDIF(USE_GAZEBO)
 
-#driver with no simulator
-#enable_testing()
-#add_executable(PacerDriver ${CMAKE_SOURCE_DIR}/example/driver.cpp)
-#target_link_libraries(PacerDriver ${REQLIBS} ${EXTRA_LIBS})
-#set_target_properties(PacerDriver PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-#add_test(NAME test_pacer COMMAND PacerDriver ${CMAKE_SOURCE_DIR}/example/models/links-moby/model.xml ${CMAKE_SOURCE_DIR}/example/models/links-moby/vars.xml 1.0)
-
-#IF(USE_MOBY)
-#  add_test(moby_test  [<arg>...])
-#ENDIF(USE_MOBY)
-#IF(USE_GAZEBO)
-#  add_test(gazebo_test gzserver ${CMAKE_SOURCE_DIR}/example/models/links/model.world)
-#ENDIF(USE_GAZEBO)
 ENDIF(BUILD_EXAMPLES)
 
 

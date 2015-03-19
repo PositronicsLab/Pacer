@@ -581,7 +581,8 @@ class Robot {
       Ravelin::VectorNd& qdd_des);
 
     void calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
-    
+   
+    const Moby::RigidBodyPtr get_root_link(){return _root_link;}
   private:
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);

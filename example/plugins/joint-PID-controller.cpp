@@ -58,9 +58,9 @@ public:
     OUTLOG(joint_names,"joint_names",logERROR);
 
     std::vector<double>
-        &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kp"),
-        &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.kv"),
-        &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+".gains.ki"),
+        &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kp"),
+        &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kv"),
+        &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.ki"),
         &dofs = Utility::get_variable<std::vector<double> >("init.joint.dofs");
 
     OUTLOG(Kp,"Kp",logERROR);
@@ -95,7 +95,7 @@ public:
     {
       double perr = q_des[i] - q[i];
       double derr = qd_des[i] - qd[i];
-      get_error_feedback(i,perr,derr);
+      value[i] = get_error_feedback(i,perr,derr);
     }
   }
 };
@@ -109,14 +109,19 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       if(!pid)
         pid = boost::shared_ptr<JointPID>( new JointPID());
       
-      pid->q      = ctrl->get_joint_generalized_value(Pacer::Controller::position);
-      pid->qd     = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
       pid->q_des  = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal);
       pid->qd_des = ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal);
+      pid->q  = ctrl->get_joint_generalized_value(Pacer::Controller::position);
+      pid->qd = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
 
       pid->update();
 
-      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal, pid->value);
+      ctrl->set_joint_generalized_value(Pacer::Controller::load_goal, pid->value);
+      OUTLOG(pid->value,"joint_pid_U",logDEBUG);
+      OUTLOG(pid->q,"joint_pid_q",logDEBUG);
+      OUTLOG(pid->qd,"joint_pid_qd",logDEBUG);
+      OUTLOG(pid->q_des,"joint_pid_q_des",logDEBUG);
+      OUTLOG(pid->qd,"joint_pid_qd_des",logDEBUG);
 }
 
 /** This is a quick way to register your plugin function of the form:

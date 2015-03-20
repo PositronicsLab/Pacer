@@ -87,7 +87,9 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
         if(!_update_priority_map[i].empty()) // SRZ: do I need this line?
           BOOST_FOREACH( const name_update_t::value_type& update, _update_priority_map[i])
           {  
+            OUT_LOG(logDEBUG1) << ">> " << update.first;
             (*(update.second))(this->ptr(),t);
+            OUT_LOG(logDEBUG1) << "<< " << update.first;
           }
     }
 };

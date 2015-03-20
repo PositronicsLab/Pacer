@@ -94,6 +94,14 @@ void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL){
 
 }
 
+void OUTLOG(const std::string& z, std::string name,TLogLevel LL){
+
+    std::ostringstream str;
+
+    OUT_LOG(LL) << name << " = [" << z << "]';" << std::endl;
+
+}
+
 void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;

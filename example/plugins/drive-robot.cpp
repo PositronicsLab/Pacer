@@ -14,49 +14,19 @@ std::string plugin_namespace;
 typedef std::pair<double,double> Point;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
-
-  Ravelin::VectorNd q,qd;
-  ctrl->get_generalized_value(Pacer::Controller::position,q);
-  ctrl->get_generalized_value(Pacer::Controller::velocity,qd);
   
   const unsigned X=0,Y=1,Z=2,THETA=5;
-
-    OUT_LOG(logDEBUG1) << ">> ENTERED USER CONTROLLER" ;
-
-    // n is the number of independent coordinates in the robot
-    int n = qd.rows();
-
-    // nq is the number of joints in the robot
-    int nq = n - 6;
-
     // World frame
     boost::shared_ptr<Ravelin::Pose3d>
         environment_frame(new Ravelin::Pose3d());
     Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(*environment_frame.get())));
 
-    // com is the current position of the center-of-mass of the robot's base
-    Ravelin::Vector3d com(q[nq+X],q[nq+Y],q[nq+Z],environment_frame);
+    Ravelin::Vector3d com = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
 
-    // quat is the current orientation of the robot's base
-    Ravelin::Quatd quat(q[nq+3],q[nq+4],q[nq+5],q[nq+6]);
-
-    // make a rigid body pose out of com and quat
-    Ravelin::Pose3d pose(quat,com.data(),environment_frame);
-    Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(pose)));
-
-    // get the base orientation as roll-pitch-yaw
-    Ravelin::Vector3d rpy;
-    quat.to_rpy(rpy[0],rpy[1],rpy[2]);
-
-    // Collocate frame with robot, preserving only the yaw of robot.
-    boost::shared_ptr<Ravelin::Pose3d>
-        base_horizontal_frame(new Ravelin::Pose3d(Ravelin::AAngled(0,0,1,rpy[2]),com.data(),environment_frame));
+      boost::shared_ptr<Ravelin::Pose3d>
+        base_horizontal_frame(new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_horizontal_frame")));
 
     OUT_LOG(logDEBUG1) << "x = " << com ;
-    OUT_LOG(logDEBUG1) << "quat = " << quat ;
-    OUT_LOG(logDEBUG1) << "rpy = " << rpy ;
-    OUT_LOG(logDEBUG1) << "pose = " << pose ;
-
 
     /////////////////////
     /// SET VARIABLES ///
@@ -70,7 +40,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     double max_strafe_speed = 0.025;
 
     // if FALSE, drive like a car (x and theta)
-    // Q: if TRUE, ???
+    // Q: if TRUE, turn toward waypoint while stepping in direction of waypoint
     bool HOLONOMIC = false;
 
     /////////////////////////////////////
@@ -135,9 +105,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
     goto_direction.normalize();
 
-    // Find difference
-    // Q: difference betwen what?
     double angle_to_goal = atan2(goto_direction[Y],goto_direction[X]);
+    OUT_LOG(logDEBUG1) << "angle_to_goal = " << angle_to_goal;
 
     // If robot is facing toward goal already, walk in that direction
     if(fabs(angle_to_goal) < M_PI_8){
@@ -157,12 +126,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       }
     }
 
-    std::cout << "command = " << command ;
-
-
     Ravelin::Origin3d command_SE2(command[X],command[Y],command[THETA]);
     ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
-    std::cout << "<< EXIT USER CONTROLLER" ;
 }
 
 /** This is a quick way to register your plugin function of the form:

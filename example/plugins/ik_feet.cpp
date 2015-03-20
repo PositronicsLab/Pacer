@@ -9,7 +9,6 @@
 std::string plugin_namespace;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  OUT_LOG(logDEBUG) << ">> ik-feet";
   Ravelin::VectorNd 
     q_goal = ctrl->get_data<Ravelin::VectorNd>("init.q"),q;
   Ravelin::VectorNd
@@ -30,25 +29,26 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     foot_pos[i] = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x");
     foot_vel[i] = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd");
     foot_acc[i] = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd");
-    OUTLOG(foot_pos[i],foot_names[i]+".goal.x",logDEBUG);
-    OUTLOG(foot_vel[i],foot_names[i]+".goal.xd",logDEBUG);
-    OUTLOG(foot_acc[i],foot_names[i]+".goal.xdd",logDEBUG);
+    foot_pos[i].pose = Moby::GLOBAL;
   }
   
-  ctrl->get_joint_generalized_value(Pacer::Controller::position,q);
-      OUTLOG(q,"Current_q(ik)",logDEBUG);
-
+  ctrl->get_generalized_value(Pacer::Controller::position,q);
+  int N = q.size() - Pacer::NEULER;
+  q[N] = 0;
+  q[N+1] = 0;
+  q[N+2] = 0;
+  q[N+3] = 0;
+  q[N+4] = 0;
+  q[N+5] = 0;
+  q[N+6] = 1;
+  
+  // This is calculated in global frame always (assume base_link is at origin)
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
                                         q_goal,qd_goal,qdd_goal);
-  
-  OUTLOG(q_goal,"goal_q"  ,logDEBUG);
-  OUTLOG(qd_goal,"goal_qd"  ,logDEBUG);
-  OUTLOG(qdd_goal,"goal_qdd"  ,logDEBUG);
 
   ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
-  OUT_LOG(logDEBUG) << "<< ik-feet";
 }
 
 /** This is a quick way to register your plugin function of the form:

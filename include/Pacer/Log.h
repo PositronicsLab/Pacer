@@ -47,16 +47,16 @@ inline std::ostringstream& Log::Get(TLogLevel level)
 inline Log::~Log()
 {
     os << std::endl;
-#ifdef LOGGING
-    FILE * pFile;
-    pFile = fopen ("out.log","a");
-    fprintf(pFile, "%s", os.str().c_str());
-    fflush(pFile);
-    fclose (pFile);
-#else
+//#ifdef LOGGING
+    //FILE * pFile;
+    //pFile = fopen ("out.log","a");
+    //fprintf(pFile, "%s", os.str().c_str());
+    //fflush(pFile);
+    //fclose (pFile);
+//#else
     fprintf(stdout, "%s", os.str().c_str());
     fflush(stdout);
-#endif
+//#endif
 }
 
 inline TLogLevel& Log::ReportingLevel()
@@ -133,6 +133,7 @@ void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
 void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL);
 void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL);
 void OUTLOG(double x, std::string name,TLogLevel LL);
+void OUTLOG(const std::string& z, std::string name,TLogLevel LL);
 void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
 extern std::string LOG_TYPE;
 

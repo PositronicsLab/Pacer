@@ -252,34 +252,37 @@ void Robot::update(){
 	set_data<Ravelin::VectorNd>("qd",qd);
 	set_data<Ravelin::VectorNd>("qdd",qdd);
 
-  update_poses(generalized_q);
+  set_model_state(generalized_q,generalized_qd);
+  update_poses();
+
+  static std::vector<std::string> 
+    &eef_names_ = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+
+  boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(get_data<Ravelin::Pose3d>("base_link_frame")));
+
+  // Initialize end effectors
+  for(unsigned i=0;i<eef_names_.size();i++){
+    const Moby::RigidBodyPtr link = _id_link_map[eef_names_[i]];
+    Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,link->get_pose()));
+    set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
+    
+    Ravelin::Vector3d xd = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear());
+    set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
+  }
   
-  boost::shared_ptr<Ravelin::Pose3d> base_link_frame( new Ravelin::Pose3d(
-        get_data<Ravelin::Pose3d>("base_link_frame")));
-  boost::shared_ptr<Ravelin::Pose3d> base_horizontal_frame( new Ravelin::Pose3d(
-        get_data<Ravelin::Pose3d>("base_horizontal_frame")));
-
-#ifndef NDEBUG
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_link_frame.get()),0.8)));
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(*(base_horizontal_frame.get()),1.5)));
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
-#endif
-
-  //Ravelin::MatrixNd M;
+  Ravelin::MatrixNd M;
+  
+  // Call this somewhere (ID?)
   //calc_generalized_inertia(generalized_q,M);
   //set_data<Ravelin::VectorNd>("generalized_inertia",M);
-  
   calc_com();
 
-#ifndef NDEBUG
-  //calc_energy(generalized_qd,M);
-#endif
+  if(get_data<Ravelin::MatrixNd>("generalized_inertia",M))
+    calc_energy(generalized_qd,M);
 
 }
 
-void Robot::update_poses(const Ravelin::VectorNd& q){
-  set_model_state(q); 
-  
+void Robot::update_poses(){  
   Ravelin::Pose3d base_link_frame(*(_root_link->get_pose().get()));
 
   const std::vector<double>
@@ -297,21 +300,17 @@ void Robot::update_poses(const Ravelin::VectorNd& q){
 
   // preserve yaw
   Ravelin::Pose3d base_horizontal_frame(
-            Ravelin::Matrix3d::rot_Z(roll_pitch_yaw[2]),
+            Ravelin::AAngled(0,0,1,roll_pitch_yaw[0]),
           base_link_frame.x,Moby::GLOBAL);
 
   set_data<Ravelin::Pose3d>("base_link_frame",base_link_frame);
   set_data<Ravelin::Origin3d>("roll_pitch_yaw",roll_pitch_yaw);
   set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);
   
-  base_link_frame = get_data<Ravelin::Pose3d>("base_link_frame");
-  roll_pitch_yaw = get_data<Ravelin::Origin3d>("roll_pitch_yaw");
-  base_horizontal_frame = get_data<Ravelin::Pose3d>("base_horizontal_frame");
-  
-  OUTLOG(q,"q",logDEBUG);
-  OUTLOG(base_link_frame,"base_link_frame",logDEBUG);
-  OUTLOG(roll_pitch_yaw,"roll_pitch_yaw",logDEBUG);
-  OUTLOG(base_horizontal_frame,"base_horizontal_frame",logDEBUG);
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_link_frame,0.8)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_horizontal_frame,1.5)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
+
 }
 
 // ============================================================================

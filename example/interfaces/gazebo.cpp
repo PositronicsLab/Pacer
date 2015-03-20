@@ -250,6 +250,7 @@ using namespace Pacer;
            }
          }
        }
+       robot_ptr->reset_state();
        OUT_LOG(logERROR) << "<< end Plugin: Update(.)";
      }
      };

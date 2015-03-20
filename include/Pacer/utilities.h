@@ -41,7 +41,7 @@ public:
     // The result (the remainder) has same sign as the divisor.
     // Similar to matlab's mod(); Not similar to fmod() -   Mod(-3,4)= 1   fmod(-3,4)= -3
     template<typename T>
-    T Mod(T x, T y)
+    static T Mod(T x, T y)
     {
         if (0. == y)
             return x;
@@ -81,25 +81,25 @@ public:
     }
 
     // wrap [rad] angle to [-PI..PI)
-    double WrapPosNegPI(double fAng)
+    static double WrapPosNegPI(double fAng)
     {
         return Mod(fAng + _PI, _TWO_PI) - _PI;
     }
 
     // wrap [rad] angle to [0..TWO_PI)
-    double WrapTwoPI(double fAng)
+    static double WrapTwoPI(double fAng)
     {
         return Mod(fAng, _TWO_PI);
     }
 
     // wrap [deg] angle to [-180..180)
-    double WrapPosNeg180(double fAng)
+    static double WrapPosNeg180(double fAng)
     {
         return Mod(fAng + 180., 360.) - 180.;
     }
 
     // wrap [deg] angle to [0..360)
-    double Wrap360(double fAng)
+    static double Wrap360(double fAng)
     {
         return Mod(fAng ,360.);
     }
@@ -204,7 +204,14 @@ public:
   static void test_function(std::string fname){}
   
   template <typename T>
-  static T& get_variable(std::string tag);
+  static T& get_variable(std::string tag){
+    T& v = get_variable_internal<T>(tag);
+    OUTLOG(v,"Get: "+tag+" --> ",logDEBUG);
+    return v;
+  }
+  
+  template <typename T>
+  static T& get_variable_internal(std::string tag);
 
 };
 #endif // UTILITIES_H

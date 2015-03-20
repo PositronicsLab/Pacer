@@ -33,9 +33,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",x);
     ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",xd);
     ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",xdd);
-    OUTLOG(x,foot_names[i]+"_goal_x"  ,logDEBUG);
-    OUTLOG(xd,foot_names[i]+"_goal_xd" ,logDEBUG);
-    OUTLOG(xdd,foot_names[i]+"_goal_xdd",logDEBUG);
   }
 }
 

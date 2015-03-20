@@ -7,7 +7,6 @@
     <kinematic type="bool">false</kinematic>
 
     <base>
-      <active type="bool">true</active>
       <x type="double">0 0 0.179 0 0 0</x>
     </base>
 
@@ -26,10 +25,11 @@
   </init>
 
   <plugin>
-    <id type="string">drive-robot gait-planner ik-feet stand-trajectory joint-PID-controller</id>
-    <file type="string">libdrive-robot.so libgait-planner.so libik-feet.so libstand-trajectory.so libjoint-PID-controller.so</file>
-    <active type="bool">true true true false true</active>
+    <id type="string">  drive-robot       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller</id>
+    <file type="string">libdrive-robot.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so</file>
+    <active type="bool">true              true                true            false                   false                       true</active>
   </plugin>
+  
   
   <drive-robot>
      <real-time-factor type="double">1</real-time-factor>
@@ -72,9 +72,9 @@
     <step-height type="double">0.015</step-height>
     <gait-duration type="double">0.5</gait-duration>
     
-    <width type="double">0.1</width>
-    <length type="double">0.30</length>
-    <height type="double">0.14</height>
+    <width type="double">0.15</width>
+    <length type="double">0.36</length>
+    <height type="double">0.161</height>
 
     
     <!--troting gait-->
@@ -115,10 +115,10 @@
   </joint-PID-controller>
 
   <eef-PID-controller>
+    <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <active type="bool">true</active>
-    <accel type="bool">false</accel>
-    <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
+    <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
+    <!-- Gains are for the q of joint ids respectively -->
     <gains>
       <kp type="double">1e3 1e3 1e3      1e3 1e3 1e3      1e3 1e3 1e3     1e3 1e3 1e3</kp>
       <kv type="double">1e1 1e1 1e1      1e1 1e1 1e1      1e1 1e1 1e1     1e1 1e1 1e1</kv>

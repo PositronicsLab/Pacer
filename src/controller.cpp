@@ -55,7 +55,9 @@ bool Controller::init_plugins(){
     std::string filename = plugin_files[i];
     std::string pPath(getenv("PACER_PLUGIN_PATH"));
     std::string lib_path = pPath+"/"+filename;
-    OUT_LOG(logDEBUG) << "Loading Plugin: " << lib_path.c_str();
+    OUT_LOG(logINFO) << "Loading Plugin: " << plugin_names[i];
+    OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();
+    OUT_LOG(logINFO) << "\tPATH: " << pPath.c_str();
     // attempt to read the file
     void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
     if (!HANDLE)
@@ -102,7 +104,6 @@ void Controller::control(double t){
   update_plugins(t);
 #endif
   unlock_state();
-
   /*
   // Select end effectors that are feet and set them as active contacts
   static std::vector<int>

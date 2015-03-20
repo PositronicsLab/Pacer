@@ -467,7 +467,7 @@ void walk_toward(
 
     OUT_LOG(logDEBUG) << T1[0] <<" : " << t << " : "<< T2[T2.rows()-1] << " -- " << spline_t[i].size();
 
-    for(double t=T1[0]+Moby::NEAR_ZERO ; t<=T2[T2.rows()-1] ; t += 0.05){
+    for(double t=T1[0]+Moby::NEAR_ZERO ; t<=T2[T2.rows()-1] ; t += 0.01){
       Ravelin::Vector3d x,xd,xdd;
       for(int d=0;d<3;d++){
         Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
@@ -535,11 +535,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   if(origins.empty()){
     origins.resize(NUM_FEET);
     for(int i=0;i<NUM_FEET;i++){
-      //origins[i] = Ravelin::Vector3d(
-        //Utility::sign<double>(foot_pos[i][0])*length/2,
-        //Utility::sign<double>(foot_pos[i][1])*width/2,
-        //-height,base_frame);
-        origins[i] = foot_pos[i];
+      origins[i] = Ravelin::Vector3d(
+        Utility::sign<double>(foot_pos[i][0])*length/2,
+        Utility::sign<double>(foot_pos[i][1])*width/2,
+        -height,base_frame);
+        //origins[i] = foot_pos[i];
     }
   }
 
@@ -554,9 +554,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
-    OUTLOG(foot_pos[i],foot_names[i]+"_goal_x"  ,logDEBUG);
-    OUTLOG(foot_vel[i],foot_names[i]+"_goal_xd" ,logDEBUG);
-    OUTLOG(foot_acc[i],foot_names[i]+"_goal_xdd",logDEBUG);
   }
 }
 

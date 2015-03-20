@@ -72,20 +72,12 @@ public:
   }
 
   void update(){
-      qd_des.set_zero();
-
-      OUTLOG(q,"*joint_pid_q",logDEBUG);
-      OUTLOG(q_des,"*joint_pid_q_des",logDEBUG);
-      OUTLOG(qd,"*joint_pid_qd",logDEBUG);
-      OUTLOG(qd_des,"*joint_pid_qd_des",logDEBUG);
-            
-      Ravelin::VectorNd perr = q;
-      perr -= q_des;
-      Ravelin::VectorNd derr = qd;
-      derr -= qd_des;
-
-      OUTLOG(perr,"*perr",logDEBUG);
-      OUTLOG(derr,"*derr",logDEBUG);
+    qd_des.set_zero();
+          
+    Ravelin::VectorNd perr = q;
+    perr -= q_des;
+    Ravelin::VectorNd derr = qd;
+    derr -= qd_des;
       
     assert(q.rows() == _gains.size());
     u.set_zero(q.rows());
@@ -99,7 +91,7 @@ public:
       _gains[i].perr_sum += perr[i];
       double ierr = _gains[i].perr_sum;
       
-      u[i] = perr[i]*KP + derr[i]*KV + ierr*KI;
+      u[i] = -(perr[i]*KP + derr[i]*KV + ierr*KI);
     }
   }
 };
@@ -122,8 +114,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
       pid.update();
     
+      Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
       OUTLOG(pid.u,"joint_pid_U",logDEBUG);
-      ctrl->set_joint_generalized_value(Pacer::Controller::load_goal, pid.u);
+      u += pid.u;
+      ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
       
 }
 

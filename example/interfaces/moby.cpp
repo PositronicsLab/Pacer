@@ -196,6 +196,8 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
       abrobot->update_link_poses();
     }
   }
+  
+  robot_ptr->reset_state();
 }
 
 // ============================================================================

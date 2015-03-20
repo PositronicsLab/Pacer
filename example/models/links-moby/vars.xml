@@ -7,7 +7,6 @@
     <kinematic type="bool">false</kinematic>
 
     <base>
-      <active type="bool">true</active>
       <x type="double">0 0 0.179 0 0 0</x>
     </base>
 
@@ -30,9 +29,9 @@
 
  
   <plugin>
-    <id type="string">drive-robot gait-planner ik-feet stand-trajectory joint-PID-controller</id>
-    <file type="string">libdrive-robot.so libgait-planner.so libik-feet.so libstand-trajectory.so libjoint-PID-controller.so</file>
-    <active type="bool">false false true true true</active>
+    <id type="string">  drive-robot       gait-planner        ik-feet         stand-trajectory        joint-PID-controller</id>
+    <file type="string">libdrive-robot.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so</file>
+    <active type="bool">true              true                true            false                   true</active>
   </plugin>
   
   <drive-robot>
@@ -75,12 +74,9 @@
     <holonomic type="bool">false</holonomic>
     <step-height type="double">0.015</step-height>
     <gait-duration type="double">0.5</gait-duration>
-    
     <width type="double">0.1</width>
     <length type="double">0.30</length>
     <height type="double">0.14</height>
-
-    
     <!--troting gait-->
        <gait type="double">0  0.5  0.5  0</gait>
     <!--walking gait-->

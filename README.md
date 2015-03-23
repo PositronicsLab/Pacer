@@ -10,22 +10,24 @@ This repository hosts code for [Pacer] an open source robot locomotion library f
 ##Building
 
 In the project base directory:
-$ mkdir build
-$ cd build
-$ ccmake .. # configure cmake project
-$ make all
+    $ mkdir build
+    $ cd build
+    $ ccmake .. # configure cmake project
+    $ make all
 
 Make sure that all Plugins and Interfaces build successfully
 
 ##Running Pacer (Example)
 
 In the project base directory (bash terminal):
-$ source setup.sh
-$ cd $PACER_HOME/example/models/links
+    $ source setup.sh
+    $ cd $PACER_HOME/example/models/links
+
 in Gazebo:
-  $ gazebo links.world
+    $ gazebo links.world
+
 in Moby:
-  $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so model.xml
+    $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so model.xml
 
 ###Dependencies 
 
@@ -50,16 +52,13 @@ in Moby:
 
 ###Usage
 
-access the library by using the examples found in the [examples] directory:
+access the library by using the examples found in the examples directory:
 
- EXAMPLE       | LOCATION |  DESCRIPTION
--------------- | -------- | ---------------------------------------------------------
- inerfaces     |          |  Moby & Gazebo controller plugins communicte with Pacer
- models        |          |  Pre-implemented robot models and vars files (see [models/README.md])
- plugins   |          | Discrete control modules for the robot.  Add capabilites to Pacer by adding plugins here.
-
- [models/README.md]: https://github.com/PositronicsLab/Pacer/tree/master/examples/models/README.md
- [examples]: https://github.com/PositronicsLab/Pacer/tree/master/examples/
+ EXAMPLE       |  DESCRIPTION
+--------------|---------------------------------------------------------
+ inerfaces     |  Moby & Gazebo controller plugins communicte with Pacer
+ models        |  Pre-implemented robot models and vars files (see models/README.md)
+ plugins   |    Discrete control modules for the robot.  Add capabilites to Pacer by adding plugins here.
 
 ## Exporting Data to MATLAB
 

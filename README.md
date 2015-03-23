@@ -10,25 +10,29 @@ This repository hosts code for [Pacer] an open source robot locomotion library f
 ##Building
 
 In the project base directory:
-    $ mkdir build
-    $ cd build
-    $ ccmake .. # configure cmake project
-    $ make all
-
+```
+$ mkdir build
+$ cd build
+$ ccmake .. # configure cmake project
+$ make all
+```
 Make sure that all Plugins and Interfaces build successfully
 
 ##Running Pacer (Example)
 
 In the project base directory (bash terminal):
-    $ source setup.sh
-    $ cd $PACER_HOME/example/models/links
-
+```
+$ source setup.sh
+$ cd $PACER_HOME/example/models/links
+```
 in Gazebo:
-    $ gazebo links.world
-
+```
+$ gazebo links.world
+```
 in Moby:
-    $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so model.xml
-
+```
+$ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so model.xml
+```
 ###Dependencies 
 
 ##Required 

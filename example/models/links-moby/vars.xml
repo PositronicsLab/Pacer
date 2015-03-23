@@ -98,7 +98,7 @@
   </controller>
 
   <locomotion>
-    <active type="bool">false</active>
+    <active type="bool">true</active>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
     <step-height type="double">0.015</step-height>

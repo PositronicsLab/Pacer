@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
+#include <boost/algorithm/string.hpp>
 #include <random>
 
 using Pacer::Controller;
@@ -135,6 +136,16 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
 // implements a controller callback for Moby
 void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
+#ifdef TIMING
+    static struct timeval start_t;
+    static struct timeval end_t;
+    gettimeofday(&end_t, NULL);
+    const long double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) 
+      << duration*1000.0 << std::endl;
+    if(t > 10.0)
+      throw std::runtime_error("Ended Data Recording!");
+#endif
   std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
   std::vector<Moby::JointPtr> joints = abrobot->get_joints();
 
@@ -216,6 +227,9 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
     }
     abrobot->update_link_poses();
   }
+#ifdef TIMING
+    gettimeofday(&start_t, NULL);
+#endif
 }
 
 // ============================================================================
@@ -239,11 +253,17 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
 
+      std::vector<std::string> ids;
+      boost::split(ids, sb1->id, boost::is_any_of("::"));
+      std::string sb1_id(ids.back());
+      boost::split(ids, sb2->id, boost::is_any_of("::"));
+      std::string sb2_id(ids.back());
+
       std::vector<std::string>::iterator iter =
-          std::find(eef_names_.begin(), eef_names_.end(), sb1->id);
+          std::find(eef_names_.begin(), eef_names_.end(), sb1_id);
       //if end effector doesnt exist, check other SB
       if(iter  == eef_names_.end()){
-        iter = std::find(eef_names_.begin(), eef_names_.end(), sb2->id);
+        iter = std::find(eef_names_.begin(), eef_names_.end(), sb2_id);
         if(iter  == eef_names_.end())
           continue;  // Contact doesn't include an end-effector
         else{
@@ -360,7 +380,25 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 // ============================================================================
 
 
-//boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2);
+boost::shared_ptr<Moby::ContactParameters> get_contact_parameters_callback_fn(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
+  boost::shared_ptr<Moby::ContactParameters> c(new Moby::ContactParameters());
+  Moby::CollisionGeometryPtr g = geom1;
+  Moby::SingleBodyPtr s1 = geom1->get_single_body();
+  Moby::SingleBodyPtr s2 = geom2->get_single_body();
+  Moby::SingleBodyPtr s = s1;
+  if(s1->id.compare("GROUND") == 0){
+    s = s2;
+    g = geom2;
+  }
+
+  Ravelin::Pose3d pose = *(s->get_pose().get());
+  pose.update_relative_pose(Moby::GLOBAL);
+  if(pose.x[0] > 1.0)
+    c->mu_coulomb = 0.1;
+  else  
+    c->mu_coulomb = 1.5;
+  return c;
+}
 //void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty);
 //void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty);
 
@@ -399,7 +437,7 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   sim->constraint_post_callback_fn        = &post_event_callback_fn;
   // CONTROLLER CALLBACK
   abrobot->controller                     = &controller_callback;
-
+  sim->get_contact_parameters_callback_fn = &get_contact_parameters_callback_fn;
   // ================= INIT ROBOT STATE ==========================
   std::vector<Moby::JointPtr> joints_quad = robot_ptr->get_joints();
   std::vector<Moby::JointPtr> joints = abrobot->get_joints();

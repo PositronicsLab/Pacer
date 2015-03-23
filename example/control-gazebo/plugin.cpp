@@ -130,10 +130,21 @@ using namespace Pacer;
 
    public: void UpdateController()
    {
+       double t = world->GetSimTime().Double();
+#define TIMING
+#ifdef TIMING
+    static struct timeval start_t;
+    static struct timeval end_t;
+    gettimeofday(&end_t, NULL);
+    const long double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) 
+      << duration*1000.0 << std::endl;
+    if(t > 10.0)
+      throw std::runtime_error("Ended Data Recording!");
+#endif
        // Control Robot
        OUT_LOG(logERROR) << ">> start Plugin: Update(.)";
        static double last_time = -0.001;
-       double t = world->GetSimTime().Double();
        double dt = t - last_time;
        last_time = t;
 
@@ -281,6 +292,9 @@ using namespace Pacer;
 
        // Apply a small linear velocity to the model.
        OUT_LOG(logERROR) << "<< end Plugin: Update(.)";
+#ifdef TIMING
+    gettimeofday(&start_t, NULL);
+#endif
      }
      };
 

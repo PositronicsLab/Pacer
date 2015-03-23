@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <sdf version='1.5'>
   <model name='ROBOT'>
-  <plugin name="PacerPlugin" filename="/usr/local/lib/libPacerGazeboPlugin.so"/>
+  <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.so"/>
   <pose>0 0 1 0 -0 0</pose>
     <link name='BODY0'>
       <pose>0 0 0 0 -0 0</pose>
@@ -247,85 +247,20 @@
           <izz>0.01</izz>
         </inertia>
       </inertial>
-      <!-- <collision name='l_foot_collision'>
+      <collision name='l_foot_collision'>
         <pose>0.048 0 -0.056119 0 -0 0</pose>
         <geometry>
           <box>
             <size>0.26 0.124887 0.05</size>
           </box>
         </geometry>
-      </collision> -->
-      <collision name='l_foot_collision'>
-        <pose>0.178 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <collision name='l_foot_collision'>
-        <pose>0.178 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <collision name='l_foot_collision'>
-        <pose>-0.098 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <collision name='l_foot_collision'>
-        <pose>-0.098 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-
-      <visual name='l_foot_visual1'>
+        </collision>
+        <visual name='l_foot_visual1'>
         <pose>0.048 0 -0.056119 0 -0 0</pose>
         <geometry>
           <box>
             <size>0.26 0.124887 0.03</size>
           </box>
-        </geometry>
-      </visual>
-      <visual name='l_foot_visual2'>
-        <pose>0.178 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-      <visual name='l_foot_visual3'>
-        <pose>0.178 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-      <visual name='l_foot_visual4'>
-      <pose>-0.098 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-      <visual name='l_foot_visual5'>
-      <pose>-0.098 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
         </geometry>
       </visual>
 
@@ -335,7 +270,6 @@
       </velocity_decay>
 
       <sensor name='l_foot_contact' type='contact'>
-        <!-- <plugin name="l_foot_contact_plugin" filename="libcontact.dylib"/> -->
         <contact>
           <collision>l_foot_collision</collision>
         </contact>
@@ -575,44 +509,12 @@
         </inertia>
       </inertial>
 
-      <!-- <collision name='r_foot_collision'>
+      <collision name='r_foot_collision'>
         <pose>0.048 0 -0.056119 0 -0 0</pose>
         <geometry>
           <box>
             <size>0.26 0.124887 0.05</size>
           </box>
-        </geometry>
-      </collision> -->
-      <collision name='r_foot_collision'>
-        <pose>0.178 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <collision name='r_foot_collision'>
-        <pose>0.178 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <collision name='r_foot_collision'>
-        <pose>-0.098 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <collision name='r_foot_collision'>
-        <pose>-0.098 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
         </geometry>
       </collision>
 
@@ -624,46 +526,12 @@
           </box>
         </geometry>
       </visual>
-      <visual name='r_foot_visual2'>
-        <pose>0.178 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-      <visual name='r_foot_visual3'>
-        <pose>0.178 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-      <visual name='r_foot_visual4'>
-      <pose>-0.098 0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-      <visual name='r_foot_visual5'>
-      <pose>-0.098 -0.06 -0.056119 0 -0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.025</radius>
-          </sphere>
-        </geometry>
-      </visual>
-
       <velocity_decay>
         <linear>0</linear>
         <angular>0</angular>
       </velocity_decay>
 
       <sensor name='r_foot_contact' type='contact'>
-        <!-- <plugin name="r_foot_contact_plugin" filename="libcontact.dylib"/> -->
         <contact>
           <collision>r_foot_collision</collision>
         </contact>

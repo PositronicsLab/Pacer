@@ -9,19 +9,19 @@
   <MOBY>
 
   <RungeKuttaIntegrator id="rk4" />
-  <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
+  <BulirschStoerIntegrator id="bs" abs-err-tol="1e-3" rel-err-tol="1e-1" />
 
   <GravityForce id="gravity" accel="0 0 -9.81" />
+
+  <SDF id="" filename="model.sdf"/>
 
   <EventDrivenSimulator integrator-id="bs" Euler-step="0.001">
     <RecurrentForce recurrent-force-id="gravity" />
     <DynamicBody dynamic-body-id="GROUND" />
-    <DynamicBody dynamic-body-id="ROBOT" />
-    <DisabledPair object1-id="ROBOT" object2-id="ROBOT"/>
-    <ContactParameters object1-id="GROUND" object2-id="ROBOT" epsilon="0" mu-coulomb="0.5" />
+    <DynamicBody dynamic-body-id="::ROBOT" />
+    <DisabledPair object1-id="::ROBOT" object2-id="::ROBOT"/>
+    <ContactParameters object1-id="GROUND" object2-id="::ROBOT" epsilon="0" mu-coulomb="0.5" />
   </EventDrivenSimulator>
-
-  <SDF filename="atlas-pointfeet.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
 <!--     <Box id="ground-primitive" xlen="5" ylen="5" zlen="0.2" />-->

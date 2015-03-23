@@ -234,8 +234,8 @@ void Robot::update(
   // SRZ: Very Heavy Computation
   // SRZ: updating generalized_fext disabled (for now)
   // generalized_fext is supplied by Sim (controller input)
-  calculate_dyn_properties(new_data->M,new_data->generalized_fext);
-  calc_energy(new_data->generalized_qd,new_data->M);
+  //calculate_dyn_properties(new_data->M,new_data->generalized_fext);
+  //calc_energy(new_data->generalized_qd,new_data->M);
   calc_com();
 
   center_of_contact.point.resize(1);
@@ -263,37 +263,6 @@ void Robot::update(
   visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_frame,0.8)));
   visualize.push_back( Pacer::VisualizablePtr( new Pose(*base_horizontal_frame,1.5)));
   visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
-
-       // CONTACTS
-       if(NC != 0){
-         std::vector<const EndEffector * > active_eefs;
-         if(eefs_[0].active)
-           active_eefs.push_back(&eefs_[0]);
-         if(eefs_[1].active)
-           active_eefs.push_back(&eefs_[1]);
-         if(eefs_[3].active)
-           active_eefs.push_back(&eefs_[3]);
-         if(eefs_[2].active)
-           active_eefs.push_back(&eefs_[2]);
-
-         // Draw Contact Polygon
-         for(int i=0;i<NC;i++){
-     //      visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->point[0] + Ravelin::Vector3d(0,0,0.001),
-       //                  active_eefs[(i+1)%NC]->point[0]  + Ravelin::Vector3d(0,0,0.001),
-         //                Ravelin::Vector3d(0.5,0.5,1))));
-         }
-//          Draw all Contacts
-         for(int i=0;i<NC;i++){
-           for(int j=0;j<active_eefs[i]->point.size();j++){
-//             visualize.push_back( Pacer::VisualizablePtr( new Ray(active_eefs[i]->contacts[j],
-//                           active_eefs[i]->point[0],
-//                           Ravelin::Vector3d(1,1,1)));
-           }
-         }
-//         visualize.push_back( Pacer::VisualizablePtr( new Ray(center_of_contact.point[0],
-//                    center_of_contact.normal[0]*0.1 + center_of_contact.point[0],
-//                    Ravelin::Vector3d(1,1,0)));
-       }
 
        data = boost::shared_ptr<const RobotData>(new_data);
 }

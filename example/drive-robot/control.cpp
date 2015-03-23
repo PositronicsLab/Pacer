@@ -21,8 +21,9 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
 
   gait_pose = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Ravelin::AAngled(1,1,0,M_PI_8/2.0),Ravelin::Origin3d(0,0,0.01),Moby::GLOBAL));
 
-  const unsigned X=0,Y=1,Z=2,THETA=5;
+    const unsigned X=0,Y=1,Z=2,THETA=5;
 
+    command.set_zero(6);
     // n is the number of independent coordinates in the robot
     int n = qd.rows();
 
@@ -80,9 +81,10 @@ void controller(double time, const Ravelin::VectorNd& q, const Ravelin::VectorNd
     // time that the controller is called?)
 
     // points on a figure eight
-    for (double t=0.01; t<1.0; t+=0.05) {
-        waypoints.push_back(Point(sin(M_PI*2.0 * t),-sin(M_PI*2.0 * t * 2.0)*0.25));
-    }
+    //for (double t=0.01; t<1.0; t+=0.05) {
+    //    waypoints.push_back(Point(sin(M_PI*2.0 * t),-sin(M_PI*2.0 * t * 2.0)*0.25));
+    //}
+    waypoints.push_back(Point(2,0));
 
     /////////////////////////////
     /// CHOOSE NEXT WAYPOINT  ///

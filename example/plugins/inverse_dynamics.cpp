@@ -5,22 +5,25 @@
  ****************************************************************************/
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
-#include <Opt/LP.h>
+
+//#define USE_CLAWAR_MODEL
+//#define USE_AP_MODEL
+#define USE_NO_SLIP_MODEL
+//#define USE_NO_SLIP_LCP_MODEL
+//#define TIMING
+
 using namespace Pacer;
 
 int N_SYSTEMS = 0;
 
+std::string plugin_namespace;
 using Ravelin::VectorNd;
 using Ravelin::MatrixNd;
 
 Ravelin::LinAlgd _LA;
 Moby::LCP _lcp;
-
-extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-extern bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
-extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb, const Ravelin::VectorNd& ub, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::VectorNd& lb, const Ravelin::VectorNd& ub, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& x);
+  
+Ravelin::Vector3d workv3_;
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
@@ -28,7 +31,7 @@ Ravelin::VectorNd STAGE1, STAGE2;
 //  M.mult(qdd,x) -= fext;
 //}
 
-bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
 
   OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
@@ -274,7 +277,7 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
   qq.set_sub_vec(0,qq1);
   qq.set_sub_vec(qq1.rows(),qq2);
 
-  if(!solve_qp_pos(qG,qc,qM,qq,z)){
+  if(!Utility::solve_qp_pos(qG,qc,qM,qq,z)){
     OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!";
     return false;
   }
@@ -412,7 +415,7 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
 
     // optimize system
     Ravelin::VectorNd w(size_null_space);
-    if(!solve_qp(qG,qc,qM,qq,w)){
+    if(!Utility::solve_qp(qG,qc,qM,qq,w)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!";
       return false;
       // then skip to calculating x from stage 1 solution
@@ -454,7 +457,8 @@ bool Controller::inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::Vec
   return true;
 }
 
-bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+#ifdef USE_NO_SLIP_MODEL
+bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip() entered" << std::endl;
 
@@ -664,7 +668,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   qM.set_sub_mat(0,0,qM1);
   qq.set_sub_vec(0,qq1);
 
-  if(!solve_qp_pos(qG,qc,qM,qq,z)){
+  if(!Utility::solve_qp_pos(qG,qc,qM,qq,z)){
     OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!";
     return false;
   }
@@ -760,7 +764,7 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
 
     // optimize system
     Ravelin::VectorNd w(size_null_space);
-    if(!solve_qp(qG,qc,qM,qq,w)){
+    if(!Utility::solve_qp(qG,qc,qM,qq,w)){
       OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!";
       // calculate x from stage 1 solution
       cf_final = cf;
@@ -815,10 +819,12 @@ bool Controller::inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Rave
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip() exited" << std::endl;
   return true;
 }
+#endif
 
+#ifdef USE_NO_SLIP_LCP_MODEL
 extern bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol);
 
-bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
+bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
                          const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
@@ -1293,8 +1299,8 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   // setup remainder of LCP vector
 
   // Setup Indices vector
-  std::vector<unsigned> indices;
   unsigned active_eefs = 0;
+  std::vector<unsigned> indices;
   for(int i=0;i<eefs_.size();i++){
     if(!eefs_[i].active){
       continue;
@@ -1303,7 +1309,6 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
     for(int j=0;j<eefs_[i].point.size();j++)
       indices.push_back(i);
   }
-
   static Ravelin::VectorNd _v;
   if(_v.size() != _qq.size())
     _v.resize(0);
@@ -1321,6 +1326,7 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
       if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
         throw std::runtime_error("Unable to solve constraint LCP!");
     }
+    
   } else {
     OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
 
@@ -1456,8 +1462,10 @@ bool Controller::inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, con
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip_fast() exited" << std::endl;
   return true;
 }
+#endif
 
-bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& NT,
+#ifdef USE_AP_MODEL
+bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& NT,
                          const Ravelin::MatrixNd& D_, const Ravelin::VectorNd& fext, double dt, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
@@ -1844,14 +1852,306 @@ bool Controller::inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_ap() exited" << std::endl;
   return true;
 }
-#include <Pacer/Controller.h>
+#endif
 
-extern "C"{
-  init(boost::shared_ptr<Pacer::Controller>& robot){
+void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  static double last_time = -0.001;
+  const double dt = t - last_time;
+    static double &dt_idyn = Utility::get_variable<double>(plugin_namespace+"dt");
+    static double &alpha = Utility::get_variable<double>(plugin_namespace+"alpha");
+    static int &USE_DES_CONTACT = Utility::get_variable<int>(plugin_namespace+"des-contact");
+    static int &USE_LAST_CFS = Utility::get_variable<int>(plugin_namespace+"last-cfs");
+    double DT = (dt_idyn == 0)? dt : dt_idyn;
 
+
+    static std::vector<std::string>
+        &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+   
+    std::vector<std::string> active_feet;
+
+    int num_feet = foot_names.size();
+
+    Ravelin::VectorNd cf,q,generalized_qd,qdd_des,generalized_fext;
+    ctrl->get_generalized_value(Pacer::Robot::position,q);
+    ctrl->get_generalized_value(Pacer::Robot::velocity,generalized_qd);
+    ctrl->get_generalized_value(Pacer::Robot::load,generalized_fext);
+    ctrl->get_joint_generalized_value(Pacer::Robot::acceleration_goal,qdd_des);
+
+   OUTLOG(qdd_des,"qdd_des",logERROR);
+
+    int NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
+    int NDOFS = NUM_JOINT_DOFS + Pacer::NSPATIAL;
+    Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
+
+    Ravelin::MatrixNd N,S,T,D,M;
+    
+    static Ravelin::VectorNd q_last = Ravelin::VectorNd::zero(q.size());
+    // Consider increasing tolerance
+    if((q_last-=q).norm() > Moby::NEAR_ZERO)
+      ctrl->calc_generalized_inertia(q, M);
+   q_last = q;
+    
+    if(USE_DES_CONTACT){
+      for(int i=0;i<foot_names.size();i++){
+        int is_stance = 0;
+        if(ctrl->get_data<int>(foot_names[i]+".stance",is_stance))
+          if(is_stance == 1)
+            active_feet.push_back(foot_names[i]);
+      }
+    } else
+      active_feet = foot_names;
+
+
+    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
+    for(int i=0;i<active_feet.size();i++){
+      std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+      ctrl->get_link_contacts(active_feet[i],c);
+      if(!c.empty())
+        contacts.push_back(c[0]);
+    }
+
+    ctrl->calc_contact_jacobians(q,contacts,N,S,T);
+    
+    int NC = N.columns();
+    
+    D.set_zero(NDOFS,NC*4);
+    D.set_sub_mat(0,0,S);
+    D.set_sub_mat(0,NC,T);
+    S.negate();
+    T.negate();
+    D.set_sub_mat(0,NC*2,S);
+    D.set_sub_mat(0,NC*3,T);
+
+    bool inf_friction = true;
+    Ravelin::MatrixNd MU;
+    MU.set_zero(N.columns(),2);
+    for(int i=0;i<contacts.size();i++){
+      std::fill(MU.row(i).begin(),MU.row(i).end(),contacts[i]->mu_coulomb);
+      if(std::accumulate(MU.row(i).begin(),MU.row(i).end(),0)
+         /MU.row(i).rows() < 100.0)
+        inf_friction = false;
+    }
+
+    Ravelin::VectorNd cf_init;
+      cf.set_zero(NC*5);
+      for(unsigned i=0;i< contacts.size();i++){
+          Ravelin::Vector3d tan1,tan2;
+          Ravelin::Vector3d::determine_orthonormal_basis(contacts[i]->normal,tan1,tan2);
+          Ravelin::Matrix3d R_foot( contacts[i]->normal[0], contacts[i]->normal[1], contacts[i]->normal[2],
+                                                   tan1[0],                tan1[1],                tan1[2],
+                                                   tan2[0],                tan2[1],                tan2[2]);
+          Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(contacts[i]->impulse,workv3_)*(dt/DT));
+          cf[i] = contact_impulse[0];
+          if(contact_impulse[1] >= 0)
+            cf[NC+i] = contact_impulse[1];
+          else
+            cf[NC+i+NC*2] = -contact_impulse[1];
+          if(contact_impulse[2] >= 0)
+            cf[NC+i+NC] = contact_impulse[2];
+          else
+            cf[NC+i+NC*3] = -contact_impulse[2];
+        }
+      
+      Utility::check_finite(cf);
+    OUTLOG(cf,"cf_moby",logERROR);
+
+    {
+      double sum = std::accumulate(cf.segment(0,NC).begin(),cf.segment(0,NC).end(),0.0);
+
+      OUT_LOG(logERROR) << t-dt <<",M, Sum normal force: " << sum ;
+    }
+
+    if(USE_LAST_CFS){
+
+      cf_init = cf;
+      static std::queue<Ravelin::VectorNd>
+          cf_delay_queue;
+      static std::queue<Ravelin::MatrixNd>
+          N_delay_queue,
+          D_delay_queue,
+          MU_delay_queue;
+      static int &FILTER_CFS = Utility::get_variable<int>(plugin_namespace+"last-cfs-filter");
+
+      if(FILTER_CFS && NC>0){
+
+        cf_delay_queue.push(cf);
+        N_delay_queue.push(N);
+        D_delay_queue.push(D);
+        MU_delay_queue.push(MU);
+        cf = cf_delay_queue.front();
+        N = N_delay_queue.front();
+        D = D_delay_queue.front();
+        MU = MU_delay_queue.front();
+        if(cf_delay_queue.size() >= 2){
+           cf_delay_queue.pop();
+           N_delay_queue.pop();
+           D_delay_queue.pop();
+           MU_delay_queue.pop();
+        }
+      } else {
+        cf_delay_queue = std::queue<Ravelin::VectorNd>();
+        N_delay_queue = std::queue<Ravelin::MatrixNd>();
+        D_delay_queue = std::queue<Ravelin::MatrixNd>();
+        MU_delay_queue = std::queue<Ravelin::MatrixNd>();
+      }
+    } else {
+      cf_init.set_zero(0);
+    }
+
+
+    const double h_dt = DT/dt;
+    bool solve_flag = false;
+    Ravelin::VectorNd fext_scaled;
+
+    // IDYN MAXIMAL DISSIPATION MODEL
+    unsigned ctl_num = 0;
+
+    std::vector<Ravelin::VectorNd> compare_cf_vec;
+
+
+    OUTLOG(NC,"idyn_NC",logERROR);
+
+    ////////////////////////// simulator DT IDYN //////////////////////////////
+
+if(inf_friction){
+#ifdef USE_NO_SLIP_MODEL
+    // NO-SLIP MODEL
+    {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf = cf_init;
+    id.set_zero(NUM_JOINT_DOFS);
+    if(inverse_dynamics_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf)){
+      compare_cf_vec.push_back(cf.segment(0,NC));
+    } else {
+      compare_cf_vec.push_back(cf);
+    }
+    OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+    OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
+    }
+#endif
+#ifdef USE_NO_SLIP_LCP_MODEL
+  // NO-SLIP Fast MODEL
+    {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf.set_zero(NC*5);
+    id.set_zero(NUM_JOINT_DOFS);
+    {
+      solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf,false);
+      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+      if(last_cf.rows() == NC){
+        Ravelin::VectorNd diff_cf  = last_cf;
+        diff_cf -= cf.segment(0,NC);
+        if(diff_cf.norm() > 0.01)
+          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+      }
+      last_cf = cf.segment(0,NC);
+    }
+    compare_cf_vec.push_back(cf.segment(0,NC));
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
+    }
+#endif
+
+
+} else {
+
+#ifdef USE_CLAWAR_MODEL
+    // IDYN QP
+  {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf = cf_init;
+    id.set_zero(NUM_JOINT_DOFS);
+    if(inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf)){
+      compare_cf_vec.push_back(cf.segment(0,NC));
+    } else {
+      compare_cf_vec.push_back(cf);
+    }
+    OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+    OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
   }
-  
-  update(boost::shared_ptr<Pacer::Controller>& robot, double t){
-  
-  }
+#endif
+
+
+#ifdef USE_AP_MODEL
+    // A-P Fast MODEL
+    {
+#ifdef TIMING
+    struct timeval start_t;
+    struct timeval end_t;
+    gettimeofday(&start_t, NULL);
+#endif
+    cf.set_zero(NC*5);
+    id.set_zero(NUM_JOINT_DOFS);
+    if(NC>0){
+      solve_flag = inverse_dynamics_ap(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf);
+      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
+      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+      if(last_cf.rows() == NC){
+        Ravelin::VectorNd diff_cf  = last_cf;
+        diff_cf -= cf.segment(0,NC);
+        if(diff_cf.norm() > 0.01)
+          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+      }
+      last_cf = cf.segment(0,NC);
+    } else {
+      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf);
+    }
+    compare_cf_vec.push_back(cf.segment(0,NC));
+#ifdef TIMING
+    gettimeofday(&end_t, NULL);
+    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
+    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+#endif
+    ctl_num++;
+    }
+#endif
 }
+
+  for(int i=0;i<compare_cf_vec.size();i++){
+    double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);
+    OUT_LOG(logERROR) << i << ", Sum normal force: " << sum ;
+  }
+
+  id*=alpha;
+  
+  Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
+  OUTLOG(id,"idyn_U",logDEBUG);
+  u += id;
+  ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+}
+
+/** This is a quick way to register your plugin function of the form:
+  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+  */
+#include "register_plugin"

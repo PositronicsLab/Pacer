@@ -139,18 +139,24 @@ void Robot::compile(){
 
   for(int i=0;i<8;i++)
     _state[static_cast<unit_e>(i)] = std::map<std::string, Ravelin::VectorNd >();
-
+  
+  _disabled_dofs.resize(NDOFS);
+  std::fill(_disabled_dofs.begin(),_disabled_dofs.end(),true);
+  
   std::map<std::string, Moby::JointPtr>::iterator it;
   for(it=_id_joint_map.begin();it!=_id_joint_map.end();it++){
     const std::pair<std::string, Moby::JointPtr>& id_joint = (*it);
     _id_dof_coord_map[id_joint.first] = std::vector<int>(id_joint.second->num_dof());
     for(int j=0;j<id_joint.second->num_dof();j++){
+      if(id_joint.second->num_dof() == 0)
+        _disabled_dofs[id_joint.second->get_coord_index() + j] = false;
       _id_dof_coord_map[id_joint.first][j] 
         = id_joint.second->get_coord_index() + j;
 
       _coord_id_map[id_joint.second->get_coord_index() + j] 
         = std::pair<std::string,int>(id_joint.first,j);
     }
+    
     OUTLOG(_id_dof_coord_map[id_joint.first],id_joint.first+"_dofs",logDEBUG1);
     
     std::map<unit_e , std::map<std::string, Ravelin::VectorNd > >::iterator it;

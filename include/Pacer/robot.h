@@ -630,7 +630,7 @@ class Robot {
   private:
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
-  
+ 
     Moby::RCArticulatedBodyPtr        _abrobot;
     Moby::DynamicBodyPtr              _dbrobot;
     
@@ -640,6 +640,8 @@ class Robot {
 
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;
+
+    std::vector<bool> _disabled_dofs; 
 
     /// set up internal models after kineamtic model is set (called from init)
     void compile();

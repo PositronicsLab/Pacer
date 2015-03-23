@@ -12,6 +12,7 @@ static Ravelin::Vector3d workv3_;
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
   boost::shared_ptr<Ravelin::Pose3d> base_frame;
   std::string plugin_namespace;
+  std::vector<std::string> foot_names;
 
   /*
 void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
@@ -448,6 +449,7 @@ void walk_toward(
       }
       stance_phase[i] = !stance_phase[i];
     }
+    ctrl_ptr->set_data<int>(foot_names[i]+".stance",(!stance_phase[i])? 1 : 0);
     //last_feet_active[i] = feet[i]->active;
     //feet[i]->stance = !stance_phase[i];
     x.pose = foot_pos[i].pose;
@@ -478,7 +480,7 @@ void walk_toward(
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
 //      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p,   Ravelin::Vector3d(0,1,0))));
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Ravelin::Vector3d(0,1,0))));
 //      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
 //     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
@@ -492,6 +494,7 @@ void walk_toward(
 }
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  ctrl_ptr = ctrl;
   Ravelin::Origin3d command = Ravelin::Origin3d(0,0,0);
   ctrl->get_data<Ravelin::Origin3d>("SE2_command",command);
   Ravelin::VectorNd go_to;
@@ -506,8 +509,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double &gait_time = Utility::get_variable<double>(plugin_namespace+"gait-duration");
   static double &step_height = Utility::get_variable<double>(plugin_namespace+"step-height");
   static std::vector<Ravelin::Vector3d> footholds(0);
-  static std::vector<std::string>
-      &foot_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+"feet");
+  foot_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+"feet");
 
   static double &width = Utility::get_variable<double>(plugin_namespace+"width");
   static double &length = Utility::get_variable<double>(plugin_namespace+"length");

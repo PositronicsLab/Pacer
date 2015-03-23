@@ -9,7 +9,7 @@
 #define USE_CLAWAR_MODEL
 //#define USE_AP_MODEL
 //#define USE_NO_SLIP_MODEL
-#define USE_NO_SLIP_LCP_MODEL
+//#define USE_NO_SLIP_LCP_MODEL
 //#define TIMING
 
 using namespace Pacer;

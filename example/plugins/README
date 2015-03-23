@@ -1,6 +1,0 @@
-FILE/DIRECTORY	DESCRIPTION
---------------------------------------------------------------------------
-control.cpp	C++ file that shows how to setup waypoints for the robot
-		  to follow in Pacer
-
-

@@ -1,7 +1,7 @@
 add_library(drive-robot MODULE drive-robot.cpp)
 target_link_libraries(drive-robot ${REQLIBS})
 
-add_library(ik-feet MODULE ik_feet.cpp)
+add_library(ik-feet MODULE ik-feet.cpp)
 target_link_libraries(ik-feet ${REQLIBS})
 
 add_library(stabilization MODULE stabilization.cpp)
@@ -16,8 +16,8 @@ target_link_libraries(joint-PID-controller ${REQLIBS})
 add_library(eef-PID-controller MODULE eef-PID-controller.cpp)
 target_link_libraries(eef-PID-controller ${REQLIBS})
 
-add_library(stand-trajectory MODULE stand.cpp)
+add_library(stand-trajectory MODULE stand-trajectory.cpp)
 target_link_libraries(stand-trajectory ${REQLIBS})
 
-add_library(inverse-dynamics MODULE inverse_dynamics.cpp)
+add_library(inverse-dynamics MODULE inverse-dynamics.cpp)
 target_link_libraries(inverse-dynamics ${REQLIBS})

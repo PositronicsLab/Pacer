@@ -63,15 +63,15 @@ include_directories(${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
+
 # these are the setting for the in-source compiler flow control
 option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
-#option(SPLITTING_METHOD "Use Splitting Methods to solve QPs?" OFF)
 option(LOGGING "Write logs to <working_dir>/out.log" OFF)
-option(TIMING "use ctime timing functions" OFF)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
-  option(BUILD_PLUGINS "Build pacer plugins?" ON)
+  option(BUILD_PLUGINS "Build Pacer plugins?" ON)
+  option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
   option(USE_DXL "use dynamixel drivers" OFF)
-  #option(CONSOLE "Display a Console window for controlling robot CVars =EXPERIMENTAL=" OFF)
+  #option(CONSOLE "Display a Console window for controlling robot XML parameters inline" OFF)
 
 
 # fix the C++ linking error on 64-bit Linux
@@ -98,14 +98,9 @@ add_definitions(-DBUILD_DOUBLE)
 add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
-IF(TIMING)
-  add_definitions( -DTIMING)
-ENDIF(TIMING)
-
 IF(LOGGING)
   add_definitions( -DLOGGING )
 ENDIF(LOGGING)
-
 
 include_directories(
                     include
@@ -173,45 +168,12 @@ set(REQLIBS ${REQLIBS} Pacer)
 
 # EXAMPLES
 IF(BUILD_EXAMPLES)
-# Drive ROBOT
-IF(BUILD_PLUGINS)
-  add_subdirectory( example/plugins )
-ENDIF(BUILD_PLUGINS)
-
-  # Gazebo Interface
-  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
-# osg
-IF(USE_OSG_DISPLAY AND OSG_FOUND)
-    target_link_libraries (PacerMobyPlugin ${OSG_LIBRARIES})
-    target_link_libraries (PacerMobyPlugin ${OSGVIEWER_LIBRARIES})
-    target_link_libraries (PacerMobyPlugin ${OSGDB_LIBRARIES})
-    target_link_libraries (PacerMobyPlugin ${OSGGA_LIBRARIES})
-    target_link_libraries (PacerMobyPlugin ${OPENTHREADS_LIBRARY})
-    target_link_libraries (PacerMobyPlugin ${OSGUTIL_LIBRARIES})
-    target_link_libraries (PacerMobyPlugin ${OSGMANIPULATOR_LIBRARIES})
-    target_link_libraries (PacerMobyPlugin OpenThreads)
-   
-   # target_link_libraries (PacerMobyDriver ${OSG_LIBRARIES})
-   # target_link_libraries (PacerMobyDriver ${OSGVIEWER_LIBRARIES})
-   # target_link_libraries (PacerMobyDriver ${OSGDB_LIBRARIES})
-   # target_link_libraries (PacerMobyDriver ${OSGGA_LIBRARIES})
-   # target_link_libraries (PacerMobyDriver ${OPENTHREADS_LIBRARY})
-   # target_link_libraries (PacerMobyDriver ${OSGUTIL_LIBRARIES})
-   # target_link_libraries (PacerMobyDriver ${OSGMANIPULATOR_LIBRARIES})
-   # target_link_libraries (PacerMobyDriver OpenThreads)
-    add_definitions (-DUSE_OSG_DISPLAY)
-  ENDIF(USE_OSG_DISPLAY AND OSG_FOUND)
-  target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS})
-  set_target_properties(PacerMobyPlugin PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-  install(TARGETS PacerMobyPlugin DESTINATION ${CMAKE_SOURCE_DIR}/example/interfaces)
-  
-
-  # Gazebo Interface
-IF(GAZEBO_FOUND)
-  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/interfaces/gazebo.cpp)
-  target_link_libraries(PacerGazeboPlugin ${REQLIBS} ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf ${EXTRA_LIBS})
-ENDIF(GAZEBO_FOUND)
-
+  IF(BUILD_PLUGINS)
+    add_subdirectory( example/plugins )
+  ENDIF(BUILD_PLUGINS)
+  IF(BUILD_INTERFACES)
+    add_subdirectory( example/interfaces )
+  ENDIF(BUILD_INTERFACES)
 ENDIF(BUILD_EXAMPLES)
 
 

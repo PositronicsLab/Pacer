@@ -1,4 +1,4 @@
-#Pacer Project Repository
+###Pacer Project Repository
 by Sam Zapolsky @ the [Positronics Lab]
 
 [Positronics Lab]: http://robotics.gwu.edu/positronics/
@@ -6,6 +6,26 @@ by Sam Zapolsky @ the [Positronics Lab]
 This repository hosts code for [Pacer] an open source robot locomotion library for simulation and physical robots.
 
 [Pacer]: https://github.com/PositronicsLab/Pacer
+
+##Building
+
+In the project base directory:
+$ mkdir build
+$ cd build
+$ ccmake .. # configure cmake project
+$ make all
+
+Make sure that all Plugins and Interfaces build successfully
+
+##Running Pacer (Example)
+
+In the project base directory (bash terminal):
+$ source setup.sh
+$ cd $PACER_HOME/example/models/links
+in Gazebo:
+  $ gazebo links.world
+in Moby:
+  $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so model.xml
 
 ###Dependencies 
 
@@ -34,17 +54,18 @@ access the library by using the examples found in the [examples] directory:
 
  EXAMPLE       | LOCATION |  DESCRIPTION
 -------------- | -------- | ---------------------------------------------------------
- control-moby  |          |  Moby controller plugin that communictes with Pacer
- control-gazebo|          |  Gazebo Model Plugin for an SDF model that communicates with Pacer
- driver.cpp    |          |  Stand-alone Pacer with no simulator, example for use with hardware
- models        |          |  Pre-implemented robot models and vars files (see [models/README])
- drive-robot   |          |  Simple library for driving the locomotion system of Pacer (called by the simulation plugins and driver.cpp).
+ inerfaces     |          |  Moby & Gazebo controller plugins communicte with Pacer
+ models        |          |  Pre-implemented robot models and vars files (see [models/README.md])
+ plugins   |          | Discrete control modules for the robot.  Add capabilites to Pacer by adding plugins here.
 
- [models/README]: https://github.com/PositronicsLab/Pacer/tree/master/examples/models/README
+ [models/README.md]: https://github.com/PositronicsLab/Pacer/tree/master/examples/models/README.md
+ [examples]: https://github.com/PositronicsLab/Pacer/tree/master/examples/
 
 ## Exporting Data to MATLAB
- 
- Vectors and Matrices are output in a syntax readable by Matlab for copy and pasting.  The examples in [scripts] demonstrate exporting output from pacer logs to MATLAB readable delimited files.
+
+ Logs are either output to terminal or written to the file: "out.log" in the run directory.  Running Pacer will overwrite the current instance of "./out.log"
+
+ Vectors and Matrices output is readable in Matlab.  The examples in [scripts] demonstrate exporting output from Pacer's logs to MATLAB readable space delimited files.
 
 [scripts]: https://github.com/PositronicsLab/Pacer/tree/master/examples/test-scripts
 
@@ -56,3 +77,4 @@ access the library by using the examples found in the [examples] directory:
  example         |  Data files and examples for Pacer
  include         |  Header files for calling functions in Pacer
  src             |  Pacer source code
+ setup.sh        |  source this file to configure Pacer and Gazebo environment variables

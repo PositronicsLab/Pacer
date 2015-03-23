@@ -205,9 +205,13 @@ public:
   
   template <typename T>
   static T& get_variable(std::string tag){
-    T& v = get_variable_internal<T>(tag);
-    OUTLOG(v,"Get: "+tag+" --> ",logDEBUG);
-    return v;
+    try{
+      T& v = get_variable_internal<T>(tag);
+      OUTLOG(v,"Get: "+tag+" --> ",logDEBUG);
+      return v;
+    }catch(...){
+      throw std::runtime_error("Parameter: \"" + tag + "\" not found in XML!");
+    }
   }
   
   template <typename T>

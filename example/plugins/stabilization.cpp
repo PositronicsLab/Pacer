@@ -5,13 +5,12 @@
  ****************************************************************************/
 #include <Pacer/utilities.h>
 #include <Pacer/controller.h>
+std::string plugin_namespace;
+
 using namespace Pacer;
-
-extern bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-
 using namespace Ravelin;
 
-void Controller::contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::SharedConstMatrixNd& Jq,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos,const std::vector<double>& pos_des,const std::vector<double>& vel,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
+void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::SharedConstMatrixNd& Jq,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos,const std::vector<double>& pos_des,const std::vector<double>& vel,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
   int NC = Jb.columns();
 
   OUTLOG(Jb,"Jb",logDEBUG1);
@@ -53,59 +52,99 @@ void Controller::contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ra
   OUTLOG(js_correct,"js_correct",logDEBUG);
 }
 
-// Parallel Stiffness Controller
-void Controller::eef_stiffness_fb(const std::vector<double>& Kp, const std::vector<double>& Kv, const std::vector<double>& Ki, const std::vector<Ravelin::Vector3d>& x_des,const std::vector<Ravelin::Vector3d>& xd_des,const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd,Ravelin::VectorNd& fb){
+void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  static std::vector<double> &x_des = Utility::get_variable<std::vector<double> >(plugin_namespace+"desired.x");
+  static std::vector<double> &xd_des = Utility::get_variable<std::vector<double> >(plugin_namespace+"desired.xd");
+  static int &USE_DES_CONTACT = Utility::get_variable<int>(plugin_namespace+"des-contact");
+  
+  Ravelin::VectorNd 
+    generalized_qd = ctrl->get_generalized_value(Pacer::Controller::velocity),
+    generalized_q  = ctrl->get_generalized_value(Pacer::Controller::position);
+  
+  Ravelin::VectorNd base_qd = ctrl->get_base_value(Pacer::Controller::velocity);
+  Ravelin::Origin3d roll_pitch_yaw = ctrl->get_data<Ravelin::Origin3d>("roll_pitch_yaw");
+  //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
+  Ravelin::VectorNd center_of_mass_x = ctrl->get_base_value(Pacer::Controller::position);
 
-    set_model_state(q,qd);
+  int NDOFS = generalized_qd.rows();
+  int NUM_JOINT_DOFS = NDOFS - NSPATIAL;
 
-    static std::vector<Ravelin::Vector3d> p_err_sum;
-    if(p_err_sum.empty()){
-        p_err_sum.resize(NUM_EEFS);
-        for(int i=0;i<NUM_EEFS;i++)
-            p_err_sum[i] = Ravelin::Origin3d(0,0,0);
+  static std::vector<std::string>
+        &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+        
+  Ravelin::MatrixNd N,S,T,D;
+  std::vector<std::string> active_feet;
+
+  int num_feet = foot_names.size();
+  
+  if(USE_DES_CONTACT){
+    for(int i=0;i<foot_names.size();i++){
+      int is_stance = 0;
+      if(ctrl->get_data<int>(foot_names[i]+".stance",is_stance))
+        if(is_stance == 1)
+          active_feet.push_back(foot_names[i]);
+    }
+  } else
+    active_feet = foot_names;
+
+
+  std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
+  for(int i=0;i<active_feet.size();i++){
+    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    ctrl->get_link_contacts(active_feet[i],c);
+    if(!c.empty())
+      contacts.push_back(c[0]);
+  }
+
+  ctrl->calc_contact_jacobians(generalized_q,contacts,N,S,T);
+  
+  int NC = N.columns();
+
+  static std::vector<double>
+      &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kp"),
+      &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kv"),
+      &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.ki");
+  
+  if(NC > 0){
+    D.set_zero(NDOFS,NC*4);
+    D.set_sub_mat(0,0,S);
+    D.set_sub_mat(0,NC,T);
+    S.negate();
+    T.negate();
+    D.set_sub_mat(0,NC*2,S);
+    D.set_sub_mat(0,NC*3,T);
+    
+    int nk = D.columns()/NC;
+    int nvars = NC + NC*(nk);
+    // setup R
+    Ravelin::MatrixNd R(NDOFS, NC + (NC*nk) );
+    R.block(0,NDOFS,0,NC) = N;
+    R.block(0,NDOFS,NC,NC*nk+NC) = D;
+    
+    std::vector<double> vel_base(6), pos_base(6);
+    for(int i=0;i<3;i++){
+      vel_base[i] = base_qd[i];
+      vel_base[i+3] = base_qd[3+i];
+      pos_base[i] = center_of_mass_x[i];
+      pos_base[i+3] = roll_pitch_yaw[i];
     }
 
-    for(int i=0;i<NUM_EEFS;i++){
-        boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(x_des[i].pose));
-        EndEffector& foot = eefs_[i];
+    Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,NC*3);
+    Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,NC*3);
 
-        // Calc jacobian for AB at this EEF
-        Ravelin::MatrixNd J,Jf;
-        Ravelin::VectorNd x(foot.chain.size());
+    Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
+    contact_jacobian_stabilizer(Jb,Jq,Kp,Kv,Ki,pos_base,x_des,vel_base,xd_des,fb);
 
-        Ravelin::VectorNd u;
-
-        for(int k=0;k<foot.chain.size();k++)                // actuated joints
-            x[k] = q[foot.chain[k]];
-        foot_jacobian(x,foot,boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(*x_des[i].pose)),J);
-        J = J.get_sub_mat(0,3,0,J.columns(),workM_);
-
-        // Positional Correction
-        Ravelin::Vector3d x_err  = x_des[i] - Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-        x_err = Ravelin::Vector3d(x_err[0]*Kp[i*3],x_err[1]*Kp[i*3+1],x_err[2]*Kp[i*3+2]);
-        J.transpose_mult(x_err,u);
-
-        // Integrative Correction
-        p_err_sum[i] += Ravelin::Origin3d(x_err.data());
-        J.transpose_mult(Ravelin::Vector3d(p_err_sum[i][0]*Ki[i*3],p_err_sum[i][1]*Ki[i*3+1],p_err_sum[i][2]*Ki[i*3+2]),u,1,1);
-
-        // Remove portion of foot velocity that can't be affected by corrective forces
-        event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-        dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
-        Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-        Ravelin::SharedConstVectorNd vb = data->generalized_qd.segment(NUM_JOINTS,NDOFS);
-        Jb.mult(vb,workv3_);
-        workv3_.pose = x_des[i].pose;
-
-        // Velocity Correction
-        Ravelin::Vector3d xd_err = xd_des[i] - (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
-        xd_err = Ravelin::Vector3d(xd_err[0]*Kv[i*3],xd_err[1]*Kv[i*3+1],xd_err[2]*Kv[i*3+2]);
-        J.transpose_mult(xd_err,u,1,1);
-
-        for(int k=0;k<foot.chain.size();k++)                // actuated joints
-            fb[foot.chain[k]] += u[k];
-    }
+    OUTLOG(fb,"viip_fb",logDEBUG);
+    
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
+    u += fb;
+    ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  }
 }
 
-
+/** This is a quick way to register your plugin function of the form:
+  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+  */
+#include "register_plugin"
 

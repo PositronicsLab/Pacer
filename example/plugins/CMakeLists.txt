@@ -4,6 +4,9 @@ target_link_libraries(drive-robot ${REQLIBS})
 add_library(ik-feet MODULE ik_feet.cpp)
 target_link_libraries(ik-feet ${REQLIBS})
 
+add_library(stabilization MODULE stabilization.cpp)
+target_link_libraries(stabilization ${REQLIBS})
+
 add_library(gait-planner MODULE gait-planner.cpp)
 target_link_libraries(gait-planner ${REQLIBS})
 

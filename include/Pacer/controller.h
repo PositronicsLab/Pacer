@@ -15,10 +15,10 @@ class Controller;
 
 typedef void (*update_t)(const boost::shared_ptr<Controller>&, double);
 
-enum niceness{
-  HIGHEST_PRIORITY = -20,
-  LOWEST_PRIORITY = 19
-};
+const int
+  NON_REALTIME = -1,
+  HIGHEST_PRIORITY = 0,
+  LOWEST_PRIORITY = 10;
 
 class Controller : public Robot, public boost::enable_shared_from_this<Controller>
 {
@@ -36,7 +36,8 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
     void init(){
       // After Robot loads, load plugins
 #ifdef USE_PLUGINS
-      assert(init_plugins());
+      if(!init_plugins())
+        throw std::runtime_error("One of the plugins failed to load");
 #endif
       unlock_state();
     }
@@ -51,12 +52,12 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
 
     void add_plugin_update(int priority,std::string name,update_t f){
       // Fix priority
-      if(priority > 19 || priority < -20){
-        OUT_LOG(logERROR) << "Set priorities to \"niceness\" range [-20..19]";
-        if(priority < -20)
-          priority = -20;
-        else if(priority > 19)
-          priority = 19;
+      if(priority > LOWEST_PRIORITY || priority < NON_REALTIME){
+        OUT_LOG(logERROR) << "Set priorities to range [-1,0.."<<LOWEST_PRIORITY<<"], -1 is for non-realtime processes (will only return data when complete)";
+        if(priority < NON_REALTIME)
+          priority = NON_REALTIME;
+        else if(priority > LOWEST_PRIORITY)
+          priority = LOWEST_PRIORITY;
       }
 
       // Check if this function already has an updater
@@ -83,6 +84,18 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
     bool init_plugins();
     
     bool update_plugins(double t){
+      OUT_LOG(logDEBUG1) << ">> update_plugins()";
+      //name_update_t& non_realtime_map = _update_priority_map[NON_REALTIME];
+      //if(!_update_priority_map[i].empty())
+      //BOOST_FOREACH( const name_update_t::value_type& update, non_realtime_map)
+      //{  
+        //static std::map<std::string,std::thread> threads = std::map<std::string,std::thread>();
+        //if(threads.find(update.first) != threads.end());
+        //OUT_LOG(logDEBUG1) << ">> " << update.first;
+        //threads[update.first] = (*(update.second)),this->ptr(),t);
+        //OUT_LOG(logDEBUG1) << "<< " << update.first;
+      //}
+          
       for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++)
         if(!_update_priority_map[i].empty()) // SRZ: do I need this line?
           BOOST_FOREACH( const name_update_t::value_type& update, _update_priority_map[i])
@@ -91,6 +104,8 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
             (*(update.second))(this->ptr(),t);
             OUT_LOG(logDEBUG1) << "<< " << update.first;
           }
+                
+      OUT_LOG(logDEBUG1) << "<< update_plugins()";
     }
 };
 }

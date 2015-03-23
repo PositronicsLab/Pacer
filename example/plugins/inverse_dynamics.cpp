@@ -9,7 +9,7 @@
 #define USE_CLAWAR_MODEL
 //#define USE_AP_MODEL
 //#define USE_NO_SLIP_MODEL
-//#define USE_NO_SLIP_LCP_MODEL
+#define USE_NO_SLIP_LCP_MODEL
 //#define TIMING
 
 using namespace Pacer;
@@ -72,7 +72,8 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   // compute D, E, and F
   Ravelin::MatrixNd iM_chol;
   iM_chol = M;
-  assert(LA_.factor_chol(iM_chol));
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
 
   Ravelin::MatrixNd iM;
   iM = Ravelin::MatrixNd::identity(n);
@@ -89,7 +90,8 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   iM.get_sub_mat(0,nq,0,nq,F);
   Ravelin::MatrixNd iF;
   iF = F;
-  assert(LA_.factor_chol(iF));
+  pass = LA_.factor_chol(iF);
+  assert(pass);
 
   // if in mid-air only return ID forces solution
   // fID + fext = M qdd  ==> fID = M qdd - fext
@@ -498,7 +500,8 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   // compute D, E, and F
   Ravelin::MatrixNd iM_chol;
   iM_chol = M;
-  assert(LA_.factor_chol(iM_chol));
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
 
   Ravelin::MatrixNd iM;
   iM = Ravelin::MatrixNd::identity(n);
@@ -515,7 +518,8 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   iM.get_sub_mat(0,nq,0,nq,F);
   Ravelin::MatrixNd iF;
   iF = F;
-  assert(LA_.factor_chol(iF));
+  pass = LA_.factor_chol(iF);
+  assert(pass);
 
 #ifndef NDEBUG
   OUTLOG(N,"N",logDEBUG);
@@ -858,7 +862,8 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
   // compute D, E, and F
   Ravelin::MatrixNd iM_chol = M;
-  assert(LA_.factor_chol(iM_chol));
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
 
   Ravelin::MatrixNd iM;
   iM = Ravelin::MatrixNd::identity(n);
@@ -872,7 +877,8 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   iM.get_sub_mat(0,nq,0,nq,F);
   Ravelin::MatrixNd iF;
   iF = F;
-  assert(LA_.factor_chol(iF));
+  pass = LA_.factor_chol(iF);
+  assert(pass);
 
   // compute j and k
   // [F,E']
@@ -1301,14 +1307,14 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   // Setup Indices vector
   unsigned active_eefs = 0;
   std::vector<unsigned> indices;
-  for(int i=0;i<eefs_.size();i++){
-    if(!eefs_[i].active){
-      continue;
-    }
-    active_eefs++;
-    for(int j=0;j<eefs_[i].point.size();j++)
-      indices.push_back(i);
-  }
+  //for(int i=0;i<eefs_.size();i++){
+    //if(!eefs_[i].active){
+      //continue;
+    //}
+    //active_eefs++;
+    //for(int j=0;j<eefs_[i].point.size();j++)
+      //indices.push_back(i);
+  //}
   static Ravelin::VectorNd _v;
   if(_v.size() != _qq.size())
     _v.resize(0);
@@ -1492,7 +1498,8 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
 
   // compute D, E, and F
   Ravelin::MatrixNd iM_chol = M;
-  assert(LA_.factor_chol(iM_chol));
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
 
   Ravelin::MatrixNd iM;
   iM = Ravelin::MatrixNd::identity(n);
@@ -1506,7 +1513,8 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   iM.get_sub_mat(0,nq,0,nq,F);
   Ravelin::MatrixNd iF;
   iF = F;
-  assert(LA_.factor_chol(iF));
+  pass = LA_.factor_chol(iF);
+  assert(pass);
 
   // compute j and k
   // [F,E']
@@ -2102,7 +2110,9 @@ if(inf_friction){
 #endif
 
 
-#ifdef USE_AP_MODEL
+#ifdef USE_AP_MODEL 
+// THIS IS A WORKING THEORETICAL MODEL 
+// BUT IS NOT FOR ACTUAL USE (discontinuous torque commands)
     // A-P Fast MODEL
     {
 #ifdef TIMING

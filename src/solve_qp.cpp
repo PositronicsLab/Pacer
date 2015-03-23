@@ -11,8 +11,8 @@
 extern bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
 Moby::LCP lcp_;
 
-const int MAX_ITER = 100;
-const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon()); //2e-12;
+const int MAX_ITER = 1000;
+const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon());
 const double NEAR_INF = 1.0/NEAR_ZERO;
 
 //#define SPLITTING_METHOD
@@ -52,9 +52,9 @@ bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& 
   OUTLOG(c,"qp_c",logDEBUG1);
   OUTLOG(A,"qp_A",logDEBUG1);
   OUTLOG(b,"qp_b",logDEBUG1);
-//  OUT_LOG(logINFO)  << "LCP variables" << std::endl;
-//  OUTLOG(MMM,"MM");
-//  OUTLOG(qqq,"qq");
+  //OUT_LOG(logINFO)  << "LCP variables" << std::endl;
+  //OUTLOG(MMM,"MM",logDEBUG1);
+  //OUTLOG(qqq,"qq",logDEBUG1);
 #endif
 
 #ifndef SPLITTING_METHOD

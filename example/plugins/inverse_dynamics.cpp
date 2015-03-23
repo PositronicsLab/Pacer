@@ -6,9 +6,9 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-//#define USE_CLAWAR_MODEL
+#define USE_CLAWAR_MODEL
 //#define USE_AP_MODEL
-#define USE_NO_SLIP_MODEL
+//#define USE_NO_SLIP_MODEL
 //#define USE_NO_SLIP_LCP_MODEL
 //#define TIMING
 

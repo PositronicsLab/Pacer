@@ -185,7 +185,7 @@ public:
   }
 
 	static bool isvalid(const Ravelin::VectorNd& v){
-	  if(v.norm() > std::numeric_limits<double>::epsilon() || !std::isfinite(v.norm()))
+	  if(!std::isfinite(v.norm()))
       return false;
 	  return true;
 	}

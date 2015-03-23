@@ -60,7 +60,7 @@ access the library by using the examples found in the examples directory:
 
  EXAMPLE       |  DESCRIPTION
 --------------|---------------------------------------------------------
- inerfaces     |  Moby & Gazebo controller plugins communicte with Pacer
+ interfaces     |  Moby & Gazebo controller plugins communicte with Pacer
  models        |  Pre-implemented robot models and vars files (see models/README.md)
  plugins   |    Discrete control modules for the robot.  Add capabilites to Pacer by adding plugins here.
 

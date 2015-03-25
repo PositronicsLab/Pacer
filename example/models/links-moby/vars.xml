@@ -31,13 +31,17 @@
   <plugin>
     <id type="string">  drive-robot       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller</id>
     <file type="string">libdrive-robot.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so</file>
-    <active type="bool">true              true                true            false                   false                       true                      true</active>
+    <active type="bool">true              true                true            false                   true                       false                      false</active>
   </plugin>
   
   
   <drive-robot>
      <real-time-factor type="double">1</real-time-factor>
+     <control type="bool">true</control>
      <priority type="double">1</priority>
+     <max-forward-speed type="double">0.2</max-forward-speed>
+     <max-strafe-speed type="double">0.0</max-strafe-speed>
+     <max-turn-speed type="double">0.0</max-turn-speed>
      <waypoints type="double">
    0.06279052 -0.03133330 
 	 0.36812455 -0.17113678 
@@ -58,7 +62,7 @@
 	-0.92977649  0.17113678 
 	-0.77051324  0.24557181 
 	-0.53582679  0.22620676 
-	-0.24868989  0.12043842 
+  -0.24868989  0.12043842
     </waypoints>
   </drive-robot>
   
@@ -89,6 +93,7 @@
   <ik-feet>
     <priority type="double">2</priority>
     <real-time-factor type="double">1</real-time-factor>
+    <abs-err-tolerance type="double">1e-3</abs-err-tolerance>
   </ik-feet>
   
   <viip-balance>

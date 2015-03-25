@@ -236,6 +236,9 @@ void walk_toward(
 
   Ravelin::Vector3d turn_origin(0,command[0]/command[5],0,foot_pos[0].pose);
 
+  // Ackerman steering, foot velocity
+  std::vector<Ravelin::Vector3d> xd_stance(NUM_FEET);
+  
   boost::shared_ptr< Ravelin::Pose3d> turning_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(*base_frame.get()));
 
   turning_frame->x = Ravelin::Origin3d(center_of_mass_x) + Ravelin::Origin3d(Ravelin::Pose3d::transform_vector(Moby::GLOBAL,turn_origin));
@@ -261,6 +264,7 @@ void walk_toward(
   ////////////////// PHASE PLANNING ///////////////////////
   for(int i=0;i<NUM_FEET;i++){
 
+    OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }, stance: " << !stance_phase[i];
     Ravelin::Vector3d &x   = foot_pos[i],
                       &xd  = foot_vel[i],
                       &xdd = foot_acc[i];
@@ -274,7 +278,6 @@ void walk_toward(
         //replan_path = true;
       //} else {
         for(int d=0; d<3;d++){
-          OUT_LOG(logDEBUG) << "Evaluate existing spline at " << t;
           replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
           if(replan_path)
             break;
@@ -291,7 +294,6 @@ void walk_toward(
       // NOTE: Don't ever use modf (this does modf(t/gait_duration,&intpart))
       // truncates t/gait_duration at decimal; gait_progress \in [0,1)
 
-      OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }";
       // How much time is left in the current phase stance (-), swing (+)
       left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,stance_phase[i]);
 
@@ -323,17 +325,23 @@ void walk_toward(
       }
 
       // Calculate foot step info
-
       // Determine linear portion of step
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame));
-      foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,origins[i]);
+      foot_frame->x = Ravelin::Origin3d(0,0,0);// Ravelin::Pose3d::transform_point(Moby::GLOBAL,origins[i]);
       Ravelin::Origin3d x0 = origins[i].data();
 
-      Ravelin::Vector3d foot_goal(command[0],command[1],command[2],foot_frame);
+      Ravelin::Vector3d foot_goal(command[0],command[1],0,foot_frame);
+      xd_stance[i] = -Ravelin::Vector3d(foot_goal.data());
 
       if(fabs(command[5]) > Moby::NEAR_ZERO){
         // Determine shape of step needed to yaw robot
         Ravelin::Origin3d rotation_axis = Ravelin::Origin3d(0,0,1);
+
+        // Foot velocity to perform Ackerman steering
+        Ravelin::Origin3d turn_origin = Ravelin::Origin3d::cross(rotation_axis,Ravelin::Origin3d(foot_goal.data())) * Utility::sign(command[5]);
+        Ravelin::Origin3d foot_radius = turn_origin + Ravelin::Origin3d(origins[i]); 
+        xd_stance[i] *= -foot_radius.norm()/turn_origin.norm(); 
+
         Ravelin::AAngled aa_gamma(Ravelin::Vector3d(rotation_axis,turning_frame),command[5] *  left_in_phase*gait_duration);
         OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
         Ravelin::Matrix3d R_gamma;
@@ -393,11 +401,8 @@ void walk_toward(
         }
       }
       else {
-        OUT_LOG(logDEBUG) << "\tPlanning Stance phase (phase < 0)...";
-
         // STANCE
         foot_goal /= -duty_factor[i];
-        OUTLOG( foot_goal," foot_goal_old",logDEBUG);
 
         // project foot goal 'a' onto walking plane (defined by normal 'b')
         // x = v{||} - w{_|_}
@@ -414,8 +419,6 @@ void walk_toward(
 
       // create new spline!!
       // copy last spline to history erasing oldest spline
-      for(int i=0;i<control_points.size();i++)
-        OUTLOG(control_points[i],"control_point",logDEBUG1);
 
       for(int j=0;j<spline_plan_length-1;j++){
         for(int d=0; d<3;d++)
@@ -431,6 +434,10 @@ void walk_toward(
       for(int j=0;j<n;j++)
         T[j] = t0 + fabs( left_in_phase*gait_duration / (double)(n-1)) * (double)j ;
 
+      for(int cp=0;cp<control_points.size();cp++){
+        OUTLOG(control_points[cp],"control_point",logDEBUG1);
+      }
+      OUTLOG(xd_stance[i],"control_point_V",logDEBUG1);
       for(int d=0;d<3;d++){
         Ravelin::VectorNd           X(n);
         Ravelin::VectorNd          &coefs = *(spline_coef[i][d].rbegin());
@@ -440,7 +447,7 @@ void walk_toward(
         OUTLOG(T,"T",logDEBUG1);
         OUTLOG(X,"X",logDEBUG1);
 
-        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],xd[d]),coefs);
+        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd_stance[i][d],xd_stance[i][d]),coefs);
 
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
@@ -467,7 +474,6 @@ void walk_toward(
     Ravelin::VectorNd &T1 = *(spline_t[i].begin()),
                       &T2 = *(spline_t[i].rbegin());
 
-    OUT_LOG(logDEBUG) << T1[0] <<" : " << t << " : "<< T2[T2.rows()-1] << " -- " << spline_t[i].size();
 
     for(double t=T1[0]+Moby::NEAR_ZERO ; t<=T2[T2.rows()-1] ; t += 0.01){
       Ravelin::Vector3d x,xd,xdd;
@@ -478,10 +484,10 @@ void walk_toward(
       xd.pose = foot_vel[i].pose;
       xdd.pose = foot_acc[i].pose;
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-//      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+      //Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Ravelin::Vector3d(0,1,0))));
-//      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Ravelin::Vector3d(0,1,0),0.01)));
+      //Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
 //     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
   }

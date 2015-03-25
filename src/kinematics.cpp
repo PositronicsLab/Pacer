@@ -60,7 +60,7 @@ Ravelin::VectorNd& Robot::link_kinematics(const Ravelin::VectorNd& x,const end_e
   return fk;
 }
 /// Resolved Motion Rate Control
-void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des){
+void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des, double TOL){
   Ravelin::MatrixNd J;
   Ravelin::VectorNd x(foot.chain.size());
   Ravelin::VectorNd step(foot.chain.size());
@@ -78,7 +78,7 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   err = step.norm();
   OUTLOG(goal,"goal",logDEBUG1);
 
-  while(err > 1e-4){
+  while(err > TOL){
     // update error
     last_err = err;
 //    OUTLOG(x,"q",logDEBUG1);
@@ -273,7 +273,7 @@ void Robot::end_effector_inverse_kinematics(
     const Ravelin::VectorNd& q,
     Ravelin::VectorNd& q_des,
     Ravelin::VectorNd& qd_des,
-    Ravelin::VectorNd& qdd_des){
+    Ravelin::VectorNd& qdd_des, double TOL){
   
   q_des = q.segment(0,NUM_JOINT_DOFS);
   qd_des.set_zero(NUM_JOINT_DOFS);
@@ -289,7 +289,7 @@ void Robot::end_effector_inverse_kinematics(
     // POSITION
     OUTLOG(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(foot.link->get_pose())),foot.id + "_x",logDEBUG1);
     OUTLOG(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]),foot.id + "_x_des",logDEBUG1);
-    RMRC(foot,q,foot_pos[i],q_des);
+    RMRC(foot,q,foot_pos[i],q_des,TOL);
     //RMRC(foot,q,Ravelin::VectorNd(6,Ravelin::SVector6d(foot_pos[i],Ravelin::Vector3d::zero()).data()),q_des);
     OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
 

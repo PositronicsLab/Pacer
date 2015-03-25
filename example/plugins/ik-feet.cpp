@@ -42,9 +42,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   q[N+5] = 0;
   q[N+6] = 1;
   
+  double &TOL = Utility::get_variable<double>(plugin_namespace+"abs-err-tolerance");
   // This is calculated in global frame always (assume base_link is at origin)
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
-                                        q_goal,qd_goal,qdd_goal);
+                                        q_goal,qd_goal,qdd_goal,TOL);
 
   ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);

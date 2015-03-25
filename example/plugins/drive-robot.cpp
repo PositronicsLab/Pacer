@@ -35,14 +35,20 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     Ravelin::VectorNd command;
     command.set_zero(6);
 
-    double max_turn_speed = 1.0; // rad/sec
-    double max_forward_speed = 0.05;
-    double max_strafe_speed = 0.025;
+    static double &max_forward_speed = Utility::get_variable<double>(plugin_namespace+"max-forward-speed");
+    static double &max_strafe_speed  = Utility::get_variable<double>(plugin_namespace+"max-strafe-speed");
+    static double &max_turn_speed    = Utility::get_variable<double>(plugin_namespace+"max-turn-speed");
 
     // if FALSE, drive like a car (x and theta)
     // Q: if TRUE, turn toward waypoint while stepping in direction of waypoint
     bool HOLONOMIC = false;
+    command[X] = max_forward_speed; 
+    command[Y] = max_strafe_speed; 
+    command[THETA] = max_turn_speed; 
+    
+    static int& drive_robot = Utility::get_variable<int>(plugin_namespace+"control");
 
+    if(!drive_robot){
     /////////////////////////////////////
     /// Assign WAYPOINTS in the plane ///
     static std::vector<Point> waypoints;
@@ -50,7 +56,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     static std::vector<double>
       &waypoints_vec = Utility::get_variable<std::vector<double> >(plugin_namespace+"waypoints");
 
-    if(waypoints.empty())
+    if(waypoints.empty() || waypoints_vec.size()/2 != waypoints.size())
       for(int i=0;i<waypoints_vec.size();i+=2)
         waypoints.push_back(Point(waypoints_vec[i],waypoints_vec[i+1]));
         
@@ -59,7 +65,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     Ravelin::Vector3d goto_point;
 
     int num_waypoints = waypoints.size();
-    if(num_waypoints > 1){
+    if(num_waypoints != 0){
       static int waypoint_index = 0;
       static Ravelin::Vector3d
       next_waypoint(waypoints[waypoint_index].first,waypoints[waypoint_index].second,0,environment_frame);
@@ -125,7 +131,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
         command[Y] = 0;
       }
     }
-
+    }
     Ravelin::Origin3d command_SE2(command[X],command[Y],command[THETA]);
     ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
 }

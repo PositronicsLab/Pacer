@@ -599,7 +599,7 @@ class Robot {
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal
-    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des, double TOL = 1e-4);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 6d (linear and angular) goal
@@ -622,7 +622,7 @@ class Robot {
       const Ravelin::VectorNd& q,
       Ravelin::VectorNd& q_des,
       Ravelin::VectorNd& qd_des,
-      Ravelin::VectorNd& qdd_des);
+      Ravelin::VectorNd& qdd_des, double TOL = 1e-4);
 
     void calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
    

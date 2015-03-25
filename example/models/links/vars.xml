@@ -27,14 +27,14 @@
   <plugin>
     <id type="string">  drive-robot       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller         stabilization</id>
     <file type="string">libdrive-robot.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so  libstabilization.so</file>
-    <active type="bool">true              true                true            false                   true                       false                      false                  true</active>
+    <active type="bool">true              true                true            false                   true                       false                      false                  false</active>
   </plugin>
   
   <!-- global planning (LOW NICENESS) -->
   
   <drive-robot>
      <real-time-factor type="double">1</real-time-factor>
-     <priority type="double">1</priority>
+     <priority type="double">0</priority>
      <waypoints type="double">
    0.06279052 -0.03133330 
 	 0.36812455 -0.17113678 

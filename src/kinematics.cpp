@@ -241,7 +241,7 @@ void Robot::calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost
     boost::shared_ptr<const Ravelin::Pose3d>
           impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),c[i]->point.data(),Moby::GLOBAL));
 
-      _dbrobot->calc_jacobian(impulse_frame,_id_link_map[c[i]->id],workM_);
+      _abrobot->calc_jacobian(impulse_frame,_id_link_map[c[i]->id],workM_);
       workM_.get_sub_mat(0,3,0,NDOFS,J);
 
       Vector3d

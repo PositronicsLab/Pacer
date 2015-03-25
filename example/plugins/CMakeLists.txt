@@ -21,3 +21,9 @@ target_link_libraries(stand-trajectory ${REQLIBS})
 
 add_library(inverse-dynamics MODULE inverse-dynamics.cpp)
 target_link_libraries(inverse-dynamics ${REQLIBS})
+
+find_package(SDL2)
+IF(SDL2_FOUND)
+  add_library(gamepad MODULE gamepad.cpp)
+  target_link_libraries(gamepad ${REQLIBS} SDL2)
+ENDIF(SDL2_FOUND)

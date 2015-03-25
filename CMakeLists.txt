@@ -143,12 +143,6 @@ IF(CVARS_FOUND)
   target_link_libraries (Pacer ${CVARS_LIBRARIES})
 ENDIF(CVARS_FOUND)
 
-# look for DXL
-find_package(DXL)
-IF(USE_DXL AND DXL_FOUND)
-  set(EXTRA_LIBS ${EXTRA_LIBS} dxl)
-  add_definitions (-DUSE_DXL)
-ENDIF(USE_DXL AND DXL_FOUND)
 
 # GLConsole
 IF(GLConsole_FOUND)

@@ -138,6 +138,42 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 }
               }
             break;
+            case (str2int("string vector")):
+                try{
+                  CVarUtils::CreateCVar<std::vector<std::string> >(tag+n->name,elements, help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::vector<std::string> >(tag+n->name,elements);
+                }
+            break;
+            case (str2int("double vector")):
+            {  
+                std::vector<double> typed_elements;
+                typed_elements.reserve(elements.size());
+                std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
+                        [](std::string const& val) {return std::stod(val);});
+                try{
+                  CVarUtils::CreateCVar<std::vector<double> >(tag+n->name,typed_elements, help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::vector<double> >(tag+n->name,typed_elements );
+                }
+            }
+            break;
+            case (str2int("bool vector")):
+            {
+                std::vector<int> typed_elements;
+                typed_elements.reserve(elements.size());
+                std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
+                        [](std::string const& val) {return str2bool(val);});
+                try{
+                  CVarUtils::CreateCVar<std::vector<int> >(tag+n->name,typed_elements, help );
+                } catch (CVarUtils::CVarException& e){
+                  OUT_LOG(logDEBUG1) << "\t -- Already set, resetting" ;
+                  CVarUtils::SetCVar<std::vector<int> >(tag+n->name,typed_elements);
+                }
+            }
+            break;
             default:
               OUT_LOG(logINFO) << tag+n->name << "<" <<  data_type << "> = " <<  n->content << "\n"  << data_type << " is not a valid type!" ;
               assert(false);

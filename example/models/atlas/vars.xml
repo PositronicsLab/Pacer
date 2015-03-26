@@ -1,16 +1,20 @@
 <XML>
+    <logging type="string">DEBUG1</logging>
+    
+    <robot-model type="string">atlas/model.sdf</robot-model>
+
     <init>
+      <kinematic type="bool">true</kinematic>
+
       <base>
-        <active type="bool">true</active>
         <x type="double">0 0 0.91 0.01 -0.15 0</x>
       </base>
 
       <joint>
-      <id type="string">0r_leg_uhz1 0r_leg_mhx2 0r_leg_lhy3 0r_leg_kny4 0r_leg_uay5 0r_leg_lax6    0l_leg_uhz1 0l_leg_mhx2 0l_leg_lhy3 0l_leg_kny4 0l_leg_uay5 0l_leg_lax6</id>
-      <active type="bool">true true true true false false                                       true true true true false false</active>
+      <id type="string">r_leg_uhz1 r_leg_mhx2 r_leg_lhy3 r_leg_kny4 r_leg_uay5 r_leg_lax6    l_leg_uhz1 l_leg_mhx2 l_leg_lhy3 l_leg_kny4 l_leg_uay5 l_leg_lax6</id>
+      <dofs type="double">1 1 1 1 1 1                             1 1 1 1 1 1</dofs>
 <!--      <q type="double">  0 -0.1 0 0.5 -0.3 0.1                                                            0 0.1 0 0.5 -0.3 -0.1</q>-->
-      <q type="double">  0 -0 0 0.5 -0.3 0                                                            0 0 0 0.5 -0.3 -0</q>
-       <max-torque type="double">500 500 500 500 500 500                                           500 500 500 500 500 500</max-torque>
+      <q type="double">  0 -0 0 0.5 -0.3 0    0 0 0 0.5 -0.3 -0</q>
       </joint>
 
       <end-effector>
@@ -20,84 +24,122 @@
        <x type="double">0 0.06 -0.29    0 -0.06 -0.29</x>
       </end-effector>
     </init>
-
-  <controller>
-  <error-feedback>
-    <active type="bool">true</active>
-    <configuration-space>
-    <id type="string">0r_leg_uhz1 0r_leg_mhx2 0r_leg_lhy3 0r_leg_kny4 0r_leg_uay5 0r_leg_lax6    0l_leg_uhz1 0l_leg_mhx2 0l_leg_lhy3 0l_leg_kny4 0l_leg_uay5 0l_leg_lax6</id>
+  
+  <plugin>
+      <id type="string">  gamepad          waypoints       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller</id>
+      <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so</file>
+      <active type="bool">false            true            true                true            false                   true                       false                      false</active>
+  </plugin>
+  
+  <gamepad>
+      <real-time-factor type="double">1</real-time-factor>
+      <priority type="double">0</priority>
+  </gamepad>
+  
+  <waypoints>
+      <real-time-factor type="double">1</real-time-factor>
+      <priority type="double">0</priority>
+      <max-forward-speed type="double">0.2</max-forward-speed>
+      <max-strafe-speed type="double">0.0</max-strafe-speed>
+      <max-turn-speed type="double">0.0</max-turn-speed>
+      <waypoints type="double">
+          0.06279052 -0.03133330
+          0.36812455 -0.17113678
+          0.63742399 -0.24557181
+          0.84432793 -0.22620676
+          0.96858316 -0.12043842
+          0.99802673  0.03133330
+          0.92977649  0.17113678
+          0.77051324  0.24557181
+          0.53582679  0.22620676
+          0.24868989  0.12043842
+          -0.06279052 -0.03133330
+          -0.36812455 -0.17113678
+          -0.63742399 -0.24557181
+          -0.84432793 -0.22620676
+          -0.96858316 -0.12043842
+          -0.99802673  0.03133330
+          -0.92977649  0.17113678
+          -0.77051324  0.24557181
+          -0.53582679  0.22620676
+          -0.24868989  0.12043842
+      </waypoints>
+  </waypoints>
+  
+  <stand-trajectory>
+      <real-time-factor type="double">1</real-time-factor>
+      <priority type="double">1</priority>
+  </stand-trajectory>
+  
+  <gait-planner>
+      <real-time-factor type="double">1</real-time-factor>
+      <priority type="double">1</priority>
+      <feet type="string">l_foot           r_foot</feet>
+      <stance-on-contact type="bool">false</stance-on-contact>
+      <holonomic type="bool">false</holonomic>
+      <step-height type="double">0.10</step-height>
+      <gait-duration type="double">1.0</gait-duration>
+      <!--trot-->
+      <gait type="double">0.0 0.5</gait>
+      
+      <width type="double">0.2</width>
+      <length type="double">0</length>
+      <height type="double">0.7</height>
+      <duty-factor type="double">0.75 0.75</duty-factor>
+  </gait-planner>
+  
+  <ik-feet>
+      <priority type="double">2</priority>
+      <real-time-factor type="double">1</real-time-factor>
+      <abs-err-tolerance type="double">1e-3</abs-err-tolerance>
+  </ik-feet>
+  
+  <viip-balance>
+      <priority type="double">3</priority>
+      <real-time-factor type="double">1</real-time-factor>
       <active type="bool">true</active>
-      <accel type="bool">true</accel>
-      <!-- Gains are for the q of joint ids respectively -->
-      <force>
-        <gains>
-          <kp type="double">1e3 1e3 1e3 1e3 1e3 1e3         1e3 1e3 1e3 1e3 1e3 1e3   </kp>
-          <kv type="double">1e1 1e1 1e1 1e1 1e1 1e1         1e1 1e1 1e1 1e1 1e1 1e1</kv>
-          <ki type="double">1e-2 1e-2 1e-2 1e-2 1e-2 1e-2   1e-2 1e-2 1e-2 1e-2 1e-2 1e-2</ki>
-        </gains>
-      </force>
-      <accel>
-        <gains>
-          <kp type="double">1e3 1e3 1e3  1e3 1e3 1e3  1e3 1e3 1e3  1e3 1e3 1e3</kp>
-          <kv type="double">1e1 1e1 1e1  1e1 1e1 1e1  1e1 1e1 1e1  1e1 1e1 1e1</kv>
-          <ki type="double">1e0 1e0 1e0  1e0 1e0 1e0  1e0 1e0 1e0  1e0 1e0 1e0</ki>
-        </gains>
-      </accel>
-    </configuration-space>
-    <operational-space>
-      <active type="bool">false</active>
-      <accel type="bool">false</accel>
-      <!-- Gains are for the [X Y Z] of end-effector ids respectively -->
-      <gains>
-        <kp type="double"> 1e4 1e4 1e4     1e4 1e4 1e4</kp>
-        <kv type="double"> 1e2 1e2 1e2     1e2 1e2 1e2</kv>
-        <ki type="double"> 1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
-      </gains>
-    </operational-space>
-  </error-feedback>
-
-  <stabilization>
-    <active type="bool">false</active>
-    <viip>
-      <active type="bool">false</active>
       <accel type="bool">false</accel>
       <des-contact type="bool">false</des-contact>
       <!-- Gains are for the [X Y Z r p y] of base -->
       <gains>
-        <kp type="double"> 1e4 1e4 1e4     1e4 1e4 1e4</kp>
-        <kv type="double"> 1e2 1e2 1e2     1e2 1e2 1e2</kv>
-        <ki type="double"> 1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
+          <kp type="double">0 0 0  0 0 0</kp>
+          <kv type="double">0 0 0  5e1 5e1 0</kv>
+          <ki type="double">0 0 0  0   0   0</ki>
       </gains>
-      <desired>
-        <x type="double">0 0 0  0 0 0</x>
-        <xd type="double">0 0 0  0 0 0</xd>
-      </desired>
-    </viip>
-  </stabilization>
-
-  <inverse-dynamics>
-    <active type="bool">true</active>
-    <dt type="double">0.001</dt>
-    <alpha type="double">1</alpha>
-    <last-cfs type="bool">false</last-cfs>
-    <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">true</des-contact>
-  </inverse-dynamics>
-  </controller>
-
-  <locomotion>
-    <active type="bool">false</active>
-    <stance-on-contact type="bool">false</stance-on-contact>
-    <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.10</step-height>
-    <gait-duration type="double">1.0</gait-duration>
-    <!--trot-->
-    <gait type="double">0.0 0.5</gait>
-    <!--walk-->
-    <command type="double">0.25 0 0   0 0 0</command>
-    <patrol type="double">0 0</patrol>
-    <point type="double">0 0 0</point>
-    <duty-factor type="double">0.5 0.5</duty-factor>
-  </locomotion>
+  </viip-balance>
+  
+  <joint-PID-controller>
+      <priority type="double">4</priority>
+      <real-time-factor type="double">1</real-time-factor>
+      <!-- Gains are for the q of joint ids respectively -->
+      <gains>
+          <kp type="double">1e3 1e3 1e3 1e3 1e3 1e3         1e3 1e3 1e3 1e3 1e3 1e3   </kp>
+          <kv type="double">1e1 1e1 1e1 1e1 1e1 1e1         1e1 1e1 1e1 1e1 1e1 1e1</kv>
+          <ki type="double">1e-2 1e-2 1e-2 1e-2 1e-2 1e-2   1e-2 1e-2 1e-2 1e-2 1e-2 1e-2</ki>
+      </gains>
+  </joint-PID-controller>
+  
+  <eef-PID-controller>
+      <priority type="double">4</priority>
+      <real-time-factor type="double">1</real-time-factor>
+      <id type="string">l_foot           r_foot</id>
+      <!-- Gains are for the q of joint ids respectively -->
+      <gains>
+          <kp type="double"> 1e4 1e4 1e4     1e4 1e4 1e4</kp>
+          <kv type="double"> 1e2 1e2 1e2     1e2 1e2 1e2</kv>
+          <ki type="double"> 1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
+      </gains>
+  </eef-PID-controller>
+  
+  <idyn-controller>
+      <priority type="double">4</priority>
+      <real-time-factor type="double">1</real-time-factor>
+      <dt type="double">0.001</dt>
+      <alpha type="double">1</alpha>
+      <last-cfs type="bool">false</last-cfs>
+      <last-cfs-filter type="bool">false</last-cfs-filter>
+      <des-contact type="bool">true</des-contact>
+      <type type="string">AP</type>
+  </idyn-controller>
 
 </XML>

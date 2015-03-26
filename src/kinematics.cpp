@@ -154,8 +154,7 @@ Ravelin::VectorNd& Robot::link_kinematics(const Ravelin::VectorNd& x,const end_e
 
 
 /// 6d IK
-void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des){
-  /*
+void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des, double TOL){
   Ravelin::MatrixNd J;
   Ravelin::VectorNd x(foot.chain.size());
   Ravelin::VectorNd step(foot.chain.size());
@@ -172,7 +171,7 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   err = step.norm();
   OUTLOG(goal,"goal",logDEBUG1);
 
-  while(err > 1e-3  && err < last_err){
+  while(err > TOL){
     // update error
     last_err = err;
     OUTLOG(step,"xstep",logDEBUG1);
@@ -193,8 +192,6 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
       while (link_kinematics((x = xx) += ((workv_ = qstep)*= alpha)      ,foot,base_frame,goal,fk1,workM_).norm() >
              link_kinematics((x = xx) += ((workv_ = qstep)*= alpha*beta) ,foot,base_frame,goal,fk1,workM_).norm()){
         alpha = alpha*beta;
-        if(alpha < 1e-4)
-          break;
       }
       x = xx;
     }
@@ -210,15 +207,16 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
     OUTLOG(err,"err",logDEBUG1);
 
     // if error increases, backstep then return
-    if(err > last_err)
+    if(err > last_err){
       x -= ( (workv_ = qstep)*= alpha );
+      break;
+    }
   }
 
   OUTLOG(err,"final_err",logDEBUG1);
 
   for(int k=0;k<foot.chain.size();k++)
     q_des[foot.chain[k]] = x[k];
-    */
 }
 
 
@@ -290,7 +288,7 @@ void Robot::end_effector_inverse_kinematics(
     OUTLOG(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(foot.link->get_pose())),foot.id + "_x",logDEBUG1);
     OUTLOG(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]),foot.id + "_x_des",logDEBUG1);
     RMRC(foot,q,foot_pos[i],q_des,TOL);
-    //RMRC(foot,q,Ravelin::VectorNd(6,Ravelin::SVector6d(foot_pos[i],Ravelin::Vector3d::zero()).data()),q_des);
+//    RMRC(foot,q,Ravelin::VectorNd(6,Ravelin::SVector6d(foot_pos[i],Ravelin::Vector3d::zero()).data()),q_des,TOL);
     OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
 
     // Calc jacobian for AB at this EEF

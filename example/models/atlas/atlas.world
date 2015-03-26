@@ -3,11 +3,11 @@
   <world name="default">
     <!-- Ground -->
     <include>
-      <uri>model://atlas_legs</uri>
+      <uri>model://ground_plane</uri>
     </include>
     <!-- Links (Lynx) model -->
     <include>
-      <uri>model://lynx</uri>
+      <uri>model://atlas</uri>
       <pose>0 0 0 0 0 0</pose>
     </include>
     <!-- A global light source -->

@@ -8,11 +8,13 @@
 using namespace Pacer;
 
 static Ravelin::Vector3d workv3_;
+static Ravelin::VectorNd q;
 
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
   boost::shared_ptr<Ravelin::Pose3d> base_frame;
   std::string plugin_namespace;
   std::vector<std::string> foot_names;
+
 
   /*
 void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
@@ -331,16 +333,25 @@ void walk_toward(
       Ravelin::Origin3d x0 = origins[i].data();
 
       Ravelin::Vector3d foot_goal(command[0],command[1],0,foot_frame);
-      xd_stance[i] = -Ravelin::Vector3d(foot_goal.data());
-
+      
+      Ravelin::VectorNd generalized_command, foot_vel;
+      generalized_command.set_zero(q.rows() - Pacer::NEULER + Pacer::NSPATIAL);
+        generalized_command.set_sub_vec(generalized_command.rows() - Pacer::NSPATIAL,command);
+        
+        Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,foot_names[i]);
+        
+      J.mult(generalized_command,foot_vel,-1.0,0);
+        xd_stance[i] = Ravelin::Vector3d(foot_vel.segment(0,3).data());
+        
       if(fabs(command[5]) > Moby::NEAR_ZERO){
         // Determine shape of step needed to yaw robot
         Ravelin::Origin3d rotation_axis = Ravelin::Origin3d(0,0,1);
 
-        // Foot velocity to perform Ackerman steering
-        Ravelin::Origin3d turn_origin = Ravelin::Origin3d::cross(rotation_axis,Ravelin::Origin3d(foot_goal.data())) * Utility::sign(command[5]);
-        Ravelin::Origin3d foot_radius = turn_origin + Ravelin::Origin3d(origins[i]); 
-        xd_stance[i] *= -foot_radius.norm()/turn_origin.norm(); 
+//        // Foot velocity to perform Ackerman steering
+//        Ravelin::Origin3d body_origin = -Ravelin::Origin3d::cross(rotation_axis,Ravelin::Origin3d(foot_goal.data())) * command[5];
+//        Ravelin::Origin3d foot_origin = turn_origin + Ravelin::Origin3d(origins[i]);
+//          OUTLOG(body_origin,"body_origin",logDEBUG);
+//          OUTLOG(foot_origin,"foot_origin",logDEBUG);
 
         Ravelin::AAngled aa_gamma(Ravelin::Vector3d(rotation_axis,turning_frame),command[5] *  left_in_phase*gait_duration);
         OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
@@ -464,6 +475,7 @@ void walk_toward(
     xdd.pose = foot_acc[i].pose;
   }
 
+#ifndef NDEBUG
 ///* VISUALIZE
   {
 
@@ -493,7 +505,7 @@ void walk_toward(
   }
   }
 //  END VISUALIZE */
-
+#endif
   last_time = t;
   inited = true;
   OUT_LOG(logDEBUG) << " -- walk_toward() exited";
@@ -530,7 +542,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       foot_vel(NUM_FEET),
       foot_pos(NUM_FEET),
       foot_acc(NUM_FEET);
-  ctrl->set_model_state(ctrl->get_generalized_value(Pacer::Robot::position));
+  q = ctrl->get_generalized_value(Pacer::Robot::position);
+  
+  ctrl->set_model_state(q);
   for(int i=0;i<NUM_FEET;i++){
     foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,ctrl->get_link(foot_names[i])->get_pose()));
     foot_vel[i] = Ravelin::Vector3d(0,0,0,base_frame);
@@ -550,7 +564,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         //origins[i] = foot_pos[i];
     }
   }
-
 
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);

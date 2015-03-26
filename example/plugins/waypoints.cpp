@@ -42,13 +42,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     // if FALSE, drive like a car (x and theta)
     // Q: if TRUE, turn toward waypoint while stepping in direction of waypoint
     bool HOLONOMIC = false;
-    command[X] = max_forward_speed; 
-    command[Y] = max_strafe_speed; 
-    command[THETA] = max_turn_speed; 
-    
-    static int& drive_robot = Utility::get_variable<int>(plugin_namespace+"control");
 
-    if(!drive_robot){
     /////////////////////////////////////
     /// Assign WAYPOINTS in the plane ///
     static std::vector<Point> waypoints;
@@ -130,7 +124,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
         command[X] = 0;
         command[Y] = 0;
       }
-    }
     }
     Ravelin::Origin3d command_SE2(command[X],command[Y],command[THETA]);
     ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);

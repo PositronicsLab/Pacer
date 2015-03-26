@@ -29,16 +29,19 @@
 
  
   <plugin>
-    <id type="string">  drive-robot       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller</id>
-    <file type="string">libdrive-robot.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so</file>
-    <active type="bool">true              true                true            false                   true                       false                      false</active>
+    <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller</id>
+    <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so</file>
+    <active type="bool">false            false           true                true            false                   true                       false                      false</active>
   </plugin>
   
-  
-  <drive-robot>
+  <gamepad>
      <real-time-factor type="double">1</real-time-factor>
-     <control type="bool">true</control>
-     <priority type="double">1</priority>
+     <priority type="double">0</priority>
+ </gamepad>
+
+  <waypoints>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">0</priority>
      <max-forward-speed type="double">0.2</max-forward-speed>
      <max-strafe-speed type="double">0.0</max-strafe-speed>
      <max-turn-speed type="double">0.0</max-turn-speed>
@@ -64,7 +67,7 @@
 	-0.53582679  0.22620676 
   -0.24868989  0.12043842
     </waypoints>
-  </drive-robot>
+  </waypoints>
   
   <stand-trajectory>
      <real-time-factor type="double">1</real-time-factor>

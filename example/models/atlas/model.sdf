@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <sdf version='1.5'>
   <model name='ROBOT'>
-  <plugin name="PacerPlugin" filename="/usr/local/lib/libPacerGazeboPlugin.so"/>
+  <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.dylib"/>
   <pose>0 0 1 0 -0 0</pose>
     <link name='BODY0'>
       <pose>0 0 0 0 -0 0</pose>

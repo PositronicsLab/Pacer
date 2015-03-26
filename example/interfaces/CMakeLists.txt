@@ -31,7 +31,7 @@ ENDIF(GAZEBO_FOUND)
 
 # look for DXL
 find_package(DXL)
-IF(USE_DXL AND DXL_FOUND)
+IF(DXL_FOUND)
   add_executable(PacerMotorDriver ${CMAKE_SOURCE_DIR}/example/interfaces/motor.cpp)
   target_link_libraries(PacerMotorDriver ${REQLIBS} dxl)
-ENDIF(USE_DXL AND DXL_FOUND)
+ENDIF(DXL_FOUND)

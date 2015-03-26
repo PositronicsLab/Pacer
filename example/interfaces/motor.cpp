@@ -4,6 +4,9 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
+#include <thread>
+
+#define USE_DXL
 
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
@@ -13,19 +16,27 @@
 
 using Pacer::Controller;
 using Pacer::Robot;
-using Pacer::EndEffector;
 
 boost::shared_ptr<Controller> robot_ptr;
 unsigned NDOFS;
 
-#ifdef DRIVE_ROBOT
-extern void controller(double time,
-                       const Ravelin::VectorNd& q,
-                       const Ravelin::VectorNd& qd,
-                       Ravelin::VectorNd& command,
-                       boost::shared_ptr<Ravelin::Pose3d>& pose,
-                       Ravelin::VectorNd& params);
-#endif
+static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
+static bool joint_data_lock_ = false;
+static double FREQ = 500;
+static void control_motor(){
+  while(true){
+    static Ravelin::VectorNd q_motors,qd_motors,u_motors;
+    if(!joint_data_lock_){
+      q_motors = q_motors_data;
+      qd_motors = qd_motors_data;
+      u_motors = u_motors_data;
+    }
+ 
+    dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
+//    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
+    sleep(1.0/FREQ);
+  }
+}
 
 // ============================================================================
 // ================================ INIT ======================================
@@ -33,8 +44,6 @@ extern void controller(double time,
 
 void init(std::string model_f,std::string vars_f){
   std::cout << "STARTING PACER" << std::endl;
-  std::cout << "Robot:" << model_f << std::endl;
-  std::cout << "Variables:" << vars_f << std::endl;
 #ifdef USE_DXL
   // If use robot is active also init dynamixel controllers
   dxl_ = new DXL::Dynamixel(DEVICE_NAME);
@@ -42,46 +51,24 @@ void init(std::string model_f,std::string vars_f){
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
+    std::cout << "STARTING ROBOT" << std::endl;
 
-  robot_ptr = boost::shared_ptr<Controller>(new Controller(model_f,vars_f));
+  robot_ptr = boost::shared_ptr<Controller>(new Controller());
+    
+    robot_ptr->init();
+    std::cout << "ROBOT INITED" << std::endl;
 
-//  detect current configuration, then have robot start from there
-
-  // Have robot start from desired initial configuration
-  std::vector<Moby::JointPtr> joints = robot_ptr->get_joints();
-  Moby::RCArticulatedBodyPtr abrobot = robot_ptr->get_articulated_body();
-
-  std::map<std::string,double> q0 = robot_ptr->get_q0();
-
-  std::vector<double>
-      workvd,
-      base_start = Utility::get_variable("init.base.x",workvd);
-
-  Ravelin::VectorNd q_start;
-  abrobot->get_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
-  NDOFS = abrobot->num_generalized_coordinates(Moby::DynamicBody::eSpatial) - 6;
-
-
-  for(unsigned i=NDOFS;i<q_start.rows();i++)
-    q_start[i] = base_start[i-NDOFS];
-
-  abrobot->set_generalized_coordinates(Moby::DynamicBody::eSpatial,q_start);
-  abrobot->update_link_poses();
-  for(int i=0,ii=0;i<joints.size();i++){
-    for(int j=0;j<joints[i]->num_dof();j++,ii++){
-      joints[i]->q[j] = q0[std::to_string(j)+joints[i]->id];
-    }
-  }
-  abrobot->update_link_poses();
-
+    robot_ptr->set_generalized_value(Pacer::Robot::position_goal,robot_ptr->get_generalized_value(Pacer::Robot::position));
+    robot_ptr->set_generalized_value(Pacer::Robot::velocity_goal,robot_ptr->get_generalized_value(Pacer::Robot::velocity));
+    robot_ptr->set_generalized_value(Pacer::Robot::acceleration_goal,robot_ptr->get_generalized_value(Pacer::Robot::acceleration));
 #ifdef USE_DXL
   // LINKS robot
 
   // Set Dynamixel Names
   std::vector<std::string> dxl_name = boost::assign::list_of
-     ("0LF_X_1")("0RF_X_1")("0LH_X_1")("0RH_X_1")
-     ("0LF_Y_2")("0RF_Y_2")("0LH_Y_2")("0RH_Y_2")
-     ("0LF_Y_3")("0RF_Y_3")("0LH_Y_3")("0RH_Y_3");
+     ("LF_X_1")("RF_X_1")("LH_X_1")("RH_X_1")
+     ("LF_Y_2")("RF_Y_2")("LH_Y_2")("RH_Y_2")
+     ("LF_Y_3")("RF_Y_3")("LH_Y_3")("RH_Y_3");
 
   dxl_->names = dxl_name;
   // Set Joint Angles
@@ -103,6 +90,12 @@ void init(std::string model_f,std::string vars_f){
   for(int i=1;i<=dxl_->names.size();i++){
     dxl_->ids.push_back(i);
   }
+    q_motors_data.set_zero(dxl_->ids.size());
+    qd_motors_data.set_zero(dxl_->ids.size());
+    u_motors_data.set_zero(dxl_->ids.size());
+    
+    dxl_->relaxed(false);
+
 #endif
 }
 
@@ -110,55 +103,37 @@ void controller(double t)
 {
   static double last_t = -0.001;
   double dt = t-last_t;
-  static Ravelin::VectorNd generalized_qdd,generalized_qd,generalized_q,generalized_fext;
-  Moby::ArticulatedBodyPtr abrobot = robot_ptr->get_articulated_body();
-
-  static bool inited = false;
-  if(!inited){
-    inited= true;
-    abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,generalized_q);
-    abrobot->get_generalized_velocity(Moby::DynamicBody::eSpatial,generalized_qd);
-    std::vector<Moby::JointPtr> joints = robot_ptr->get_joints();
-    generalized_qdd.set_zero(generalized_qd.size());
-    generalized_fext.set_zero(generalized_qd.size());
-  }
 
 //  static Ravelin::VectorNd  generalized_qd_last = generalized_qd;
 //  //NOTE: Pre-contact    abrobot->get_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
 //  ((generalized_qdd = generalized_qd) -= generalized_qd_last) /= dt;
 //  generalized_qd_last = generalized_qd;
 
+  robot_ptr->set_generalized_value(Pacer::Robot::position,robot_ptr->get_generalized_value(Pacer::Robot::position_goal));
+  robot_ptr->set_generalized_value(Pacer::Robot::velocity,robot_ptr->get_generalized_value(Pacer::Robot::velocity_goal));
+  robot_ptr->set_generalized_value(Pacer::Robot::acceleration,robot_ptr->get_generalized_value(Pacer::Robot::acceleration_goal));
 
-  static Ravelin::VectorNd q_des,
-                          qd_des,
-                          qdd_des;
-  static Ravelin::VectorNd u;
+  robot_ptr->control(t);
 
-#ifdef DRIVE_ROBOT
-  controller(t,generalized_q,generalized_qd,robot_ptr->movement_command,robot_ptr->gait_pose,robot_ptr->gait_params);
-#endif
-  robot_ptr->control(t,generalized_q,generalized_qd,generalized_qdd,generalized_fext,q_des,qd_des,qdd_des,u);
-
-  generalized_q.set_sub_vec(0,q_des);
-  generalized_qd.set_sub_vec(0,qd_des);
-  generalized_qdd.set_sub_vec(0,qd_des);
 #ifdef USE_DXL
-    Ravelin::VectorNd q_motors(dxl_->ids.size()),qd_motors(dxl_->ids.size()),u_motors(dxl_->ids.size());
-    q_motors.set_zero();
-    qd_motors.set_zero();
-    u_motors.set_zero();
+  {
+    joint_data_lock_ = true;
 
 //    for(int i=0;i<DXL::N_JOINTS;i++)
 //      qd_motors[i] = robot_ptr->qd_joints[dxl_->JointName(i)];
 
-    for(int i=0;i<dxl_->ids.size();i++)
-      q_motors[i] = robot_ptr->q_joints[dxl_->JointName(i)];
-    dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
+    std::map<std::string,Ravelin::VectorNd> joint_val_map;
+    robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_val_map);
 
     for(int i=0;i<dxl_->ids.size();i++)
-      u_motors[i] = robot_ptr->u_joints[dxl_->JointName(i)];
-//    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
+      q_motors_data[i] = joint_val_map[dxl_->JointName(i)][0];
+
+    //for(int i=0;i<dxl_->ids.size();i++)
+    //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
+    joint_data_lock_ = false;
+  }
 #endif
+  static std::thread motor_thread(control_motor);
 
     last_t = t;
 }
@@ -186,7 +161,7 @@ int main(int argc, char* argv[])
 //  struct timeval start_t, now_t;
 //  gettimeofday(&start_t, NULL);
   while(t<max_time){
-    t+=0.001;
+    t += 1.0/FREQ * 2.5;
 //    gettimeofday(&now_t, NULL);
 //    double t = (now_t.tv_sec - start_t.tv_sec) + (now_t.tv_usec - start_t.tv_usec) * 1E-6;
     controller(t);

@@ -241,40 +241,43 @@ class Joystick
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // SDL2 will only report events when the window has focus, so set
   // this hint as we don't have a window
-  static Joystick j = Joystick(0);
-
-  j.update();
+  try {
+    static Joystick j = Joystick(0);
  
-  double max_forward_speed = 0.2;
-  double max_strafe_speed = 0.05;
-  double max_turn_speed = 1;
-  Ravelin::Origin3d command_SE2(0,0,0);
-
-  int i; // strafe
-  {
-    i = 0;
-    if(j.axes[i] == 128)
-      command_SE2[1] = 0;
-    else
-      command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) 32767;
+    j.update();
+  
+    double max_forward_speed = 0.2;
+    double max_strafe_speed = 0.05;
+    double max_turn_speed = 1;
+    Ravelin::Origin3d command_SE2(0,0,0);
+ 
+    int i; // strafe
+    {
+      i = 0;
+      if(j.axes[i] == 128)
+        command_SE2[1] = 0;
+      else
+        command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) 32767;
+    }
+    {
+      i = 1; // forward
+      if(j.axes[i] == 128)
+        command_SE2[0] = 0;
+      else
+        command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) 32767;
+    }
+    {
+      i = 2; // turn
+      if(j.axes[i] == 128)
+        command_SE2[2] = 0;
+      else
+        command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) 32767;
+    }
+    ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
+  
+  } catch(std::exception& e){
+      exit(0);
   }
-  {
-    i = 1; // forward
-    if(j.axes[i] == 128)
-      command_SE2[0] = 0;
-    else
-      command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) 32767;
-  }
-  {
-    i = 2; // turn
-    if(j.axes[i] == 128)
-      command_SE2[2] = 0;
-    else
-      command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) 32767;
-  }
-
-  ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
-
 }
 
 /** This is a quick way to register your plugin function of the form:

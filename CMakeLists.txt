@@ -70,7 +70,6 @@ option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)
   option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
-  option(USE_DXL "use dynamixel drivers" OFF)
   #option(CONSOLE "Display a Console window for controlling robot XML parameters inline" OFF)
 
 

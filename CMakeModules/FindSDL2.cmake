@@ -28,7 +28,7 @@ if( SDL2_INCLUDE_DIR )
     set(SDL2_LIBRARIES ${SDL2_LIBRARY})
   endif(SDL2_LIBRARY)
 else(SDL2_INCLUDE_DIR)
-  message(FATAL_ERROR "FindSDL2: Could not find SDL.h")
+  message(STATUS "FindSDL2: Could not find SDL.h")
 endif(SDL2_INCLUDE_DIR)
 	    
 if(SDL2_FOUND)

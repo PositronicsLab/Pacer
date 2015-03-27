@@ -28,7 +28,7 @@ if( CURSES_INCLUDE_DIR )
     set(CURSES_LIBRARIES ${CURSES_LIBRARY})
   endif(CURSES_LIBRARY)
 else(CURSES_INCLUDE_DIR)
-  message(FATAL_ERROR "Findcurses: Could not find curses.h")
+  message(STATUS "Findcurses: Could not find curses.h")
 endif(CURSES_INCLUDE_DIR)
 	    
 if(CURSES_FOUND)

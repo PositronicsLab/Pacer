@@ -249,6 +249,16 @@ void Robot::update(){
   set_data<Ravelin::VectorNd>("generalized_qdd", generalized_qdd);
   set_data<Ravelin::VectorNd>("generalized_fext", generalized_fext);
 
+  Ravelin::Vector3d workv;
+  workv = Ravelin::Vector3d(generalized_qd.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose());
+  set_data<Ravelin::Vector3d>("base.xd", workv);
+  workv = Ravelin::Vector3d(generalized_qd.segment(NUM_JOINT_DOFS+3, NUM_JOINT_DOFS+NSPATIAL).data(), _abrobot->get_gc_pose());
+  set_data<Ravelin::Vector3d>("base.omega", workv);
+  workv = Ravelin::Vector3d(generalized_qdd.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose()); 
+  set_data<Ravelin::Vector3d>("base.xdd", workv);
+  workv = Ravelin::Vector3d(generalized_qdd.segment(NUM_JOINT_DOFS+3, NUM_JOINT_DOFS+NSPATIAL).data(), _abrobot->get_gc_pose());
+  set_data<Ravelin::Vector3d>("base.alpha", workv);
+
   Ravelin::VectorNd q = generalized_q.segment(0,NUM_JOINT_DOFS); 
   Ravelin::VectorNd qd = generalized_qd.segment(0,NUM_JOINT_DOFS);
   Ravelin::VectorNd qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);

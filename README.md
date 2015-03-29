@@ -49,7 +49,7 @@ $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so mode
 - OpenSceneGraph
 - [GLConsole] 
 - [DXL]
-- [SDL] (permits joystick control)
+- SDL (permits joystick control)
 
 [Ravelin]: https://github.com/PositronicsLab/Ravelin
 [Moby]: https://github.com/PositronicsLab/Moby

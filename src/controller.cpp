@@ -53,6 +53,10 @@ bool Controller::init_plugins(){
   for(unsigned i=0;i<plugin_names.size();i++){
     if(plugin_active[i] == 0) continue;
     std::string filename = plugin_files[i];
+
+  if (!getenv("PACER_PLUGIN_PATH"))
+    throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
+
     std::string pPath(getenv("PACER_PLUGIN_PATH"));
     std::string lib_path = pPath+"/"+filename;
     OUT_LOG(logINFO) << "Loading Plugin: " << plugin_names[i];

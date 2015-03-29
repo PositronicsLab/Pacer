@@ -27,10 +27,11 @@ target_link_libraries(hopper-controller ${REQLIBS})
 
 find_package(SDL2)
 find_package(curses)
+
 IF(SDL2_FOUND)
-  IF(CURSES_FOUND)
+  IF(CURSES_FOUND AND USE_CURSES)
     add_definitions( -DUSE_CURSES )
-  ENDIF(CURSES_FOUND)
+  ENDIF()
   add_library(gamepad MODULE gamepad.cpp)
   target_link_libraries(gamepad ${REQLIBS} ${SDL2_LIBRARIES} ${CURSES_LIBRARIES})
 ENDIF(SDL2_FOUND)

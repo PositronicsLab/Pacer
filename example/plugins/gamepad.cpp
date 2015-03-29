@@ -18,7 +18,9 @@
 
 #include <SDL2/SDL.h>
 #include <assert.h>
+#ifdef USE_CURSES
 #include <curses.h>
+#endif
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -29,6 +31,7 @@
 #include <Pacer/utilities.h>
 std::string plugin_namespace;
 
+#ifdef USE_CURSES
 void print_bar(int pos, int len)
 {
   addch('[');
@@ -41,6 +44,7 @@ void print_bar(int pos, int len)
   }
   addch(']');
 }
+#endif
 
 int str2int(const char* str, int* val)
 {

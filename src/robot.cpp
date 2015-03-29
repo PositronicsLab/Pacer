@@ -341,6 +341,10 @@ void Robot::update_poses(){
  void Robot::init_robot(){
   OUT_LOG(logDEBUG) << ">> Robot::init_robot(.)";
   // ================= LOAD SCRIPT DATA ==========================
+
+  if (!getenv("PACER_MODEL_PATH"))
+    throw std::runtime_error("Environment variable PACER_MODEL_PATH not defined");
+
   std::string pPath(getenv ("PACER_MODEL_PATH"));
   OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
 

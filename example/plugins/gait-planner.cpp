@@ -340,8 +340,8 @@ void walk_toward(
         
         Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,foot_names[i]);
         
-      J.mult(generalized_command,foot_vel,-1.0,0);
-        xd_stance[i] = Ravelin::Vector3d(foot_vel.segment(0,3).data());
+      J.mult(generalized_command,foot_vel,1.0,0);
+      xd_stance[i] = Ravelin::Vector3d(foot_vel.segment(0,3).data());
         
       if(fabs(command[5]) > Moby::NEAR_ZERO){
         // Determine shape of step needed to yaw robot

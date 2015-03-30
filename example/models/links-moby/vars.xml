@@ -13,7 +13,7 @@
     <joint>
     <id type="string">LF_X_1 LF_Y_2 LF_Y_3  RF_X_1 RF_Y_2 RF_Y_3   LH_X_1 LH_Y_2 LH_Y_3   RH_X_1 RH_Y_2 RH_Y_3</id>
     <dofs type="double">1 1 1   1 1 1  1 1 1  1 1 1</dofs>
-    <!--    <q type="double">  0.3927 0.7854 1.5708           -0.3927 -0.7854 -1.5708         -0.3927 -0.7854 -1.5708          0.3927 0.7854 1.5708 </q> -->
+    <!--     <q type="double">  0.3927 0.7854 1.5708           -0.3927 -0.7854 -1.5708         -0.3927 -0.7854 -1.5708          0.3927 0.7854 1.5708 </q> -->
 <!--    <q type="double">  0.1 0.7854 1.5708           -0.1 -0.7854 -1.5708         -0.1 -0.6 -1.5708          0.1 0.6 1.5708 </q>-->
 <!--real robot    -->
     <q type="double">  0.1 0.8 1.2           -0.1 -0.8 -1.2         -0.1 -0.8 -1.2          0.1 0.8 1.2 </q>
@@ -42,8 +42,8 @@
   <waypoints>
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">0</priority>
-     <max-forward-speed type="double">0.2</max-forward-speed>
-     <max-strafe-speed type="double">0.1</max-strafe-speed>
+     <max-forward-speed type="double">0.1</max-forward-speed>
+     <max-strafe-speed type="double">0.05</max-strafe-speed>
      <max-turn-speed type="double">1</max-turn-speed>
      <waypoints type="double">
    0.06279052 -0.03133330 

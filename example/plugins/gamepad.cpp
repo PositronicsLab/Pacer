@@ -16,6 +16,7 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 // 02111-1307, USA.
 
+#undef USE_CURSES
 #include <SDL2/SDL.h>
 #include <assert.h>
 #ifdef USE_CURSES
@@ -250,8 +251,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
  
     j.update();
   
-    double max_forward_speed = 0.2;
-    double max_strafe_speed = 0.05;
+    double max_forward_speed = 10;
+    double max_strafe_speed = 10;
     double max_turn_speed = 1;
     Ravelin::Origin3d command_SE2(0,0,0);
  

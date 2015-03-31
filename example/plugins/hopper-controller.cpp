@@ -25,11 +25,12 @@ void footIK(const Vector3d& foot_pos, Origin3d& joint_pos){
 
   //r = sqrt(x^2 + y^2 + z^2)
   joint_pos[PISTON_JOINT] = std::sqrt(foot_pos[0]*foot_pos[0] + foot_pos[1]*foot_pos[1] + foot_pos[2]*foot_pos[2]);
-  //theta = acos(z/r)
-  joint_pos[ROLL_JOINT] = std::acos(foot_pos[0]/joint_pos[PISTON_JOINT]);
-//  th[1] = atan2(foot_pos[1],-foot_pos[0]);
-  // Phi  = atan(y/x)
-  joint_pos[PITCH_JOINT] = std::atan2(foot_pos[1],-foot_pos[2]);
+  
+  //theta = acos(x/r)
+  joint_pos[PITCH_JOINT] = std::acos(foot_pos[0]/joint_pos[PISTON_JOINT]) - M_PI_2;
+  
+  // Phi  = atan(y/z)
+  joint_pos[ROLL_JOINT] = std::atan2(foot_pos[1],-foot_pos[2]);
 }
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
@@ -162,6 +163,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
   // project the base frame to the ground plane 
   Vector3d neutral_foot_position = Vector3d(base_frame->x[0],base_frame->x[1],0,GLOBAL) + lvel0*duration_of_stance/2.0; // neutral_foot_position
+  neutral_foot_position[VERT_DIM] = 0;
 
   // Perform controller action based on mode
   switch(hopper_state){
@@ -194,17 +196,19 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     // get the forward foot position from neutral
     Ravelin::Vector3d forward_foot_position = neutral_foot_position +
                                               k_xd*(lvel0 - xd_des);
-
+    forward_foot_position[VERT_DIM] = neutral_foot_position[VERT_DIM];
     // get the desired foot position 
     Vector3d foot_pos = base_frame->inverse_transform_point(forward_foot_position);
 
+    OUTLOG(foot_pos,"foot_pos", logDEBUG1);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(forward_foot_position,Vector3d(base_frame->x.data()),   Ravelin::Vector3d(0,1,0),0.1)));
     // do IK to get the joint angle for the desired foot position
     Origin3d joint_pos;
     footIK(foot_pos,joint_pos);
-    joint_pos[PISTON_JOINT] = 1.0;   // set the piston to fully extended
+    // set the piston to fully extended in direction of goal point
+    joint_pos[PISTON_JOINT] = 1.0;   
 
     // log foot position 
-    OUTLOG(foot_pos,"foot_pos", logDEBUG1);
     OUTLOG(joint_pos,"joint_pos", logDEBUG1);
 
     for(int i=0;i<joint_names.size();i++)

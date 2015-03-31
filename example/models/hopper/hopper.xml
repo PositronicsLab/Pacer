@@ -35,7 +35,7 @@
     <DisabledPair object1-id="ground" object2-id="ROLL_LINK" />
     <DisabledPair object1-id="ground" object2-id="LEG" />
     <DisabledPair object1-id="ground" object2-id="BASE" />
-    <ContactParameters object1-id="FOOT" object2-id="ground" mu-coulomb="10" mu-viscous="0" epsilon="0.0"/>
+    <ContactParameters object1-id="hopper" object2-id="ground" mu-coulomb="10" mu-viscous="0" epsilon="0.0"/>
   </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
@@ -78,8 +78,8 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-  <Box id="globe" xlen="10" ylen="10" zlen="0.1" />
-  <Plane id="plane" aangle="1 0 0 1.5707963267949" />
+  <Box id="globe" rpy="1.5707963267949 0 0" xlen="10" ylen="0.1" zlen="10" />
+  <Plane id="plane" rpy="1.5707963267949 0 0" />
 <!--  <Sphere id="globe" radius="100" />-->
 
   <RigidBody id="ground" enabled="false"

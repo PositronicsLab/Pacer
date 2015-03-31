@@ -17,26 +17,32 @@
     <GravityForce id="gravity" accel="0 0 -9.81" />
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
+<!--
     <CollisionDetectionPlugin id="simpleccd" plugin="../libHopperColdetPlugin.so" >
       <Body body-id="hopper" />
       <Body body-id="ground" />
       <DisabledPair object1-id="hopper" object2-id="hopper"/>
     </CollisionDetectionPlugin>
+-->
 
-  <EventDrivenSimulator integrator-id="rkf" collision-detector-id="simpleccd">
+  <EventDrivenSimulator integrator-id="rkf">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="hopper" object2-id="hopper"/>
     <DynamicBody dynamic-body-id="hopper" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="hopper" object2-id="ground" mu-coulomb="10" mu-viscous="0" epsilon="0.0"/>
+    <DisabledPair object1-id="ground" object2-id="PITCH_LINK" />
+    <DisabledPair object1-id="ground" object2-id="ROLL_LINK" />
+    <DisabledPair object1-id="ground" object2-id="LEG" />
+    <DisabledPair object1-id="ground" object2-id="BASE" />
+    <ContactParameters object1-id="FOOT" object2-id="ground" mu-coulomb="10" mu-viscous="0" epsilon="0.0"/>
   </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
     <Box id="base" xlen="1" ylen="1" zlen="0.25" mass="10"/>
     <Box id="joint" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.1"/>
     <!-- Leg Primitives -->
-    <Box id="leg" xlen="1" ylen="0.03" zlen="0.03" mass="0.3"/>
+    <Box id="leg" xlen=".03" ylen="0.03" zlen="1" mass="0.3"/>
     <Sphere id="foot" radius="0.03" mass="0.05" num-points="100"/>
 
     <RCArticulatedBody id="hopper" floating-base="true" fdyn-algorithm="crb"
@@ -58,14 +64,14 @@
         <CollisionGeometry primitive-id="joint" />
         <InertiaFromPrimitive primitive-id="joint" />
       </RigidBody>
-      <PrismaticJoint id="PISTON_JOINT" q-tare="0" location="0 0 0" inboard-link-id="PITCH_LINK" outboard-link-id="LEG" axis="1 0 0" />
-      <RigidBody id="LEG" position="-0.5 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg">
+      <PrismaticJoint id="PISTON_JOINT" q="0" q-tare="0" location="0 0 0" inboard-link-id="PITCH_LINK" outboard-link-id="LEG" axis="0 0 -1" lower-limits="0" upper-limits="1" />
+      <RigidBody id="LEG" position="0 0 0.375" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="leg">
         <CollisionGeometry primitive-id="leg" />
         <InertiaFromPrimitive primitive-id="leg" />
       </RigidBody>
 
       <FixedJoint id="ANKLE" location="0 0 0" inboard-link-id="LEG" outboard-link-id="FOOT" />
-      <RigidBody id="FOOT" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot">
+      <RigidBody id="FOOT" position="0 0 -.125" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="foot">
         <CollisionGeometry primitive-id="foot" />
         <InertiaFromPrimitive primitive-id="foot" />
       </RigidBody>
@@ -73,11 +79,12 @@
 
   <!-- setup the platform rigid body; it is not active -->
   <Box id="globe" xlen="10" ylen="10" zlen="0.1" />
+  <Plane id="plane" aangle="1 0 0 1.5707963267949" />
 <!--  <Sphere id="globe" radius="100" />-->
 
   <RigidBody id="ground" enabled="false"
     position="0 0 -0.05" visualization-id="globe">
-    <CollisionGeometry primitive-id="globe" />
+    <CollisionGeometry primitive-id="plane" />
   </RigidBody>
 
   </MOBY>

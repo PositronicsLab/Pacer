@@ -35,7 +35,7 @@ void footIK(const Vector3d& foot_pos, Origin3d& joint_pos){
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
-  const unsigned ROLL = 2, PITCH = 1, YAW = 0, VERT_DIM = 2;
+  const unsigned ROLL = 0, PITCH = 1, YAW = 2, VERT_DIM = 2;
   const double NEAR_MAX_PISTON_LEN = 0.97;
   const double COMPRESSION_PISTON_LEN = 0.95;
   const double THRUST_PISTON_LEN = 0.8;
@@ -183,15 +183,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   case eCompression:
     OUT_LOG(logERROR) << "COMPRESSION PHASE";
     //// UPPER LEG CHAMBER SEALED & SERVO BODY ATTITUDE WITH HIP
-    qd_des[ROLL_JOINT] = -AKv*roll_pitch_yaw[ROLL]/dt;
-    qd_des[PITCH_JOINT] = -AKv*roll_pitch_yaw[PITCH]/dt;
+    qd_des[ROLL_JOINT] = AKv*roll_pitch_yaw[ROLL]/dt;
+    qd_des[PITCH_JOINT] = AKv*roll_pitch_yaw[PITCH]/dt;
     qd_des[PISTON_JOINT] = 0;
     break;
   case eThrust:
     OUT_LOG(logERROR) << "THRUST PHASE";
     //// PRESSURIZE LEG & SERVO BODY ATTITUDE WITH HIP
-    qd_des[ROLL_JOINT] = -AKv*roll_pitch_yaw[ROLL]/dt;
-    qd_des[PITCH_JOINT] = -AKv*roll_pitch_yaw[PITCH]/dt;
+    qd_des[ROLL_JOINT] = AKv*roll_pitch_yaw[ROLL]/dt;
+    qd_des[PITCH_JOINT] = AKv*roll_pitch_yaw[PITCH]/dt;
     qd_des[PISTON_JOINT] = 10.0;//-Vz*1.1;
     q_des[PISTON_JOINT] = qd_des[PISTON_JOINT]*dt;
     u[PISTON_JOINT] = 500;
@@ -246,7 +246,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
   // setup the PD gains
   const double KP[3] = { 2e2, 2e2, 2e2 };
-  const double KV[3] = { 1e1, 1e1, 1e1 };
+  const double KV[3] = { 5e1, 5e1, 5e1 };
 
   // the PID controller will apply torques using the desired commands 
   for (unsigned i=0; i< joint_names.size(); i++)

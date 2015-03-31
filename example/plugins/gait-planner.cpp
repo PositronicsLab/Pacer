@@ -329,7 +329,7 @@ void walk_toward(
       // Calculate foot step info
       // Determine linear portion of step
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame));
-      foot_frame->x = Ravelin::Origin3d(0,0,0);// Ravelin::Pose3d::transform_point(Moby::GLOBAL,origins[i]);
+      foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,origins[i]);
       Ravelin::Origin3d x0 = origins[i].data();
 
       Ravelin::Vector3d foot_goal(command[0],command[1],0,foot_frame);
@@ -338,7 +338,7 @@ void walk_toward(
       generalized_command.set_zero(q.rows() - Pacer::NEULER + Pacer::NSPATIAL);
         generalized_command.set_sub_vec(generalized_command.rows() - Pacer::NSPATIAL,command);
         
-        Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,foot_names[i]);
+      Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,foot_names[i]);
         
       J.mult(generalized_command,foot_vel,1.0,0);
       xd_stance[i] = Ravelin::Vector3d(foot_vel.segment(0,3).data());
@@ -374,7 +374,6 @@ void walk_toward(
 
       // Set control point for either stance or swing phase
       std::vector<Ravelin::Origin3d> control_points;
-
 
       if(!stance_phase[i]){
         // SWING
@@ -448,7 +447,7 @@ void walk_toward(
       for(int cp=0;cp<control_points.size();cp++){
         OUTLOG(control_points[cp],"control_point",logDEBUG1);
       }
-      OUTLOG(xd_stance[i],"control_point_V",logDEBUG1);
+      OUTLOG(xd,"control_point_V",logDEBUG1);
       for(int d=0;d<3;d++){
         Ravelin::VectorNd           X(n);
         Ravelin::VectorNd          &coefs = *(spline_coef[i][d].rbegin());
@@ -458,7 +457,7 @@ void walk_toward(
         OUTLOG(T,"T",logDEBUG1);
         OUTLOG(X,"X",logDEBUG1);
 
-        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd_stance[i][d],xd_stance[i][d]),coefs);
+        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],xd[d]),coefs);
 
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
@@ -475,7 +474,7 @@ void walk_toward(
     xdd.pose = foot_acc[i].pose;
   }
 
-#ifndef NDEBUG
+//#ifdef NDEBUG
 ///* VISUALIZE
   {
 
@@ -496,16 +495,16 @@ void walk_toward(
       xd.pose = foot_vel[i].pose;
       xdd.pose = foot_acc[i].pose;
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
-      //Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
+      Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
 //      Ravelin::Vector3d a = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
       Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Ravelin::Vector3d(0,1,0),0.01)));
-      //Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0))));
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(1,0,0),0.01)));
 //     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Ravelin::Vector3d(1,0.5,0)));
     }
   }
   }
 //  END VISUALIZE */
-#endif
+//#endif
   last_time = t;
   inited = true;
   OUT_LOG(logDEBUG) << " -- walk_toward() exited";
@@ -513,8 +512,25 @@ void walk_toward(
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ctrl_ptr = ctrl;
-  Ravelin::Origin3d command = Ravelin::Origin3d(0,0,0);
-  ctrl->get_data<Ravelin::Origin3d>("SE2_command",command);
+  
+  const int queue_size = 500;
+  static std::deque<Ravelin::Origin3d> command_queue;
+  static Ravelin::Origin3d sum_command = Ravelin::Origin3d(0,0,0);
+  
+  {
+    Ravelin::Origin3d command = Ravelin::Origin3d(0,0,0);
+    ctrl->get_data<Ravelin::Origin3d>("SE2_command",command);
+    command_queue.push_front(command);
+    sum_command += command;
+  }
+
+  if(command_queue.size() > queue_size){
+    sum_command -= command_queue.back();
+    command_queue.pop_back();
+  }
+
+  Ravelin::Origin3d command = sum_command / (double) command_queue.size();
+
   Ravelin::VectorNd go_to;
   go_to.set_zero(6);
   go_to[0] = command[0];

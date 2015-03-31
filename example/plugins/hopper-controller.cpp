@@ -35,7 +35,7 @@ void footIK(const Vector3d& foot_pos, Origin3d& joint_pos){
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
-  const unsigned ROLL = 0, PITCH = 1, YAW = 2, VERT_DIM = 2;
+  const unsigned ROLL = 2, PITCH = 1, YAW = 0, VERT_DIM = 2;
   const double NEAR_MAX_PISTON_LEN = 0.97;
   const double COMPRESSION_PISTON_LEN = 0.95;
   const double THRUST_PISTON_LEN = 0.8;
@@ -107,30 +107,37 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   // TODO: get maximum piston velocity (Vz)
 
   // do controller transitions 
+  std::cout << "NC = " << NUM_CONTACTS << std::endl;
+  std::cout << "z_vel = " << lvel[VERT_DIM] << std::endl;
+
   if (hopper_state == eFlight && NUM_CONTACTS != 0 && lvel[VERT_DIM] < 0.0)
   {
+    OUT_LOG(logERROR) << "FLIGHT ==> LOADING PHASE";
     // foot is now contacting ground -> move to loading phase
     hopper_state = eLoading;
   }
   else if (hopper_state == eLoading && q[PISTON_JOINT] < COMPRESSION_PISTON_LEN)
   {
+    OUT_LOG(logERROR) << "LOADING ==> COMPRESSION PHASE";
     // foot is sufficiently shortened; now in compression phase
     hopper_state = eCompression;
 //    Vz = ?;
   }
   else if (hopper_state == eCompression && (q[PISTON_JOINT] < THRUST_PISTON_LEN || qd[PISTON_JOINT] < 0.0))
   {
+    OUT_LOG(logERROR) << "COMPRESSION ==> THRUST PHASE";
     // foot is really shortened; add thrust
     hopper_state = eThrust;
-    u[PISTON_JOINT] = 2.5;
   }
   else if (hopper_state == eThrust && q[PISTON_JOINT] > NEAR_MAX_PISTON_LEN) //(lvel.norm() >= -Vz) || )
   {
+    OUT_LOG(logERROR) << "THRUST ==> UNLOADING PHASE";
     // leg near full length
     hopper_state = eUnloading;
   }
   else if (hopper_state == eUnloading && NUM_CONTACTS == 0)
   {
+    OUT_LOG(logERROR) << "UNLOADING ==> FLIGHT PHASE";
     // foot not in contact
     hopper_state = eFlight;
 
@@ -168,29 +175,35 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   // Perform controller action based on mode
   switch(hopper_state){
   case eLoading:
+    OUT_LOG(logERROR) << "LOADING PHASE";
     //// STOP EXHAUSTING LEG & ZERO HIP TORQUE
     qd_des[ROLL_JOINT] = 0;
     qd_des[PITCH_JOINT] = 0;
     break;
   case eCompression:
+    OUT_LOG(logERROR) << "COMPRESSION PHASE";
     //// UPPER LEG CHAMBER SEALED & SERVO BODY ATTITUDE WITH HIP
-    qd_des[ROLL_JOINT] = AKv*roll_pitch_yaw[ROLL]/dt;
-    qd_des[PITCH_JOINT] = AKv*roll_pitch_yaw[PITCH]/dt;
+    qd_des[ROLL_JOINT] = -AKv*roll_pitch_yaw[ROLL]/dt;
+    qd_des[PITCH_JOINT] = -AKv*roll_pitch_yaw[PITCH]/dt;
     qd_des[PISTON_JOINT] = 0;
     break;
   case eThrust:
+    OUT_LOG(logERROR) << "THRUST PHASE";
     //// PRESSURIZE LEG & SERVO BODY ATTITUDE WITH HIP
-    qd_des[ROLL_JOINT] = AKv*roll_pitch_yaw[ROLL]/dt;
-    qd_des[PITCH_JOINT] = AKv*roll_pitch_yaw[PITCH]/dt;
+    qd_des[ROLL_JOINT] = -AKv*roll_pitch_yaw[ROLL]/dt;
+    qd_des[PITCH_JOINT] = -AKv*roll_pitch_yaw[PITCH]/dt;
     qd_des[PISTON_JOINT] = 10.0;//-Vz*1.1;
-    q_des[PISTON_JOINT] += qd_des[PISTON_JOINT]*dt;
+    q_des[PISTON_JOINT] = qd_des[PISTON_JOINT]*dt;
+    u[PISTON_JOINT] = 500;
     break;
   case eUnloading:
+    OUT_LOG(logERROR) << "UNLOADING PHASE";
     qd_des[ROLL_JOINT] = 0;
     qd_des[PITCH_JOINT] = 0;
     qd_des[PISTON_JOINT] = 0;
     break;
   case eFlight:
+    OUT_LOG(logERROR) << "FLIGHT PHASE";
     //// EXHAUST LEG TO LOW PRESSURE & POSITION LEG FOR LANDING
 
     // get the forward foot position from neutral
@@ -232,15 +245,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   } 
 
   // setup the PD gains
-  const double KP[3] = { 2e1, 2e1, 2e1 };
-  const double KV[3] = { 1e0, 1e0, 1e0 };
+  const double KP[3] = { 2e2, 2e2, 2e2 };
+  const double KV[3] = { 1e1, 1e1, 1e1 };
 
   // the PID controller will apply torques using the desired commands 
   for (unsigned i=0; i< joint_names.size(); i++)
   {
     // setup tau
-    if (u[i] == 0.0)
-      u[i] = KP[i] * (q_des[i] - q[i]) + KV[i] * (qd_des[i] - qd[i]);
+//    if (u[i] == 0.0)
+      u[i] += KP[i] * (q_des[i] - q[i]) + KV[i] * (qd_des[i] - qd[i]);
   
     // get the current position and velocity
     ctrl->set_joint_value(joint_names[i], Robot::load_goal, 0, u[i]);
@@ -253,6 +266,7 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int RTF = (int) Utility::get_variable<double>(plugin_namespace+"real-time-factor");
   if(ITER%RTF == 0)
     Update(ctrl,t);
+  ITER += 1;
 }
 
 extern "C" {

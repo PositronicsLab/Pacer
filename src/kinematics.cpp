@@ -36,15 +36,15 @@ Ravelin::MatrixNd& Robot::link_jacobian(const Ravelin::VectorNd& x,const end_eff
   return gk;
 }
     
-Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::string& link, Ravelin::Vector3d point){
+Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::string& link, Ravelin::Origin3d point){
    Ravelin::MatrixNd J;
    set_model_state(q);
   
    boost::shared_ptr<Ravelin::Pose3d> jacobian_frame(
         new Ravelin::Pose3d(Ravelin::Quatd::identity(),
-                            Ravelin::Pose3d::transform_point(
-                              Moby::GLOBAL,
-                              point).data(),Moby::GLOBAL));
+                            Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
+                            ,Moby::GLOBAL)
+        );
    
   _abrobot->calc_jacobian(jacobian_frame,_id_link_map[link],J);
 

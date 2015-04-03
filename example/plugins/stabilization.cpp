@@ -44,8 +44,8 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
   OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
 
 //   Remove Tangential Elements (for now)
-  for(int i=NC;i<ws_correct.rows();i++)
-      ws_correct[i] = 0.0;
+  //for(int i=NC;i<ws_correct.rows();i++)
+  //    ws_correct[i] = 0.0;
   OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
@@ -62,9 +62,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     generalized_q  = ctrl->get_generalized_value(Pacer::Controller::position);
   
   Ravelin::VectorNd base_qd = ctrl->get_base_value(Pacer::Controller::velocity);
-  Ravelin::Origin3d roll_pitch_yaw = ctrl->get_data<Ravelin::Origin3d>("roll_pitch_yaw");
   //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
-  Ravelin::VectorNd center_of_mass_x = ctrl->get_base_value(Pacer::Controller::position);
+  
+  boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(
+    ctrl->get_data<Ravelin::Pose3d>("base_stability_frame")));
+  base_frame->update_relative_pose(Moby::GLOBAL);
+  Ravelin::VectorNd center_of_mass_x = Utility::pose_to_vec(base_frame);
+  Ravelin::Origin3d roll_pitch_yaw;
+  Ravelin::Quatd(center_of_mass_x[3],center_of_mass_x[4],center_of_mass_x[5],center_of_mass_x[6]).to_rpy(roll_pitch_yaw[0],roll_pitch_yaw[1],roll_pitch_yaw[2]);
 
   int NDOFS = generalized_qd.rows();
   int NUM_JOINT_DOFS = NDOFS - NSPATIAL;

@@ -19,6 +19,7 @@ void Robot::calc_com(){
     total_mass += m;
     center_of_mass_x += (Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,(*it).second->get_inertial_pose())) *= m);
   }
+  set_data<double>("mass",total_mass);
   center_of_mass_x /= total_mass;
 
   boost::shared_ptr<Ravelin::Pose3d> base_com_w = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Moby::GLOBAL));
@@ -319,6 +320,7 @@ void Robot::update_poses(){
             Ravelin::AAngled(0,0,1,roll_pitch_yaw[0]),
           base_link_frame.x,Moby::GLOBAL);
 
+  set_data<Ravelin::Pose3d>("base_stability_frame",base_link_frame);
   set_data<Ravelin::Pose3d>("base_link_frame",base_link_frame);
   set_data<Ravelin::Origin3d>("roll_pitch_yaw",roll_pitch_yaw);
   set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);

@@ -1,5 +1,4 @@
-<!-- A box just sitting on the ground.  -->
-<!-- The Links(Lynx) robot -->
+<!-- The Raibert hopping robot -->
 
 <XML>
   <DRIVER>
@@ -18,25 +17,19 @@
     <GravityForce id="gravity" accel="0 0 -9.81" />
 <!--    <StokesDragForce id="drag" drag-b="0.0" drag-b-ang=".01" />-->
 
-   <GeneralizedCCD id="ccd" eps-tolerance="1e-3" >
-      <Body body-id="hopper" />
-      <Body body-id="ground" />
-      <DisabledPair object1-id="hopper" object2-id="hopper"/>
-    </GeneralizedCCD>
-
     <CollisionDetectionPlugin id="simpleccd" plugin="../libHopperColdetPlugin.so" >
       <Body body-id="hopper" />
       <Body body-id="ground" />
       <DisabledPair object1-id="hopper" object2-id="hopper"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="rkf" collision-detector-id="simpleccd" max-event-time="1">
+  <EventDrivenSimulator integrator-id="rkf" collision-detector-id="simpleccd">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="hopper" object2-id="hopper"/>
     <DynamicBody dynamic-body-id="hopper" />
     <DynamicBody dynamic-body-id="ground" />
-    <ContactParameters object1-id="hopper" object2-id="ground" mu-coulomb="10" mu-viscous="10" epsilon="0.0"/>
+    <ContactParameters object1-id="hopper" object2-id="ground" mu-coulomb="10" mu-viscous="0" epsilon="0.0"/>
   </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->

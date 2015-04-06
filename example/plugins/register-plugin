@@ -12,6 +12,7 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int RTF = (int) Utility::get_variable<double>(plugin_namespace+"real-time-factor");
   if(ITER%RTF == 0)
     Update(ctrl,t);
+  ITER+=1;
 }
 
 extern "C" {

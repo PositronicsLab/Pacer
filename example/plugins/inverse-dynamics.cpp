@@ -2,6 +2,9 @@
  * Copyright 2014 Samuel Zapolsky
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * This file implements a number of inverse dynamics controllers that leverage 
+ * contact force predictions to compute actuator forces for the robot.
  ****************************************************************************/
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
@@ -9,7 +12,7 @@
 #define USE_CLAWAR_MODEL
 //#define USE_AP_MODEL
 //#define USE_NO_SLIP_MODEL
-#define USE_NO_SLIP_LCP_MODEL
+//#define USE_NO_SLIP_LCP_MODEL
 //#define TIMING
 
 using namespace Pacer;
@@ -1901,14 +1904,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
     if(USE_DES_CONTACT){
       for(int i=0;i<foot_names.size();i++){
-        int is_stance = 0;
-        if(ctrl->get_data<int>(foot_names[i]+".stance",is_stance))
-          if(is_stance == 1)
+        bool is_stance = false;
+        if(ctrl->get_data<bool>(foot_names[i]+".stance",is_stance))
+          if(is_stance)
             active_feet.push_back(foot_names[i]);
       }
     } else
       active_feet = foot_names;
 
+  
 
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
     for(int i=0;i<active_feet.size();i++){
@@ -1939,6 +1943,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
          /MU.row(i).rows() < 100.0)
         inf_friction = false;
     }
+    inf_friction = false;
 
     Ravelin::VectorNd cf_init;
       cf.set_zero(NC*5);

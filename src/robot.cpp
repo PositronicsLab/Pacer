@@ -19,6 +19,7 @@ void Robot::calc_com(){
     total_mass += m;
     center_of_mass_x += (Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,(*it).second->get_inertial_pose())) *= m);
   }
+  set_data<double>("mass",total_mass);
   center_of_mass_x /= total_mass;
 
   boost::shared_ptr<Ravelin::Pose3d> base_com_w = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Moby::GLOBAL));
@@ -249,6 +250,16 @@ void Robot::update(){
   set_data<Ravelin::VectorNd>("generalized_qdd", generalized_qdd);
   set_data<Ravelin::VectorNd>("generalized_fext", generalized_fext);
 
+  Ravelin::Vector3d workv;
+  workv = Ravelin::Vector3d(generalized_qd.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose());
+  set_data<Ravelin::Vector3d>("base.xd", workv);
+  workv = Ravelin::Vector3d(generalized_qd.segment(NUM_JOINT_DOFS+3, NUM_JOINT_DOFS+NSPATIAL).data(), _abrobot->get_gc_pose());
+  set_data<Ravelin::Vector3d>("base.omega", workv);
+  workv = Ravelin::Vector3d(generalized_qdd.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose()); 
+  set_data<Ravelin::Vector3d>("base.xdd", workv);
+  workv = Ravelin::Vector3d(generalized_qdd.segment(NUM_JOINT_DOFS+3, NUM_JOINT_DOFS+NSPATIAL).data(), _abrobot->get_gc_pose());
+  set_data<Ravelin::Vector3d>("base.alpha", workv);
+
   Ravelin::VectorNd q = generalized_q.segment(0,NUM_JOINT_DOFS); 
   Ravelin::VectorNd qd = generalized_qd.segment(0,NUM_JOINT_DOFS);
   Ravelin::VectorNd qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);
@@ -309,6 +320,7 @@ void Robot::update_poses(){
             Ravelin::AAngled(0,0,1,roll_pitch_yaw[0]),
           base_link_frame.x,Moby::GLOBAL);
 
+  set_data<Ravelin::Pose3d>("base_stability_frame",base_link_frame);
   set_data<Ravelin::Pose3d>("base_link_frame",base_link_frame);
   set_data<Ravelin::Origin3d>("roll_pitch_yaw",roll_pitch_yaw);
   set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);
@@ -331,6 +343,10 @@ void Robot::update_poses(){
  void Robot::init_robot(){
   OUT_LOG(logDEBUG) << ">> Robot::init_robot(.)";
   // ================= LOAD SCRIPT DATA ==========================
+
+  if (!getenv("PACER_MODEL_PATH"))
+    throw std::runtime_error("Environment variable PACER_MODEL_PATH not defined");
+
   std::string pPath(getenv ("PACER_MODEL_PATH"));
   OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
 

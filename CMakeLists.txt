@@ -70,7 +70,6 @@ option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)
   option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
-  option(USE_DXL "use dynamixel drivers" OFF)
   #option(CONSOLE "Display a Console window for controlling robot XML parameters inline" OFF)
 
 
@@ -143,12 +142,6 @@ IF(CVARS_FOUND)
   target_link_libraries (Pacer ${CVARS_LIBRARIES})
 ENDIF(CVARS_FOUND)
 
-# look for DXL
-find_package(DXL)
-IF(USE_DXL AND DXL_FOUND)
-  set(EXTRA_LIBS ${EXTRA_LIBS} dxl)
-  add_definitions (-DUSE_DXL)
-ENDIF(USE_DXL AND DXL_FOUND)
 
 # GLConsole
 IF(GLConsole_FOUND)

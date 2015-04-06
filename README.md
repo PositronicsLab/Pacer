@@ -7,7 +7,9 @@ This repository hosts code for [Pacer] an open source robot locomotion library f
 
 [Pacer]: https://github.com/PositronicsLab/Pacer
 
-##Building
+## Installation/building
+
+[Pacer] currently must be built from source. Debian binaries will be available soon.
 
 In the project base directory:
 ```
@@ -44,9 +46,10 @@ $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so mode
 
 ##Optional 
 
-- Open Scene Graph
+- OpenSceneGraph
 - [GLConsole] 
 - [DXL]
+- SDL (permits joystick control)
 
 [Ravelin]: https://github.com/PositronicsLab/Ravelin
 [Moby]: https://github.com/PositronicsLab/Moby
@@ -56,7 +59,7 @@ $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so mode
 
 ###Usage
 
-access the library by using the examples found in the examples directory:
+Access the library by using the examples found in the examples directory:
 
  EXAMPLE       |  DESCRIPTION
 --------------|---------------------------------------------------------

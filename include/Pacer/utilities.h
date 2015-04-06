@@ -31,12 +31,38 @@
 #include <numeric>
 #include <Pacer/Visualizable.h>
 
+template < class T >
+std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
+{
+  os << "[";
+  for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+  {
+    os << " " << *ii;
+  }
+  os << "]";
+  return os;
+}
+
 class Utility{
 
     /// Data storage
 public:
     static std::vector<Pacer::VisualizablePtr> visualize;
 
+  static Ravelin::VectorNd pose_to_vec(const boost::shared_ptr<Ravelin::Pose3d> T){
+    Ravelin::VectorNd p(7);
+//    Ravelin::Transform3d T = Ravelin::Pose3d::calc_relative_pose(pose,boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d()));
+    p[0] = T->x[0];
+    p[1] = T->x[1];
+    p[2] = T->x[2];
+    
+    p[3] = T->q.w;
+    p[4] = T->q.x;
+    p[5] = T->q.y;
+    p[6] = T->q.z;
+    return p;
+  }
+  
     // Floating-point modulo
     // The result (the remainder) has same sign as the divisor.
     // Similar to matlab's mod(); Not similar to fmod() -   Mod(-3,4)= 1   fmod(-3,4)= -3
@@ -148,8 +174,8 @@ public:
 											 Ravelin::VectorNd& B);
   static void calc_cubic_spline_coefs(const Ravelin::VectorNd &T, const Ravelin::VectorNd &X,  const Ravelin::Vector2d &Xd, Ravelin::VectorNd &B);
 
-  static void eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,int num_segments,
-                           Ravelin::VectorNd& X, Ravelin::VectorNd& Xd, Ravelin::VectorNd& Xdd);
+  static bool eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,double t,
+                           double& X, double& Xd, double& Xdd);
   static bool eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,const std::vector<Ravelin::VectorNd>& t_limits,double t,
                            double& X, double& Xd, double& Xdd);
 

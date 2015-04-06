@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">DEBUG1</logging>
+  <logging type="string">ERROR</logging>
   
   <robot-model type="string">links-moby/model.xml</robot-model>
 
@@ -13,10 +13,9 @@
     <joint>
     <id type="string">LF_X_1 LF_Y_2 LF_Y_3  RF_X_1 RF_Y_2 RF_Y_3   LH_X_1 LH_Y_2 LH_Y_3   RH_X_1 RH_Y_2 RH_Y_3</id>
     <dofs type="double">1 1 1   1 1 1  1 1 1  1 1 1</dofs>
-    <!--    <q type="double">  0.3927 0.7854 1.5708           -0.3927 -0.7854 -1.5708         -0.3927 -0.7854 -1.5708          0.3927 0.7854 1.5708 </q> -->
+    <q type="double">  0.3927 0.7854 1.5708           -0.3927 -0.7854 -1.5708         -0.3927 -0.7854 -1.5708          0.3927 0.7854 1.5708 </q> 
 <!--    <q type="double">  0.1 0.7854 1.5708           -0.1 -0.7854 -1.5708         -0.1 -0.6 -1.5708          0.1 0.6 1.5708 </q>-->
 <!--real robot    -->
-    <q type="double">  0.1 0.8 1.2           -0.1 -0.8 -1.2         -0.1 -0.8 -1.2          0.1 0.8 1.2 </q>
 <!--    <q type="double">  0.1 0.8 1.2           -0.1 -0.8 -1.2         -0.1 -1.1 -1.2          0.1 1.1 1.2 </q>-->
     <active type="bool">true true true   true true true   true true true   true true true</active>
      <max-torque type="double">1e4 1e4 1e4  1e4 1e4 1e4  1e4 1e4 1e4   1e4 1e4 1e4</max-torque>
@@ -29,38 +28,104 @@
 
  
   <plugin>
-    <id type="string">  drive-robot       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller</id>
-    <file type="string">libdrive-robot.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so</file>
-    <active type="bool">true              true                true            false                   false                       true                      true</active>
+    <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller stabilization</id>
+    <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so libstabilization.so</file>
+    <active type="bool">true            false           true                true            false                   true                       false                     false false</active>
   </plugin>
   
+  <stabilization>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">2</priority>
+    <des-contact type="bool">false</des-contact>
+    <!-- Gains are for the [X Y Z r p y] of base -->
+    <gains>
+      <kp type="double"> 1e4 1e4 1e4     1e4 1e4 1e4</kp>
+      <kv type="double"> 1e2 1e2 1e2     1e2 1e2 1e2</kv>
+      <ki type="double"> 1e-2 1e-2 1e-2  1e-2 1e-2 1e-2</ki>
+    </gains>
+    <desired>
+      <x type="double">0 0 0  0 0 0</x>
+      <xd type="double">0 0 0  0 0 0</xd>
+    </desired>
+  </stabilization>
   
-  <drive-robot>
+  <gamepad>
      <real-time-factor type="double">1</real-time-factor>
-     <priority type="double">1</priority>
-     <waypoints type="double">
-   0.06279052 -0.03133330 
-	 0.36812455 -0.17113678 
-	 0.63742399 -0.24557181 
-	 0.84432793 -0.22620676 
-	 0.96858316 -0.12043842 
-	 0.99802673  0.03133330 
-	 0.92977649  0.17113678 
-	 0.77051324  0.24557181 
-	 0.53582679  0.22620676 
-	 0.24868989  0.12043842 
-	-0.06279052 -0.03133330 
-	-0.36812455 -0.17113678 
-	-0.63742399 -0.24557181 
-	-0.84432793 -0.22620676 
-	-0.96858316 -0.12043842 
-	-0.99802673  0.03133330 
-	-0.92977649  0.17113678 
-	-0.77051324  0.24557181 
-	-0.53582679  0.22620676 
-	-0.24868989  0.12043842 
-    </waypoints>
-  </drive-robot>
+     <priority type="double">0</priority>
+ </gamepad>
+
+  <waypoints>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">0</priority>
+     <max-forward-speed type="double">0.1</max-forward-speed>
+     <max-strafe-speed type="double">0.05</max-strafe-speed>
+     <max-turn-speed type="double">1</max-turn-speed>
+     <waypoints type="double vector">
+       0         0
+       0.1987   -0.0050
+       0.3894   -0.0199
+       0.5646   -0.0447
+       0.7174   -0.0789
+       0.8415   -0.1224
+       0.9320   -0.1747
+       0.9854   -0.2352
+       0.9996   -0.3033
+       0.9738   -0.3784
+       0.9093   -0.4597
+       0.8085   -0.5464
+       0.6755   -0.6376
+       0.5155   -0.7325
+       0.3350   -0.8300
+       0.1411   -0.9293
+       -0.0584   -1.0292
+       -0.2555   -1.1288
+       -0.4425   -1.2272
+       -0.6119   -1.3233
+       -0.7568   -1.4161
+       -0.8716   -1.5048
+       -0.9516   -1.5885
+       -0.9937   -1.6663
+       -0.9962   -1.7374
+       -0.9589   -1.8011
+       -0.8835   -1.8569
+       -0.7728   -1.9041
+       -0.6313   -1.9422
+       -0.4646   -1.9710
+       -0.2794   -1.9900
+       -0.0831   -1.9991
+       0.1165   -1.9983
+       0.3115   -1.9875
+       0.4941   -1.9668
+       0.6570   -1.9365
+       0.7937   -1.8968
+       0.8987   -1.8481
+       0.9679   -1.7910
+       0.9985   -1.7259
+       0.9894   -1.6536
+       0.9407   -1.5748
+       0.8546   -1.4903
+       0.7344   -1.4008
+       0.5849   -1.3073
+       0.4121   -1.2108
+       0.2229   -1.1122
+       0.0248   -1.0124
+       -0.1743   -0.9125
+       -0.3665   -0.8135
+       -0.5440   -0.7163
+       -0.6999   -0.6220
+       -0.8278   -0.5315
+       -0.9228   -0.4456
+       -0.9809   -0.3653
+       -1.0000   -0.2913
+       -0.9792   -0.2244
+       -0.9193   -0.1653
+       -0.8228   -0.1145
+       -0.6935   -0.0725
+       -0.5366   -0.0398
+       -0.3582   -0.0167
+       -0.1656   -0.0035
+     </waypoints>
+  </waypoints>
   
   <stand-trajectory>
      <real-time-factor type="double">1</real-time-factor>
@@ -70,15 +135,15 @@
   <gait-planner>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">1</priority>
+    <pose type="double">0 0 0 0 0 0</pose>
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.015</step-height>
+    <step-height type="double">0.02</step-height>
     <gait-duration type="double">0.5</gait-duration>
-    
-    <width type="double">0.15</width>
-    <length type="double">0.36</length>
-    <height type="double">0.161</height>
+    <length type="double">0.30</length>
+    <width type="double">0.22824</width>
+    <height type="double">0.130656</height>
     <!--troting gait-->
        <gait type="double">0  0.5  0.5  0</gait>
     <!--walking gait-->
@@ -89,6 +154,7 @@
   <ik-feet>
     <priority type="double">2</priority>
     <real-time-factor type="double">1</real-time-factor>
+    <abs-err-tolerance type="double">1e-3</abs-err-tolerance>
   </ik-feet>
   
   <viip-balance>
@@ -135,7 +201,7 @@
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">true</des-contact>
+    <des-contact type="bool">false</des-contact>
     <type type="string">AP</type>
   </idyn-controller>
 </XML>

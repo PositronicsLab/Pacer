@@ -91,6 +91,26 @@ bool Utility::eval_cubic_spline(const std::vector<Ravelin::VectorNd>& coefs,cons
 }
 
 
+bool Utility::eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,double t,
+                       double& X, double& Xd, double& Xdd){
+  int k=0;
+  while(t >= t_limits[k+1]){
+    k++;
+    if(k == t_limits.rows()-1)
+      return false;
+  }
+  // Spline always evaluates from t[0] = 0 in interval
+  // offset t to start of interval to find t in spline
+  t -= t_limits[0];
+  
+  X    = t*t*t*coefs[k*4] + t*t*coefs[k*4+1] + t*coefs[k*4+2] + coefs[k*4+3];
+  Xd   = 3*t*t*coefs[k*4] + 2*t*coefs[k*4+1] +   coefs[k*4+2];
+  Xdd  =   6*t*coefs[k*4] +   2*coefs[k*4+1] ;
+  
+  return true;
+}
+
+
 void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T_,const Ravelin::VectorNd& X,
                                            const Ravelin::Vector2d& Xd, Ravelin::VectorNd& B){
   static Ravelin::MatrixNd A;
@@ -244,57 +264,38 @@ void Utility::calc_cubic_spline_coefs(const Ravelin::VectorNd& T_,const Ravelin:
   workv_.get_sub_vec(4,workv_.size()-4,B);
 }
 
-bool eval_cubic_spline(const Ravelin::VectorNd& coefs,const Ravelin::VectorNd& t_limits,double t,
-                       double& X, double& Xd, double& Xdd){
- int k=0;
-  while(t >= t_limits[k+1]){
-    k++;
-    if(k == t_limits.rows()-1)
-      return false;
-  }
-  // Spline always evaluates from t[0] = 0 in interval
-  // offset t to start of interval to find t in spline
-  t -= t_limits[0];
-
-  X    = t*t*t*coefs[k*4] + t*t*coefs[k*4+1] + t*coefs[k*4+2] + coefs[k*4+3];
-  Xd   = 3*t*t*coefs[k*4] + 2*t*coefs[k*4+1] +   coefs[k*4+2];
-  Xdd  =   6*t*coefs[k*4] +   2*coefs[k*4+1] ;
-
-  return true;
-}
-
-int test_spline(){
-
-  // This is for ONE dimension,
-  // for 3 dimensions just do this in each of the 3 spatial axis
-  Ravelin::VectorNd coefs;
-  //  we want a spline through x = {0,10,5} these are "knots";
-  //  we want the spline to reach each knot at times t = {0,1,2};
-  Ravelin::VectorNd X(3);
-  Ravelin::VectorNd t_limits(3);
-  X[0] = 0.0;
-  X[1] = 10.0;
-  X[2] = 5.0;
-
-  t_limits[0] = 0.0;
-  t_limits[1] = 1.0;
-  t_limits[2] = 2.0;
-
-  //  we also want the spaceship to be stationary in the x axis
-  // at the 2 end points
-  // This is a "Velocity clamped" cubic spline
-  Ravelin::Vector2d Xd(0,0);
-
-//  calc_cubic_spline_coefs(t_limits,X,Xd,coefs);
-
-  // Now we can evaluate the spline at any t [0..2)
-  double pos,vel,acc;
-  for(double t=0;t<2;t += 0.01){
-    eval_cubic_spline(coefs,t_limits,t,pos,vel,acc);
-    printf("%f, %f, %f\n",pos,vel,acc);
-    // now pos,vel,acc are your desired velocities on the trajectory at time t.
-    // You may track these using a PD controller on pos & vel
-    // or an inverse dynamics controller on acc
-  }
-  return 0;
-}
+//int test_spline(){
+//
+//  // This is for ONE dimension,
+//  // for 3 dimensions just do this in each of the 3 spatial axis
+//  Ravelin::VectorNd coefs;
+//  //  we want a spline through x = {0,10,5} these are "knots";
+//  //  we want the spline to reach each knot at times t = {0,1,2};
+//  Ravelin::VectorNd X(3);
+//  Ravelin::VectorNd t_limits(3);
+//  X[0] = 0.0;
+//  X[1] = 10.0;
+//  X[2] = 5.0;
+//
+//  t_limits[0] = 0.0;
+//  t_limits[1] = 1.0;
+//  t_limits[2] = 2.0;
+//
+//  //  we also want the spaceship to be stationary in the x axis
+//  // at the 2 end points
+//  // This is a "Velocity clamped" cubic spline
+//  Ravelin::Vector2d Xd(0,0);
+//
+////  calc_cubic_spline_coefs(t_limits,X,Xd,coefs);
+//
+//  // Now we can evaluate the spline at any t [0..2)
+//  double pos,vel,acc;
+//  for(double t=0;t<2;t += 0.01){
+//    eval_cubic_spline(coefs,t_limits,t,pos,vel,acc);
+//    printf("%f, %f, %f\n",pos,vel,acc);
+//    // now pos,vel,acc are your desired velocities on the trajectory at time t.
+//    // You may track these using a PD controller on pos & vel
+//    // or an inverse dynamics controller on acc
+//  }
+//  return 0;
+//}

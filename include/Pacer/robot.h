@@ -135,7 +135,7 @@ class Robot {
     }
       
     Ravelin::MatrixNd calc_link_jacobian(const Ravelin::VectorNd& q, const std::string& link){
-      return calc_jacobian(q,link,Ravelin::Vector3d(0,0,0,_id_link_map[link]->get_pose()));
+      return calc_jacobian(q,link,Ravelin::Origin3d(0,0,0));
     }
     
     const Moby::RigidBodyPtr get_link(const std::string& link){
@@ -595,15 +595,15 @@ class Robot {
     void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
     
     /// @brief Calculate 6x(N+6) jacobian for point(in frame) on link at state q
-    Ravelin::MatrixNd calc_jacobian(const Ravelin::VectorNd& q, const std::string& link, Ravelin::Vector3d point);
+    Ravelin::MatrixNd calc_jacobian(const Ravelin::VectorNd& q, const std::string& link, Ravelin::Origin3d point);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal
-    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des, double TOL = 1e-4);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 6d (linear and angular) goal
-    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des);
+    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des, double TOL = 1e-4);
 
     /// @brief N x 3d kinematics
     Ravelin::VectorNd& link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
@@ -622,7 +622,7 @@ class Robot {
       const Ravelin::VectorNd& q,
       Ravelin::VectorNd& q_des,
       Ravelin::VectorNd& qd_des,
-      Ravelin::VectorNd& qdd_des);
+      Ravelin::VectorNd& qdd_des, double TOL = 1e-4);
 
     void calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
    

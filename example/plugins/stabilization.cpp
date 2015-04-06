@@ -61,9 +61,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     generalized_qd = ctrl->get_generalized_value(Pacer::Controller::velocity),
     generalized_q  = ctrl->get_generalized_value(Pacer::Controller::position);
   
-  Ravelin::VectorNd base_qd = ctrl->get_base_value(Pacer::Controller::velocity);
-  //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
-  
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(
     ctrl->get_data<Ravelin::Pose3d>("base_stability_frame")));
   base_frame->update_relative_pose(Moby::GLOBAL);
@@ -74,6 +71,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NDOFS = generalized_qd.rows();
   int NUM_JOINT_DOFS = NDOFS - NSPATIAL;
 
+  Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);// ctrl->get_base_value(Pacer::Controller::velocity);
+                                                       //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
+  
   static std::vector<std::string>
         &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
         
@@ -114,10 +114,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     D.set_zero(NDOFS,NC*4);
     D.set_sub_mat(0,0,S);
     D.set_sub_mat(0,NC,T);
-    S.negate();
-    T.negate();
-    D.set_sub_mat(0,NC*2,S);
-    D.set_sub_mat(0,NC*3,T);
+//    S.negate();
+//    T.negate();
+//    D.set_sub_mat(0,NC*2,S);
+//    D.set_sub_mat(0,NC*3,T);
     
     int nk = D.columns()/NC;
     int nvars = NC + NC*(nk);

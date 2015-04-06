@@ -16,7 +16,9 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 // 02111-1307, USA.
 
-//#define USE_CURSES
+#define USE_CURSES
+//#define PS3
+//#define SABRENT
 
 #include <SDL2/SDL.h>
 #include <assert.h>
@@ -257,6 +259,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     static double press_time = 0;
     const double wait_time = 0.01;
     static bool pressed = false;
+#ifdef SABRENT
     if(j.buttons[0] == 1 && !pressed){
       if(t-press_time > wait_time){
         pressed = true;
@@ -270,6 +273,23 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         press_time = t;
       }
     }
+#else // if PS3
+    const int X_BUTTON = 14;
+    if(j.buttons[X_BUTTON] == 1 && !pressed){ // X button
+      if(t-press_time > wait_time){
+        pressed = true;
+        press_time = t;
+      }
+    } else if(j.buttons[X_BUTTON] == 1 && pressed) {
+      if(t-press_time > wait_time){
+        std::vector<double> target2d(0);
+        ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
+        pressed = false;
+        press_time = t;
+      }
+    }
+#endif
+
 
     Ravelin::Origin3d command_SE2(0,0,0);
 
@@ -281,6 +301,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
     if(pressed){ // Move Waypoint
       Ravelin::Vector3d movement;
+#ifdef SABRENT
       for(int i = 0; i < j.num_hats; ++i)
       {
         if((j.hats[i] & SDL_HAT_UP) && (j.hats[i] & SDL_HAT_LEFT)) 
@@ -304,6 +325,34 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         if((j.hats[i] & SDL_HAT_DOWN) && (j.hats[i] & SDL_HAT_RIGHT))
           movement = Ravelin::Vector3d(-1,-1,0);
       }
+#else // if PS3
+const int
+      BUTTON_UP = 4,
+      BUTTON_LEFT = 7,
+      BUTTON_RIGHT = 5,
+      BUTTON_DOWN = 6;
+      if((j.buttons[BUTTON_UP] == 1) && (j.buttons[BUTTON_LEFT] == 1))
+        movement = Ravelin::Vector3d(1,1,0);
+      else if((j.buttons[BUTTON_UP] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
+        movement = Ravelin::Vector3d(1,0,0);
+      else if((j.buttons[BUTTON_UP] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
+        movement = Ravelin::Vector3d(1,-1,0);
+      
+      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_LEFT] == 1))
+        movement = Ravelin::Vector3d(0,1,0);
+      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
+        movement = Ravelin::Vector3d(0,0,0);
+      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
+        movement = Ravelin::Vector3d(0,-1,0);
+      
+      else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_LEFT] == 1))
+        movement = Ravelin::Vector3d(-1,1,0);
+      else if((j.buttons[BUTTON_DOWN] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
+        movement = Ravelin::Vector3d(-1,0,0);
+      else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
+        movement = Ravelin::Vector3d(-1,-1,0);
+#endif
+
       movement*=dt*10;
       target += movement;
       Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(target,Ravelin::Vector3d(1,0.5,0),1.0)));
@@ -315,13 +364,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       double max_forward_speed = 0.1;
       double max_strafe_speed = 0.05;
       double max_turn_speed = 1;
-      
+//#ifdef SABRENT || PS3
+
       { // strafe
         int i = 0;
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[1] = 0;
         else
-          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) 32767;
+          command_SE2[1] = max_strafe_speed * (double) j.axes[i] / (double) 32767;
       }
       { // forward
         int i = 1;
@@ -335,9 +385,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[2] = 0;
         else
-          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) 32767;
+          command_SE2[2] = max_turn_speed *  (double) j.axes[i] / (double) 32767;
       }
-      
+//#endif
+
     }
     ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
 
@@ -345,7 +396,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   //  std::cout << "strafe_left (m/s) = " << command_SE2[1] << std::endl;
   //  std::cout << "turn_left (rad/s) = " << command_SE2[2] << std::endl;
   } catch(std::exception& e){
-      exit(0);
+    throw std::runtime_error("Could not connect to Controller!");
+//    std::cerr << "Could not connect to Controller!" << std::endl;
   }
 }
 

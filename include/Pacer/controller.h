@@ -7,7 +7,6 @@
 #define CONTROL_H
 
 #include <Pacer/robot.h>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 namespace Pacer{
 
@@ -34,6 +33,10 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
     Controller();
     ~Controller();
     void init(){
+      PARAMS_FILE = std::string("vars.xml");
+      load_variables(PARAMS_FILE,boost::dynamic_pointer_cast<Robot>(ptr()));
+      unlock_state();
+      init_robot();
       // After Robot loads, load plugins
 #ifdef USE_PLUGINS
       if(!init_plugins())

@@ -17,7 +17,9 @@
 
 using namespace Pacer;
   
-Controller::Controller(): Robot(){}
+Controller::Controller(): Robot(){
+
+}
 
 Controller::~Controller(){
   close_plugins();
@@ -45,9 +47,9 @@ bool Controller::init_plugins(){
   std::vector<init_t> INIT;
 
   // call the initializers, if any
-  std::vector<std::string> &plugin_names = Utility::get_variable<std::vector<std::string> >("plugin.id");
-  std::vector<std::string> &plugin_files = Utility::get_variable<std::vector<std::string> >("plugin.file");
-  std::vector<int> &plugin_active = Utility::get_variable<std::vector<int> >("plugin.active");
+  std::vector<std::string> plugin_names = get_data<std::vector<std::string> >("plugin.id");
+  std::vector<std::string> plugin_files = get_data<std::vector<std::string> >("plugin.file");
+  std::vector<int> plugin_active = get_data<std::vector<int> >("plugin.active");
 
   // Load all the plugins
   for(unsigned i=0;i<plugin_names.size();i++){

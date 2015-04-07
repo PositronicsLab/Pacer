@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/robot.h>
+#include <boost/algorithm/string.hpp>
 
 using namespace Pacer;
 
@@ -184,7 +185,7 @@ void Robot::compile(){
   }
   
    const std::vector<std::string> 
-    &eef_names_ = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+    &eef_names_ = get_data<std::vector<std::string> >("init.end-effector.id");
 
   // Initialize end effectors
   for(unsigned i=0;i<eef_names_.size();i++){
@@ -272,8 +273,8 @@ void Robot::update(){
   set_model_state(generalized_q,generalized_qd);
   update_poses();
 
-  static std::vector<std::string> 
-    &eef_names_ = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+  const  std::vector<std::string>
+    eef_names_ = get_data<std::vector<std::string> >("init.end-effector.id");
 
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(get_data<Ravelin::Pose3d>("base_link_frame")));
 
@@ -303,7 +304,7 @@ void Robot::update_poses(){
   Ravelin::Pose3d base_link_frame(*(_root_link->get_pose().get()));
 
   const std::vector<double>
-    &base_start = Utility::get_variable<std::vector<double> >("init.base.x");
+    &base_start = get_data<std::vector<double> >("init.base.x");
 
   Ravelin::Matrix3d R_base(base_link_frame.q),
       R_pitch = Ravelin::Matrix3d::rot_Y(base_start[4]),
@@ -334,9 +335,7 @@ void Robot::update_poses(){
 // ============================================================================
 // ===========================  BEGIN ROBOT INIT  =============================
 
-#include <stdlib.h>     /* getenv */
-#include <boost/filesystem.hpp>
-
+#include <stdlib.h>
 #include <Moby/SDFReader.h>
 #include <Moby/XMLReader.h>
 
@@ -352,7 +351,7 @@ void Robot::update_poses(){
 
   // ================= SETUP LOGGING ==========================
 
-  std::string& LOG_TYPE = Utility::get_variable<std::string>("logging");
+  const std::string LOG_TYPE = get_data<std::string>("logging");
 
   FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
@@ -366,16 +365,26 @@ void Robot::update_poses(){
   OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
 
   // ================= BUILD ROBOT ==========================
-  std::string robot_model_file = Utility::get_variable<std::string>("robot-model");
-  Utility::test_function(robot_model_file);
+  std::string robot_model_file = get_data<std::string>("robot-model");
   // Get Model type
-  std::string model_type = boost::filesystem::extension(robot_model_file);
+   
+   std::string model_type;
+   
+   {
+     std::vector<std::string> strs;
+     boost::split(strs,robot_model_file,boost::is_any_of("."));
+     if (strs.size() < 1) {
+       OUT_LOG(logERROR) << robot_model_file << " has no file extension!";
+       throw std::runtime_error(robot_model_file + " has no file extension!");
+     }
+     model_type = strs.back();
+   }
+   
   robot_model_file = pPath+"/"+robot_model_file;
   OUT_LOG(logINFO) << "Using robot model : " << robot_model_file;
 
-  (robot_model_file.substr(robot_model_file.size()-4,robot_model_file.size()));
   /// The map of objects read from the simulation XML file
-  if(model_type.compare(".sdf") == 0){
+  if(model_type.compare("sdf") == 0){
     std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file);
 
     for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
@@ -391,7 +400,7 @@ void Robot::update_poses(){
     if (!_abrobot){
       throw std::runtime_error("could not find RCArticulatedBody for robot SDF");
     }
-  } else if(model_type.compare(".xml") == 0){
+  } else if(model_type.compare("xml") == 0){
     std::cerr << "look for model: " << robot_model_file << std::endl;
 
     std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(robot_model_file));
@@ -415,11 +424,11 @@ void Robot::update_poses(){
 
   // Initialized Joints
   const std::vector<std::string>
-     &joint_names = Utility::get_variable<std::vector<std::string> >("init.joint.id");
+     joint_names = get_data<std::vector<std::string> >("init.joint.id");
   const std::vector<double>
-     &joint_dofs = Utility::get_variable<std::vector<double> >("init.joint.dofs");
+     joint_dofs = get_data<std::vector<double> >("init.joint.dofs");
   const std::vector<double>
-    &joints_start = Utility::get_variable<std::vector<double> >("init.joint.q");
+    joints_start = get_data<std::vector<double> >("init.joint.q");
 
   std::map<std::string, std::vector<double> > init_q;
   for(int i=0,ii=0;i<joint_names.size();i++){
@@ -432,12 +441,11 @@ void Robot::update_poses(){
 
   
   // Initialize base
-  const std::vector<double>
-    &base_start = Utility::get_variable<std::vector<double> >("init.base.x");
-
+  std::vector<double>
+   base_start = get_data<std::vector<double> >("init.base.x");
   Ravelin::Quatd init_quat =
     Ravelin::Quatd::rpy(base_start[3],base_start[4],base_start[5]);
-
+   
   Ravelin::VectorNd init_base(7);
   init_base[0] = base_start[0];
   init_base[1] = base_start[1];
@@ -447,10 +455,18 @@ void Robot::update_poses(){
   init_base[5] = init_quat.z;
   init_base[6] = init_quat.w;
 
+   std::vector<double> base_startv(6);
+   std::fill(base_startv.begin(),base_startv.end(),0);
+   get_data<std::vector<double> >("init.base.xd",base_startv);
+   Ravelin::VectorNd init_basev(6,&base_startv[0]);
+   
   unlock_state();
   set_joint_value(position,init_q);
   set_base_value(position,init_base);
+   
+  set_base_value(velocity,init_basev);
   lock_state();
+   
     Ravelin::VectorNd init_q_vec;
     convert_to_generalized(init_q,init_q_vec);
     set_data<Ravelin::VectorNd>("init.q",init_q_vec);

@@ -56,10 +56,10 @@ public:
     p[1] = T->x[1];
     p[2] = T->x[2];
     
-    p[3] = T->q.w;
-    p[4] = T->q.x;
-    p[5] = T->q.y;
-    p[6] = T->q.z;
+    p[3] = T->q.x;
+    p[4] = T->q.y;
+    p[5] = T->q.z;
+    p[6] = T->q.w;
     return p;
   }
   
@@ -223,25 +223,5 @@ public:
 	static bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 	static bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
   static bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
-
-  //////////////  Variables ///////////////
-  static void load_variables(std::string fname);
-  
-  static void test_function(std::string fname){}
-  
-  template <typename T>
-  static T& get_variable(std::string tag){
-    try{
-      T& v = get_variable_internal<T>(tag);
-      OUTLOG(v,"Get: "+tag+" --> ",logDEBUG);
-      return v;
-    }catch(...){
-      throw std::runtime_error("Parameter: \"" + tag + "\" not found in XML!");
-    }
-  }
-  
-  template <typename T>
-  static T& get_variable_internal(std::string tag);
-
 };
 #endif // UTILITIES_H

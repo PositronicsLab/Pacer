@@ -538,16 +538,16 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   go_to[5] = command[2];
 
   static std::vector<double>
-      &duty_factor = Utility::get_variable<std::vector<double> >(plugin_namespace+"duty-factor"),
-      &this_gait = Utility::get_variable<std::vector<double> >(plugin_namespace+"gait");
-  static double &gait_time = Utility::get_variable<double>(plugin_namespace+"gait-duration");
-  static double &step_height = Utility::get_variable<double>(plugin_namespace+"step-height");
+      &duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"duty-factor"),
+      &this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gait");
+  static double &gait_time = ctrl_ptr->get_data<double>(plugin_namespace+"gait-duration");
+  static double &step_height = ctrl_ptr->get_data<double>(plugin_namespace+"step-height");
   static std::vector<Ravelin::Vector3d> footholds(0);
-  foot_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+"feet");
+  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"feet");
 
-  static double &width = Utility::get_variable<double>(plugin_namespace+"width");
-  static double &length = Utility::get_variable<double>(plugin_namespace+"length");
-  static double &height = Utility::get_variable<double>(plugin_namespace+"height");
+  static double &width = ctrl_ptr->get_data<double>(plugin_namespace+"width");
+  static double &length = ctrl_ptr->get_data<double>(plugin_namespace+"length");
+  static double &height = ctrl_ptr->get_data<double>(plugin_namespace+"height");
 
   base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(
         ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
@@ -584,7 +584,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
 
-  int STANCE_ON_CONTACT = Utility::get_variable<int>(plugin_namespace+"stance-on-contact");
+  int STANCE_ON_CONTACT = ctrl_ptr->get_data<int>(plugin_namespace+"stance-on-contact");
   walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
 //  cpg_trot(go_to,this_gait,duty_factor,gait_time,step_height,foot_origin,t,foot_pos,foot_vel,foot_acc);
   for(int i=0;i<NUM_FEET;i++){

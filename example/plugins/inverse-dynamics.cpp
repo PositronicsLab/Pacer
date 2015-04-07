@@ -1868,15 +1868,15 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double last_time = -0.001;
   const double dt = t - last_time;
-    static double &dt_idyn = Utility::get_variable<double>(plugin_namespace+"dt");
-    static double &alpha = Utility::get_variable<double>(plugin_namespace+"alpha");
-    static int &USE_DES_CONTACT = Utility::get_variable<int>(plugin_namespace+"des-contact");
-    static int &USE_LAST_CFS = Utility::get_variable<int>(plugin_namespace+"last-cfs");
+    static double dt_idyn = ctrl->get_data<double>(plugin_namespace+"dt");
+    static double alpha = ctrl->get_data<double>(plugin_namespace+"alpha");
+    static int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
+    static int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs");
     double DT = (dt_idyn == 0)? dt : dt_idyn;
 
 
     static std::vector<std::string>
-        &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+        foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
    
     std::vector<std::string> active_feet;
 
@@ -1983,7 +1983,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           N_delay_queue,
           D_delay_queue,
           MU_delay_queue;
-      static int &FILTER_CFS = Utility::get_variable<int>(plugin_namespace+"last-cfs-filter");
+      static int FILTER_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs-filter");
 
       if(FILTER_CFS && NC>0){
 

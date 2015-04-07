@@ -26,7 +26,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
     Ravelin::Vector3d com(base_horizontal_frame->x.data());
 
-    OUT_LOG(logDEBUG1) << "x = " << base_horizontal_frame->x ;
+  OUT_LOG(logERROR) << "x = " << base_horizontal_frame->x ;
+  
+  Ravelin::VectorNd base_xd;
+  ctrl->get_base_value(Pacer::Robot::velocity,base_xd);
+  OUT_LOG(logERROR) << "xd = " << base_xd ;
 
     /////////////////////
     /// SET VARIABLES ///
@@ -35,9 +39,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     Ravelin::VectorNd command;
     command.set_zero(6);
 
-    static double &max_forward_speed = Utility::get_variable<double>(plugin_namespace+"max-forward-speed");
-    static double &max_strafe_speed  = Utility::get_variable<double>(plugin_namespace+"max-strafe-speed");
-    static double &max_turn_speed    = Utility::get_variable<double>(plugin_namespace+"max-turn-speed");
+    double max_forward_speed = ctrl->get_data<double>(plugin_namespace+"max-forward-speed");
+    double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+"max-strafe-speed");
+    double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
 
     // if FALSE, drive like a car (x and theta)
     // Q: if TRUE, turn toward waypoint while stepping in direction of waypoint
@@ -47,8 +51,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     /// Assign WAYPOINTS in the plane ///
     static std::vector<Point> waypoints;
   
-    Ravelin::Vector2d waypoint;
-      std::vector<double> waypoints_vec = Utility::get_variable<std::vector<double> >(plugin_namespace+"waypoints");
+    std::vector<double> waypoints_vec = ctrl->get_data<std::vector<double> >(plugin_namespace+"waypoints");
   
     // if (waypoints not inititalized) OR (waypoints changed) OR (only one waypoint)
     // update waypoints

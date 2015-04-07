@@ -18,7 +18,7 @@
 
 #define USE_CURSES
 //#define PS3
-//#define SABRENT
+#define SABRENT
 
 #include <SDL2/SDL.h>
 #include <assert.h>
@@ -371,7 +371,7 @@ const int
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[1] = 0;
         else
-          command_SE2[1] = max_strafe_speed * (double) j.axes[i] / (double) 32767;
+          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) 32767;
       }
       { // forward
         int i = 1;
@@ -385,7 +385,7 @@ const int
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[2] = 0;
         else
-          command_SE2[2] = max_turn_speed *  (double) j.axes[i] / (double) 32767;
+          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) 32767;
       }
 //#endif
 

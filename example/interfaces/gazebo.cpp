@@ -51,7 +51,7 @@ using namespace Pacer;
 
        init_plugin();
 
-       foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+       foot_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
 
        // get the sensor
        for(int i=0;i<foot_names.size();i++){
@@ -71,7 +71,7 @@ using namespace Pacer;
            boost::bind(&ControllerPlugin::UpdateController, this)));
 
        std::vector<double>
-           base_start = Utility::get_variable<std::vector<double> >("init.base.x");
+           base_start = robot_ptr->get_data<std::vector<double> >("init.base.x");
        
        math::Pose p(base_start[0],base_start[1],base_start[2],base_start[3],base_start[4],base_start[5]);
        model->SetWorldPose(p);
@@ -234,7 +234,7 @@ using namespace Pacer;
          robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
          robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
          
-         int is_kinematic = Utility::get_variable<int>("init.kinematic");
+         int is_kinematic = robot_ptr->get_data<int>("init.kinematic");
 
           //  apply_sim_perturbations();
          for(int i=0;i<joints.size();i++){

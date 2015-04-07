@@ -22,8 +22,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ctrl->set_model_state(q_goal);
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(
         ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
-   std::vector<std::string>
-      &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+  static std::vector<std::string>
+      foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
 
   for(int i=0;i<foot_names.size();i++){
     Ravelin::Vector3d x 

@@ -16,7 +16,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
   
   std::vector<std::string>
-      &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+      foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
       
   int NUM_FEET = foot_names.size();
   std::vector<Ravelin::Vector3d>
@@ -42,7 +42,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   q[N+5] = 0;
   q[N+6] = 1;
   
-  double &TOL = Utility::get_variable<double>(plugin_namespace+"abs-err-tolerance");
+  double TOL = ctrl->get_data<double>(plugin_namespace+"abs-err-tolerance");
   // This is calculated in global frame always (assume base_link is at origin)
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
                                         q_goal,qd_goal,qdd_goal,TOL);

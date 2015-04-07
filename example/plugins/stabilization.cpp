@@ -53,9 +53,9 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
 }
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  static std::vector<double> &x_des = Utility::get_variable<std::vector<double> >(plugin_namespace+"desired.x");
-  static std::vector<double> &xd_des = Utility::get_variable<std::vector<double> >(plugin_namespace+"desired.xd");
-  static int &USE_DES_CONTACT = Utility::get_variable<int>(plugin_namespace+"des-contact");
+   std::vector<double> x_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.x");
+   std::vector<double> xd_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.xd");
+   int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
   
   Ravelin::VectorNd 
     generalized_qd = ctrl->get_generalized_value(Pacer::Controller::velocity),
@@ -74,8 +74,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);// ctrl->get_base_value(Pacer::Controller::velocity);
                                                        //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
   
-  static std::vector<std::string>
-        &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+   std::vector<std::string>
+        foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
         
   Ravelin::MatrixNd N,S,T,D;
   std::vector<std::string> active_feet;
@@ -106,9 +106,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NC = N.columns();
 
   static std::vector<double>
-      &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kp"),
-      &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kv"),
-      &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.ki");
+      Kp = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
+      Kv = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
+      Ki = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.ki");
   
   if(NC > 0){
     D.set_zero(NDOFS,NC*4);

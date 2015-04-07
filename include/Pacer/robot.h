@@ -9,32 +9,29 @@
 #include <Pacer/project_common.h>
 #include <Pacer/utilities.h>
 #include <Pacer/Visualizable.h>
+#include <boost/enable_shared_from_this.hpp>
+
 namespace Pacer{
+  class Robot;
   
  static const unsigned NSPATIAL = 6;
  static const unsigned NEULER = 7;
 
-class Robot {
-	
-  private:
-    std::string PARAMS_FILE;
-    
+  class Robot{
   public:
 
 	Robot(){
-    OUT_LOG(logDEBUG) << ">> Robot::Robot(.)";
-	  PARAMS_FILE = std::string("vars.xml");
-	  Utility::load_variables(PARAMS_FILE);
-    unlock_state();
-	  init_robot();
-    OUT_LOG(logDEBUG) << "<< Robot::Robot(.)";
 	}
+
+  protected:
+    std::string PARAMS_FILE;
+    void load_variables(std::string xml_file,boost::shared_ptr<Robot> robot_ptr);
 
   /// --------------------  Data Storage  -------------------- ///
   private:
+  
     std::map<std::string,boost::shared_ptr<void> > _data_map;
     std::mutex _data_map_mutex;
-   
   public:   
     template<class T>
     void set_data(std::string n, const T& v){

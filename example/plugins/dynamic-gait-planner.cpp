@@ -216,12 +216,12 @@ void walk_toward(
       xd.pose = base_frame;
       x.pose = base_frame;
       x = x + xd * dt;
-      
-      if(active_foot){
-        workv3_ *= 100;
-        J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
-        ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
-      }
+  // NOTE: This is for running    
+  //    if(active_foot){
+  //      workv3_ *= 100;
+  //      J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
+  //      ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
+  //    }
       
       Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x);
       Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,xd);// * (left_in_phase*gait_duration);

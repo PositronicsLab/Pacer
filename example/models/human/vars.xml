@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">DEBUG1</logging>
+  <logging type="string">ERROR</logging>
   <robot-model type="string">human/human.generated.sdf</robot-model>
 
   <init>

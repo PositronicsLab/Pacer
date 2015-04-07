@@ -42,19 +42,15 @@ $ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so mode
 - [Ravelin] 
 - [Moby] 
 - Boost 
-- [CVars] 
 
 ##Optional 
 
 - OpenSceneGraph
-- [GLConsole] 
 - [DXL]
 - SDL (permits joystick control)
 
 [Ravelin]: https://github.com/PositronicsLab/Ravelin
 [Moby]: https://github.com/PositronicsLab/Moby
-[CVars]: https://github.com/arpg/GLConsole
-[GLConsole]: https://github.com/arpg/GLConsole
 [DXL]: https://github.com/samzapo/DynamixelDriver
 
 ###Usage

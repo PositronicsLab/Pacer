@@ -240,13 +240,13 @@ using namespace Pacer;
          for(int i=0;i<joints.size();i++){
            physics::JointPtr joint = joints[i];
            for(int j=0;j<joint->GetAngleCount();j++){
-             if(is_kinematic){
+             //if(!is_kinematic){
                joint->SetForce(j,u[joint->GetName()][j]);
-             } else {
-               math::Angle a(q[joints[i]->GetName()][j]);
-               joint->SetAngle(j,a);
-               joint->SetVelocity(j,qd[joint->GetName()][j]);
-             }
+             //} else {
+             //  math::Angle a(q[joints[i]->GetName()][j]);
+             //  joint->SetAngle(j,a);
+             //  joint->SetVelocity(j,qd[joint->GetName()][j]);
+             //}
            }
          }
        }

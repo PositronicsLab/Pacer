@@ -1,0 +1,13 @@
+<?xml version='1.0'?>
+<sdf version='1.4'>
+  <model name="human" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- TODO: These should not be needed but parameters aren't working -->
+    <xacro:property name="xoffset" value="0" />
+    <xacro:property name="yoffset" value="0" />
+    <xacro:property name="zoffset" value="0" />
+    <xacro:property name="prefix" value="" />
+    <static>false</static>
+    <xacro:include filename="human.include"/>
+    <!-- <xacro:human xoffset="0" yoffset="0" zoffset="0.0"/>--> <!-- Base pose --> 
+  </model>
+</sdf>

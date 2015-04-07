@@ -334,8 +334,10 @@ class Robot {
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
         const std::vector<double>& dof_val = (*it).second;
-        if(dof_val_internal.rows() != dof_val.size())
+        if(dof_val_internal.rows() != dof_val.size()){
+          std::cerr << "Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string(dof_val.size()) << std::endl;
           throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string(dof_val.size()));
+        }
         for(int j=0;j<(*it).second.size();j++){
           dof_val_internal[j] = dof_val[j]; 
         }

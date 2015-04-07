@@ -1,0 +1,9 @@
+<?xml version='1.0'?>
+<sdf version='1.5' xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <world name='default'>
+    <xacro:include filename="../../world.include"/>
+    <include>
+      <uri>model://file://models/human/</uri>
+    </include>
+  </world>
+</sdf>

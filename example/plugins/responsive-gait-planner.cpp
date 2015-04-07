@@ -15,106 +15,6 @@ boost::shared_ptr<Pacer::Controller> ctrl_ptr;
   std::string plugin_namespace;
   std::vector<std::string> foot_names;
 
-
-  /*
-void sinusoidal_trot(Ravelin::VectorNd& q_des,Ravelin::VectorNd& qd_des,Ravelin::VectorNd& qdd,double dt){
-  static double t = 0;
-  if(dt==0)
-    t = 0;
-  static Ravelin::VectorNd workv_,last_qd_des = Ravelin::VectorNd::zero(NUM_JOINTS);
-  static Ravelin::MatrixNd workM_;
-  t += dt;
-
-  std::vector<Ravelin::Vector3d> foot_vel(NUM_EEFS),foot_poses(NUM_EEFS);
-  Ravelin::VectorNd Hs(NUM_EEFS);
-
-  // Additional Parameters for CPG
-  double Ls = 0.02, Vf = 10;
-  for(int f=0;f<NUM_EEFS;f++){
-    // set height of gait (each foot)
-    Hs[f] = 0.02;
-
-    // SET EEF ORIGINS TO the ground below that EEF SHOULDER
-    if(dt != 0){
-      Ravelin::Pose3d joint_pose = *joints_[eefs_[f].chain[2]]->get_pose();
-      joint_pose.update_relative_pose(Moby::GLOBAL);
-      joint_pose.x[2] += -0.13;
-      joint_pose.update_relative_pose(base_frame);
-      eefs_[f].origin.pose = base_frame;
-      eefs_[f].origin = joint_pose.x;
-      if(f%2 == 0)
-        eefs_[f].origin[1] += 0.02;
-      else
-        eefs_[f].origin[1] -= 0.02;
-    }
-  }
-
-
-  // Foot goal position
-  for(int f=0;f<NUM_EEFS;f++){
-    if(f==0 || f==3) {
-      foot_poses[f] = eefs_[f].origin+Ravelin::Vector3d(Ls*sin(M_PI_2+t*Vf),0,Hs[f]*cos(M_PI_2+t*Vf),base_frame);
-      foot_vel[f] = Ravelin::Vector3d(Vf*Ls*cos(M_PI_2+t*Vf),0,-Vf*Hs[f]*sin(M_PI_2+t*Vf));
-    } else {
-      foot_poses[f] = eefs_[f].origin+Ravelin::Vector3d(-Ls*sin(M_PI_2+t*Vf),0,Hs[f]*cos(M_PI_2+t*-Vf),base_frame);
-      foot_vel[f] = Ravelin::Vector3d(-Vf*Ls*cos(M_PI_2+t*Vf),0,Vf*Hs[f]*sin(M_PI_2+t*-Vf));
-    }
-  }
-
-  // EEF POSITION
-  for(int i=0;i<NUM_EEFS;i++){
-    OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_x =" << foot_poses[i];
-    RMRC(eefs_[i],q_des,foot_poses[i],q_des);
-    OUT_LOG(logDEBUG) << "\t" << eefs_[i].id << "_q =" << foot_poses[i];
-  }
-  // Foot goal Velocity
-  if(dt!= 0)
-  for(int f=0;f<NUM_EEFS;f++){
-    // Calc jacobian for AB at this EEF
-    boost::shared_ptr<Ravelin::Pose3d> foot_frame(new Ravelin::Pose3d(*eefs_[f].link->get_pose()));
-    foot_frame->update_relative_pose(Moby::GLOBAL);
-    boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(Moby::GLOBAL));
-    event_frame->x = foot_frame->x;
-    event_frame->update_relative_pose(base_frame);
-
-    dbrobot_->calc_jacobian(event_frame,eefs_[f].link,workM_);// J: qd -> xd
-    Ravelin::MatrixNd iJ(3,3);
-    for(int j=0;j<3;j++)                                      // x,y,z
-      for(int i=0;i<eefs_[f].chain.size();i++)                // actuated joints
-        iJ(j,i) = workM_(j,eefs_[f].chain[i]);                // Ji <- J
-    LA_.solve_fast(iJ,foot_vel[f]);                           // qd <- Ji\xd
-  }
-
-  for(int i=0;i<NUM_EEFS;i++){
-    for(int j=0;j<eefs_[i].chain.size();j++){
-      qd_des[eefs_[i].chain[j]] = foot_vel[i][j];
-    }
-  }
-  for(int i=0;i<NUM_JOINT_DOFS;i++)
-    qdd[i] = (qd_des[i] - last_qd_des[i])/dt;
-
-  last_qd_des = qd_des;
-}
-
-/// Generate a bunch of random points at z = 0 around the COM
-void find_footholds(std::vector<Ravelin::Vector3d>& footholds,int num_footholds){
-  footholds.clear();
-  double rad = 0.2;
-  if(data->N.columns()>0) center_of_contact.active = true;
-  if(!center_of_contact.active) return;
-  for(int i=0;i<num_footholds;i++){
-    Ravelin::Vector3d fh(
-      data->center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,data->center_of_mass_x[0] + (double)rand()/RAND_MAX * 2.0 * rad - rad,0
-      ,Moby::GLOBAL
-    );
-    if(center_of_contact.normal[0].norm() > Moby::NEAR_ZERO)
-      fh[2] = Utility::get_z_plane(fh[0],fh[1],center_of_contact.normal[0],center_of_contact.point[0]);
-
-    footholds.push_back(Ravelin::Pose3d::transform_point(base_frame,fh));
-  }
-}
-*/
-
 void select_foothold(const std::vector<Ravelin::Vector3d>& footholds,const Ravelin::Origin3d &x, Ravelin::Origin3d& x_fh){
   double min_dist = INFINITY;
   int    min_vec = 0;
@@ -263,6 +163,7 @@ void walk_toward(
     }
   }
 
+  ctrl_ptr->set_model_state(q);
   ////////////////// PHASE PLANNING ///////////////////////
   for(int i=0;i<NUM_FEET;i++){
 
@@ -275,21 +176,31 @@ void walk_toward(
     double left_in_phase;
     bool replan_path = false;
     if(inited){
+      Ravelin::Vector3d x_   = foot_pos[i];
       // Set liftoff feet (opposite of stance_phase variable)
-      //if(stance_phase[i] && feet[i]->active && !last_feet_active[i] && STANCE_ON_CONTACT){
-        //replan_path = true;
-      //} else {
         for(int d=0; d<3;d++){
           replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
           if(replan_path)
             break;
         }
-      //}
+        // Stance phase (opposite to signal switch on next re-program)
+        if(!stance_phase[i]){
+          Ravelin::VectorNd generalized_command, foot_vel;
+          generalized_command.set_zero(q.rows() - Pacer::NEULER + Pacer::NSPATIAL);
+          generalized_command.set_sub_vec(generalized_command.rows() - Pacer::NSPATIAL,command);
+        
+          Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,foot_names[i]);
+        
+          J.mult(generalized_command,foot_vel,-1.0,0);
+          xd = Ravelin::Vector3d(foot_vel.segment(0,3).data(),base_frame);
+          x_.pose = base_frame;
+          x = x_+xd*0.001;
+        }
     }
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
-
+      x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,ctrl_ptr->get_link(foot_names[i])->get_pose()));
       OUTLOG(origins[i],"foot_origin_" + std::to_string(i),logDEBUG);
 
       // What phase of the gait is the controller in?
@@ -320,8 +231,9 @@ void walk_toward(
         // continue off of the end of the last spline
         t0 = *(spline_t[i].rbegin()->end()-1) - Moby::NEAR_ZERO;
         }
+        Ravelin::Vector3d x_;
         for(int d=0; d<3;d++){
-          bool pass = Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x[d],xd[d],xdd[d]);
+          bool pass = Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x_[d],xd[d],xdd[d]);
           assert(pass);
         }
       }
@@ -329,19 +241,11 @@ void walk_toward(
       // Calculate foot step info
       // Determine linear portion of step
       boost::shared_ptr< Ravelin::Pose3d> foot_frame = boost::shared_ptr< Ravelin::Pose3d>(new Ravelin::Pose3d(base_frame));
-      foot_frame->x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,origins[i]);
+      foot_frame->x = Ravelin::Origin3d(origins[i].data());
       Ravelin::Origin3d x0 = origins[i].data();
 
       Ravelin::Vector3d foot_goal(command[0],command[1],0,foot_frame);
       
-      Ravelin::VectorNd generalized_command, foot_vel;
-      generalized_command.set_zero(q.rows() - Pacer::NEULER + Pacer::NSPATIAL);
-        generalized_command.set_sub_vec(generalized_command.rows() - Pacer::NSPATIAL,command);
-        
-      Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,foot_names[i]);
-        
-      J.mult(generalized_command,foot_vel,1.0,0);
-      xd_stance[i] = Ravelin::Vector3d(foot_vel.segment(0,3).data());
         
       if(fabs(command[5]) > Moby::NEAR_ZERO){
         // Determine shape of step needed to yaw robot
@@ -474,15 +378,19 @@ void walk_toward(
     xdd.pose = foot_acc[i].pose;
   }
 
-#ifdef NDEBUG
+//#ifdef NDEBUG
 ///* VISUALIZE
   {
 
   for(int i=0;i<NUM_FEET;i++){
+      {
+        Ravelin::Vector3d p = Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]);
+        Ravelin::Vector3d v = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,foot_vel[i])/10;
+        Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Ravelin::Vector3d(0,0,1),0.1)));
+        Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Ravelin::Vector3d(0,1,0),0.1)));
+      }
 
-    //Ravelin::Vector3d pos = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
-
-    Ravelin::VectorNd &T1 = *(spline_t[i].begin()),
+      Ravelin::VectorNd &T1 = *(spline_t[i].begin()),
                       &T2 = *(spline_t[i].rbegin());
 
 
@@ -504,7 +412,7 @@ void walk_toward(
   }
   }
 //  END VISUALIZE */
-#endif
+//#endif
   last_time = t;
   inited = true;
   OUT_LOG(logDEBUG) << " -- walk_toward() exited";
@@ -513,7 +421,7 @@ void walk_toward(
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ctrl_ptr = ctrl;
   
-  const int queue_size = 500;
+  const int queue_size = 100;
   static std::deque<Ravelin::Origin3d> command_queue;
   static Ravelin::Origin3d sum_command = Ravelin::Origin3d(0,0,0);
   
@@ -560,9 +468,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       foot_acc(NUM_FEET);
   q = ctrl->get_generalized_value(Pacer::Robot::position);
   
-  ctrl->set_model_state(q);
   for(int i=0;i<NUM_FEET;i++){
-    foot_pos[i] = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,ctrl->get_link(foot_names[i])->get_pose()));
+    foot_pos[i] = Ravelin::Vector3d(0,0,0,base_frame);
+    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     foot_vel[i] = Ravelin::Vector3d(0,0,0,base_frame);
     foot_acc[i] = Ravelin::Vector3d(0,0,0,base_frame);
     //double gait_progress = t/gait_time;

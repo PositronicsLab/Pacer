@@ -1868,15 +1868,15 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double last_time = -0.001;
   const double dt = t - last_time;
-    static double &dt_idyn = Utility::get_variable<double>(plugin_namespace+"dt");
-    static double &alpha = Utility::get_variable<double>(plugin_namespace+"alpha");
-    static int &USE_DES_CONTACT = Utility::get_variable<int>(plugin_namespace+"des-contact");
-    static int &USE_LAST_CFS = Utility::get_variable<int>(plugin_namespace+"last-cfs");
+    static double dt_idyn = ctrl->get_data<double>(plugin_namespace+"dt");
+    static double alpha = ctrl->get_data<double>(plugin_namespace+"alpha");
+    static int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
+    static int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs");
     double DT = (dt_idyn == 0)? dt : dt_idyn;
 
 
     static std::vector<std::string>
-        &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+        foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
    
     std::vector<std::string> active_feet;
 
@@ -1904,14 +1904,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
     if(USE_DES_CONTACT){
       for(int i=0;i<foot_names.size();i++){
-        int is_stance = 0;
-        if(ctrl->get_data<int>(foot_names[i]+".stance",is_stance))
-          if(is_stance == 1)
+        bool is_stance = false;
+        if(ctrl->get_data<bool>(foot_names[i]+".stance",is_stance))
+          if(is_stance)
             active_feet.push_back(foot_names[i]);
       }
     } else
       active_feet = foot_names;
 
+  
 
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
     for(int i=0;i<active_feet.size();i++){
@@ -1942,6 +1943,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
          /MU.row(i).rows() < 100.0)
         inf_friction = false;
     }
+    inf_friction = false;
 
     Ravelin::VectorNd cf_init;
       cf.set_zero(NC*5);
@@ -1981,7 +1983,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           N_delay_queue,
           D_delay_queue,
           MU_delay_queue;
-      static int &FILTER_CFS = Utility::get_variable<int>(plugin_namespace+"last-cfs-filter");
+      static int FILTER_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs-filter");
 
       if(FILTER_CFS && NC>0){
 

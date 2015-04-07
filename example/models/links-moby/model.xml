@@ -39,8 +39,7 @@
     <Sphere id="foot" radius="0.01" mass="0.01"/>
 <!--    <Box id="foot" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.005" edge-sample-length="0.01"/>-->
 
-    <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb"
-      rotate="0.0 0.0 0.0" translate="0,0,0.19" >
+    <RCArticulatedBody id="LINKS" floating-base="true" fdyn-algorithm="crb" rotate="0.0 0.0 0.0" translate="0,0,0.19" >
       <!-- the body -->
       <RigidBody id="BODY0" color="0.25 0.25 0.25 1" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="body1" compliant="false">
 <!--        <CollisionGeometry primitive-id="body1" />-->
@@ -212,7 +211,7 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="3" ylen="0.001" zlen="3" />
+     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="2" />
      <Plane id="ground-primitive" rpy="1.5708 0 0" />
 <!--<Heightmap id="ground-primitive" filename="heightmap.mat" width="1" depth="1" rpy="1.5708 0 0" />-->
 <RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"

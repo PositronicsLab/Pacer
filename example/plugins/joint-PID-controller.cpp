@@ -35,16 +35,16 @@ public:
   void init(){
     std::map<std::string,std::vector<Gains> > gains;
 
-    std::vector<std::string>
-      &joint_names = Utility::get_variable<std::vector<std::string> >("init.joint.id");
+    static std::vector<std::string>
+      joint_names = ctrl_ptr->get_data<std::vector<std::string> >("init.joint.id");
 
     OUTLOG(joint_names,"joint_names",logERROR);
 
-    std::vector<double>
-        &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kp"),
-        &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kv"),
-        &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.ki"),
-        &dofs = Utility::get_variable<std::vector<double> >("init.joint.dofs");
+    static std::vector<double>
+        Kp = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
+        Kv = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
+        Ki = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.ki"),
+        dofs = ctrl_ptr->get_data<std::vector<double> >("init.joint.dofs");
 
     OUTLOG(Kp,"Kp",logERROR);
     OUTLOG(Kv,"Kv",logERROR);

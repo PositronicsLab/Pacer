@@ -29,14 +29,14 @@ public:
 
   void init(){
 
-    eef_names = Utility::get_variable<std::vector<std::string> >(plugin_namespace+"id");
+    eef_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"id");
     num_eefs = eef_names.size();
     eef_u.resize(num_eefs);
     
     std::vector<double>
-        &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kp"),
-        &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kv"),
-        &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.ki");
+        Kp = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
+        Kv = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
+        Ki = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.ki");
  
     assert(num_eefs*3 == Kp.size());
     assert(num_eefs*3 == Kv.size());

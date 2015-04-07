@@ -44,8 +44,8 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
   OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
 
 //   Remove Tangential Elements (for now)
-  for(int i=NC;i<ws_correct.rows();i++)
-      ws_correct[i] = 0.0;
+  //for(int i=NC;i<ws_correct.rows();i++)
+  //    ws_correct[i] = 0.0;
   OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
@@ -53,24 +53,29 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
 }
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  static std::vector<double> &x_des = Utility::get_variable<std::vector<double> >(plugin_namespace+"desired.x");
-  static std::vector<double> &xd_des = Utility::get_variable<std::vector<double> >(plugin_namespace+"desired.xd");
-  static int &USE_DES_CONTACT = Utility::get_variable<int>(plugin_namespace+"des-contact");
+   std::vector<double> x_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.x");
+   std::vector<double> xd_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.xd");
+   int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
   
   Ravelin::VectorNd 
     generalized_qd = ctrl->get_generalized_value(Pacer::Controller::velocity),
     generalized_q  = ctrl->get_generalized_value(Pacer::Controller::position);
   
-  Ravelin::VectorNd base_qd = ctrl->get_base_value(Pacer::Controller::velocity);
-  Ravelin::Origin3d roll_pitch_yaw = ctrl->get_data<Ravelin::Origin3d>("roll_pitch_yaw");
-  //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
-  Ravelin::VectorNd center_of_mass_x = ctrl->get_base_value(Pacer::Controller::position);
+  boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(
+    ctrl->get_data<Ravelin::Pose3d>("base_stability_frame")));
+  base_frame->update_relative_pose(Moby::GLOBAL);
+  Ravelin::VectorNd center_of_mass_x = Utility::pose_to_vec(base_frame);
+  Ravelin::Origin3d roll_pitch_yaw;
+  Ravelin::Quatd(center_of_mass_x[3],center_of_mass_x[4],center_of_mass_x[5],center_of_mass_x[6]).to_rpy(roll_pitch_yaw[0],roll_pitch_yaw[1],roll_pitch_yaw[2]);
 
   int NDOFS = generalized_qd.rows();
   int NUM_JOINT_DOFS = NDOFS - NSPATIAL;
 
-  static std::vector<std::string>
-        &foot_names = Utility::get_variable<std::vector<std::string> >("init.end-effector.id");
+  Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);// ctrl->get_base_value(Pacer::Controller::velocity);
+                                                       //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
+  
+   std::vector<std::string>
+        foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
         
   Ravelin::MatrixNd N,S,T,D;
   std::vector<std::string> active_feet;
@@ -101,18 +106,18 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NC = N.columns();
 
   static std::vector<double>
-      &Kp = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kp"),
-      &Kv = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.kv"),
-      &Ki = Utility::get_variable<std::vector<double> >(plugin_namespace+"gains.ki");
+      Kp = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
+      Kv = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
+      Ki = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.ki");
   
   if(NC > 0){
     D.set_zero(NDOFS,NC*4);
     D.set_sub_mat(0,0,S);
     D.set_sub_mat(0,NC,T);
-    S.negate();
-    T.negate();
-    D.set_sub_mat(0,NC*2,S);
-    D.set_sub_mat(0,NC*3,T);
+//    S.negate();
+//    T.negate();
+//    D.set_sub_mat(0,NC*2,S);
+//    D.set_sub_mat(0,NC*3,T);
     
     int nk = D.columns()/NC;
     int nvars = NC + NC*(nk);

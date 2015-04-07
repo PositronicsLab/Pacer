@@ -9,7 +9,7 @@
 
 void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static int ITER = 0;
-  int RTF = (int) Utility::get_variable<double>(plugin_namespace+"real-time-factor");
+  int RTF = (int) ctrl->get_data<double>(plugin_namespace+"real-time-factor");
   if(ITER%RTF == 0)
     Update(ctrl,t);
   ITER+=1;
@@ -19,7 +19,7 @@ extern "C" {
   void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
     plugin_namespace = std::string(std::string(name)+".");
 
-    int priority = Utility::get_variable<double>(plugin_namespace+"priority");
+    int priority = ctrl->get_data<double>(plugin_namespace+"priority");
 
     ctrl->add_plugin_update(priority,name,&update);
   }

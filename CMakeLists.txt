@@ -15,7 +15,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 #find BOOST libraries
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
-find_package(Boost COMPONENTS system REQUIRED)
+find_package(Boost REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
@@ -40,16 +40,6 @@ find_package(Moby REQUIRED)
 link_directories(${MOBY_LIBRARY_DIR})
 include_directories(${MOBY_INCLUDE_DIR})
 
-#add cvars
-find_package(CVars REQUIRED)
-link_directories(${CVARS_LIBRARY_DIRS})
-include_directories(${CVARS_INCLUDE_DIRS})
-
-#add GLConsole
-find_package(GLConsole QUIET)
-link_directories(${GLConsole_LIBRARY_DIRS})
-include_directories(${GLConsole_INCLUDE_DIRS})
-
 #add GLConsole
 find_package(LibXml2 REQUIRED)
 link_directories(${LIBXML2_LIBRARY_DIR})
@@ -70,7 +60,6 @@ option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)
   option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
-  #option(CONSOLE "Display a Console window for controlling robot XML parameters inline" OFF)
 
 
 # fix the C++ linking error on 64-bit Linux
@@ -137,18 +126,7 @@ IF(LIBXML2_FOUND)
   target_link_libraries (Pacer ${LIBXML2_LIBRARIES})
 ENDIF(LIBXML2_FOUND)
 
-# cvars
-IF(CVARS_FOUND)
-  target_link_libraries (Pacer ${CVARS_LIBRARIES})
-ENDIF(CVARS_FOUND)
-
-
-# GLConsole
-IF(GLConsole_FOUND)
-  target_link_libraries (Pacer ${GLConsole_LIBRARIES})
-ENDIF(GLConsole_FOUND)
-
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES} boost_filesystem boost_system)
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES})
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

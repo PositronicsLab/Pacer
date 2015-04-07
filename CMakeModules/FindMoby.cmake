@@ -28,7 +28,7 @@ if( MOBY_INCLUDE_DIR )
     set(MOBY_LIBRARIES ${MOBY_LIBRARY})
   endif(MOBY_LIBRARY)
 else(MOBY_INCLUDE_DIR)
-  message(FATAL_ERROR "FindMoby: Could not find EventDrivenSimulator.h")
+  message(STATUS "FindMoby: Could not find EventDrivenSimulator.h")
 endif(MOBY_INCLUDE_DIR)
 	    
 if(MOBY_FOUND)

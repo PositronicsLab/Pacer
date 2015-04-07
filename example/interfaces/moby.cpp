@@ -60,9 +60,9 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
    int num_joints = joints_.size();
 
    static std::vector<double> workv_,
-       &unknown_base_perturbation = Utility::get_variable("sim.unknown-base-perturbation",workv_),
-       &known_base_perturbation = Utility::get_variable("sim.known-base-perturbation",workv_),
-       &known_leading_force = Utility::get_variable("sim.known-leading-force",workv_);
+       &unknown_base_perturbation = robot_ptr->get_data("sim.unknown-base-perturbation",workv_),
+       &known_base_perturbation = robot_ptr->get_data("sim.known-base-perturbation",workv_),
+       &known_leading_force = robot_ptr->get_data("sim.known-leading-force",workv_);
 
    Ravelin::Vector3d lead(known_leading_force[3],
                           known_leading_force[4],
@@ -317,15 +317,18 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   abrobot->controller                     = &controller_callback;
 
   // ================= INIT ROBOT STATE ==========================
-  int is_kinematic = Utility::get_variable<int>("init.kinematic");
+  int is_kinematic = robot_ptr->get_data<int>("init.kinematic");
 
   if(is_kinematic)
     abrobot->set_kinematic(true);
 
   Ravelin::VectorNd q_start;
   robot_ptr->get_generalized_value(Pacer::Robot::position,q_start);
+  Ravelin::VectorNd qd_start;
+  robot_ptr->get_generalized_value(Pacer::Robot::velocity,qd_start);
 
   abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
+  abrobot->set_generalized_velocity(Moby::DynamicBody::eSpatial,qd_start);
   abrobot->update_link_poses();
 }
 

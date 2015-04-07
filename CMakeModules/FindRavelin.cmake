@@ -28,7 +28,7 @@ if( RAVELIN_INCLUDE_DIR )
     set(RAVELIN_LIBRARIES ${RAVELIN_LIBRARY})
   endif(RAVELIN_LIBRARY)
 else(RAVELIN_INCLUDE_DIR)
-  message(FATAL_ERROR "FindRavelin: Could not find VectorNd.h")
+  message(STATUS "FindRavelin: Could not find VectorNd.h")
 endif(RAVELIN_INCLUDE_DIR)
 	    
 if(RAVELIN_FOUND)

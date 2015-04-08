@@ -32,14 +32,25 @@ namespace Pacer{
   
     std::map<std::string,boost::shared_ptr<void> > _data_map;
     std::mutex _data_map_mutex;
-  public:   
+  public:
+    
+    // Returns 'true' if new key was created in map
     template<class T>
-    void set_data(std::string n, const T& v){
+    bool set_data(std::string n, const T& v){
       _data_map_mutex.lock();
       // TODO: Improve this functionality, shouldn't be copying into new class
-      _data_map[n] = boost::shared_ptr<T>(new T(v));  
-      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+      std::map<std::string,boost::shared_ptr<void> >::iterator it
+        =_data_map.find(n);
+      bool new_var = (it == _data_map.end());
+      if(new_var){
+        _data_map[n] = boost::shared_ptr<T>(new T(v));
+      }else{
+        (*it).second = boost::shared_ptr<T>(new T(v));
+      }
       _data_map_mutex.unlock();
+
+      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+      return new_var;
     }
     
     template<class T>

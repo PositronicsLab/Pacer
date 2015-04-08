@@ -282,10 +282,14 @@ void Robot::update(){
   for(unsigned i=0;i<eef_names_.size();i++){
     const Moby::RigidBodyPtr link = _id_link_map[eef_names_[i]];
     Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,link->get_pose()));
-    set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
+    bool new_var = set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
     
     Ravelin::Vector3d xd = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear());
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
+    if(new_var){
+      set_data<Ravelin::Vector3d>(eef_names_[i]+".init.x",x);
+      set_data<Ravelin::Vector3d>(eef_names_[i]+".init.xd",xd);
+    }
   }
   
   Ravelin::MatrixNd M;
@@ -318,7 +322,7 @@ void Robot::update_poses(){
 
   // preserve yaw
   Ravelin::Pose3d base_horizontal_frame(
-            Ravelin::AAngled(0,0,1,roll_pitch_yaw[0]),
+            Ravelin::AAngled(0,0,1,roll_pitch_yaw[2]),
           base_link_frame.x,Moby::GLOBAL);
 
   set_data<Ravelin::Pose3d>("base_stability_frame",base_link_frame);

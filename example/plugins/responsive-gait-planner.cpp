@@ -200,7 +200,7 @@ void walk_toward(
 
     // Plan a new spline for this foot
     if(replan_path || !inited ){
-      x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,ctrl_ptr->get_link(foot_names[i])->get_pose()));
+      x = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.x");
       OUTLOG(origins[i],"foot_origin_" + std::to_string(i),logDEBUG);
 
       // What phase of the gait is the controller in?
@@ -467,11 +467,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       foot_pos(NUM_FEET),
       foot_acc(NUM_FEET);
   q = ctrl->get_generalized_value(Pacer::Robot::position);
-  
+  ctrl_ptr->update_model(q);
   for(int i=0;i<NUM_FEET;i++){
-    foot_pos[i] = Ravelin::Vector3d(0,0,0,base_frame);
-    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-    foot_vel[i] = Ravelin::Vector3d(0,0,0,base_frame);
+    foot_pos[i] = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.x");
+//    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    foot_vel[i] = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.xd");
     foot_acc[i] = Ravelin::Vector3d(0,0,0,base_frame);
     //double gait_progress = t/gait_time;
     //gait_progress = gait_progress - (double) ((int) gait_progress);

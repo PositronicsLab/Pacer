@@ -44,9 +44,9 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
   OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
 
 //   Remove Tangential Elements (for now)
-  //for(int i=NC;i<ws_correct.rows();i++)
-  //    ws_correct[i] = 0.0;
-  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
+//  for(int i=NC;i<ws_correct.rows();i++)
+//      ws_correct[i] = 0.0;
+//  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);
@@ -63,7 +63,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(
     ctrl->get_data<Ravelin::Pose3d>("base_stability_frame")));
+  
   base_frame->update_relative_pose(Moby::GLOBAL);
+  
+//  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(*(base_frame.get()),0.1,1)));
+  
   Ravelin::VectorNd center_of_mass_x = Utility::pose_to_vec(base_frame);
   Ravelin::Origin3d roll_pitch_yaw;
   Ravelin::Quatd(center_of_mass_x[3],center_of_mass_x[4],center_of_mass_x[5],center_of_mass_x[6]).to_rpy(roll_pitch_yaw[0],roll_pitch_yaw[1],roll_pitch_yaw[2]);
@@ -114,10 +118,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     D.set_zero(NDOFS,NC*4);
     D.set_sub_mat(0,0,S);
     D.set_sub_mat(0,NC,T);
-//    S.negate();
-//    T.negate();
-//    D.set_sub_mat(0,NC*2,S);
-//    D.set_sub_mat(0,NC*3,T);
+    S.negate();
+    T.negate();
+    D.set_sub_mat(0,NC*2,S);
+    D.set_sub_mat(0,NC*3,T);
     
     int nk = D.columns()/NC;
     int nvars = NC + NC*(nk);

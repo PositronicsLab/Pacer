@@ -23,7 +23,7 @@
       <DisabledPair object1-id="hopper" object2-id="hopper"/>
     </CollisionDetectionPlugin>
 
-  <EventDrivenSimulator integrator-id="rkf" collision-detector-id="simpleccd">
+  <EventDrivenSimulator integrator-id="bs">
     <RecurrentForce recurrent-force-id="gravity" />
 <!--    <RecurrentForce recurrent-force-id="drag" />-->
     <DisabledPair object1-id="hopper" object2-id="hopper"/>
@@ -33,7 +33,7 @@
   </EventDrivenSimulator>
 
     <!-- the ROBOT [R. LINKS] "LYNX" -->
-    <Box id="base" xlen="1" ylen="1" zlen="0.25" mass="10"/>
+    <Sphere id="base" radius=".5" mass="10"/>
     <Box id="joint" xlen="0.01" ylen="0.01" zlen="0.01" mass="0.1"/>
     <!-- Leg Primitives -->
     <Box id="leg" xlen="1" ylen="0.03" zlen="0.03" mass="0.3"/>
@@ -42,12 +42,26 @@
     <RCArticulatedBody id="hopper" floating-base="true" fdyn-algorithm="crb"
       fdyn-algorithm-frame="link" translate="0.0 0.0 2">
 
+<!-- comment these out to do unconstrained hopper -->
+<!--
+      <RigidBody id="base" position="0 0 0"/>
+      <RigidBody id="base2" position="0 0 0">
+        <InertiaFromPrimitive primitive-id="joint" />
+      </RigidBody>
+      <RigidBody id="base3" position="0 0 0">
+        <InertiaFromPrimitive primitive-id="joint" />
+      </RigidBody>
+      <PrismaticJoint id="xlat1-base" location="0 0 0" inboard-link-id="base" outboard-link-id="base2" axis="0 1 0" />
+      <PrismaticJoint id="xlat2-base" location="0 0 0" inboard-link-id="base2" outboard-link-id="base3" axis="0 0 1" />
+      <RevoluteJoint id="roll-base" location="0 0 0" inboard-link-id="BASE3" outboard-link-id="BASE" axis="1 0 0" />
+-->
+
       <!-- the body -->
       <RigidBody id="BASE" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0.1 0.1 0" visualization-id="base" >
         <CollisionGeometry primitive-id="base" />
         <InertiaFromPrimitive primitive-id="base" />
       </RigidBody>
-      <!-- LF leg -->
+       <!-- LF leg -->
       <RevoluteJoint id="ROLL_JOINT" q-tare="0"  location="0 0 0" inboard-link-id="BASE" outboard-link-id="ROLL_LINK" axis="1 0 0" />
       <RigidBody id="ROLL_LINK" position="0 0 0" angular-velocity="0 0 0" linear-velocity="0 0 0" visualization-id="joint">
         <CollisionGeometry primitive-id="joint" />

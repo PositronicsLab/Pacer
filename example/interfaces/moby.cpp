@@ -7,6 +7,7 @@
 #include <Pacer/controller.h>
 #include <random>
 
+
 using Pacer::Controller;
 
 // pointer to the simulator
@@ -244,16 +245,41 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   }
 }
 
+#define SET_CONTACT_PARAMS
+
+#ifdef SET_CONTACT_PARAMS
+//# define RANDOM_FRICTION
+# define LOW_FRICTION
+#endif
 // sets friction parameters for the feet randomly (when used)
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
 
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
 
+#ifdef RANDOM_FRICTION
   static std::default_random_engine generator;
   static std::uniform_real_distribution<double> distribution(0.1,1.4);
 
   e->mu_coulomb = distribution(generator);
+#endif
+  
+#ifdef LOW_FRICTION
+  Moby::SingleBodyPtr sb1 = geom1->get_single_body();
+  Moby::SingleBodyPtr sb2 = geom2->get_single_body();
+  
+  Ravelin::Vector3d point(0,0,0);
+  if(robot_ptr->is_end_effector(sb1->id)){
+    point = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,sb1->get_pose()));
+  } else if(robot_ptr->is_end_effector(sb2->id)){
+    point = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,sb2->get_pose()));
+  }
+  
+  if (point[0] > 2.0)
+    e->mu_coulomb = 0.2;
+  else
+    e->mu_coulomb = 1000;
 
+#endif
   return e;
 }
 
@@ -307,8 +333,8 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   std::cout << "ROBOT INITED" << std::endl;
 
   // CONTACT PARAMETER CALLBACK (MUST BE SET)
-#ifdef RANDOM_FRICTION
-  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
+#ifdef SET_CONTACT_PARAMS
+ sim->get_contact_parameters_callback_fn = &get_contact_parameters;
 #endif
   // CONTACT CALLBACK
 //  sim->constraint_callback_fn             = &pre_event_callback_fn;

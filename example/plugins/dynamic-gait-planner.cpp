@@ -226,7 +226,7 @@ void walk_toward(
         J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
         ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
       }
-      
+    
       Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
       Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd);// * (left_in_phase*gait_duration);
       Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,1),0.01)));

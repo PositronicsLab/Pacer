@@ -136,10 +136,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
         }
       }
     
-      double slow_down_tol = 0.1;
-      if(distance_to_wp < slow_down_tol)
-        command *= distance_to_wp/slow_down_tol;
-    
       Ravelin::Origin3d command_SE2(command[X],command[Y],command[THETA]);
       ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
     }

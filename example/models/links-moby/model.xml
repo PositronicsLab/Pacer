@@ -211,7 +211,7 @@
     </RCArticulatedBody>
 
   <!-- setup the platform rigid body; it is not active -->
-     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="2" />
+     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="32" ylen="0.001" zlen="32" />
      <Plane id="ground-primitive" rpy="1.5708 0 0" />
 <!--<Heightmap id="ground-primitive" filename="heightmap.mat" width="1" depth="1" rpy="1.5708 0 0" />-->
 <RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"

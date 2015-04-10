@@ -245,7 +245,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   }
 }
 
-#define SET_CONTACT_PARAMS
+//#define SET_CONTACT_PARAMS
 
 #ifdef SET_CONTACT_PARAMS
 //# define RANDOM_FRICTION
@@ -274,7 +274,7 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
     point = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,sb2->get_pose()));
   }
   
-  if (point[0] > 2.0)
+  if (point[0] > 1.0)
     e->mu_coulomb = 0.2;
   else
     e->mu_coulomb = 1000;

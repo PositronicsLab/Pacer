@@ -7,6 +7,9 @@ target_link_libraries(ik-feet ${REQLIBS})
 add_library(stabilization MODULE stabilization.cpp)
 target_link_libraries(stabilization ${REQLIBS})
 
+add_library(skating-stabilization MODULE skating-stabilization.cpp)
+target_link_libraries(skating-stabilization ${REQLIBS})
+
 add_library(gait-planner MODULE dynamic-gait-planner.cpp)
 target_link_libraries(gait-planner ${REQLIBS})
 

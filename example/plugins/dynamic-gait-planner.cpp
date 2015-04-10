@@ -213,7 +213,7 @@ void walk_toward(
       workv3_.pose = base_frame;
       xd.pose = base_frame;
 
-      xdd = (workv3_ - xd)/dt;
+      xdd = (dt < Moby::NEAR_ZERO)? 0 : (workv3_ - xd)/dt;
       
       xd = workv3_;
       xdd.pose = base_frame;
@@ -527,6 +527,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
     foot_pos[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".state.x");
 //    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    foot_vel[i] = Vector3d(0,0,0,base_frame); 
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
     //double gait_progress = t/gait_time;

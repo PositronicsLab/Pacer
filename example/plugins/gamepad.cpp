@@ -361,9 +361,9 @@ const int
       target2d[1] = target[1];
       ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
     } else {
-      double max_forward_speed = 0.1;
-      double max_strafe_speed = 0.05;
-      double max_turn_speed = 1;
+      double max_forward_speed = ctrl->get_data<double>(plugin_namespace+"max-forward-speed");
+      double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+"max-strafe-speed");
+      double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
 //#ifdef SABRENT || PS3
 
       { // strafe

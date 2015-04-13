@@ -221,11 +221,11 @@ void walk_toward(
       x.pose = base_frame;
       x = x + xd * dt;
       
-      if(active_foot){
-        workv3_ *= 100;
-        J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
-        ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
-      }
+//      if(active_foot){
+//        workv3_ *= 100;
+//        J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
+//        ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
+//      }
     
       Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
       Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd);// * (left_in_phase*gait_duration);
@@ -525,7 +525,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 //  ctrl_ptr->set_model_state(q);
   for(int i=0;i<NUM_FEET;i++){
     foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
-    foot_pos[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".state.x");
+    foot_pos[i] = foot_init[i];
+    ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
 //    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     foot_vel[i] = Vector3d(0,0,0,base_frame); 
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);

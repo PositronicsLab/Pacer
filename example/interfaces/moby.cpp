@@ -180,15 +180,17 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   render(Utility::visualize);
 #endif
 
-  {
+  { 
     std::map<std::string, Ravelin::VectorNd > q, qd, u; 
     robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
     robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
     robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
 
     if(!abrobot->get_kinematic()){
-      for(int i=0;i<joints.size();i++)
+      for(int i=0;i<joints.size();i++){
+        //std::cout << joints[i]->id << " = "  << u[joints[i]->id] << std::endl;
         joints[i]->add_force(u[joints[i]->id]);
+      }
     } else {
       for(int i=0;i<joints.size();i++){
         joints[i]->q = q[joints[i]->id];

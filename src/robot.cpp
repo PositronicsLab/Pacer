@@ -196,17 +196,16 @@ void Robot::compile(){
 
     eef->id = eef->link->id;
 
-    Moby::JointPtr joint_ptr = eef->link->get_inner_joint_explicit();
     Moby::RigidBodyPtr rb_ptr = eef->link;
     OUT_LOG(logDEBUG) << eef->id ;
     eef->chain_bool.resize(NUM_JOINT_DOFS);
-    rb_ptr = joint_ptr->get_inboard_link();
-    while (rb_ptr != _abrobot->get_base_link()) {
+    do {
       OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
-      joint_ptr = rb_ptr->get_inner_joint_explicit();
+      Moby::JointPtr joint_ptr = rb_ptr->get_inner_joint_explicit();
       OUT_LOG(logDEBUG) << "  " << joint_ptr->id;
 
       const std::vector<int>& dof = _id_dof_coord_map[joint_ptr->id];
+      OUT_LOG(logDEBUG) << "  dofs = " << dof.size() ;
       for(int i=0;i<dof.size();i++){
         OUT_LOG(logDEBUG) << "  " << dof[i] <<  " "<< joint_ptr->id;
         eef->chain.push_back(dof[i]);
@@ -214,6 +213,7 @@ void Robot::compile(){
       }
       rb_ptr = joint_ptr->get_inboard_link();
     }
+    while (rb_ptr != _abrobot->get_base_link());
 
     _id_end_effector_map[eef_names_[i]] = eef;
   }

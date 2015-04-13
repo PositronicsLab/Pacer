@@ -256,6 +256,10 @@ namespace Pacer{
     //void get_foot_value(const std::string& id,unit_e u, Ravelin::Vector3d val){
     //  val = Ravelin::Vector3d(_foot_state[u].segment(0,3).data(),_id_end_effector_map[id]->link->get_pose());
     //}
+    int get_joint_dofs(const std::string& id)
+    {
+      return _id_dof_coord_map[id].size();
+    }
 
     /// ------------ GET/SET JOINT value  ------------ ///
 

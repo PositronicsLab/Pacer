@@ -29,8 +29,8 @@
     <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory
                       joint-PID-controller        eef-PID-controller      idyn-controller
                       stabilization  skating-stabilization</id>
-    <active type="bool">false           true           true                true            false
-                      true                        false                   true
+    <active type="bool">false           false           true                true            false
+                      true                        false                   false
                       false            false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
                       libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so
@@ -77,6 +77,9 @@
      <max-strafe-speed type="double">0.05</max-strafe-speed>
      <max-turn-speed type="double">1</max-turn-speed>
      <priority type="double">0</priority>
+     <!--<type type="string">SABRENT</type>-->
+     <!--<type type="string">PS</type>-->
+     <type type="string">XBOX</type>
  </gamepad>
 
   <waypoints>

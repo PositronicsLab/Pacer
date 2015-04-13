@@ -116,7 +116,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       goto_direction.normalize();
 
       double angle_to_goal = atan2(goto_direction[Y],goto_direction[X]);
-      std::cout<< std::endl << "angle_to_goal = " << angle_to_goal;
+      OUT_LOG(logDEBUG) << "angle_to_goal = " << angle_to_goal;
 
       // If robot is facing toward goal already, walk in that direction
       if(fabs(angle_to_goal) < M_PI_8){

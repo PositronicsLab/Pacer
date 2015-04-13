@@ -10,7 +10,7 @@ target_link_libraries(stabilization ${REQLIBS})
 add_library(skating-stabilization MODULE skating-stabilization.cpp)
 target_link_libraries(skating-stabilization ${REQLIBS})
 
-add_library(gait-planner MODULE dynamic-gait-planner.cpp)
+add_library(gait-planner MODULE gait-planner.cpp)
 target_link_libraries(gait-planner ${REQLIBS})
 
 add_library(joint-PID-controller MODULE joint-PID-controller.cpp)

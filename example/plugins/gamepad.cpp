@@ -19,6 +19,7 @@
 #define USE_CURSES
 //#define PS3
 #define SABRENT
+//#define XBOX
 
 #include <SDL2/SDL.h>
 #include <assert.h>
@@ -251,6 +252,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // this hint as we don't have a window
   const int JDEADZONE = 4000;
   
+  std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+"type");
   try {
     static Joystick j = Joystick(0);
 
@@ -259,7 +261,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     static double press_time = 0;
     const double wait_time = 0.01;
     static bool pressed = false;
-#ifdef SABRENT
+  if (GAMEPAD_TYPE.compare("SABRENT") == 0){
     if(j.buttons[0] == 1 && !pressed){
       if(t-press_time > wait_time){
         pressed = true;
@@ -273,7 +275,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         press_time = t;
       }
     }
-#else // if PS3
+  } else if (GAMEPAD_TYPE.compare("PS") == 0){
     const int X_BUTTON = 14;
     if(j.buttons[X_BUTTON] == 1 && !pressed){ // X button
       if(t-press_time > wait_time){
@@ -288,7 +290,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         press_time = t;
       }
     }
-#endif
+  }
 
 
     Ravelin::Origin3d command_SE2(0,0,0);
@@ -301,7 +303,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
     if(pressed){ // Move Waypoint
       Ravelin::Vector3d movement;
-#ifdef SABRENT
+    if (GAMEPAD_TYPE.compare("SABRENT") == 0){
       for(int i = 0; i < j.num_hats; ++i)
       {
         if((j.hats[i] & SDL_HAT_UP) && (j.hats[i] & SDL_HAT_LEFT)) 
@@ -325,7 +327,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         if((j.hats[i] & SDL_HAT_DOWN) && (j.hats[i] & SDL_HAT_RIGHT))
           movement = Ravelin::Vector3d(-1,-1,0);
       }
-#else // if PS3
+  } else if (GAMEPAD_TYPE.compare("PS") == 0){
 const int
       BUTTON_UP = 4,
       BUTTON_LEFT = 7,
@@ -351,8 +353,7 @@ const int
         movement = Ravelin::Vector3d(-1,0,0);
       else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
         movement = Ravelin::Vector3d(-1,-1,0);
-#endif
-
+    }
       movement*=dt*10;
       target += movement;
       Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(target,Ravelin::Vector3d(1,0.5,0),1.0)));
@@ -364,30 +365,54 @@ const int
       double max_forward_speed = ctrl->get_data<double>(plugin_namespace+"max-forward-speed");
       double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+"max-strafe-speed");
       double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
-//#ifdef SABRENT || PS3
-
+      
+      const int MAX_VAL =32767;
+      
+    if (GAMEPAD_TYPE.compare("SABRENT") == 0 || GAMEPAD_TYPE.compare("PS") == 0){
       { // strafe
         int i = 0;
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[1] = 0;
         else
-          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) 32767;
+          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) MAX_VAL;
       }
       { // forward
         int i = 1;
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[0] = 0;
         else
-          command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) 32767;
+          command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) MAX_VAL;
       }
       { // turn
         int i = 2;
         if(fabs(j.axes[i]) < JDEADZONE)
           command_SE2[2] = 0;
         else
-          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) 32767;
+          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) MAX_VAL;
       }
-//#endif
+    } else if(GAMEPAD_TYPE.compare("XBOX") == 0){
+      { // strafe
+        int i = 0;
+        if(fabs(j.axes[i]) < JDEADZONE)
+          command_SE2[1] = 0;
+        else
+          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) MAX_VAL;
+      }
+      { // forward
+        int i = 1;
+        if(fabs(j.axes[i]) < JDEADZONE)
+          command_SE2[0] = 0;
+        else
+          command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) MAX_VAL;
+      }
+      { // turn
+        int i = 3;
+        if(fabs(j.axes[i]) < JDEADZONE)
+          command_SE2[2] = 0;
+        else
+          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) MAX_VAL;
+      }
+    }
 
     }
     ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
@@ -396,8 +421,7 @@ const int
   //  std::cout << "strafe_left (m/s) = " << command_SE2[1] << std::endl;
   //  std::cout << "turn_left (rad/s) = " << command_SE2[2] << std::endl;
   } catch(std::exception& e){
-    throw std::runtime_error("Could not connect to Controller!");
-//    std::cerr << "Could not connect to Controller!" << std::endl;
+    std::cerr << "Could not connect to Controller: " << GAMEPAD_TYPE << std::endl;
   }
 }
 

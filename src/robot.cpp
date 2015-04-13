@@ -196,17 +196,16 @@ void Robot::compile(){
 
     eef->id = eef->link->id;
 
-    Moby::JointPtr joint_ptr = eef->link->get_inner_joint_explicit();
     Moby::RigidBodyPtr rb_ptr = eef->link;
     OUT_LOG(logDEBUG) << eef->id ;
     eef->chain_bool.resize(NUM_JOINT_DOFS);
-    rb_ptr = joint_ptr->get_inboard_link();
-    while (rb_ptr != _abrobot->get_base_link()) {
+    do {
       OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
-      joint_ptr = rb_ptr->get_inner_joint_explicit();
+      Moby::JointPtr joint_ptr = rb_ptr->get_inner_joint_explicit();
       OUT_LOG(logDEBUG) << "  " << joint_ptr->id;
 
       const std::vector<int>& dof = _id_dof_coord_map[joint_ptr->id];
+      OUT_LOG(logDEBUG) << "  dofs = " << dof.size() ;
       for(int i=0;i<dof.size();i++){
         OUT_LOG(logDEBUG) << "  " << dof[i] <<  " "<< joint_ptr->id;
         eef->chain.push_back(dof[i]);
@@ -214,6 +213,7 @@ void Robot::compile(){
       }
       rb_ptr = joint_ptr->get_inboard_link();
     }
+    while (rb_ptr != _abrobot->get_base_link());
 
     _id_end_effector_map[eef_names_[i]] = eef;
   }
@@ -282,10 +282,14 @@ void Robot::update(){
   for(unsigned i=0;i<eef_names_.size();i++){
     const Moby::RigidBodyPtr link = _id_link_map[eef_names_[i]];
     Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,link->get_pose()));
-    set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
+    bool new_var = set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
     
     Ravelin::Vector3d xd = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear());
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
+    if(new_var){
+      set_data<Ravelin::Vector3d>(eef_names_[i]+".init.x",x);
+      set_data<Ravelin::Vector3d>(eef_names_[i]+".init.xd",xd);
+    }
   }
   
   Ravelin::MatrixNd M;
@@ -318,7 +322,7 @@ void Robot::update_poses(){
 
   // preserve yaw
   Ravelin::Pose3d base_horizontal_frame(
-            Ravelin::AAngled(0,0,1,roll_pitch_yaw[0]),
+            Ravelin::AAngled(0,0,1,roll_pitch_yaw[2]),
           base_link_frame.x,Moby::GLOBAL);
 
   set_data<Ravelin::Pose3d>("base_stability_frame",base_link_frame);

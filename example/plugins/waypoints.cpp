@@ -116,7 +116,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       goto_direction.normalize();
 
       double angle_to_goal = atan2(goto_direction[Y],goto_direction[X]);
-      OUT_LOG(logDEBUG1) << "angle_to_goal = " << angle_to_goal;
+      OUT_LOG(logDEBUG) << "angle_to_goal = " << angle_to_goal;
 
       // If robot is facing toward goal already, walk in that direction
       if(fabs(angle_to_goal) < M_PI_8){
@@ -135,6 +135,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
           command[Y] = 0;
         }
       }
+    
+//      double slow_down_tol = 0.1;
+//      if(distance_to_wp < slow_down_tol)
+//        command *= distance_to_wp*slow_down_tol+0.05;
     
       Ravelin::Origin3d command_SE2(command[X],command[Y],command[THETA]);
       ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);

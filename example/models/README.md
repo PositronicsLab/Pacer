@@ -2,10 +2,9 @@
 
 FILE/DIRECTORY | DESCRIPTION
 ---------------|----------------------------------------------------------
-atlas	|	A model of the Atlas robot (adapted from Gazebo)	
-atlas-pointfeet | A model of the Atlas robot (adapted from Gazebo) with a point representation for the foot geometry
-links	| A model of the R. Links robot with fixed ankles for Gazebo & Moby
-links-ankles	| A model of the R. Links robot with ankles
-links-moby |  A colored R. Links model for Moby
+atlas	|	A biped model approximating the articulations on the lower half of Atlas 	
+human	|	A humanoid model with universal shoulder, hip, and neck joints	
+hopper|	A monopod model with 9 DOF, including pitch, roll and piston joints for hopping locomotion
+links	| A model of the 18 DOF R. Links with fixed ankles for Gazebo & Moby
 	
 

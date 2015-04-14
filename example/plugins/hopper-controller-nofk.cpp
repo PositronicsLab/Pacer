@@ -83,7 +83,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   {
     // foot is really shortened; add thrust
     hopper_state = eThrust;
-    u[PISTON_JOINT] = 2.5;
+    u[PISTON_JOINT] = 5.0;
   }
   else if (hopper_state == eThrust && q[PISTON_JOINT] > NEAR_MAX_PISTON_LEN)
   {

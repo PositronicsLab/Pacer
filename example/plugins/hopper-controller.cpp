@@ -49,13 +49,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   // flight phase start time
   static double t = time;
 
-  // TODO: look up what this gain does
-  const double AKv = 1e-1;
-
   // set last t to (hopefully) some reasonable value, update last_t, compute dt
   static double last_t = 1e-4;
   double dt = time - last_t;
   last_t = time;
+
+  // set AKv
+  const double AKv = 2.5e-1;
 
   // robot "publishes" its base data
   shared_ptr<Pose3d> base_frame(new Pose3d(ctrl->get_data<Pose3d>("base_link_frame"))); 
@@ -66,6 +66,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
 
   // get roll/pitch/yaw
   Origin3d roll_pitch_yaw = ctrl->get_data<Origin3d>("roll_pitch_yaw");
+  OUT_LOG(logERROR) << "roll/pitch/yaw " << roll_pitch_yaw;
 
   // check whether the value is there
   Ravelin::Origin3d xd_des;
@@ -104,11 +105,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   // setup u (directly applied forces)
   double u[3] = { 0, 0, 0 };
 
-  // TODO: get maximum piston velocity (Vz)
-
   // do controller transitions 
-  std::cout << "NC = " << NUM_CONTACTS << std::endl;
-  std::cout << "z_vel = " << lvel[VERT_DIM] << std::endl;
+  OUT_LOG(logERROR) << "NC = " << NUM_CONTACTS;
+  OUT_LOG(logERROR) << "z_vel = " << lvel[VERT_DIM];
 
   if (hopper_state == eFlight && NUM_CONTACTS != 0 && lvel[VERT_DIM] < 0.0)
   {
@@ -183,16 +182,16 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
   case eCompression:
     OUT_LOG(logERROR) << "COMPRESSION PHASE";
     //// UPPER LEG CHAMBER SEALED & SERVO BODY ATTITUDE WITH HIP
-    qd_des[ROLL_JOINT] = AKv*roll_pitch_yaw[ROLL]/dt;
-    qd_des[PITCH_JOINT] = AKv*roll_pitch_yaw[PITCH]/dt;
-    qd_des[PISTON_JOINT] = 0;
+    qd_des[ROLL_JOINT] = 0.0;
+    qd_des[PITCH_JOINT] = 0.0;
+    qd_des[PISTON_JOINT] = 0; // NOTE: this is not used
     break;
   case eThrust:
     OUT_LOG(logERROR) << "THRUST PHASE";
     //// PRESSURIZE LEG & SERVO BODY ATTITUDE WITH HIP
-    qd_des[ROLL_JOINT] = AKv*roll_pitch_yaw[ROLL]/dt;
-    qd_des[PITCH_JOINT] = AKv*roll_pitch_yaw[PITCH]/dt;
-    qd_des[PISTON_JOINT] = 10.0;//-Vz*1.1;
+    qd_des[ROLL_JOINT] = 0.0;
+    qd_des[PITCH_JOINT] = 0.0;
+    qd_des[PISTON_JOINT] = 0.0; // NOTE: this is not used
     q_des[PISTON_JOINT] = qd_des[PISTON_JOINT]*dt;
     u[PISTON_JOINT] = 500;
     break;
@@ -225,7 +224,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     OUTLOG(joint_pos,"joint_pos", logDEBUG1);
 
     for(int i=0;i<joint_names.size();i++)
-        q_des[i] = joint_pos[i];
+    {
+      q_des[i] = joint_pos[i];
+      qd_des[i] = 0.0;
+    }
 
 /*
     // get elapsed t since start of flight phase
@@ -244,16 +246,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     break;
   } 
 
-  // setup the PD gains
-  const double KP[3] = { 2e2, 2e2, 2e2 };
-  const double KV[3] = { 5e1, 5e1, 5e1 };
-
+  // setup the PD gains for on-ground control
+  const double KP[3] = { 2e1, 2e1, 2e1 };
+  const double KV[3] = { 5e0, 5e0, 5e0 };
   // the PID controller will apply torques using the desired commands 
   for (unsigned i=0; i< joint_names.size(); i++)
   {
     // setup tau
-//    if (u[i] == 0.0)
-      u[i] += KP[i] * (q_des[i] - q[i]) + KV[i] * (qd_des[i] - qd[i]);
+    if (u[i] == 0.0)
+      u[i] = KP[i] * (q_des[i] - q[i]) + KV[i] * (qd_des[i] - qd[i]);
   
     // get the current position and velocity
     ctrl->set_joint_value(joint_names[i], Robot::load_goal, 0, u[i]);

@@ -29,7 +29,7 @@
     <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory
                       joint-PID-controller        eef-PID-controller      idyn-controller
                       stabilization  skating-stabilization</id>
-    <active type="bool">false           true           true                true            false
+    <active type="bool">true            false           true                true            false
                       true                        false                   false
                       false            false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
@@ -73,13 +73,11 @@
   
   <gamepad>
      <real-time-factor type="double">1</real-time-factor>
-     <max-forward-speed type="double">0.3</max-forward-speed>
+     <max-forward-speed type="double">0.1</max-forward-speed>
      <max-strafe-speed type="double">0.05</max-strafe-speed>
-     <max-turn-speed type="double">1</max-turn-speed>
+     <max-turn-speed type="double">0.5</max-turn-speed>
      <priority type="double">0</priority>
-     <!--<type type="string">SABRENT</type>-->
-     <!--<type type="string">PS</type>-->
-     <type type="string">XBOX</type>
+     <type type="string">SABRENT</type> <!-- XBOX  PS  SABRENT -->
  </gamepad>
 
   <waypoints>
@@ -101,12 +99,12 @@
   <gait-planner>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">1</priority>
-    <pose type="double">0.0 0 0 0 0 0</pose>
+    <pose type="double">0.04 0 0 0 0 0</pose>
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.015</step-height>
-    <gait-duration type="double">0.3</gait-duration>
+    <step-height type="double">0.04</step-height>
+    <gait-duration type="double">1</gait-duration>
     <!-- 0.178056, 0.0762394, -0.161853 -->
     <length type="double">0.35</length>
     <width type="double">0.1524788</width>
@@ -151,11 +149,12 @@
   <idyn-controller>
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0.001</dt>
-    <alpha type="double">1</alpha>
+    <dt type="double">0</dt>
+    <alpha type="double">0</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
-    <type type="string">AP</type>
+    <max-contacts-per-foot type="double">1</max-contacts-per-foot>
+    <type type="string">NSLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
   </idyn-controller>
 </XML>

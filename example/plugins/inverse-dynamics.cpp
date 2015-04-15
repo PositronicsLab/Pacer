@@ -10,10 +10,10 @@
 #include <Pacer/utilities.h>
 
 #define USE_CLAWAR_MODEL
-//#define USE_AP_MODEL
-//#define USE_NO_SLIP_MODEL
-//#define USE_NO_SLIP_LCP_MODEL
-//#define TIMING
+#define USE_AP_MODEL
+#define USE_NO_SLIP_MODEL
+#define USE_NO_SLIP_LCP_MODEL
+#define TIMING
 
 using namespace Pacer;
 
@@ -29,10 +29,6 @@ Moby::LCP _lcp;
 Ravelin::Vector3d workv3_;
 
 Ravelin::VectorNd STAGE1, STAGE2;
-
-//bool Robot::inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, Ravelin::VectorNd& x){
-//  M.mult(qdd,x) -= fext;
-//}
 
 bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
@@ -829,10 +825,8 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
 #endif
 
 #ifdef USE_NO_SLIP_LCP_MODEL
-extern bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol);
-
 bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
-                         const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless){
+                                   const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless, std::vector<unsigned>& indices, int active_eefs){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
@@ -1307,17 +1301,6 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   OUTLOG(_qq,"qq",logDEBUG1);
   // setup remainder of LCP vector
 
-  // Setup Indices vector
-  unsigned active_eefs = 0;
-  std::vector<unsigned> indices;
-  //for(int i=0;i<eefs_.size();i++){
-    //if(!eefs_[i].active){
-      //continue;
-    //}
-    //active_eefs++;
-    //for(int j=0;j<eefs_[i].point.size();j++)
-      //indices.push_back(i);
-  //}
   static Ravelin::VectorNd _v;
   if(_v.size() != _qq.size())
     _v.resize(0);
@@ -1328,7 +1311,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
     OUTLOG(_v,"warm_start_v",logDEBUG1);
 
-    if (!lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
+    if (!Utility::lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
     {
       OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
@@ -1912,14 +1895,23 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     } else
       active_feet = foot_names;
 
-  
+  double mcpf = 1e2;
+    ctrl->get_data<double>(plugin_namespace+"max-contacts-per-foot",mcpf);
+  int MAX_CONTACTS_PER_FOOT = mcpf;
 
+  
+    std::vector<unsigned> indices;
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
+  
     for(int i=0;i<active_feet.size();i++){
       std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
       ctrl->get_link_contacts(active_feet[i],c);
-      if(!c.empty())
-        contacts.push_back(c[0]);
+      if(!c.empty()){
+        for(int j=0;j<c.size() && j<MAX_CONTACTS_PER_FOOT;j++){
+          contacts.push_back(c[j]);
+          indices.push_back((unsigned) i);
+        }
+      }
     }
 
     ctrl->calc_contact_jacobians(q,contacts,N,S,T);
@@ -2026,7 +2018,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
     ////////////////////////// simulator DT IDYN //////////////////////////////
 
-if(inf_friction){
+//if(inf_friction){
 #ifdef USE_NO_SLIP_MODEL
     // NO-SLIP MODEL
     {
@@ -2063,7 +2055,7 @@ if(inf_friction){
     cf.set_zero(NC*5);
     id.set_zero(NUM_JOINT_DOFS);
     {
-      solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf,false);
+      solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf,false,indices,active_feet.size());
       OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
       OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
       static Ravelin::VectorNd last_cf = cf.segment(0,NC);
@@ -2086,7 +2078,7 @@ if(inf_friction){
 #endif
 
 
-} else {
+//} else {
 
 #ifdef USE_CLAWAR_MODEL
     // IDYN QP
@@ -2151,7 +2143,7 @@ if(inf_friction){
     ctl_num++;
     }
 #endif
-}
+//}
 
   for(int i=0;i<compare_cf_vec.size();i++){
     double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);

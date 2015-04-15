@@ -23,6 +23,7 @@ unsigned NDOFS;
 static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
 static bool joint_data_lock_ = false;
 static double FREQ = 500;
+
 static void control_motor(){
   while(true){
     static Ravelin::VectorNd q_motors,qd_motors,u_motors;

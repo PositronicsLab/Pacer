@@ -11,7 +11,7 @@
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;
-# define DEVICE_NAME "/dev/tty.usbserial-A9YL9ZZV"
+# define DEVICE_NAME "/dev/ttyS0"
 #endif
 
 using Pacer::Controller;

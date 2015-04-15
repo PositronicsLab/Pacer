@@ -118,7 +118,7 @@ class Joystick
 
         case SDL_QUIT:
           printf("Recieved interrupt, exiting\n");
-          throw std::runtime_error("Exited");
+          exit(0);
           break;
 
         default:
@@ -422,6 +422,7 @@ const int
   //  std::cout << "turn_left (rad/s) = " << command_SE2[2] << std::endl;
   } catch(std::exception& e){
     std::cerr << "Could not connect to Controller: " << GAMEPAD_TYPE << std::endl;
+    throw std::runtime_error( "Could not connect to Controller: " + GAMEPAD_TYPE);
   }
 }
 

@@ -84,8 +84,10 @@ using namespace Pacer;
       
        physics::Joint_V joints = model->GetJoints();
        for(int i=0,ii=0;i<joints.size();i++){
-         OUT_LOG(logERROR) << joints[i]->GetName() << ", dofs: " << joints[i]->GetAngleCount();
-         for(int j=0;j<joints[i]->GetAngleCount();j++){
+         //OUT_LOG(logERROR) << joints[i]->GetName() << ", dofs: " << joints[i]->GetAngleCount();
+         int JDOFS = robot_ptr->get_joint_dofs(joints[i]->GetName());
+         OUT_LOG(logERROR) << joints[i]->GetName() << ", dofs: " << JDOFS;
+         for(int j=0;j<JDOFS;j++){
            math::Angle a(q_start[joints[i]->GetName()][j]);
            joints[i]->SetAngle(j,a);
          }
@@ -166,10 +168,10 @@ using namespace Pacer;
          math::Vector3    pos = base_pose.pos;
          math::Quaternion rot = base_pose.rot;
          base_q.set_sub_vec(0  ,Ravelin::Vector3d(pos.x,pos.y,pos.z));
-         base_q[3+0] = rot.w;
-         base_q[3+1] = rot.x;
-         base_q[3+2] = rot.y;
-         base_q[3+3] = rot.z;
+         base_q[3+3] = rot.w;
+         base_q[3+0] = rot.x;
+         base_q[3+1] = rot.y;
+         base_q[3+2] = rot.z;
 
          math::Vector3    vel = base_ptr->GetWorldLinearVel();
          math::Vector3   avel = base_ptr->GetWorldAngularVel();
@@ -210,7 +212,8 @@ using namespace Pacer;
 
          for(int i=0;i<joints.size();i++){
            physics::JointPtr joint = joints[i];
-           for(int j=0;j<joint->GetAngleCount();j++){
+           int JDOFS = robot_ptr->get_joint_dofs(joints[i]->GetName());
+           for(int j=0;j<JDOFS;j++){
              joint_q[joint->GetName()][j]    = joint->GetAngle(j).Radian();
              joint_qd[joint->GetName()][j]   = joint->GetVelocity(j);
              joint_qdd[joint->GetName()][j]   
@@ -239,7 +242,8 @@ using namespace Pacer;
           //  apply_sim_perturbations();
          for(int i=0;i<joints.size();i++){
            physics::JointPtr joint = joints[i];
-           for(int j=0;j<joint->GetAngleCount();j++){
+           int JDOFS = robot_ptr->get_joint_dofs(joints[i]->GetName());
+           for(int j=0;j<JDOFS;j++){
              //if(!is_kinematic){
                joint->SetForce(j,u[joint->GetName()][j]);
              //} else {

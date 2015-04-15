@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version='1.5'>
-  <model name='ROBOT'>
+  <model name='LINKS'>
   <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.so"/>
   <pose>0 0 0.19 0 -0 0</pose>
     <link name='BODY0'>
@@ -132,9 +132,9 @@
     </link>
 
     <joint name='LF_Y_3' type='revolute'>
-      <pose>-0.05 0 0 0 0 0</pose>
+      <pose>-0.1 0 0 0 0 0</pose>
       <parent>LF_LEG_2</parent>
-      <child>LF_LEG_3</child>
+      <child>LF_FOOT</child>
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
@@ -146,9 +146,10 @@
 
     </joint>
 
-    <link name='LF_LEG_3'>
-      <pose>0.3 0.06 0 0 0 0</pose>
+    <link name='LF_FOOT'>
+      <pose>0.35 0.06 0 0 0 0</pose>
       <inertial>
+       <pose>-0.05 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -161,44 +162,15 @@
       </inertial>
 
       <visual name='leg3_visual'>
-        <pose>0 0 0 0 1.5708 0</pose>
+        <pose>-0.05 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <length>0.1</length>
             <radius>0.005</radius>
+            <length>0.1</length>
           </cylinder>
         </geometry>
       </visual>
-    </link>
-
-    <joint name='LF_ANKLE4' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
-      <parent>LF_LEG_3</parent>
-      <child>LF_FOOT</child>
-      <axis>
-        <xyz>1 0 0</xyz>
-        <limit>
-          <lower>-1e-8</lower>
-          <upper>1e-8</upper>
-        </limit>
-        <dynamics/>
-      </axis>
-    </joint>
-
-    <link name='LF_FOOT'>
-      <pose>0.35 0.06 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-        <inertia>
-          <ixx>4e-5</ixx>
-          <ixy>0.0</ixy>
-          <ixz>-0.0</ixz>
-          <iyy>4e-5</iyy>
-          <iyz>-0.0</iyz>
-          <izz>4e-5</izz>
-        </inertia>
-      </inertial>
-
+      
       <visual name='LF_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -216,6 +188,7 @@
           </sphere>
         </geometry>
         <surface>
+          <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
               <mu>100</mu>
@@ -311,9 +284,9 @@
     </link>
 
     <joint name='RF_Y_3' type='revolute'>
-      <pose>-0.05 0 0 0 0 0</pose>
+      <pose>-0.1 0 0 0 0 0</pose>
       <parent>RF_LEG_2</parent>
-      <child>RF_LEG_3</child>
+      <child>RF_FOOT</child>
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
@@ -324,9 +297,10 @@
       </axis>
     </joint>
 
-    <link name='RF_LEG_3'>
-      <pose>0.3 -0.06 0 0 0 0</pose>
+    <link name='RF_FOOT'>
+      <pose>0.35 -0.06 0 0 0 0</pose>
       <inertial>
+       <pose>-0.05 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -339,44 +313,15 @@
       </inertial>
 
       <visual name='leg3_visual'>
-        <pose>0 0 0 0 1.5708 0</pose>
+        <pose>-0.05 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <length>0.1</length>
             <radius>0.005</radius>
+            <length>0.1</length>
           </cylinder>
         </geometry>
       </visual>
-    </link>
-
-    <joint name='RF_ANKLE4' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
-      <parent>RF_LEG_3</parent>
-      <child>RF_FOOT</child>
-      <axis>
-        <xyz>1 0 0</xyz>
-        <limit>
-          <lower>-1e-8</lower>
-          <upper>1e-8</upper>
-        </limit>
-        <dynamics/>
-      </axis>
-    </joint>
-
-    <link name='RF_FOOT'>
-      <pose>0.35 -0.06 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-        <inertia>
-          <ixx>4e-5</ixx>
-          <ixy>0.0</ixy>
-          <ixz>-0.0</ixz>
-          <iyy>4e-5</iyy>
-          <iyz>-0.0</iyz>
-          <izz>4e-5</izz>
-        </inertia>
-      </inertial>
-
+      
       <visual name='RF_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -394,6 +339,7 @@
           </sphere>
         </geometry>
         <surface>
+          <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
               <mu>100</mu>
@@ -490,9 +436,9 @@
     </link>
 
     <joint name='LH_Y_3' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
+      <pose>0.1 0 0 0 0 0</pose>
       <parent>LH_LEG_2</parent>
-      <child>LH_LEG_3</child>
+      <child>LH_FOOT</child>
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
@@ -504,9 +450,10 @@
 
     </joint>
 
-    <link name='LH_LEG_3'>
-      <pose>-0.3 0.06 0 0 0 0</pose>
+    <link name='LH_FOOT'>
+      <pose>-0.35 0.06 0 0 0 0</pose>
       <inertial>
+       <pose>0.05 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -519,43 +466,15 @@
       </inertial>
 
       <visual name='leg3_visual'>
-        <pose>0 0 0 0 1.5708 0</pose>
+        <pose>0.05 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <length>0.1</length>
             <radius>0.005</radius>
+            <length>0.1</length>
           </cylinder>
         </geometry>
       </visual>
-    </link>
-    <joint name='LH_ANKLE4' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
-      <parent>LH_LEG_3</parent>
-      <child>LH_FOOT</child>
-      <axis>
-        <xyz>1 0 0</xyz>
-        <limit>
-          <lower>-1e-8</lower>
-          <upper>1e-8</upper>
-        </limit>
-        <dynamics/>
-      </axis>
-    </joint>
-
-    <link name='LH_FOOT'>
-      <pose>-0.35 0.06 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-        <inertia>
-          <ixx>4e-5</ixx>
-          <ixy>0.0</ixy>
-          <ixz>-0.0</ixz>
-          <iyy>4e-5</iyy>
-          <iyz>-0.0</iyz>
-          <izz>4e-5</izz>
-        </inertia>
-      </inertial>
-
+      
       <visual name='LH_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -573,6 +492,7 @@
           </sphere>
         </geometry>
         <surface>
+          <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
               <mu>100</mu>
@@ -668,9 +588,9 @@
     </link>
 
     <joint name='RH_Y_3' type='revolute'>
-      <pose>0.05 0  0 0 0 0</pose>
+      <pose>0.1 0  0 0 0 0</pose>
       <parent>RH_LEG_2</parent>
-      <child>RH_LEG_3</child>
+      <child>RH_FOOT</child>
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
@@ -682,9 +602,11 @@
 
     </joint>
 
-    <link name='RH_LEG_3'>
-      <pose>-0.3 -0.06 0 0 0 0</pose>
+
+    <link name='RH_FOOT'>
+      <pose>-0.35 -0.06 0 0 0 0</pose>
       <inertial>
+       <pose>0.05 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -697,45 +619,15 @@
       </inertial>
 
       <visual name='leg3_visual'>
-        <pose>0 0 0 0 1.5708 0</pose>
+        <pose>0.05 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <length>0.1</length>
             <radius>0.005</radius>
+            <length>0.1</length>
           </cylinder>
         </geometry>
       </visual>
-
-    </link>
-
-    <joint name='RH_ANKLE4' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
-      <parent>RH_LEG_3</parent>
-      <child>RH_FOOT</child>
-      <axis>
-        <xyz>1 0 0</xyz>
-        <limit>
-          <lower>-1e-8</lower>
-          <upper>1e-8</upper>
-        </limit>
-        <dynamics/>
-      </axis>
-    </joint>
-
-    <link name='RH_FOOT'>
-      <pose>-0.35 -0.06 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-        <inertia>
-          <ixx>4e-5</ixx>
-          <ixy>0.0</ixy>
-          <ixz>-0.0</ixz>
-          <iyy>4e-5</iyy>
-          <iyz>-0.0</iyz>
-          <izz>4e-5</izz>
-        </inertia>
-      </inertial>
-
+      
       <visual name='RH_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -753,6 +645,7 @@
           </sphere>
         </geometry>
         <surface>
+          <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
               <mu>100</mu>

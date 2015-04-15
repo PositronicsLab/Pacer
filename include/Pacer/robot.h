@@ -32,14 +32,25 @@ namespace Pacer{
   
     std::map<std::string,boost::shared_ptr<void> > _data_map;
     std::mutex _data_map_mutex;
-  public:   
+  public:
+    
+    // Returns 'true' if new key was created in map
     template<class T>
-    void set_data(std::string n, const T& v){
+    bool set_data(std::string n, const T& v){
       _data_map_mutex.lock();
       // TODO: Improve this functionality, shouldn't be copying into new class
-      _data_map[n] = boost::shared_ptr<T>(new T(v));  
-      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+      std::map<std::string,boost::shared_ptr<void> >::iterator it
+        =_data_map.find(n);
+      bool new_var = (it == _data_map.end());
+      if(new_var){
+        _data_map[n] = boost::shared_ptr<T>(new T(v));
+      }else{
+        (*it).second = boost::shared_ptr<T>(new T(v));
+      }
       _data_map_mutex.unlock();
+
+      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+      return new_var;
     }
     
     template<class T>
@@ -245,6 +256,10 @@ namespace Pacer{
     //void get_foot_value(const std::string& id,unit_e u, Ravelin::Vector3d val){
     //  val = Ravelin::Vector3d(_foot_state[u].segment(0,3).data(),_id_end_effector_map[id]->link->get_pose());
     //}
+    int get_joint_dofs(const std::string& id)
+    {
+      return _id_dof_coord_map[id].size();
+    }
 
     /// ------------ GET/SET JOINT value  ------------ ///
 

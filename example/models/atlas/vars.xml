@@ -30,7 +30,7 @@
   <plugin>
     <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller         stabilization</id>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so    libstabilization.so</file>
-    <active type="bool">false            true           true                true            false                   true                       false                     false                    true</active>
+    <active type="bool">false           false           false               false           true                   true                       false                     false                    true</active>
   </plugin>
   
   <stabilization>
@@ -39,9 +39,9 @@
     <des-contact type="bool">false</des-contact>
     <!-- Gains are for the [X Y Z r p y] of base -->
     <gains>
-      <kp type="double">  0 0 0 0 0 0</kp>
-      <kv type="double">  0 0 0 1e2 1e2 0</kv>
-      <ki type="double">  0 0 0   0 0 0</ki>
+      <kp type="double">0   0   1e2 1e3 1e3 0</kp>
+      <kv type="double">0   0   0   1e2 1e2 0</kv>
+      <ki type="double">0   0   0   0 0 0</ki>
     </gains>
     <desired>
       <x type="double">0 0 0  0 0 0</x>

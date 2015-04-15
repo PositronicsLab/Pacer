@@ -19,17 +19,6 @@ find_package(Boost REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
-#find OSG
-find_package (osg)
-find_package (osgViewer)
-find_package (osgDB)
-find_package (osgGA)
-find_package (osgFX)
-find_package (osgUtil)
-find_package (OpenThreads)
-link_directories(${OSG_LIBRARY_DIRS})
-include_directories(${OSG_INCLUDE_DIR})
-
 #add ravelin
 find_package(Ravelin REQUIRED)
 link_directories(${RAVELIN_LIBRARY_DIR})
@@ -55,7 +44,6 @@ link_directories(${GAZEBO_LIBRARY_DIRS})
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
 # these are the setting for the in-source compiler flow control
-option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
 option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)

@@ -10,13 +10,8 @@ std::string plugin_namespace;
 using namespace Pacer;
 using namespace Ravelin;
 
-void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::SharedConstMatrixNd& Jq,const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos,const std::vector<double>& pos_des,const std::vector<double>& vel,const std::vector<double>& vel_des, Ravelin::VectorNd& js_correct){
-  int NC = Jb.columns();
-
-  OUTLOG(Jb,"Jb",logDEBUG1);
-  OUTLOG(Jq,"Jq",logDEBUG1);
-
-  Ravelin::VectorNd base_correct(6);
+void calc_base_correction(const std::vector<double>& Kp,const std::vector<double>& Kv,const std::vector<double>& Ki,const std::vector<double>& pos,const std::vector<double>& pos_des,const std::vector<double>& vel,const std::vector<double>& vel_des, Ravelin::VectorNd& base_correct){
+  base_correct = Ravelin::VectorNd(6);
 
   OUTLOG(vel,"vel_base",logDEBUG1);
   OUTLOG(vel_des,"vel_des",logDEBUG1);
@@ -32,36 +27,17 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
   }
 
   OUTLOG(base_correct,"base_correct",logDEBUG);
-
-  Ravelin::VectorNd ws_correct;
-  Jb.transpose_mult(base_correct,ws_correct);
-  OUTLOG(ws_correct,"ws_correct",logDEBUG);
-
-  // Remove non-compressive elements (cN < 0)
-  for(int i=0;i<NC;i++)
-    if(ws_correct[i] < 0.0)
-      ws_correct[i] = 0.0;
-  OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
-
-//   Remove Tangential Elements (for now)
-//  for(int i=NC;i<ws_correct.rows();i++)
-//      ws_correct[i] = 0.0;
-//  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
-
-  Jq.mult(ws_correct,js_correct,-1.0,0);
-  OUTLOG(js_correct,"js_correct",logDEBUG);
 }
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
-  
    std::vector<std::string>
         foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
         
   std::vector<std::string> active_feet;
 
   int num_feet = foot_names.size();
-  
+  int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
+
   if(USE_DES_CONTACT){
     for(int i=0;i<foot_names.size();i++){
       int is_stance = 0;
@@ -73,21 +49,21 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     active_feet = foot_names;
 
   double activation_tol = 0;
-  ctrl->get_data<double>(plugin_namespace+"min-allowed-friction",activation_tol);
+  ctrl->get_data<double>(plugin_namespace+"max-allowed-friction",activation_tol);
   
   std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
   for(int i=0;i<active_feet.size();i++){
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(active_feet[i],c);
     if(!c.empty())
-      if(c[0]->mu_coulomb >= activation_tol)
+      if(c[0]->mu_coulomb < activation_tol)
         contacts.push_back(c[0]);
   }
 
-  
   int NC = contacts.size();
+  
   if(NC > 0){
-    /// Current State
+    /// Current state
     std::vector<double> x_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.x");
     std::vector<double> xd_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.xd");
     
@@ -100,8 +76,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
     base_frame->update_relative_pose(Moby::GLOBAL);
     
-    //  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(*(base_frame.get()),0.1,1)));
-    
     Ravelin::VectorNd center_of_mass_x = Utility::pose_to_vec(base_frame);
     Ravelin::Origin3d roll_pitch_yaw;
     Ravelin::Quatd(center_of_mass_x[3],center_of_mass_x[4],center_of_mass_x[5],center_of_mass_x[6]).to_rpy(roll_pitch_yaw[0],roll_pitch_yaw[1],roll_pitch_yaw[2]);
@@ -109,8 +83,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     int NDOFS = generalized_qd.rows();
     int NUM_JOINT_DOFS = NDOFS - NSPATIAL;
     
-    Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);// ctrl->get_base_value(Pacer::Controller::velocity);
-                                                                             //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");
+    Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);
+    
     std::vector<double> vel_base(6), pos_base(6);
     for(int i=0;i<3;i++){
       vel_base[i] = base_qd[i];
@@ -118,12 +92,12 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       pos_base[i] = center_of_mass_x[i];
       pos_base[i+3] = roll_pitch_yaw[i];
     }
-
-    /// Jacobians
+    
+    /// Contact Jacobians
     Ravelin::MatrixNd N,S,T,D;
     
     ctrl->calc_contact_jacobians(generalized_q,contacts,N,S,T);
-
+    
     D.set_zero(NDOFS,NC*4);
     D.set_sub_mat(0,0,S);
     D.set_sub_mat(0,NC,T);
@@ -139,23 +113,44 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     R.block(0,NDOFS,0,NC) = N;
     R.block(0,NDOFS,NC,NC*nk+NC) = D;
     
-    Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,NC*3);
-    Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,NC*3);
-
-    /// Feedback gains
+    /// Feedback Gains
     static std::vector<double>
       Kp = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
       Kv = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
       Ki = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.ki");
 
-    Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-    contact_jacobian_stabilizer(Jb,Jq,Kp,Kv,Ki,pos_base,x_des,vel_base,xd_des,fb);
+    /// Get desired base error-feedback force
+    Ravelin::VectorNd base_correct;
+    calc_base_correction(Kp,Kv,Ki,pos_base,x_des,vel_base,xd_des,base_correct);
 
-    OUTLOG(fb,"viip_fb",logDEBUG);
+//    {
+//      Ravelin::SharedConstMatrixNd Jb = R.block(NUM_JOINT_DOFS,NDOFS,0,NC*3);
+//      Ravelin::SharedConstMatrixNd Jq = R.block(0,NUM_JOINT_DOFS,0,NC*3);
+//
+//      Ravelin::VectorNd ws_correct;
+//      Jb.transpose_mult(base_correct,ws_correct);
+//      OUTLOG(ws_correct,"ws_correct",logDEBUG);
+//      
+//      // Remove non-compressive elements (cN < 0)
+//      for(int i=0;i<NC;i++)
+//        if(ws_correct[i] < 0.0)
+//          ws_correct[i] = 0.0;
+//      OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
+//      
+//      //   Remove Tangential Elements (for now)
+//      //  for(int i=NC;i<ws_correct.rows();i++)
+//      //      ws_correct[i] = 0.0;
+//      //  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
+//      
+//      Jq.mult(ws_correct,js_correct,-1.0,0);
+//      OUTLOG(js_correct,"js_correct",logDEBUG);
+//    }
     
-    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
-    u += fb;
-    ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+    
+    
+//    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
+//    u += fb;
+//    ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
   }
 }
 

@@ -191,9 +191,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     //// PRESSURIZE LEG & SERVO BODY ATTITUDE WITH HIP
     qd_des[ROLL_JOINT] = 0.0;
     qd_des[PITCH_JOINT] = 0.0;
-    qd_des[PISTON_JOINT] = 0.0; // NOTE: this is not used
+    qd_des[PISTON_JOINT] = .2; 
     q_des[PISTON_JOINT] = qd_des[PISTON_JOINT]*dt;
-    u[PISTON_JOINT] = 500;
     break;
   case eUnloading:
     OUT_LOG(logERROR) << "UNLOADING PHASE";

@@ -30,7 +30,7 @@
   <plugin>
     <id type="string">gamepad            waypoints       gait-planner        ik-feet         stand-trajectory        joint-PID-controller        eef-PID-controller        idyn-controller         stabilization</id>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so  libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so    libstabilization.so</file>
-    <active type="bool">false            true           true                true            false                   true                       false                     false                    true</active>
+    <active type="bool">false            false           true                true            false                   true                       false                     false                    true</active>
   </plugin>
   
   <stabilization>

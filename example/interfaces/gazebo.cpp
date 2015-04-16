@@ -9,6 +9,7 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/common.hh>
 #include <gazebo/sensors/sensors.hh>
+//#include <gazebo/physics/Body.hh>
 
 #include <stdio.h>
 
@@ -149,6 +150,16 @@ using namespace Pacer;
          }
        }
 
+       // Apply force to the robot body for 1 ms
+       if (t > 0.2 && t < 0.3)
+       {
+           // Get body
+           physics::LinkPtr l = model->GetLink("BODY0");
+           // Apply a force of 50N in Y direction
+           math::Vector3 f(0, 50, 0);
+           l->SetForce(f);
+       }
+
        physics::Joint_V joints = model->GetJoints();
 
        OUT_LOG(logERROR) << "**Starting controller**";
@@ -166,10 +177,10 @@ using namespace Pacer;
          math::Vector3    pos = base_pose.pos;
          math::Quaternion rot = base_pose.rot;
          base_q.set_sub_vec(0  ,Ravelin::Vector3d(pos.x,pos.y,pos.z));
-         base_q[3+0] = rot.w;
-         base_q[3+1] = rot.x;
-         base_q[3+2] = rot.y;
-         base_q[3+3] = rot.z;
+         base_q[3+0] = rot.x;
+         base_q[3+1] = rot.y;
+         base_q[3+2] = rot.z;
+         base_q[3+3] = rot.w;
 
          math::Vector3    vel = base_ptr->GetWorldLinearVel();
          math::Vector3   avel = base_ptr->GetWorldAngularVel();

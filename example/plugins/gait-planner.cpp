@@ -219,6 +219,7 @@ void walk_toward(
   static double last_time = t;
   static std::vector<bool> last_feet_active(NUM_FEET);
 
+  // check if we need to change legs
   if(t-last_time > gait_duration* (*std::min_element(duty_factor.begin(),duty_factor.end())) )
     inited = false;
 

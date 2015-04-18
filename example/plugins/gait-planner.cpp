@@ -11,6 +11,10 @@ using namespace Ravelin;
 static Vector3d workv3_;
 static VectorNd q,qd_base;
 static VectorNd workv_;
+static bool push_stable = true;
+static int stable_clock = 0;
+static int stable_idx = 0;
+static int phase_nb[] = {0, 0, 0, 0};
 
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
   boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
@@ -196,7 +200,9 @@ void walk_toward(
                       &xd  = foot_vel[i],
                       &xdd = foot_acc[i];
 
-    
+    // Count phases
+    if (last_phase[i] != this_phase)
+        phase_nb[i]++;
     
     // Check if Spline must be re-evaluated
     bool replan_path = (!inited || last_phase[i] != this_phase);
@@ -329,8 +335,26 @@ void walk_toward(
         foot_goal /= (1-duty_factor[i]);
         OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
         Origin3d up_step(up.data());
+
+        /// Check if body is stable again
+        int nextStableClock = (int)((stable_clock + 1) / 2) * 2;
+        if ( (qd_base[1] < 0.01) && (qd_base[1] > -0.01) &&         // small side velocity
+             (stable_idx == i) && (phase_nb[i] > nextStableClock) ) // wait for a complete gait cycle after push
+        {
+                push_stable = true;
+        }
+
+        /// Check if body was pushed [steering speed smaller than 0.2]
         if (qd_base[1] > 0.2 || qd_base[1] < -0.2)
-            up_step*=step_height*1.5;
+        {
+            stable_clock = phase_nb[i]; // phase number when body was pushed
+            stable_idx = i;             // active leg when body was pushed
+            push_stable = false;        // body not stable
+        }
+
+        /// Make the step bigger if body was pushed
+        if (!push_stable)
+            up_step*=step_height*2; // good factor values in range [1.5, 2]
         else
             up_step*=step_height;
         
@@ -354,38 +378,46 @@ void walk_toward(
           //double Ts = gait_duration * duty_factor;
           //double xf0 = Ts * qd_base[0] / 2;
          // double yf0 = Ts * qd_base[1] / 2;
-          if (qd_base[1] > 0.1 || qd_base[1] < -0.1)
-          {
-            double kdx = 0.5;
+          //if (qd_base[1] > 0.1 || qd_base[1] < -0.1)
+
+          /// Step based on the stage: normal step, guard step
+          if (!push_stable)
+          { // guard step
+            double kdx = 0.7;
             double xdf = kdx * (qd_base[0] - 0);
             double ydf = kdx * (qd_base[1] - 0);
 
             // Clamp side step to the half of body
-            double side_step_max_factor = 0.75;
+            double side_step_max_factor = 0.5;
             if (xdf > 0 && xdf > (side_step_max_factor * 0.14) )
-                xdf = 0.07;
+                xdf = side_step_max_factor * 0.14;
             if (xdf < 0 && xdf < (-side_step_max_factor * 0.14) )
-                xdf = -0.07;
+                xdf = -side_step_max_factor * 0.14;
 
             if (ydf > 0 && ydf > (side_step_max_factor * 0.1) )
-                ydf = 0.05;
+                ydf = side_step_max_factor * 0.1;
             if (ydf < 0 && ydf < (-side_step_max_factor * 0.1) )
-                ydf = -0.05;
+                ydf = -side_step_max_factor * 0.1;
 
+            //std::cout << t << "  " << i << " My stepping " << std::endl;
             //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << qd_base << std::endl;
             //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << foot_goal << std::endl;
+
             Origin3d dx = Origin3d(xdf, ydf, 0.0);
             control_points.push_back(x0 + dx + up_step);
             control_points.push_back(x0 + dx );
           }
           else
-          {
+          { // normal step towards goal
+              //std::cout << t << "  " << i << " Gait planner " << std::endl;
               //std::cout << t << "  " << i << "  " << 0 << "   " << 0  << "  " << qd_base << std::endl;
               //std::cout << t << "  " << i << "  " << 0 << "   " << 0  << "  " << foot_goal << std::endl;
+
               control_points.push_back(x0 + Origin3d(foot_goal) + up_step);
               control_points.push_back(x0 + Origin3d(foot_goal) );
           }
 
+          // Hardcoded guard step
           /*if (qd_base[1] > 0.1)
             dx = Origin3d(0.0, 0.05, 0.0);
           else if (qd_base[1] < -0.1)
@@ -460,6 +492,8 @@ void walk_toward(
     
     last_phase[i] = this_phase;
   }
+
+  //std::cout << phase_nb[0] << " " << phase_nb[1] << " " << phase_nb[2] << " " << phase_nb[3] << std::endl;
 
   for(int i=0;i<NUM_FEET;i++){
 
@@ -581,6 +615,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
   // get pos and velocity for the base
   q = ctrl->get_generalized_value(Pacer::Robot::position);
+  //std::cout << q << std::endl;
   qd_base = ctrl->get_base_value(Pacer::Robot::velocity);
   
   // get current foot velocities

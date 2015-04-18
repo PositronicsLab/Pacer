@@ -152,12 +152,39 @@ using namespace Pacer;
        }
 
        // Apply force to the robot body for 1 ms
-       if (t > 0.2 && t < 0.3)
+       if (t > 0.5 && t < 0.6)
        {
            // Get body
            physics::LinkPtr l = model->GetLink("BODY0");
            // Apply a force of 50N in Y direction
-           math::Vector3 f(0, 50, 0);
+           math::Vector3 f(0, 40, 0);
+           l->SetForce(f);
+       }
+
+       if (t > 2.5 && t < 2.6)
+       {
+           // Get body
+           physics::LinkPtr l = model->GetLink("BODY0");
+           // Apply a force of 50N in Y direction
+           math::Vector3 f(0, 40, 0);
+           l->SetForce(f);
+       }
+
+       if (t > 3.5 && t < 3.6)
+       {
+           // Get body
+           physics::LinkPtr l = model->GetLink("BODY0");
+           // Apply a force of 50N in Y direction
+           math::Vector3 f(0, 40, 0);
+           l->SetForce(f);
+       }
+
+       if (t > 4 && t < 4.1)
+       {
+           // Get body
+           physics::LinkPtr l = model->GetLink("BODY0");
+           // Apply a force of 50N in Y direction
+           math::Vector3 f(0, 40, 0);
            l->SetForce(f);
        }
 

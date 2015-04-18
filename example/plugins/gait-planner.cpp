@@ -113,7 +113,13 @@ void walk_toward(
                  std::vector<Vector3d>&
                  foot_vel,
                  std::vector<Vector3d>&
-                 foot_acc)
+                 foot_acc,
+                 std::vector<Vector3d>&
+                 current_pos,
+                 std::vector<Vector3d>&
+                 current_vel,
+                 std::vector<Vector3d>&
+                 current_acc)
 {
   OUT_LOG(logDEBUG) << " -- walk_toward() entered";
   
@@ -237,6 +243,7 @@ void walk_toward(
       OUT_LOG(logDEBUG) << "U " << workv3_;
       
       last_phase[i] = this_phase;
+      //std::cout << "continue" << std::endl;
       continue;
     } else {
       OUT_LOG(logDEBUG) << "\t Time: " << t;
@@ -322,7 +329,10 @@ void walk_toward(
         foot_goal /= (1-duty_factor[i]);
         OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
         Origin3d up_step(up.data());
-        up_step*=step_height;
+        if (qd_base[1] > 0.2 || qd_base[1] < -0.2)
+            up_step*=step_height*1.5;
+        else
+            up_step*=step_height;
         
         if(redirect_path){
           Vector3d x_,xd_,xdd_;
@@ -337,15 +347,61 @@ void walk_toward(
         }
         
         if(footholds.empty()){
-          control_points.push_back(x0 + Origin3d(foot_goal) + up_step);
-          control_points.push_back(x0 + Origin3d(foot_goal));
+          //std::cout << "Just plan spline for foot " << i << "Info "<< current_vel[i] << "Base " << qd_base << std::endl;
+          //std::cout << "T=" << t << " Just plan spline for foot " << i << "Info "<< current_vel[i] << std::endl;
+
+          //std::cout << qd_base << qd_base[1] << std::endl;
+          //double Ts = gait_duration * duty_factor;
+          //double xf0 = Ts * qd_base[0] / 2;
+         // double yf0 = Ts * qd_base[1] / 2;
+          if (qd_base[1] > 0.1 || qd_base[1] < -0.1)
+          {
+            double kdx = 0.5;
+            double xdf = kdx * (qd_base[0] - 0);
+            double ydf = kdx * (qd_base[1] - 0);
+
+            // Clamp side step to the half of body
+            double side_step_max_factor = 0.75;
+            if (xdf > 0 && xdf > (side_step_max_factor * 0.14) )
+                xdf = 0.07;
+            if (xdf < 0 && xdf < (-side_step_max_factor * 0.14) )
+                xdf = -0.07;
+
+            if (ydf > 0 && ydf > (side_step_max_factor * 0.1) )
+                ydf = 0.05;
+            if (ydf < 0 && ydf < (-side_step_max_factor * 0.1) )
+                ydf = -0.05;
+
+            //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << qd_base << std::endl;
+            //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << foot_goal << std::endl;
+            Origin3d dx = Origin3d(xdf, ydf, 0.0);
+            control_points.push_back(x0 + dx + up_step);
+            control_points.push_back(x0 + dx );
+          }
+          else
+          {
+              //std::cout << t << "  " << i << "  " << 0 << "   " << 0  << "  " << qd_base << std::endl;
+              //std::cout << t << "  " << i << "  " << 0 << "   " << 0  << "  " << foot_goal << std::endl;
+              control_points.push_back(x0 + Origin3d(foot_goal) + up_step);
+              control_points.push_back(x0 + Origin3d(foot_goal) );
+          }
+
+          /*if (qd_base[1] > 0.1)
+            dx = Origin3d(0.0, 0.05, 0.0);
+          else if (qd_base[1] < -0.1)
+            dx = Origin3d(0.0, -0.05, 0.0);
+          else
+            dx = Origin3d(0.0, 0.0, 0.0);*/
         } else {
+          //std::cout << "Why this?" << std::endl;
           Origin3d x_fh;
           select_foothold(footholds,Pose3d::transform_point(Moby::GLOBAL, Vector3d((x0+Origin3d(foot_goal)).data(),base_frame)).data(),x_fh);
           // Reach new foothold, account for movement of robot during step
           control_points.push_back(Origin3d(Pose3d::transform_point(base_frame,Vector3d(x_fh.data(),Moby::GLOBAL)).data()) - Origin3d(foot_goal) + Origin3d(0,0,step_height));
           control_points.push_back(x_fh - Origin3d(foot_goal));
         }
+
+        //std::cout << control_points[0] << control_points[1] << control_points[2] << control_points[3] << std::endl;
       }
 
       // create spline using set of control points, place at back of history
@@ -518,16 +574,30 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       foot_vel(NUM_FEET),
       foot_pos(NUM_FEET),
       foot_acc(NUM_FEET),
+      current_vel(NUM_FEET),
+      current_pos(NUM_FEET),
+      current_acc(NUM_FEET),
       foot_init(NUM_FEET);
+
+  // get pos and velocity for the base
   q = ctrl->get_generalized_value(Pacer::Robot::position);
   qd_base = ctrl->get_base_value(Pacer::Robot::velocity);
   
-//  ctrl_ptr->set_model_state(q);
+  // get current foot velocities
+  for(int i=0;i<NUM_FEET;i++){
+    ctrl->get_data<Vector3d>(foot_names[i]+".state.x",current_pos[i]);
+    ctrl->get_data<Vector3d>(foot_names[i]+".state.xd",current_vel[i]);
+    ctrl->get_data<Vector3d>(foot_names[i]+".state.xdd",current_acc[i]);
+  }
+
+  // ctrl_ptr->set_model_state(q);
+
+  // get goal foot velocity
   for(int i=0;i<NUM_FEET;i++){
     foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
     foot_pos[i] = foot_init[i];
-    ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-//    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    //ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     foot_vel[i] = Vector3d(0,0,0,base_frame); 
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
@@ -581,7 +651,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       active_feet[foot_names[i]] = false;
   }
   
-  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
+  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc, current_pos, current_vel, current_acc);
   
   for(int i=0;i<NUM_FEET;i++){
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);

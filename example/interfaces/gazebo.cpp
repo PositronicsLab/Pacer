@@ -161,7 +161,7 @@ using namespace Pacer;
            l->SetForce(f);
        }
 
-       if (t > 2.5 && t < 2.6)
+       if (t > 2.2 && t < 2.3)
        {
            // Get body
            physics::LinkPtr l = model->GetLink("BODY0");
@@ -185,6 +185,26 @@ using namespace Pacer;
            physics::LinkPtr l = model->GetLink("BODY0");
            // Apply a force of 50N in Y direction
            math::Vector3 f(0, 40, 0);
+           l->SetForce(f);
+       }
+
+
+
+       if (t > 5.5 && t < 5.55)
+       {
+           // Get body
+           physics::LinkPtr l = model->GetLink("BODY0");
+           // Apply a force of 50N in Y direction
+           math::Vector3 f(0, 50, 0);
+           l->SetForce(f);
+       }
+
+       if (t > 6.5 && t < 6.55)
+       {
+           // Get body
+           physics::LinkPtr l = model->GetLink("BODY0");
+           // Apply a force of 50N in Y direction
+           math::Vector3 f(0, 50, 0);
            l->SetForce(f);
        }
 

@@ -13,6 +13,9 @@ target_link_libraries(skating-stabilization ${REQLIBS})
 add_library(gait-planner MODULE gait-planner.cpp)
 target_link_libraries(gait-planner ${REQLIBS})
 
+add_library(pushFree-gait-planner MODULE pushFree-gait-planner.cpp)
+target_link_libraries(pushFree-gait-planner ${REQLIBS})
+
 add_library(joint-PID-controller MODULE joint-PID-controller.cpp)
 target_link_libraries(joint-PID-controller ${REQLIBS})
 

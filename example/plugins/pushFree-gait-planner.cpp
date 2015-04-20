@@ -112,18 +112,11 @@ void walk_toward(
     std::vector<Origin3d>& origins,
     const Vector3d& center_of_mass_x,
     double t,
-                 std::vector<Vector3d>&
-                 foot_pos,
-                 std::vector<Vector3d>&
-                 foot_vel,
-                 std::vector<Vector3d>&
-                 foot_acc,
-                 std::vector<Vector3d>&
-                 current_pos,
-                 std::vector<Vector3d>&
-                 current_vel,
-                 std::vector<Vector3d>&
-                 current_acc)
+    std::vector<Vector3d>& foot_pos,
+    std::vector<Vector3d>& foot_vel,
+    std::vector<Vector3d>& foot_acc,
+    double kdx,
+    double step_factor)
 {
   OUT_LOG(logDEBUG) << " -- walk_toward() entered";
   
@@ -355,7 +348,7 @@ void walk_toward(
 
         /// Make the step bigger if body was pushed
         if (!push_stable)
-            up_step*=step_height*2; // good factor values in range [1.5, 2]
+            up_step*=step_height * step_factor; // good factor values in range [1.5, 2]
         else
             up_step*=step_height;
         
@@ -384,7 +377,7 @@ void walk_toward(
           /// Step based on the stage: normal step, guard step
           if (!push_stable)
           { // guard step
-            double kdx = 0.7;
+            //double kdx = 0.7; is read now from file
             double xdf = kdx * (qd_base[0] - 0);
             double ydf = kdx * (qd_base[1] - 0);
 
@@ -579,6 +572,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"pose");
   static double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+"gait-duration");
   static double step_height = ctrl_ptr->get_data<double>(plugin_namespace+"step-height");
+  static double kdx = ctrl_ptr->get_data<double>(plugin_namespace+"push-feedback-gain");
+  static double step_factor = ctrl_ptr->get_data<double>(plugin_namespace+"push-step-factor");
   static std::vector<Vector3d> footholds(0);
   foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"feet");
 
@@ -687,7 +682,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       active_feet[foot_names[i]] = false;
   }
   
-  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc, current_pos, current_vel, current_acc);
+  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc, kdx, step_factor);
   
   for(int i=0;i<NUM_FEET;i++){
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);

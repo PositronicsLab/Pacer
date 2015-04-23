@@ -3,7 +3,7 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <Moby/EventDrivenSimulator.h>
+#include <Moby/ConstraintSimulator.h>
 #include <Pacer/controller.h>
 #include <random>
 
@@ -11,7 +11,7 @@
 using Pacer::Controller;
 
 // pointer to the simulator
- boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+ boost::shared_ptr<Moby::ConstraintSimulator> sim;
 // pointer to the articulated body in Moby
 Moby::RCArticulatedBodyPtr abrobot;
 
@@ -20,9 +20,9 @@ Moby::RCArticulatedBodyPtr abrobot;
 
 
 #ifdef USE_OSG_DISPLAY
-void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::EventDrivenSimulator> sim ) ;
-void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::EventDrivenSimulator> sim,double lightness = 1, double size=0.1);
+void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::ConstraintSimulator> sim ) ;
+void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::ConstraintSimulator> sim ) ;
+void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::ConstraintSimulator> sim,double lightness = 1, double size=0.1);
 
 void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
    for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
@@ -310,13 +310,13 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
   // If use robot is active also init dynamixel controllers
-  // get a reference to the EventDrivenSimulator instance
+  // get a reference to the ConstraintSimulator instance
   for (std::map<std::string, Moby::BasePtr>::const_iterator i = read_map.begin();
        i !=read_map.end(); i++)
   {
     // Find the simulator reference
     if (!sim)
-      sim = boost::dynamic_pointer_cast<Moby::EventDrivenSimulator>(i->second);
+      sim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(i->second);
 
     // find the robot reference
     if (!abrobot)
@@ -375,7 +375,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 /////////////////////////////// Visualization /////////////////////////////////
 
 #include <boost/shared_ptr.hpp>
-#include <Moby/EventDrivenSimulator.h>
+#include <Moby/ConstraintSimulator.h>
 
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
@@ -391,7 +391,7 @@ using namespace Ravelin;
 const double VIBRANCY = 1;
 
 /// Draws a ray directed from a contact point along the contact normal
-void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c,double point_radius, boost::shared_ptr<EventDrivenSimulator> sim ) {
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c,double point_radius, boost::shared_ptr<ConstraintSimulator> sim ) {
 
   // random color for this contact visualization
   double r = c[0] * VIBRANCY;
@@ -475,11 +475,11 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   sim->add_transient_vdata( group_root );
 }
 
-void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<EventDrivenSimulator> sim ) {
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<ConstraintSimulator> sim ) {
   visualize_ray(point,vec,c,0.1,sim);
 }
 
-void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<EventDrivenSimulator> sim ,double lightness, double size){
+void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<ConstraintSimulator> sim ,double lightness, double size){
   Ravelin::Pose3d pose(p);
   assert(lightness >= 0.0 && lightness <= 2.0);
   pose.update_relative_pose(Moby::GLOBAL);

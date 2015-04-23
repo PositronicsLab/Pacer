@@ -213,7 +213,10 @@ void walk_toward(
       workv3_.pose = base_frame;
       xd.pose = base_frame;
 
-      xdd = (dt < Moby::NEAR_ZERO)? 0 : (workv3_ - xd)/dt;
+      if (dt < Moby::NEAR_ZERO)
+        xdd.set_zero();
+      else 
+        xdd = (workv3_ - xd)/dt;
       
       xd = workv3_;
       xdd.pose = base_frame;

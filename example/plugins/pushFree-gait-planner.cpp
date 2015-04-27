@@ -145,14 +145,11 @@ void walk_toward(
   // [foot]
   static std::vector<VectorNd> spline_t(NUM_FEET);
   
-  double gait_progress = t/gait_duration;
-  
   // Get the decimal part of gait_progress
+  double gait_progress = t/gait_duration;
   gait_progress = gait_progress - (double) ((int) gait_progress);
   if(gait_progress >= 1) gait_progress = Moby::NEAR_ZERO;
 
-//  Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
-//  turn_origin = Pose3d::transform_point(base_frame, turn_origin);
   Origin3d turn_origin(0,command[0]/command[5],0);
   
   boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
@@ -177,15 +174,6 @@ void walk_toward(
     OUT_LOG(logDEBUG) << "\t left in phase (%) : " << left_in_phase * 100.0;
     OUT_LOG(logDEBUG) << "\t left in phase (sec) : " << left_in_phase * gait_duration;
     ctrl_ptr->set_data<bool>(foot_names[i]+".stance",this_phase);
-
-//    VectorNd ackermann_command(6);
-//    Origin3d foot_radius = origins[i] - turn_origin;
-//    Origin3d body_radius = -turn_origin;
-//    
-//    // Forward speed at center of body = command[0]
-//    // Forward speed at feet must induce a turn about turn_origin in base_frame
-//    xd_stance =
-//    
     
     OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }, stance: " << this_phase;
     
@@ -225,12 +213,6 @@ void walk_toward(
       xd.pose = base_frame;
       x.pose = base_frame;
       x = x + xd * dt;
-      
-//      if(active_foot){
-//        workv3_ *= 100;
-//        J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
-//        ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
-//      }
     
       Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
       Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd);// * (left_in_phase*gait_duration);
@@ -367,14 +349,9 @@ void walk_toward(
         if(footholds.empty()){
           //std::cout << "Just plan spline for foot " << i << "Info "<< current_vel[i] << "Base " << qd_base << std::endl;
           //std::cout << "T=" << t << " Just plan spline for foot " << i << "Info "<< current_vel[i] << std::endl;
-
           //std::cout << qd_base << qd_base[1] << std::endl;
-          //double Ts = gait_duration * duty_factor;
-          //double xf0 = Ts * qd_base[0] / 2;
-         // double yf0 = Ts * qd_base[1] / 2;
-          //if (qd_base[1] > 0.1 || qd_base[1] < -0.1)
 
-          /// Step based on the stage: normal step, guard step
+          /// Step based on the stage: normal step or guard step
           if (!push_stable)
           { // guard step
             //double kdx = 0.7; is read now from file
@@ -432,31 +409,12 @@ void walk_toward(
 
       // create spline using set of control points, place at back of history
       int n = control_points.size();
-//      std::vector<Origin3d> new_control_points;
-//      if(redirect_path)
-//        spline_t[i].set_zero(n+1);
-//      else
-        spline_t[i].set_zero(n);
+      spline_t[i].set_zero(n);
       VectorNd           &T = spline_t[i];
-      bool unset = true;
       for(int j=0,jj=0;j<n;j++){
-//        if(redirect_path){
-//          T[j] = t0 + fabs( left_in_phase*gait_duration / (double)(n-2)) * (double)jj ;
-//          if (T[j]>t && unset){
-//            unset = false;
-//            T[j] = t;
-//            new_control_points.back() = Origin3d(x.data());
-//            new_control_points.push_back(control_points[jj-1]);
-//          } else {
-//            jj++;
-//          }
-//          new_control_points.push_back(control_points[jj]);
-//        } else {
           T[j] = t0 + fabs( left_in_phase*gait_duration / (double)(n-1)) * (double)j ;
-//        }
       }
-//      if(redirect_path)
-//        control_points = new_control_points;
+
       OUTLOG(T,"T",logDEBUG1);
       for(int cp=0;cp<control_points.size();cp++){
         OUTLOG(control_points[cp],"control_point",logDEBUG1);
@@ -488,40 +446,6 @@ void walk_toward(
   }
 
   //std::cout << phase_nb[0] << " " << phase_nb[1] << " " << phase_nb[2] << " " << phase_nb[3] << std::endl;
-
-  for(int i=0;i<NUM_FEET;i++){
-
-///* VISUALIZE
-//#ifdef NDEBUG
-    {
-      Vector3d p = Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]);
-      Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,foot_vel[i])/10;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,0,1),0.1)));
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.1)));
-    }
-    if(last_phase[i])
-      continue;
-
-    VectorNd &T = spline_t[i];
-
-    for(double t=T[0]+Moby::NEAR_ZERO ; t<=T[T.rows()-1] ; t += 0.01){
-      Vector3d x,xd,xdd;
-      for(int d=0;d<3;d++){
-        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
-      }
-      x.pose = base_frame;
-      xd.pose = base_frame;
-      xdd.pose = base_frame;
-      Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
-      Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-//      Vector3d a = Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,1,0),0.01)));
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,0),0.01)));
-//     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Vector3d(1,0.5,0)));
-    }
-//#endif
-    //  END VISUALIZE */
-  }
   inited = true;
   OUT_LOG(logDEBUG) << " -- walk_toward() exited";
 }
@@ -552,14 +476,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   Origin3d command = sum_command / (double) command_queue.size();
 
-  /// Command velocity differential
-//  static Origin3d command = Origin3d(0,0,0);
-//  
-//  Origin3d dcommand = Origin3d(0,0,0);
-//  ctrl->get_data<Origin3d>("SE2_command",dcommand);
-//  command *= 0.999;
-//  command += dcommand*dt;
-  
   VectorNd go_to;
   go_to.set_zero(6);
   go_to[0] = command[0];

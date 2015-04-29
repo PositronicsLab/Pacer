@@ -191,8 +191,8 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
@@ -342,8 +342,8 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
@@ -495,8 +495,8 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
@@ -648,8 +648,8 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>

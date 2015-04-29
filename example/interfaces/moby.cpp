@@ -350,13 +350,25 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   if(is_kinematic)
     abrobot->set_kinematic(true);
 
-  Ravelin::VectorNd q_start;
-  robot_ptr->get_generalized_value(Pacer::Robot::position,q_start);
-  Ravelin::VectorNd qd_start;
-  robot_ptr->get_generalized_value(Pacer::Robot::velocity,qd_start);
+  std::map<std::string,Ravelin::VectorNd > q_start, qd_start;
+  robot_ptr->get_joint_value(Pacer::Robot::position,q_start);
+  robot_ptr->get_joint_value(Pacer::Robot::velocity,qd_start);
 
-  abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
-  abrobot->set_generalized_velocity(Moby::DynamicBody::eSpatial,qd_start);
+  Ravelin::VectorNd base_x, base_xd;
+  robot_ptr->get_generalized_value(Pacer::Robot::position,base_x);
+  robot_ptr->get_generalized_value(Pacer::Robot::velocity,base_xd);
+  
+  abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,base_x);
+  abrobot->set_generalized_velocity(Moby::DynamicBody::eSpatial,base_xd);
+  abrobot->update_link_poses();
+
+  std::vector<Moby::JointPtr> joints = abrobot->get_joints();
+
+  for(int i=0;i<joints.size();i++){
+    joints[i]->q = q_start[joints[i]->id];
+    joints[i]->qd = qd_start[joints[i]->id];
+  }
+  
   abrobot->update_link_poses();
 }
 

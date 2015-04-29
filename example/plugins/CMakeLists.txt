@@ -28,6 +28,9 @@ target_link_libraries(inverse-dynamics ${REQLIBS})
 add_library(hopper MODULE hopper-controller.cpp)
 target_link_libraries(hopper ${REQLIBS})
 
+add_library(output MODULE output.cpp)
+target_link_libraries(output ${REQLIBS})
+
 find_package(SDL2)
 find_package(curses)
 

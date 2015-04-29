@@ -1,13 +1,14 @@
   <XML>
-  <logging type="string">ERROR</logging>
+  <logging type="string">DEBUG1</logging>
   
   <robot-model type="string">links/model.sdf</robot-model>
+  <real-time-factor type="double">1</real-time-factor>
 
   <init>
     <kinematic type="bool">false</kinematic>
 
     <base>
-      <x type="double"> 0 0 0.179 0 0 0</x>
+      <x type="double"> 0 0 0.1785 0 0 0</x>
       <xd type="double">0 0 0   0 0 0</xd>
     </base>
 
@@ -16,7 +17,10 @@
     <dofs type="double">1 1 1   1 1 1  1 1 1  1 1 1</dofs>
     <q type="double">  0.1 0.8 1.2           -0.1 -0.8 -1.2         -0.1 -0.8 -1.2          0.1 0.8 1.2 </q>
     <active type="bool">true true true   true true true   true true true   true true true</active>
-     <max-torque type="double">1e4 1e4 1e4  1e4 1e4 1e4  1e4 1e4 1e4   1e4 1e4 1e4</max-torque>
+    <limits>
+      <u type="double">1e4 1e4 1e4  1e4 1e4 1e4  1e4 1e4 1e4   1e4 1e4 1e4</u>
+      <qd type="double">15 15 15    15 15 15     15 15 15      15 15 15</qd>
+    </limits>
     </joint>
 
     <end-effector>
@@ -27,16 +31,49 @@
  
   <plugin>
     <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory
-                      joint-PID-controller        eef-PID-controller      idyn-controller
-                      stabilization  skating-stabilization</id>
-    <active type="bool">true            false           true                true            false
-                      true                        false                   false
-                      false            false</active>
+                      joint-PID-controller-accel        eef-PID-controller      idyn-controller
+                      stabilization  skating-stabilization
+                      output</id>
+    <active type="bool">false            true           true                true            false
+                      true                        false                   true
+                      false            false
+                      false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
                       libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so
-                      libstabilization.so  libskating-stabilization.so </file>
+                      libstabilization.so  libskating-stabilization.so
+                      liboutput.so</file>
   </plugin>
   
+  <output>
+    <real-time-factor type="double">10</real-time-factor>
+    <priority type="double">10</priority>
+    <print-data>
+      <vec3 type="string vector">
+        center_of_mass.x
+        center_of_mass.xd
+        center_of_mass.xdd
+        roll_pitch_yaw
+        zero_moment_point
+      </vec3>
+      <pose3 type="string vector">
+        base_link_frame
+        base_horizontal_frame
+        base_stability_frame
+      </pose3>
+      <end-effector>
+        <vec3 type="string vector">
+          state.x state.xd state.xdd
+          goal.x goal.xd goal.xdd
+        </vec3>
+        <bool type="string vector">
+          stance
+        </bool>
+      </end-effector>
+    </print-data>
+
+  </output>
+
+
   <stabilization>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">2</priority>
@@ -73,9 +110,9 @@
   
   <gamepad>
      <real-time-factor type="double">1</real-time-factor>
-     <max-forward-speed type="double">0.1</max-forward-speed>
-     <max-strafe-speed type="double">0.05</max-strafe-speed>
-     <max-turn-speed type="double">0.5</max-turn-speed>
+     <max-forward-speed type="double">0.2</max-forward-speed>
+     <max-strafe-speed type="double">0.1</max-strafe-speed>
+     <max-turn-speed type="double">1</max-turn-speed>
      <priority type="double">0</priority>
      <type type="string">SABRENT</type> <!-- XBOX  PS  SABRENT -->
  </gamepad>
@@ -83,8 +120,8 @@
   <waypoints>
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">0</priority>
-     <max-forward-speed type="double">0.2</max-forward-speed>
-     <max-strafe-speed type="double">0.0</max-strafe-speed>
+     <max-forward-speed type="double">0.1</max-forward-speed>
+     <max-strafe-speed type="double">0.05</max-strafe-speed>
      <max-turn-speed type="double">1</max-turn-speed>
      <waypoints type="double vector">
         10 0
@@ -99,12 +136,12 @@
   <gait-planner>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">1</priority>
-    <pose type="double">0.04 0 0 0 0 0</pose>
+    <pose type="double">0.03 0 0 0 0 0</pose>
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.04</step-height>
-    <gait-duration type="double">1</gait-duration>
+    <step-height type="double">0.015</step-height>
+    <gait-duration type="double">0.3</gait-duration>
     <!-- 0.178056, 0.0762394, -0.161853 -->
     <length type="double">0.35</length>
     <width type="double">0.1524788</width>
@@ -112,6 +149,8 @@
     <!--troting gait-->
 <!--    <gait type="double">0  0.5  0.5  0</gait>-->
     <gait type="double">0.25  0.75  0.75  0.25</gait>
+<!--    <gait type="double">0.25  0.25  0.75  0.75</gait>-->
+<!--    <gait type="double">0.25  0.75  0.25  0.75</gait>-->
     <!--walking gait-->
     <!--<gait type="double">0.25  0.75  0.0  0.5</gait>-->
     <duty-factor type="double">0.75  0.75 0.75  0.75</duty-factor>
@@ -126,6 +165,7 @@
   <joint-PID-controller>
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">false</acceleration>
     <!-- Gains are for the q of joint ids respectively -->
     <gains>
       <kp type="double">2e1 2e1 2e1      2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1   </kp>
@@ -133,6 +173,18 @@
       <ki type="double">3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3  3e-3 3e-3 3e-3</ki>
     </gains>
   </joint-PID-controller>
+
+<joint-PID-controller-accel>
+  <priority type="double">3</priority>
+  <real-time-factor type="double">1</real-time-factor>
+  <acceleration type="bool">true</acceleration>
+  <!-- Gains are for the q of joint ids respectively -->
+  <gains>
+    <kp type="double">1e5 1e5 1e5      1e5 1e5 1e5      1e5 1e5 1e5     1e5 1e5 1e5</kp>
+    <kv type="double">1e2 1e2 1e2      1e2 1e2 1e2      1e2 1e2 1e2     1e2 1e2 1e2</kv>
+    <ki type="double">1e-2 1e-2 1e-2      1e-2 1e-2 1e-2      1e-2 1e-2 1e-2     1e-2 1e-2 1e-2</ki>
+  </gains>
+</joint-PID-controller-accel>
 
   <eef-PID-controller>
     <priority type="double">4</priority>
@@ -150,11 +202,12 @@
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
     <dt type="double">0</dt>
-    <alpha type="double">0</alpha>
+    <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string">NSLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">NSQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+<!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

@@ -195,7 +195,7 @@ using namespace Pacer;
          robot_ptr->set_base_value(Pacer::Robot::position,base_q);
          robot_ptr->set_base_value(Pacer::Robot::velocity,base_qd);
          robot_ptr->set_base_value(Pacer::Robot::acceleration,base_qdd);
-         robot_ptr->set_base_value(Pacer::Robot::load,base_fext);
+         //robot_ptr->set_base_value(Pacer::Robot::load,base_fext);
 
          // Set joint params in Moby joint coordinates
          std::map<std::string,Ravelin::VectorNd> 
@@ -231,7 +231,7 @@ using namespace Pacer;
        robot_ptr->control(t);
 
        {
-         std::map<std::string, Ravelin::VectorNd > q, qd, u; 
+         std::map<std::string, Ravelin::VectorNd > q, qd, u;
          robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
          robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
          robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);

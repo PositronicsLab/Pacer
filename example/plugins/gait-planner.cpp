@@ -222,7 +222,7 @@ void walk_toward(
       x = x + xd * dt;
       
 //      if(active_foot){
-//        workv3_ *= 100;
+//        workv3_ *= 10;
 //        J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
 //        ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
 //      }
@@ -527,12 +527,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
     foot_pos[i] = foot_init[i];
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-//    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-    foot_vel[i] = Vector3d(0,0,0,base_frame); 
+    foot_vel[i] = Vector3d(0,0,0,base_frame);
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
-    //double gait_progress = t/gait_time;
-    //gait_progress = gait_progress - (double) ((int) gait_progress);
   }
 
   
@@ -544,8 +541,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           input_gait_pose[5]
         ),
         Origin3d(
-          input_gait_pose[0],
-          input_gait_pose[1],
+          input_gait_pose[0] /*+ command[0]/(4.0*gait_time)*/,
+          input_gait_pose[1] /*+ command[1]/(4.0*gait_time)*/,
           input_gait_pose[2]
         ),
         base_frame

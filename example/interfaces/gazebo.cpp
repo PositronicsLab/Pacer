@@ -150,6 +150,9 @@ using namespace Pacer;
            }
          }
        }
+       
+
+       //robot_ptr->add_contact(foot_names[f],point,normal,impulse,mu_coulomb);
 
        physics::Joint_V joints = model->GetJoints();
 

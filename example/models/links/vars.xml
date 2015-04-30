@@ -180,7 +180,7 @@
   <acceleration type="bool">true</acceleration>
   <!-- Gains are for the q of joint ids respectively -->
   <gains>
-    <kp type="double">1e5 1e5 1e5      1e5 1e5 1e5      1e5 1e5 1e5     1e5 1e5 1e5</kp>
+    <kp type="double">1e4 1e4 1e4      1e4 1e4 1e4      1e4 1e4 1e4     1e4 1e4 1e4</kp>
     <kv type="double">1e2 1e2 1e2      1e2 1e2 1e2      1e2 1e2 1e2     1e2 1e2 1e2</kv>
     <ki type="double">1e-2 1e-2 1e-2      1e-2 1e-2 1e-2      1e-2 1e-2 1e-2     1e-2 1e-2 1e-2</ki>
   </gains>
@@ -207,7 +207,7 @@
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">NSQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">CFLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
 <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

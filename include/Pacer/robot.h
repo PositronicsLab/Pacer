@@ -418,6 +418,18 @@ namespace Pacer{
     }
     
     template <typename T>
+    std::map<std::string,std::vector<T> > make_id_value_map(){
+      std::map<std::string,std::vector<T> > id_dof_val_map;
+      std::map<std::string,std::vector<int> >::iterator it;
+      for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
+        const std::vector<int>& dof = (*it).second;
+        std::vector<T>& dof_val = id_dof_val_map[(*it).first];
+        dof_val.resize(dof.size());
+      }
+      return id_dof_val_map;
+    }
+
+    template <typename T>
     void convert_from_generalized(const std::vector<T>& generalized_vec, std::map<std::string,std::vector<T> >& id_dof_val_map){
       if(generalized_vec.size() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.size()));

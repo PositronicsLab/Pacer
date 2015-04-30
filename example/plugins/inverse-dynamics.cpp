@@ -123,7 +123,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  fext.segment(0,nq) += fID;
+  fext.segment(0,nq) -= fID;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -553,9 +553,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  workv1.set_zero(n);
-  workv1.set_sub_vec(0,fID);
-  fext += workv1;
+  fext.segment(0,nq) -= fID;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -1960,11 +1958,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
     Utility::check_finite(cf_init);
 
-    OUTLOG(cf_init,"cf_Moby",logERROR);
+    OUTLOG(cf_init,"cf_0",logERROR);
 
     Ravelin::SharedConstVectorNd cf_normal = cf_init.segment(0,NC);
     double sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
-    OUT_LOG(logERROR) << "Moby, Sum normal force: " << sum ;
+    OUT_LOG(logERROR) << "0, Sum normal force: " << sum ;
   
     if(USE_LAST_CFS){
       static std::queue<Ravelin::VectorNd>
@@ -2096,8 +2094,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     if (!solve_flag) {
       if(NC==0)
         solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size());
-      else
-        solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+      else{
+        Ravelin::MatrixNd mu = MU;
+        mu *= 0.005;
+        solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,mu,id,cf);
+      }
     }
     
 #ifdef TIMING
@@ -2116,11 +2117,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
   OUTLOG(DT,"DT",logERROR);
 
-  std::vector<std::string>::iterator it=controller_name.begin();
-  for (;it!=controller_name.end(); it++) {
-    std::string& name = (*it);
-    OUTLOG(uff_map[name],"uff_"+name,logERROR);
-    OUTLOG(cf_map[name],"cf_"+name,logERROR);
+
+  OUTLOG(controller_name,"controller_name",logERROR);
+  //std::vector<std::string>::iterator it=controller_name.begin();
+  //for (;it!=controller_name.end(); it++) {
+  //;it!=controller_name.end(); it++) {
+  for (int i=0;i<controller_name.size();i++){
+    std::string& name = controller_name[i];//(*it);
+    OUTLOG(uff_map[name],"uff_"+std::to_string(i+1),logERROR);
+    OUTLOG(cf_map[name],"cf_"+std::to_string(i+1),logERROR);
 
     double sum = 0;
     if(NC > 0){
@@ -2128,7 +2133,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
     }
     
-    OUT_LOG(logERROR) << name << ", Sum normal force: " << sum ;
+    OUT_LOG(logERROR) << (i+1) << ", Sum normal force: " << sum ;
 
   }
 

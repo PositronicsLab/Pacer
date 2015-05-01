@@ -11,7 +11,7 @@
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;
-# define DEVICE_NAME "/dev/ttyS0"
+  std::string DEVICE_NAME;
 #endif
 
 using Pacer::Controller;
@@ -47,7 +47,7 @@ void init(std::string model_f,std::string vars_f){
   std::cout << "STARTING PACER" << std::endl;
 #ifdef USE_DXL
   // If use robot is active also init dynamixel controllers
-  dxl_ = new DXL::Dynamixel(DEVICE_NAME);
+  dxl_ = new DXL::Dynamixel(DEVICE_NAME.c_str());
 #endif
 
   /// Set up quadruped robot, linking data from moby's articulated body
@@ -74,7 +74,7 @@ void init(std::string model_f,std::string vars_f){
   dxl_->names = dxl_name;
   // Set Joint Angles
   std::vector<int> dxl_tare = boost::assign::list_of
-      (0)(0)(0)(0)
+      (-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT);
       (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
       (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
 
@@ -145,15 +145,10 @@ int main(int argc, char* argv[])
     std::cout << argv[i] << std::endl;
   }
 
+  DEVICE_NAME = argv[1];
   double max_time = INFINITY;
-  if(argc == 3){
-    init(std::string(argv[1]),std::string(argv[2]));
-  } else if(argc == 4) {
-    init(std::string(argv[1]),std::string(argv[2]));
-    max_time = std::atof(argv[3]);
-  } else {
-    init("model","vars.xml");
-  }
+    
+  init("model","vars.xml");
 
   
 
@@ -162,7 +157,7 @@ int main(int argc, char* argv[])
 //  struct timeval start_t, now_t;
 //  gettimeofday(&start_t, NULL);
   while(t<max_time){
-    t += 1.0/FREQ * 2.5;
+    t += 1.0/FREQ;
 //    gettimeofday(&now_t, NULL);
 //    double t = (now_t.tv_sec - start_t.tv_sec) + (now_t.tv_usec - start_t.tv_usec) * 1E-6;
     controller(t);

@@ -363,7 +363,7 @@
       <parent>BODY0</parent>
       <child>LH_LEG_1</child>
       <axis>
-        <xyz>0 1 0</xyz>
+        <xyz>-1 0 0</xyz>
         <limit>
           <lower>-1e+16</lower>
           <upper>1e+16</upper>

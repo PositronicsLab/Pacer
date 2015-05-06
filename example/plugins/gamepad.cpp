@@ -250,7 +250,7 @@ class Joystick
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // SDL2 will only report events when the window has focus, so set
   // this hint as we don't have a window
-  const int JDEADZONE = 4000;
+  const int JDEADZONE = 2000;
   
   std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+"type");
   try {
@@ -367,53 +367,24 @@ const int
       double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
       
       const int MAX_VAL =32767;
-      
-    if (GAMEPAD_TYPE.compare("SABRENT") == 0 || GAMEPAD_TYPE.compare("PS") == 0){
-      { // strafe
-        int i = 0;
-        if(fabs(j.axes[i]) < JDEADZONE)
-          command_SE2[1] = 0;
-        else
-          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) MAX_VAL;
+      int X = 1,Y = 0,THETA = 2;
+      if (GAMEPAD_TYPE.compare("SABRENT") == 0 || GAMEPAD_TYPE.compare("PS") == 0){
+        X = 1;Y = 0;THETA = 2;
+      } else if(GAMEPAD_TYPE.compare("XBOX") == 0){
+        X = 1;Y = 0;THETA = 3;
       }
-      { // forward
-        int i = 1;
-        if(fabs(j.axes[i]) < JDEADZONE)
-          command_SE2[0] = 0;
-        else
-          command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) MAX_VAL;
+      double disp = sqrt(j.axes[X]*j.axes[X]+j.axes[Y]*j.axes[Y]);
+      if(disp < JDEADZONE){
+        command_SE2[0] = 0;
+        command_SE2[1] = 0;
+      }else{
+        command_SE2[0] = max_forward_speed * - (double) j.axes[X] / (double) MAX_VAL;
+        command_SE2[1] = max_strafe_speed * - (double) j.axes[Y] / (double) MAX_VAL;
       }
-      { // turn
-        int i = 2;
-        if(fabs(j.axes[i]) < JDEADZONE)
-          command_SE2[2] = 0;
-        else
-          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) MAX_VAL;
-      }
-    } else if(GAMEPAD_TYPE.compare("XBOX") == 0){
-      { // strafe
-        int i = 0;
-        if(fabs(j.axes[i]) < JDEADZONE)
-          command_SE2[1] = 0;
-        else
-          command_SE2[1] = max_strafe_speed * - (double) j.axes[i] / (double) MAX_VAL;
-      }
-      { // forward
-        int i = 1;
-        if(fabs(j.axes[i]) < JDEADZONE)
-          command_SE2[0] = 0;
-        else
-          command_SE2[0] = max_forward_speed * - (double) j.axes[i] / (double) MAX_VAL;
-      }
-      { // turn
-        int i = 3;
-        if(fabs(j.axes[i]) < JDEADZONE)
-          command_SE2[2] = 0;
-        else
-          command_SE2[2] = max_turn_speed * - (double) j.axes[i] / (double) MAX_VAL;
-      }
-    }
-
+      if(fabs(j.axes[THETA]) < JDEADZONE)
+        command_SE2[2] = 0;
+      else
+        command_SE2[2] = max_turn_speed * - (double) j.axes[THETA] / (double) MAX_VAL;
     }
     ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
 

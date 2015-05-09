@@ -16,6 +16,12 @@ static int stable_clock = 0;
 static int stable_idx = 0;
 static int phase_nb[] = {0, 0, 0, 0};
 
+// constant definition
+const double body_width = 0.1;
+const double body_length = 0.14;
+const double side_step_max_factor = 0.5;
+
+
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
   boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
   std::string plugin_namespace;
@@ -359,16 +365,15 @@ void walk_toward(
             double ydf = kdx * (qd_base[1] - 0);
 
             // Clamp side step to the half of body
-            double side_step_max_factor = 0.5;
-            if (xdf > 0 && xdf > (side_step_max_factor * 0.14) )
-                xdf = side_step_max_factor * 0.14;
-            if (xdf < 0 && xdf < (-side_step_max_factor * 0.14) )
-                xdf = -side_step_max_factor * 0.14;
+            if (xdf > 0 && xdf > (side_step_max_factor * body_length) )
+                xdf = side_step_max_factor * body_length;
+            if (xdf < 0 && xdf < (-side_step_max_factor * body_length) )
+                xdf = -side_step_max_factor * body_length;
 
-            if (ydf > 0 && ydf > (side_step_max_factor * 0.1) )
-                ydf = side_step_max_factor * 0.1;
-            if (ydf < 0 && ydf < (-side_step_max_factor * 0.1) )
-                ydf = -side_step_max_factor * 0.1;
+            if (ydf > 0 && ydf > (side_step_max_factor * body_width) )
+                ydf = side_step_max_factor * body_width;
+            if (ydf < 0 && ydf < (-side_step_max_factor * body_width) )
+                ydf = -side_step_max_factor * body_width;
 
             //std::cout << t << "  " << i << " My stepping " << std::endl;
             //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << qd_base << std::endl;
@@ -410,7 +415,7 @@ void walk_toward(
       // create spline using set of control points, place at back of history
       int n = control_points.size();
       spline_t[i].set_zero(n);
-      VectorNd           &T = spline_t[i];
+      VectorNd &T = spline_t[i];
       for(int j=0,jj=0;j<n;j++){
           T[j] = t0 + fabs( left_in_phase*gait_duration / (double)(n-1)) * (double)j ;
       }

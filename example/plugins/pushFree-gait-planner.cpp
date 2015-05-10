@@ -361,27 +361,49 @@ void walk_toward(
           if (!push_stable)
           { // guard step
             //double kdx = 0.7; is read now from file
-            double xdf = kdx * (qd_base[0] - 0);
-            double ydf = kdx * (qd_base[1] - 0);
-
-            // Clamp side step to the half of body
-            if (xdf > 0 && xdf > (side_step_max_factor * body_length) )
-                xdf = side_step_max_factor * body_length;
-            if (xdf < 0 && xdf < (-side_step_max_factor * body_length) )
-                xdf = -side_step_max_factor * body_length;
-
-            if (ydf > 0 && ydf > (side_step_max_factor * body_width) )
-                ydf = side_step_max_factor * body_width;
-            if (ydf < 0 && ydf < (-side_step_max_factor * body_width) )
-                ydf = -side_step_max_factor * body_width;
+            const double xd_x_desired = 0.2;
+            const double xd_y_desired = 0.0;
+            double xdf = kdx * (qd_base[0] - xd_x_desired);
+            double ydf = kdx * (qd_base[1] - xd_y_desired);
 
             //std::cout << t << "  " << i << " My stepping " << std::endl;
             //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << qd_base << std::endl;
             //std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << foot_goal << std::endl;
 
-            Origin3d dx = Origin3d(xdf, ydf, 0.0);
-            control_points.push_back(x0 + dx + up_step);
-            control_points.push_back(x0 + dx );
+            //Origin3d dx = Origin3d(xdf, ydf, 0.0);
+            Origin3d dx1 = Origin3d(foot_goal) + Origin3d(xdf, ydf, 0.0) + up_step;
+            Origin3d dx2 = Origin3d(foot_goal) + Origin3d(xdf, ydf, 0.0);
+
+            // Clamp side step to the half of body
+            if (dx1[0] > 0 && dx1[0] > (side_step_max_factor * body_length) )
+            {
+                dx1[0] = side_step_max_factor * body_length;
+                dx2[0] = side_step_max_factor * body_length;
+            }
+            if (dx1[0] < 0 && dx1[0] < (-side_step_max_factor * body_length) )
+            {
+                dx1[0] = -side_step_max_factor * body_length;
+                dx2[0] = -side_step_max_factor * body_length;
+            }
+
+            if (dx1[1] > 0 && dx1[1] > (side_step_max_factor * body_width) )
+            {
+                dx1[1] = side_step_max_factor * body_width;
+                dx2[1] = side_step_max_factor * body_width;
+            }
+            if (dx1[1] < 0 && dx1[1] < (-side_step_max_factor * body_width) )
+            {
+                dx1[1] = -side_step_max_factor * body_width;
+                dx2[1] = -side_step_max_factor * body_width;
+            }
+
+            //control_points.push_back(x0 + Origin3d(foot_goal) + dx + up_step);
+            //control_points.push_back(x0 + Origin3d(foot_goal) + dx );
+            control_points.push_back(x0 + dx1);
+            control_points.push_back(x0 + dx2);
+
+            std::cout << t << "  " << i << "  " << xdf << "   " << ydf  << "  " << foot_goal << " " << dx1 << std::endl;
+
           }
           else
           { // normal step towards goal

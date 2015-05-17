@@ -214,6 +214,12 @@ void walk_toward(
       xd.pose = base_frame;
 
       xdd = (dt < Moby::NEAR_ZERO)? 0 : (workv3_ - xd)/dt;
+      double xdd_norm = xdd.norm();
+      double max_foot_accel = 500;
+      if(xdd_norm > max_foot_accel){
+        xdd /= xdd_norm;
+        xdd *= max_foot_accel;
+      }
       
       xd = workv3_;
       xdd.pose = base_frame;

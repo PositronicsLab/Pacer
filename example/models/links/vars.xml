@@ -1,5 +1,5 @@
   <XML>
-  <logging type="string">DEBUG1</logging>
+  <logging type="string">ERROR</logging>
   
   <robot-model type="string">links/model.sdf</robot-model>
   <real-time-factor type="double">1</real-time-factor>
@@ -31,11 +31,11 @@
  
   <plugin>
     <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory
-                      joint-PID-controller-accel        eef-PID-controller      idyn-controller
+                      joint-PID-controller        eef-PID-controller      idyn-controller
                       stabilization  skating-stabilization
                       output</id>
-    <active type="bool">false            true           true                true            false
-                      true                        false                   true
+    <active type="bool">true          false           true                true            false
+                      true                        false                   false
                       false            false
                       false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
@@ -201,13 +201,13 @@
   <idyn-controller>
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0</dt>
+    <dt type="double">1</dt>
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">CFLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">NSLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
 <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

@@ -153,9 +153,18 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
     OUTLOG(fb,"viip_fb",logDEBUG);
     
+    bool acceleration_ff = false;
+    ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+
+  if(acceleration_ff){
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);
+    u += fb;
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,u);
+  } else {
     Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
     u += fb;
     ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  }
   }
 }
 

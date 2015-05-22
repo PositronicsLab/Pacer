@@ -43,10 +43,10 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
       ws_correct[i] = 0.0;
   OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
 
-//   Remove Tangential Elements (for now)
-//  for(int i=NC;i<ws_correct.rows();i++)
-//      ws_correct[i] = 0.0;
-//  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
+  // Remove Tangential Elements (for now)
+  for(int i=NC;i<ws_correct.rows();i++)
+      ws_correct[i] = 0.0;
+  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);

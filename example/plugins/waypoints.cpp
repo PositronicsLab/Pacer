@@ -80,7 +80,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       }
       double distance_to_wp = (Ravelin::Origin3d(next_waypoint.data()) - Ravelin::Origin3d(com[X],com[Y],0)).norm();
 
-      if( distance_to_wp < 0.025){
+      double max_dist = ctrl->get_data<double>(plugin_namespace+"tolerance");
+      if( distance_to_wp < max_dist){
       OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
       OUTLOG(next_waypoint,"this_wp",logDEBUG1);
       OUT_LOG(logDEBUG1) << "this waypoint: " << next_waypoint;

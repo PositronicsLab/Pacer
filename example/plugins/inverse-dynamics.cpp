@@ -30,6 +30,79 @@ Ravelin::Vector3d workv3_;
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
+bool inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
+
+  Ravelin::VectorNd fext = fext_;
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = N.columns();
+
+  Ravelin::MatrixNd workM1,workM2;
+  Ravelin::VectorNd workv1, workv2;
+
+  // Log these function variables
+
+  // compute A, B, and C
+  // | C B'| = M
+  // | B A |
+  Ravelin::MatrixNd C(nq,nq);
+  M.get_sub_mat(0,nq,0,nq,C);
+
+  Ravelin::MatrixNd B(6,nq);
+  M.get_sub_mat(nq,n,0,nq,B);
+
+  Ravelin::MatrixNd A(6,6);
+  M.get_sub_mat(nq,n,nq,n,A);
+
+
+  // compute D, E, and F
+  Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
+
+  Ravelin::MatrixNd iM;
+  iM = Ravelin::MatrixNd::identity(n);
+  LA_.solve_chol_fast(iM_chol,iM);
+//  LA_.solve_fast(M,iM);
+
+  // | F E'|  =  inv(M)
+  // | E D |
+  Ravelin::MatrixNd D(6,6);
+  iM.get_sub_mat(nq,n,nq,n,D);
+  Ravelin::MatrixNd E(6,nq);
+  iM.get_sub_mat(nq,n,0,nq,E);
+  Ravelin::MatrixNd F(nq,nq);
+  iM.get_sub_mat(0,nq,0,nq,F);
+  Ravelin::MatrixNd iF;
+  iF = F;
+  pass = LA_.factor_chol(iF);
+  assert(pass);
+
+
+  if(nc != 0){
+    int nk = ST.columns()/nc;
+    int nvars = nc + nc*(nk);
+     // setup R
+    Ravelin::MatrixNd R(n, nc + (nc*nk) );
+    R.block(0,n,0,nc) = N;
+    R.block(0,n,nc,nc*nk+nc) = ST;
+
+    fext += R.mult(cf,workv1,1.0/h,0);
+  }
+
+  workv1.set_zero(n);
+  workv1.set_sub_vec(0,qdd);
+  M.mult(workv1,workv2) -= fext;
+
+  x = workv2.segment(0,nq);
+
+  return true;
+}
+
 bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
   OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
@@ -2017,10 +2090,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
     Ravelin::VectorNd cf;// = Ravelin::VectorNd::zero(NC*5);
 
-    if(USE_LAST_CFS)
-      cf = cf_init;
-    
     std::string& name = (*it);
+   
+    if(USE_LAST_CFS || NC == 0){
+      cf = cf_init;
+      inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
+    } else { 
+    
 
 #ifdef TIMING
     struct timeval start_t;
@@ -2028,7 +2104,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     gettimeofday(&start_t, NULL);
 #endif
     try{
-      if(NC != 0){
         if(name.compare("NSQP") == 0){
           solve_flag = inverse_dynamics_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf);
           
@@ -2086,19 +2161,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           }
           last_cf = cf.segment(0,NC);
         }
-      }
     } catch (std::exception e){
       solve_flag = false;
     }
     
     if (!solve_flag) {
-      if(NC==0)
-        solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size());
-      else{
-        Ravelin::MatrixNd mu = MU;
-        mu *= 0.005;
-        solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,mu,id,cf);
-      }
+      Ravelin::MatrixNd mu = MU;
+      mu *= 0.005;
+      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,mu,id,cf);
     }
     
 #ifdef TIMING
@@ -2106,7 +2176,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
     OUTLOG(duration*1000.0,"timing_"+name,logERROR);
 #endif
-    
+    }
     assert(std::isfinite(cf.norm()));
     assert(std::isfinite(id.norm()));
 

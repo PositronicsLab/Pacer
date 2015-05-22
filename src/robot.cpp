@@ -284,8 +284,31 @@ void Robot::update(){
     Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,link->get_pose()));
     bool new_var = set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
     
-    Ravelin::Vector3d xd = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear());
+    // RELATIVE TO BASE LINK (non-intertial frame)
+    Ravelin::Vector3d xd,xdd;
+    
+    // Note: This is NOT how you calculate foot link velocity
+//    = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear())
+//      - Ravelin::Pose3d::transform_vector(base_frame,root_link_->get_velocity().get_linear());
+    
+    end_effector_t& foot = *(_id_end_effector_map[eef_names_[i]].get());
+
+    // Calc jacobian for AB at this EEF
+    Ravelin::MatrixNd J,Jq;
+    Ravelin::VectorNd qx(foot.chain.size()),qdx(foot.chain.size()),qddx(foot.chain.size());
+    for(int k=0;k<foot.chain.size();k++){                // actuated joints
+      qx[k] = q[foot.chain[k]];
+      qdx[k] = qd[foot.chain[k]];
+      qddx[k] = qdd[foot.chain[k]];
+    }
+    link_jacobian(qx,foot,Moby::GLOBAL,J);
+    J.get_sub_mat(0,3,0,qx.rows(),Jq);
+    
+    Jq.mult(qdx,xd);
+    Jq.mult(qddx,xdd);
+    
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
+    set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xdd",xdd);
     if(new_var){
       set_data<Ravelin::Vector3d>(eef_names_[i]+".init.x",x);
       set_data<Ravelin::Vector3d>(eef_names_[i]+".init.xd",xd);

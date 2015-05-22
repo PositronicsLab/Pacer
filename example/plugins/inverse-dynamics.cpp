@@ -215,19 +215,6 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   FET.mult(fext,(k = vq),h,1);
 //  OUTLOG(k,"k = [ % = [F,E']*fext*h  +  vq");
 
-  // Use Sensed contact forces
-  if(cf_final.rows() != 0){
-
-    (x = vqstar) -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf_final,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
-    x += fID;
-
-    return true;
-  }
-
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
   Ravelin::MatrixNd Z(ED.rows(), R.columns());

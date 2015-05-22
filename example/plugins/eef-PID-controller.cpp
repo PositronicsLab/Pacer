@@ -118,11 +118,20 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
   pid.update();
 
-  Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
-  OUTLOG(pid.u,"eef_pid_U",logDEBUG);
-  u += pid.u.segment(0,u.rows());
-  ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
-      
+  bool acceleration_ff = false;
+  ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+  
+  if(acceleration_ff){
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);
+    OUTLOG(pid.u,"eef_pid_U",logDEBUG);
+    u += pid.u;
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,u);
+  } else {
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
+    OUTLOG(pid.u,"eef_pid_U",logDEBUG);
+    u += pid.u;
+    ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  }
 }
 
 /** This is a quick way to register your plugin function of the form:

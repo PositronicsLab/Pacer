@@ -2431,16 +2431,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   D.set_sub_mat(0,NC*2,S);
   D.set_sub_mat(0,NC*3,T);
 
-  bool inf_friction = true;
+  bool inf_friction = false;
   Ravelin::MatrixNd MU;
   MU.set_zero(N.columns(),2);
   for(int i=0;i<contacts.size();i++){
-    std::fill(MU.row(i).begin(),MU.row(i).end(),contacts[i]->mu_coulomb);
-    if(std::accumulate(MU.row(i).begin(),MU.row(i).end(),0)
-       /MU.row(i).rows() < 100.0)
-      inf_friction = false;
+    if(contacts[i]->mu_coulomb > 1.5){
+      inf_friction = true;
+      std::fill(MU.row(i).begin(),MU.row(i).end(),1.5);
+    } else {
+      std::fill(MU.row(i).begin(),MU.row(i).end(),contacts[i]->mu_coulomb);
+    }
   }
-  inf_friction = false;
 
   Ravelin::VectorNd cf_init = Ravelin::VectorNd::zero(NC*5);
   {

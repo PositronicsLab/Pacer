@@ -95,17 +95,15 @@ public:
 
       OUTLOG(eef_u[i],eef_names[i]+"_U",logDEBUG1);
       
-      Ravelin::MatrixNd J;
+//      eef_u[i].pose = base_frame;
       
-      eef_u[i].pose = Moby::GLOBAL;
-      
-      //if(!ctrl_ptr->get_data<Ravelin::MatrixNd>(eef_names[i]+".J",J))
-      J = ctrl_ptr->calc_jacobian(q,eef_names[i],Ravelin::Origin3d(0,0,0));
-            
+      Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,eef_names[i]);
       OUTLOG(J,eef_names[i]+"_J",logDEBUG1);
+
 
       Ravelin::VectorNd workv_;
       J.block(0,3,0,J.columns()).transpose_mult(eef_u[i],workv_);
+      
       OUTLOG(workv_,eef_names[i]+"_joint_u",logDEBUG1);
       u += workv_.segment(0,u.rows());
     }

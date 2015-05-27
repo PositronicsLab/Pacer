@@ -474,6 +474,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   Origin3d command = sum_command / (double) command_queue.size();
 
+  OUTLOG(command,"SE2_command",logERROR);
+  
   /// Command velocity differential
 //  static Origin3d command = Origin3d(0,0,0);
 //  

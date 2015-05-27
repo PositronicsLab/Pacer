@@ -88,7 +88,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       OUT_LOG(logDEBUG1) << "robot position: " << com;
 
       waypoint_index = (waypoint_index+1)% num_waypoints;
-
+      if(waypoint_index == 0)
+        exit(0);
       next_waypoint = Ravelin::Vector3d(waypoints[waypoint_index].first,waypoints[waypoint_index].second,0,environment_frame);
       }
 

@@ -59,7 +59,8 @@ public:
     Ravelin::VectorNd q;
     ctrl_ptr->get_generalized_value(Pacer::Controller::position,q);
     u.set_zero(q.rows()-Pacer::NEULER);
-      
+    q.set_sub_vec(q.rows()-Pacer::NEULER,Utility::pose_to_vec(Ravelin::Pose3d()));
+    
     for (int i=0; i< num_eefs; i++)
     {
       Ravelin::Vector3d
@@ -99,7 +100,7 @@ public:
       eef_u[i].pose = Moby::GLOBAL;
       
       //if(!ctrl_ptr->get_data<Ravelin::MatrixNd>(eef_names[i]+".J",J))
-        J = ctrl_ptr->calc_link_jacobian(q,eef_names[i]);
+      J = ctrl_ptr->calc_jacobian(q,eef_names[i],Ravelin::Origin3d(0,0,0));
             
       OUTLOG(J,eef_names[i]+"_J",logDEBUG1);
 

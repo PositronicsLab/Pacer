@@ -295,17 +295,14 @@ void Robot::update(){
 
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J,Jq;
-    Ravelin::VectorNd qx(foot.chain.size()),qdx(foot.chain.size()),qddx(foot.chain.size());
-    for(int k=0;k<foot.chain.size();k++){                // actuated joints
-      qx[k] = q[foot.chain[k]];
-      qdx[k] = qd[foot.chain[k]];
-      qddx[k] = qdd[foot.chain[k]];
-    }
-    link_jacobian(qx,foot,Moby::GLOBAL,J);
-    J.get_sub_mat(0,3,0,qx.rows(),Jq);
+    Ravelin::VectorNd local_q = generalized_q;
+    local_q.set_sub_vec(q.rows(),Utility::pose_to_vec(Ravelin::Pose3d()));
+    set_model_state(local_q);
+    J = Robot::calc_jacobian(local_q,foot.id,Ravelin::Origin3d(0,0,0));
+    J.get_sub_mat(0,3,0,q.rows(),Jq);
     
-    Jq.mult(qdx,xd);
-    Jq.mult(qddx,xdd);
+    Jq.mult(qd,xd);
+    Jq.mult(qdd,xdd);
     
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xdd",xdd);

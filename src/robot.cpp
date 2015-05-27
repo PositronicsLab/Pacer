@@ -280,8 +280,11 @@ void Robot::update(){
 
   // Initialize end effectors
   for(unsigned i=0;i<eef_names_.size();i++){
+    set_model_state(generalized_q,generalized_qd);
+
     const Moby::RigidBodyPtr link = _id_link_map[eef_names_[i]];
     Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,link->get_pose()));
+//    x.pose = base_frame;
     bool new_var = set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
     
     // RELATIVE TO BASE LINK (non-intertial frame)
@@ -300,6 +303,8 @@ void Robot::update(){
     
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qd,xd);
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qdd,xdd);
+//    xd.pose = base_frame;
+//    xdd.pose = base_frame;
     
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xdd",xdd);

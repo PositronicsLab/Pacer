@@ -120,7 +120,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       OUT_LOG(logDEBUG) << "angle_to_goal = " << angle_to_goal;
 
       // If robot is facing toward goal already, walk in that direction
-      if(fabs(angle_to_goal) < M_PI_8){
+      if(fabs(angle_to_goal) < M_PI_4){
         if(HOLONOMIC){
           command[Y] = goto_direction[Y]*max_strafe_speed;
         }

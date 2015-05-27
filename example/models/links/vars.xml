@@ -8,7 +8,7 @@
     <kinematic type="bool">false</kinematic>
 
     <base>
-      <x type="double"> 0 0 0.1785 0 0 2</x>
+      <x type="double"> 0 0 0.1785 0 0 0</x>
       <xd type="double">0 0 0   0 0 0</xd>
     </base>
 
@@ -30,14 +30,14 @@
 
  
   <plugin>
-    <id type="string">gamepad           waypoints       gait-planner        ik-feet         stand-trajectory
-                      joint-PID-controller-accel        eef-PID-controller      idyn-controller   wcpg
+    <id type="string">gamepad                         waypoints       gait-planner        ik-feet         stand-trajectory
+                      joint-PID-controller-accel      eef-PID-controller idyn-controller   wcpg
                       stabilization  skating-stabilization
                       output</id>
-    <active type="bool">false          true        true                true            false
-                      false                        true                   false            false
-                      true            false
-                      false</active>
+    <active type="bool">false                         true            true            true            false
+                        false                         true            false            false
+                        false                         false
+                        false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
                       libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so libwcpg.so
                       libstabilization.so  libskating-stabilization.so
@@ -82,9 +82,9 @@
     <acceleration type="bool">false</acceleration>
     <!-- Gains are for the [X Y Z r p y] of base -->
     <gains>
-      <kp type="double">0   0   0 1e3 1e3 0</kp>
+      <kp type="double">0   0   0   1e3 1e3 0</kp>
       <kv type="double">0   0   0   1e2 1e2 0</kv>
-      <ki type="double">0   0   0   0 0 0</ki>
+      <ki type="double">0   0   0   0   0   0</ki>
     </gains>
     <desired>
       <x type="double">0 0 0.161853  0 0 0</x>
@@ -99,7 +99,7 @@
     <max-allowed-friction type="double">10</max-allowed-friction>
     <!-- Gains are for the [X Y Z r p y] of base -->
     <gains>
-      <kp type="double">0   0   1e2 1e3 1e3 0</kp>
+      <kp type="double">0   0   0   1e3 1e3 0</kp>
       <kv type="double">0   0   0   1e2 1e2 0</kv>
       <ki type="double">0   0   0   0 0 0</ki>
     </gains>
@@ -126,10 +126,69 @@
      <max-turn-speed type="double">1</max-turn-speed>
      <tolerance type="double">0.1</tolerance>
      <waypoints type="double vector">
-       1 0
-       0 1
-       -1 0
-       0 -1
+       0         0
+       0.0500    0.0199
+       0.1000    0.0389
+       0.1500    0.0565
+       0.2000    0.0717
+       0.2500    0.0841
+       0.3000    0.0932
+       0.3500    0.0985
+       0.4000    0.1000
+       0.4500    0.0974
+       0.5000    0.0909
+       0.5500    0.0808
+       0.6000    0.0675
+       0.6500    0.0516
+       0.7000    0.0335
+       0.7500    0.0141
+       0.8000   -0.0058
+       0.8500   -0.0256
+       0.9000   -0.0443
+       0.9500   -0.0612
+       1.0000   -0.0757
+       1.0500   -0.0872
+       1.1000   -0.0952
+       1.1500   -0.0994
+       1.2000   -0.0996
+       1.2500   -0.0959
+       1.3000   -0.0883
+       1.3500   -0.0773
+       1.4000   -0.0631
+       1.4500   -0.0465
+       1.5000   -0.0279
+       1.5500   -0.0083
+       1.6000    0.0117
+       1.6500    0.0312
+       1.7000    0.0494
+       1.7500    0.0657
+       1.8000    0.0794
+       1.8500    0.0899
+       1.9000    0.0968
+       1.9500    0.0999
+       2.0000    0.0989
+       2.0500    0.0941
+       2.1000    0.0855
+       2.1500    0.0734
+       2.2000    0.0585
+       2.2500    0.0412
+       2.3000    0.0223
+       2.3500    0.0025
+       2.4000   -0.0174
+       2.4500   -0.0366
+       2.5000   -0.0544
+       2.5500   -0.0700
+       2.6000   -0.0828
+       2.6500   -0.0923
+       2.7000   -0.0981
+       2.7500   -0.1000
+       2.8000   -0.0979
+       2.8500   -0.0919
+       2.9000   -0.0823
+       2.9500   -0.0694
+       3.0000   -0.0537
+       3.0500   -0.0358
+       3.1000   -0.0166
      </waypoints>
   </waypoints>
   
@@ -145,8 +204,8 @@
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.015</step-height>
-    <gait-duration type="double">0.3</gait-duration>
+    <step-height type="double">0.02</step-height>
+    <gait-duration type="double">0.4</gait-duration>
     <!-- 0.178056, 0.0762394, -0.161853 -->
     <length type="double">0.35</length>
     <width type="double">0.1524788</width>
@@ -250,7 +309,7 @@
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">CFLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">CFQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
 <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

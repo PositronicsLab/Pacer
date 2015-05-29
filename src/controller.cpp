@@ -104,6 +104,8 @@ void Controller::control(double t){
   // Import Robot Data
   static double last_time = -0.001;
   const double dt = t - last_time;
+  OUTLOG(t,"virtual_time",logERROR);
+  OUTLOG(dt,"virtual_time_step",logERROR);
   update();
   lock_state();
 #ifdef USE_PLUGINS

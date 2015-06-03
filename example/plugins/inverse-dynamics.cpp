@@ -30,11 +30,13 @@ Ravelin::Vector3d workv3_;
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
+// NOT: THis doesn't incorporate base acceleration into ID eqns
+/// M( [q";0] - iM(F_ext + R z) ) = x
 bool inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
-                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
+                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
   OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
 
-  Ravelin::VectorNd fext = fext_;
+  Ravelin::VectorNd F_total = fext;
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
@@ -43,46 +45,11 @@ bool inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,c
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2;
 
-  // Log these function variables
-
-  // compute A, B, and C
-  // | C B'| = M
-  // | B A |
-  Ravelin::MatrixNd C(nq,nq);
-  M.get_sub_mat(0,nq,0,nq,C);
-
-  Ravelin::MatrixNd B(6,nq);
-  M.get_sub_mat(nq,n,0,nq,B);
-
-  Ravelin::MatrixNd A(6,6);
-  M.get_sub_mat(nq,n,nq,n,A);
-
-
-  // compute D, E, and F
   Ravelin::MatrixNd iM_chol;
   iM_chol = M;
   bool pass = LA_.factor_chol(iM_chol);
   assert(pass);
-
-  Ravelin::MatrixNd iM;
-  iM = Ravelin::MatrixNd::identity(n);
-  LA_.solve_chol_fast(iM_chol,iM);
-//  LA_.solve_fast(M,iM);
-
-  // | F E'|  =  inv(M)
-  // | E D |
-  Ravelin::MatrixNd D(6,6);
-  iM.get_sub_mat(nq,n,nq,n,D);
-  Ravelin::MatrixNd E(6,nq);
-  iM.get_sub_mat(nq,n,0,nq,E);
-  Ravelin::MatrixNd F(nq,nq);
-  iM.get_sub_mat(0,nq,0,nq,F);
-  Ravelin::MatrixNd iF;
-  iF = F;
-  pass = LA_.factor_chol(iF);
-  assert(pass);
-
-
+  
   if(nc != 0){
     int nk = ST.columns()/nc;
     int nvars = nc + nc*(nk);
@@ -91,14 +58,66 @@ bool inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,c
     R.block(0,n,0,nc) = N;
     R.block(0,n,nc,nc*nk+nc) = ST;
 
-    fext += R.mult(cf,workv1,1.0/h,0);
+    F_total += R.mult(cf,workv1,1.0/h,0);
   }
 
-  workv1.set_zero(n);
-  workv1.set_sub_vec(0,qdd);
-  M.mult(workv1,workv2) -= fext;
+  LA_.solve_chol_fast(iM_chol,workv1 = F_total);
 
-  x = workv2.segment(0,nq);
+  workv2.set_zero(n);
+  workv2.set_sub_vec(0,qdd);
+  workv2 -= workv1;
+  M.mult(workv2,workv1);
+//  workv1 -= fext;
+  x = workv1;//.segment(0,nq);
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics() exited" << std::endl;
+
+  return true;
+}
+
+
+/// [q";0] - iM(F_ext + R z) = iM x
+/// [q";v'] = iM(x + F_ext + R z )
+bool forward_dynamics( Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                      const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, const Ravelin::VectorNd& cf){
+  OUT_LOG(logDEBUG) << ">> forward_dynamics() entered" << std::endl;
+  
+  Ravelin::VectorNd F_total = fext;
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = N.columns();
+  
+  Ravelin::MatrixNd workM1,workM2;
+  Ravelin::VectorNd workv1, workv2;
+  
+  Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
+  
+  if(nc != 0){
+    int nk = ST.columns()/nc;
+    int nvars = nc + nc*(nk);
+    // setup R
+    Ravelin::MatrixNd R(n, nc + (nc*nk) );
+    R.block(0,n,0,nc) = N;
+    R.block(0,n,nc,nc*nk+nc) = ST;
+    
+    // add contact forces to FD
+    F_total += R.mult(cf,workv1,1.0/h,0);
+  }
+  
+  // Fext + [x;0] + R z = M qdd
+
+  // add joint forces to FD
+  workv1.set_zero(n);
+  workv1.set_sub_vec(0,x);
+  F_total += workv1;
+  
+  LA_.solve_chol_fast(iM_chol,workv1 = F_total);
+  
+  qdd = workv1.segment(0,nq);
+  OUT_LOG(logDEBUG) << "<< forward_dynamics() exited" << std::endl;
 
   return true;
 }
@@ -196,7 +215,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  fext.segment(0,nq) -= fID;
+  fext.segment(0,nq) += fID;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -613,7 +632,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  fext.segment(0,nq) -= fID;
+  fext.segment(0,nq) += fID;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -877,11 +896,11 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
 
 #ifdef USE_NO_SLIP_LCP_MODEL
 bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
-                                   const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless, std::vector<unsigned>& indices, int active_eefs){
+                                   const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
+  const double NEAR_ZERO = Moby::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1151,7 +1170,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= CHECK_ZERO;
+      _Y(j,j) -= NEAR_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     if (!_LA.factor_chol(_Y) || frictionless)
@@ -1189,7 +1208,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= CHECK_ZERO;
+      _Y(j,j) -= NEAR_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     last_success = _LA.factor_chol(_Y);
@@ -1353,9 +1372,8 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   // setup remainder of LCP vector
 
   static Ravelin::VectorNd _v;
-  if(_v.size() != _qq.size())
+  if(_v.size() != _qq.size() || !SAME_AS_LAST_CONTACTS)
     _v.resize(0);
-
 
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
@@ -1385,52 +1403,6 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
   Ravelin::VectorNd _cs_ct_tau, _v_plus;
 
-  // compute the no-slip friction forces
-  // u = -inv(A)*(a + Cv)
-  // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
-  // recalling that inv(A) =
-  // | inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y | ngc x ngc,    ngc x sz(x)
-  // | Y*X*inv(M)                    -Y          | sz(x) x ngc,  sz(x) x sz(x)
-  // Q is nlcp x (ngc + sz(x))
-  // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn]
-  /*
-  if(nc > 0){
-    // [v+] = -inv(M)-inv(M)*X'*Y*X*inv(M) - Y*X*inv(M)*Q'*[cn]
-    Ravelin::VectorNd a_Cv(n+J_IDX+nq);
-
-    a_Cv.set_sub_vec(n,Cn_v);
-    _workv = vqstar;
-    _workv.negate();
-    a_Cv.set_sub_vec(n+J_IDX,_workv);
-    a_Cv.set_sub_vec(n,Cn_v);
-    a_Cv.set_sub_vec(0,M.mult(v,_workv,-1.0,0));
-
-    Ravelin::MatrixNd iM_XT;
-    Ravelin::MatrixNd::transpose(_X, iM_XT);
-
-    // inv(M)*X'*Y
-    LA_.solve_chol_fast(iM_chol,iM_XT);
-    Ravelin::MatrixNd::transpose(iM_XT,_workM);
-    LA_.solve_chol_fast(_Y, _workM);
-    _workM.transpose_mult(a_Cv.segment(n,a_Cv.size()), _v_plus);
-
-
-    // inv(M)-inv(M)*X'*Y*X*inv(M)
-    iM_XT.mult(_workM,_workM2,-1.0,0);
-    _workM2 += iM;
-    _workM2.mult(a_Cv.segment(0,n),_v_plus,1.0,-1.0);
-    OUTLOG(_v_plus,"v_plus",logERROR);
-
-    N.mult(_v_plus, _workv);
-    OUTLOG(_workv,"Cn_v+",logERROR);
-
-    S.mult(_v_plus, _workv);
-    OUTLOG(_workv,"Cs_v+",logERROR);
-
-    T.mult(_v_plus, _workv);
-    OUTLOG(_workv,"Ct_v+",logERROR);
-  }
-  */
   // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
   _cs_ct_tau = _YXv;
   _cs_ct_tau -= _Yvqstar;
@@ -1513,7 +1485,7 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = Moby::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
 
   // get number of degrees of freedom and number of contact points
@@ -1916,7 +1888,7 @@ bool inverse_dynamics_ap2(const Ravelin::VectorNd& vel, const Ravelin::VectorNd&
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double CHECK_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = Moby::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points
@@ -2419,6 +2391,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
 
+  // Jacobian Calculation
   ctrl->calc_contact_jacobians(q,contacts,N,S,T);
   
   int NC = N.columns();
@@ -2431,6 +2404,22 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   D.set_sub_mat(0,NC*2,S);
   D.set_sub_mat(0,NC*3,T);
 
+  // Index of foot check (continuity of contacts)
+  static std::vector<unsigned> last_indices = indices;
+  static int last_NC = NC;
+  bool SAME_INDICES = false;
+  if(NC == last_NC){
+    SAME_INDICES = true;
+    for (int i=0; i<indices.size(); i++) {
+      if(last_indices[i] != indices[i]){
+        SAME_INDICES = false;
+        break;
+      }
+    }
+  }
+  last_NC = NC;
+  last_indices = indices;
+  
   bool inf_friction = false;
   Ravelin::MatrixNd MU;
   MU.set_zero(N.columns(),2);
@@ -2463,6 +2452,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       else
         cf_init[NC+i+NC*3] = -contact_impulse[2];
     }
+    cf_init/=dt;
     Utility::check_finite(cf_init);
 
     OUTLOG(cf_init,"cf_0",logERROR);
@@ -2526,10 +2516,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
     std::string& name = (*it);
    
+    OUT_LOG(logERROR) << "CONTROLLER: " << name;
+
     if(USE_LAST_CFS || NC == 0){
       cf = cf_init;
-      inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
-    } else { 
+//      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
+      solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size(),SAME_INDICES);
+
+    } else {
     
 
 #ifdef TIMING
@@ -2553,7 +2547,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           
         } else if(name.compare("NSLCP") == 0){
           cf.set_zero(NC*5);
-          solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size());
+          solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size(),SAME_INDICES);
           
           //// Check for Normal direction torque chatter
           static Ravelin::VectorNd last_cf = cf.segment(0,NC);
@@ -2599,11 +2593,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       solve_flag = false;
     }
     
-    if (!solve_flag) {
-      Ravelin::MatrixNd mu = MU;
-      mu *= 0.005;
-      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,mu,id,cf);
-    }
+//    if (!solve_flag) {
+//      Ravelin::MatrixNd mu = MU;
+//      mu *= 0.005;
+//      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,mu,id,cf);
+//    }
     
 #ifdef TIMING
     gettimeofday(&end_t, NULL);
@@ -2611,10 +2605,28 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     OUTLOG(duration*1000.0,"timing_"+name,logERROR);
 #endif
     }
-    assert(std::isfinite(cf.norm()));
-    assert(std::isfinite(id.norm()));
+    
+#ifndef NDEBUG
+    {
+      Ravelin::VectorNd qdd_idyn;
+      forward_dynamics(qdd_idyn,M,N,D,generalized_fext,DT,id,cf);
+      Ravelin::VectorNd idyn_qdd_err = qdd_idyn;
+      idyn_qdd_err -= qdd_des;
+      OUTLOG(qdd_des,"IDYN_QDD_DES",logERROR);
+      OUTLOG(qdd_idyn,"IDYN_QDD_RESULT",logERROR);
+      OUTLOG(idyn_qdd_err,"IDYN_QDD_ERR",logERROR);
+      if (idyn_qdd_err.norm() > 1e-4 || !solve_flag) {
+        throw std::runtime_error("IDYN failed to follow qdd_des");
+      }
+    }
+#endif
+    
+    if(!std::isfinite(cf.norm()) || !std::isfinite(id.norm())){
+      OUTLOG(cf,"IDYN_CF",logERROR);
+      OUTLOG(id,"IDYN_U",logERROR);
 
-
+      throw std::runtime_error("IDYN forces are NaN or INF");
+    }
     cf_map[name] = cf;
     uff_map[name] = id;
   }

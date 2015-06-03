@@ -104,106 +104,33 @@ void Controller::control(double t){
   // Import Robot Data
   static double last_time = -0.001;
   const double dt = t - last_time;
+  
   OUTLOG(t,"virtual_time",logERROR);
   OUTLOG(dt,"virtual_time_step",logERROR);
+  
   update();
   lock_state();
 #ifdef USE_PLUGINS
   update_plugins(t);
 #endif
   unlock_state();
-  /*
-  OUT_LOG(logINFO)<< "time = "<< t ;
+ 
+  {
+    // Enforce limits
+    // Note: homogeneous limits
+    static std::vector<double> load_max = get_data<std::vector<double> >("init.joint.limits.u");
 
-  set_model_state(data->q,data->qd);
+    Ravelin::VectorNd u = get_joint_generalized_value(Pacer::Controller::load_goal);
+    OUTLOG(u,"U_NO_LIMIT",logERROR);
 
-   OUT_LOG(logINFO) <<"JOINT:A\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err";
-   for(unsigned i=0,ii=0;i< NUM_JOINTS;i++){
-     if(joints_[i])
-     for(int j=0;j<joints_[i]->num_dof();j++,ii++){
-     OUT_LOG(logINFO)<< std::to_string(j)+joints_[i]->id << ":"<< active_joints_[std::to_string(j)+joints_[i]->id]
-               << "\t " <<  std::setprecision(3) << u[ii]
-               << "\t| " << joints_[i]->q[j]
-               << "\t " << q_des[ii]
-               << "\t " << data->q[ii] - q_des[ii]
-               << "\t| " << joints_[i]->qd[j]
-               << "\t " << qd_des[ii]
-               << "\t " <<  data->qd[ii] - qd_des[ii]
-               << "\t| " << data->qdd[ii]
-               << "\t " << qdd_des[ii]
-               << "\t " <<  (data->qdd[ii] - qdd_des[ii]);
-     }
-   }
-   OUTLOG(data->roll_pitch_yaw,"roll_pitch_yaw",logINFO);
-   OUTLOG(data->zero_moment_point,"ZmP",logINFO);
-   OUTLOG(data->center_of_mass_x,"CoM_x",logINFO);
-   OUTLOG(data->center_of_mass_xd,"CoM_xd",logINFO);
-   OUTLOG(data->center_of_mass_xdd,"CoM_xdd",logINFO);
-   OUTLOG(data->q,"q",logINFO);
-   OUTLOG(data->qd,"qd",logINFO);
-   OUTLOG(last_qd_des,"qd_des{t-1}",logINFO);
-   OUTLOG(data->qdd,"qdd",logINFO);
-   OUTLOG(last_qdd_des,"qdd_des{t-1}",logINFO);
-   OUTLOG(q_des,"q_des",logINFO);
-   OUTLOG(qd_des,"qd_des",logINFO);
-   OUTLOG(qdd_des,"qdd_des",logINFO);
-   OUTLOG(data->generalized_fext,"fext",logINFO);
-   OUTLOG(data->generalized_q,"generalized_q",logDEBUG);
-   OUTLOG(data->generalized_qd,"generalized_qd",logDEBUG);
-
-   last_qdd_des = qdd_des;
-   last_qd_des = qd_des;
-   OUTLOG(uff,"uff",logINFO);
-   OUTLOG(ufb,"ufb",logINFO);
-   OUTLOG(u,"u",logINFO);
-
-   Ravelin::MatrixNd Jf;
-   for(int i=0;i<NUM_EEFS;i++){
-     boost::shared_ptr<Ravelin::Pose3d> event_frame(new Ravelin::Pose3d(x_des[i].pose));
-     EndEffector& foot = eefs_[i];
-
-     // Positional Correction
-     Ravelin::Vector3d x_now_g = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-     Ravelin::Vector3d x_des_g = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x_des[i]);
-     Ravelin::Vector3d x_err  = x_des_g - x_now_g;
-     OUTLOG( x_now_g,foot.id + "_x",logINFO);
-     OUTLOG( x_des_g,foot.id + "_x_des",logINFO);
-     OUTLOG( x_err,foot.id + "_x_err",logINFO);
-
-
-     // Remove portion of foot velocity that can't be affected by corrective forces
-     event_frame->x = Ravelin::Pose3d::transform_point(x_des[i].pose,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-     dbrobot_->calc_jacobian(event_frame,eefs_[i].link,Jf);
-     Ravelin::SharedConstMatrixNd Jb = Jf.block(0,3,NUM_JOINTS,NDOFS);
-     Ravelin::SharedConstVectorNd vb = data->generalized_qd.segment(NUM_JOINTS,NDOFS);
-     Jb.mult(vb,workv3_);
-     workv3_.pose = x_des[i].pose;
-
-     // Velocity Correction
-     // Need to account for base being a moving frame (but only converting as a static frame)
-     Ravelin::Vector3d xd_now = (Ravelin::Pose3d::transform_vector(x_des[i].pose,eefs_[i].link->get_velocity().get_linear()) - workv3_);
-     Ravelin::Vector3d xd_err = xd_des[i] - xd_now;
-     OUTLOG( xd_now,foot.id + "_xd",logINFO);
-     OUTLOG( xd_des[i],foot.id + "_xd_des",logINFO);
-     OUTLOG( xd_err,foot.id + "_xd_err",logINFO);
-   }
-
-   int ii = 0;
-   for(int i=0;i<NUM_EEFS;i++){
-     OUT_LOG(logINFO) << eefs_[i].id << " contacts: " << eefs_[i].point.size();
-     for(int j=0;j<eefs_[i].point.size();j++,ii++){
-       OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + std::to_string(i) + "]",logINFO);
-       OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + std::to_string(i) + "]",logINFO);
-       OUTLOG(eefs_[i].impulse[j],eefs_[i].id + "_impulse[" + std::to_string(i) + "]",logINFO);
-       OUTLOG(eefs_[i].mu_coulomb[j],eefs_[i].id + "_mu[" + std::to_string(i) + "]",logINFO);
-     }
-   }
-   OUT_LOG(logINFO) << "num_contacts = " << ii;
-   OUT_LOG(logINFO) << "==============================================" << std::endl;
-   // -----------------------------------------------------------------------------
-
-   assert(data->generalized_fext.norm() < 1e+6);
-*/
+    for (int i=0;i<u.rows(); i++) {
+      if(u[i] > load_max[0]) u[i] = load_max[0];
+      else if(u[i] < -load_max[0]) u[i] = -load_max[0];
+    }
+    OUTLOG(u,"U_WITH_LIMIT",logERROR);
+    set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  }
+  
   reset_contact();
   last_time = t;
   OUT_LOG(logDEBUG) << "<< Controller::control(.)";

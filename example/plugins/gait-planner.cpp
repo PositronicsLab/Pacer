@@ -236,7 +236,7 @@ void walk_toward(
       Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
       Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd);// * (left_in_phase*gait_duration);
       Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,1),0.01)));
-      
+      OUT_LOG(logDEBUG) << "************";
       OUT_LOG(logDEBUG) << "x " << x;
       OUT_LOG(logDEBUG) << "xd " << xd;
       OUT_LOG(logDEBUG) << "xdd " << xdd;

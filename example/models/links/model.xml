@@ -19,7 +19,7 @@
       <DynamicBody dynamic-body-id="LINKS" />
       <DynamicBody dynamic-body-id="GROUND" />
 <!--      <DynamicBody dynamic-body-id="BOX1" />-->
-      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1000" mu-viscous="0" epsilon="0.0"/>
+      <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="0.1" mu-viscous="0" epsilon="0.0"/>
 <!--      <ContactParameters object1-id="LINKS" object2-id="BOX1" mu-coulomb="0.5" mu-viscous="0" epsilon="0.0"/>-->
     </EventDrivenSimulator>
   

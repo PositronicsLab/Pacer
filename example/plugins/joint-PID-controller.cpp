@@ -98,24 +98,24 @@ public:
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
-    ctrl_ptr = ctrl;
-    // --------------------------- JOINT FEEDBACK ------------------------------
-    static JointPID pid;
-    
-    pid.q_des  = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal);
-    pid.qd_des = ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal);
-    pid.q  = ctrl->get_joint_generalized_value(Pacer::Controller::position);
-    pid.qd = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
-    
-    OUTLOG(pid.q,"joint_pid_q",logDEBUG);
-    OUTLOG(pid.qd,"joint_pid_qd",logDEBUG);
-    OUTLOG(pid.q_des,"joint_pid_q_des",logDEBUG);
-    OUTLOG(pid.qd,"joint_pid_qd_des",logDEBUG);
-    
-    pid.update();
+  ctrl_ptr = ctrl;
+  // --------------------------- JOINT FEEDBACK ------------------------------
+  static JointPID pid;
+  
+  pid.q_des  = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal);
+  pid.qd_des = ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal);
+  pid.q  = ctrl->get_joint_generalized_value(Pacer::Controller::position);
+  pid.qd = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
+  
+  OUTLOG(pid.q,"joint_pid_q",logDEBUG);
+  OUTLOG(pid.qd,"joint_pid_qd",logDEBUG);
+  OUTLOG(pid.q_des,"joint_pid_q_des",logDEBUG);
+  OUTLOG(pid.qd_des,"joint_pid_qd_des",logDEBUG);
+  
+  pid.update();
 
-    bool acceleration_ff = false;
-    ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+  bool acceleration_ff = false;
+  ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
 
   if(acceleration_ff){
     Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);
@@ -127,8 +127,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     OUTLOG(pid.u,"joint_pid_U",logDEBUG);
     u += pid.u;
     ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
-  }
-  
+  }  
 }
 
 /** This is a quick way to register your plugin function of the form:

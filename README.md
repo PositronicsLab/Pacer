@@ -3,7 +3,7 @@ by Sam Zapolsky @ the [Positronics Lab]
 
 [Positronics Lab]: http://robotics.gwu.edu/positronics/
 
-This repository hosts code for [Pacer] an open source robot locomotion library for simulated and physical robots.
+This repository hosts code for [Pacer] an open source robot locomotion library for simulated and physical legged robots.
 
 [Pacer]: https://github.com/PositronicsLab/Pacer
 

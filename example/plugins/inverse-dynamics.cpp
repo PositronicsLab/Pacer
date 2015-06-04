@@ -132,9 +132,9 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   int nq = n - 6;
   int nc = N.columns();
 
-  if (nc==0) {
-    return false;
-  }
+//  if (nc==0) {
+//    return false;
+//  }
   
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2,fID;
@@ -216,7 +216,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
   fext.segment(0,nq) += fID;
-
+  
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
 
@@ -258,6 +258,18 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
 
+  if(cf_final.rows() != 0){
+    // return the inverse dynamics forces
+    // x = iF*(vqstar - k - FET*R*(cf))/h
+    (x = vqstar) -= k;
+    FET.mult(R,workM1);
+    workM1.mult(cf_final,x,-1,1);
+    LA_.solve_chol_fast(iF,x);
+    x /= h;
+    x += fID;
+    return true;
+  }
+  
   /////////////////////////////////////////////////////////////////////////////
   ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////
   /////////////////////////////////////////////////////////////////////////////
@@ -2517,11 +2529,19 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     std::string& name = (*it);
    
     OUT_LOG(logERROR) << "CONTROLLER: " << name;
+    OUT_LOG(logERROR) << "USE_LAST_CFS: " << USE_LAST_CFS;
 
-    if(USE_LAST_CFS || NC == 0){
-      cf = cf_init;
-//      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
+    if (NC == 0) {
       solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size(),SAME_INDICES);
+    }
+    else if(USE_LAST_CFS){
+
+      cf = cf_init;
+      cf *= dt;
+      OUT_LOG(logERROR) << "USING LAST CFS: " << cf;
+//      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
+      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+      OUT_LOG(logERROR) << "SAME: " << cf;
 
     } else {
     

@@ -2454,6 +2454,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
                                                tan2[0],                tan2[1],                tan2[2]);
       
       Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(contacts[i]->impulse,workv3_));
+       OUT_LOG(logERROR) << "compliant: " << contacts[i]->compliant;
+      if( !contacts[i]->compliant ){
+        contact_impulse/=dt;
+        OUT_LOG(logERROR) << "Contact " << i << " is rigid: " << contact_impulse ;
+      } else {
+        OUT_LOG(logERROR) << "Contact " << i << " is compliant: " << contact_impulse ;
+      }
       cf_init[i] = contact_impulse[0];
       if(contact_impulse[1] >= 0)
         cf_init[NC+i] = contact_impulse[1];
@@ -2464,7 +2471,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       else
         cf_init[NC+i+NC*3] = -contact_impulse[2];
     }
-    cf_init/=dt;
     Utility::check_finite(cf_init);
 
     OUTLOG(cf_init,"cf_0",logERROR);
@@ -2642,16 +2648,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 #endif
     
     if(!std::isfinite(cf.norm()) || !std::isfinite(id.norm())){
+      OUTLOG(DT,"DT",logERROR);
       OUTLOG(cf,"IDYN_CF",logERROR);
       OUTLOG(id,"IDYN_U",logERROR);
 
       throw std::runtime_error("IDYN forces are NaN or INF");
     }
+    cf /= DT;
     cf_map[name] = cf;
     uff_map[name] = id;
   }
 
-  OUTLOG(DT,"DT",logERROR);
 
   OUTLOG(controller_name,"controller_name",logERROR);
   //std::vector<std::string>::iterator it=controller_name.begin();
@@ -2665,7 +2672,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     double sum = 0;
     if(NC > 0){
       Ravelin::VectorNd cf_normal = cf_map[name].segment(0,NC);
-      cf_normal /= DT;
       sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
     }
     

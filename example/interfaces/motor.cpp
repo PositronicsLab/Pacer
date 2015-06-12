@@ -21,18 +21,22 @@ boost::shared_ptr<Controller> robot_ptr;
 unsigned NDOFS;
 
 static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
-static bool joint_data_lock_ = false;
+
+std::mutex joint_data_mutex_;
 static double FREQ = 500;
 
 static void control_motor(){
   while(true){
     static Ravelin::VectorNd q_motors,qd_motors,u_motors;
-    if(!joint_data_lock_){
+    if(joint_data_mutex_.try_lock()){
       q_motors = q_motors_data;
+      
       qd_motors = qd_motors_data;
       u_motors = u_motors_data;
+      joint_data_mutex_.unlock();
     }
  
+    OUTLOG(q_motors,"q_motors",logERROR);
     dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
@@ -74,7 +78,7 @@ void init(std::string model_f,std::string vars_f){
   dxl_->names = dxl_name;
   // Set Joint Angles
   std::vector<int> dxl_tare = boost::assign::list_of
-      (-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)
+      (0)(0)(0)(0)
       (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
       (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
 
@@ -98,6 +102,9 @@ void init(std::string model_f,std::string vars_f){
     dxl_->relaxed(false);
 
 #endif
+  
+  joint_data_mutex_.unlock();
+
 }
 
 void controller(double t)
@@ -117,9 +124,7 @@ void controller(double t)
   robot_ptr->control(t);
 
 #ifdef USE_DXL
-  {
-    joint_data_lock_ = true;
-
+  if(joint_data_mutex_.try_lock()){
 //    for(int i=0;i<DXL::N_JOINTS;i++)
 //      qd_motors[i] = robot_ptr->qd_joints[dxl_->JointName(i)];
 
@@ -131,7 +136,7 @@ void controller(double t)
 
     //for(int i=0;i<dxl_->ids.size();i++)
     //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
-    joint_data_lock_ = false;
+    joint_data_mutex_.unlock();
   }
 #endif
   static std::thread motor_thread(control_motor);

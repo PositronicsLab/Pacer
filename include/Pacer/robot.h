@@ -49,7 +49,7 @@ namespace Pacer{
       }
       _data_map_mutex.unlock();
 
-      OUT_LOG(logERROR) << "Set: " << n << " <-- " << v;
+      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
       return new_var;
     }
     

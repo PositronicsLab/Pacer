@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Moby/EventDrivenSimulator.h>
+#include <Moby/UnilateralConstraint.h>
 #include <Pacer/controller.h>
 #include <random>
 
@@ -218,13 +219,20 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
       
-      Ravelin::Vector3d normal = e[i].contact_normal, impulse = e[i].contact_impulse.get_linear();
+      Ravelin::Vector3d 
+        normal = e[i].contact_normal,         
+        impulse = e[i].contact_impulse.get_linear();
       impulse.pose = e[i].contact_point.pose;
+     
+      bool compliant = 
+        (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
+
       
+      OUT_LOG(logERROR) << "compliant: " << compliant;
       if(robot_ptr->is_end_effector(sb1->id)){
-        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous);
+        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else if(robot_ptr->is_end_effector(sb2->id)){
-        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous);
+        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else {
         continue;  // Contact doesn't include an end-effector  
       }

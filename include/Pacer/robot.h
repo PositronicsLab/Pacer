@@ -94,6 +94,7 @@ namespace Pacer{
       double mu_coulomb;
       double mu_viscous;
       double restitution;
+      bool compliant;
     };
 	
 	
@@ -156,7 +157,7 @@ namespace Pacer{
         Ravelin::Vector3d point,
         Ravelin::Vector3d normal,
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
-        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
+        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
       if(_lock_state)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
@@ -168,6 +169,7 @@ namespace Pacer{
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;
+      c->compliant  = compliant;
       _id_contacts_map[id].push_back(c);
     }
     
@@ -176,7 +178,7 @@ namespace Pacer{
         Ravelin::Vector3d point,
         Ravelin::Vector3d normal,
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
-        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
+        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
       boost::shared_ptr<contact_t> c(new contact_t);
       c->id         = id; 
@@ -186,6 +188,7 @@ namespace Pacer{
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;
+      c->compliant  = compliant;
       return c;
     }
     

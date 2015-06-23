@@ -34,10 +34,10 @@
                       joint-PID-controller      eef-PID-controller idyn-controller   wcpg
                       stabilization  skating-stabilization
                       output</id>
-    <active type="bool">false                         false            true            true            false
+    <active type="bool">true                         false            true            true            false
                         false                         false            false            false
                         false                         false
-                        true</active>
+                        false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
                       libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so libwcpg.so
                       libstabilization.so  libskating-stabilization.so

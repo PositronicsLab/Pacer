@@ -36,7 +36,7 @@ static void control_motor(){
       joint_data_mutex_.unlock();
     }
  
-    OUTLOG(q_motors,"q_motors",logERROR);
+    std::cout << q_motors << std::endl;
     dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);

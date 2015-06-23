@@ -80,14 +80,16 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       }
       double distance_to_wp = (Ravelin::Origin3d(next_waypoint.data()) - Ravelin::Origin3d(com[X],com[Y],0)).norm();
 
-      if( distance_to_wp < 0.025){
+      double max_dist = ctrl->get_data<double>(plugin_namespace+"tolerance");
+      if( distance_to_wp < max_dist){
       OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
       OUTLOG(next_waypoint,"this_wp",logDEBUG1);
       OUT_LOG(logDEBUG1) << "this waypoint: " << next_waypoint;
       OUT_LOG(logDEBUG1) << "robot position: " << com;
 
       waypoint_index = (waypoint_index+1)% num_waypoints;
-
+      if(waypoint_index == 0)
+        exit(0);
       next_waypoint = Ravelin::Vector3d(waypoints[waypoint_index].first,waypoints[waypoint_index].second,0,environment_frame);
       }
 
@@ -119,7 +121,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       OUT_LOG(logDEBUG) << "angle_to_goal = " << angle_to_goal;
 
       // If robot is facing toward goal already, walk in that direction
-      if(fabs(angle_to_goal) < M_PI_8){
+      if(fabs(angle_to_goal) < M_PI_4){
         if(HOLONOMIC){
           command[Y] = goto_direction[Y]*max_strafe_speed;
         }

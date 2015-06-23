@@ -13,6 +13,9 @@ target_link_libraries(skating-stabilization ${REQLIBS})
 add_library(gait-planner MODULE gait-planner.cpp)
 target_link_libraries(gait-planner ${REQLIBS})
 
+add_library(wcpg MODULE wcpg.cpp)
+target_link_libraries(wcpg ${REQLIBS})
+
 add_library(joint-PID-controller MODULE joint-PID-controller.cpp)
 target_link_libraries(joint-PID-controller ${REQLIBS})
 
@@ -24,6 +27,12 @@ target_link_libraries(stand-trajectory ${REQLIBS})
 
 add_library(inverse-dynamics MODULE inverse-dynamics.cpp)
 target_link_libraries(inverse-dynamics ${REQLIBS})
+
+add_library(hopper MODULE hopper-controller.cpp)
+target_link_libraries(hopper ${REQLIBS})
+
+add_library(output MODULE output.cpp)
+target_link_libraries(output ${REQLIBS})
 
 find_package(SDL2)
 find_package(curses)

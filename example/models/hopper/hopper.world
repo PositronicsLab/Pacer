@@ -4,7 +4,7 @@
   <physics type="ode">
     <max_step_size>0.001</max_step_size>
     <real_time_factor>1</real_time_factor>
-    <real_time_update_rate>500</real_time_update_rate>
+    <real_time_update_rate>1000</real_time_update_rate>
     <max_contacts>1000</max_contacts>
     <simbody>
       <min_step_size>0.0001</min_step_size>
@@ -41,7 +41,7 @@
       <solver>
         <type>quick</type>
         <min_step_size>1e-6</min_step_size>
-        <iters>10</iters>
+        <iters>50</iters>
         <sor>1.0</sor>
       </solver>
       <constraints>
@@ -58,8 +58,8 @@
     </include>
     <!-- Links (Lynx) model -->
     <include>
-      <uri>model://links</uri>
-      <pose>0 0 0 0 0 0</pose>
+      <uri>model://hopper</uri>
+      <pose>0 0 2 0 0 0</pose>
     </include>
     <!-- A global light source -->
     <include>

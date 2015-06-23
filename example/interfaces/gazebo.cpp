@@ -150,6 +150,9 @@ using namespace Pacer;
            }
          }
        }
+       
+
+       //robot_ptr->add_contact(foot_names[f],point,normal,impulse,mu_coulomb);
 
        physics::Joint_V joints = model->GetJoints();
 
@@ -184,7 +187,6 @@ using namespace Pacer;
 
          base_fext.set_sub_vec(0  , Ravelin::Vector3d(force.x,force.y,force.z) );
          base_fext.set_sub_vec(3,Ravelin::Vector3d(torque.x,torque.y,torque.z));
-         
 
          math::Vector3  accel = base_ptr->GetWorldLinearAccel();
          math::Vector3 aaccel = base_ptr->GetWorldAngularAccel();
@@ -196,7 +198,7 @@ using namespace Pacer;
          robot_ptr->set_base_value(Pacer::Robot::position,base_q);
          robot_ptr->set_base_value(Pacer::Robot::velocity,base_qd);
          robot_ptr->set_base_value(Pacer::Robot::acceleration,base_qdd);
-         robot_ptr->set_base_value(Pacer::Robot::load,base_fext);
+         //robot_ptr->set_base_value(Pacer::Robot::load,base_fext);
 
          // Set joint params in Moby joint coordinates
          std::map<std::string,Ravelin::VectorNd> 
@@ -218,7 +220,7 @@ using namespace Pacer;
              joint_qd[joint->GetName()][j]   = joint->GetVelocity(j);
              joint_qdd[joint->GetName()][j]   
                = (joint_qd[joint->GetName()][j] - last_joint_qd[joint->GetName()][j])/dt;
-             joint_fext[joint->GetName()][j] = joint->GetForce(j);
+             //joint_fext[joint->GetName()][j] = joint->GetForce(j);
            }
          }
          last_joint_qd = joint_qd;
@@ -226,13 +228,13 @@ using namespace Pacer;
          robot_ptr->set_joint_value(Pacer::Robot::position,joint_q);
          robot_ptr->set_joint_value(Pacer::Robot::velocity,joint_qd);
          robot_ptr->set_joint_value(Pacer::Robot::acceleration,joint_qdd);
-         robot_ptr->set_joint_value(Pacer::Robot::load,joint_fext);
+         //robot_ptr->set_joint_value(Pacer::Robot::load,joint_fext);
        }
        
        robot_ptr->control(t);
 
        {
-         std::map<std::string, Ravelin::VectorNd > q, qd, u; 
+         std::map<std::string, Ravelin::VectorNd > q, qd, u;
          robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
          robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
          robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);

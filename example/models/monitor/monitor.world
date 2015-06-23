@@ -58,7 +58,7 @@
     </include>
     <!-- Links (Lynx) model -->
     <include>
-      <uri>model://links</uri>
+      <uri>model://monitor</uri>
       <pose>0 0 0 0 0 0</pose>
     </include>
     <!-- A global light source -->

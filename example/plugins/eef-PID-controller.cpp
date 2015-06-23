@@ -4,6 +4,11 @@
 std::string plugin_namespace;
 
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
+using namespace Pacer;
+using namespace Ravelin;
+
+boost::shared_ptr<Pose3d> base_link_frame;
+
 
 class eefPID {
 public:
@@ -56,24 +61,36 @@ public:
   }
 
   void update(){
+    
+    base_link_frame = boost::shared_ptr<Pose3d>( new Ravelin::Pose3d(ctrl_ptr->get_data<Ravelin::Pose3d>("base_link_frame")));
+
     Ravelin::VectorNd q;
     ctrl_ptr->get_generalized_value(Pacer::Controller::position,q);
-    u.set_zero(q.rows()-Pacer::NEULER);
-      
+    u.set_zero(ctrl_ptr->joint_dofs());
+    q.set_sub_vec(ctrl_ptr->joint_dofs(),Utility::pose_to_vec(Ravelin::Pose3d()));
+    OUTLOG(q,"control_pose",logERROR);
+    
     for (int i=0; i< num_eefs; i++)
     {
       Ravelin::Vector3d
-        pos = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.x"),
-        vel = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.xd");      
+      pos = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.x"),
+      vel = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.xd");
+      pos.pose = base_link_frame;
+      vel.pose = base_link_frame;
       
       Ravelin::Vector3d
-        pos_des = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".goal.x"),
-        vel_des = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".goal.xd");    
+      pos_des = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".goal.x"),
+      vel_des = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".goal.xd");
+      pos_des.pose = base_link_frame;
+      vel_des.pose = base_link_frame;
       
-      pos.pose = Moby::GLOBAL;
-      pos_des.pose = Moby::GLOBAL;
-      vel.pose = Moby::GLOBAL;
-      vel_des.pose = Moby::GLOBAL;
+      {
+        Vector3d p1 = Pose3d::transform_point(Moby::GLOBAL,pos_des);
+        Vector3d p2 = Pose3d::transform_point(Moby::GLOBAL,pos);
+        //      Vector3d a = Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+        Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p1,   Vector3d(0,1,0),0.01)));
+        Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  p2,   p1,   Vector3d(1,0,0),0.01)));
+      }
       
       Ravelin::Vector3d 
         perr = pos_des-pos,
@@ -88,23 +105,20 @@ public:
         
         eef_u[i][j] = (perr[j]*KP + derr[j]*KV + ierr*KI);
       }
+      eef_u[i].pose = base_link_frame;
       
       OUTLOG(perr,eef_names[i]+"_perr",logDEBUG1);
       OUTLOG(derr,eef_names[i]+"_derr",logDEBUG1);
 
       OUTLOG(eef_u[i],eef_names[i]+"_U",logDEBUG1);
       
-      Ravelin::MatrixNd J;
-      
-      eef_u[i].pose = Moby::GLOBAL;
-      
-      //if(!ctrl_ptr->get_data<Ravelin::MatrixNd>(eef_names[i]+".J",J))
-        J = ctrl_ptr->calc_link_jacobian(q,eef_names[i]);
-            
+      Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(q,eef_names[i]);
       OUTLOG(J,eef_names[i]+"_J",logDEBUG1);
+
 
       Ravelin::VectorNd workv_;
       J.block(0,3,0,J.columns()).transpose_mult(eef_u[i],workv_);
+      
       OUTLOG(workv_,eef_names[i]+"_joint_u",logDEBUG1);
       u += workv_.segment(0,u.rows());
     }
@@ -118,11 +132,20 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
   pid.update();
 
-  Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
-  OUTLOG(pid.u,"eef_pid_U",logDEBUG);
-  u += pid.u.segment(0,u.rows());
-  ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
-      
+  bool acceleration_ff = false;
+  ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+  
+  if(acceleration_ff){
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);
+    OUTLOG(pid.u,"eef_pid_U",logDEBUG);
+    u += pid.u;
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,u);
+  } else {
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
+    OUTLOG(pid.u,"eef_pid_U",logDEBUG);
+    u += pid.u;
+    ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  }
 }
 
 /** This is a quick way to register your plugin function of the form:

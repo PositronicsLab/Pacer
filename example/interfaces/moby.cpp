@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Moby/EventDrivenSimulator.h>
+#include <Moby/UnilateralConstraint.h>
 #include <Pacer/controller.h>
 #include <random>
 
@@ -218,13 +219,20 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
       Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
       
-      Ravelin::Vector3d normal = e[i].contact_normal, impulse = e[i].contact_impulse.get_linear();
+      Ravelin::Vector3d 
+        normal = e[i].contact_normal,         
+        impulse = e[i].contact_impulse.get_linear();
       impulse.pose = e[i].contact_point.pose;
+     
+      bool compliant = 
+        (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
+
       
+      OUT_LOG(logERROR) << "compliant: " << compliant;
       if(robot_ptr->is_end_effector(sb1->id)){
-        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous);
+        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else if(robot_ptr->is_end_effector(sb2->id)){
-        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous);
+        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else {
         continue;  // Contact doesn't include an end-effector  
       }
@@ -350,13 +358,25 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   if(is_kinematic)
     abrobot->set_kinematic(true);
 
-  Ravelin::VectorNd q_start;
-  robot_ptr->get_generalized_value(Pacer::Robot::position,q_start);
-  Ravelin::VectorNd qd_start;
-  robot_ptr->get_generalized_value(Pacer::Robot::velocity,qd_start);
+  std::map<std::string,Ravelin::VectorNd > q_start, qd_start;
+  robot_ptr->get_joint_value(Pacer::Robot::position,q_start);
+  robot_ptr->get_joint_value(Pacer::Robot::velocity,qd_start);
 
-  abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,q_start);
-  abrobot->set_generalized_velocity(Moby::DynamicBody::eSpatial,qd_start);
+  Ravelin::VectorNd base_x, base_xd;
+  robot_ptr->get_generalized_value(Pacer::Robot::position,base_x);
+  robot_ptr->get_generalized_value(Pacer::Robot::velocity,base_xd);
+  
+  abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,base_x);
+  abrobot->set_generalized_velocity(Moby::DynamicBody::eSpatial,base_xd);
+  abrobot->update_link_poses();
+
+  std::vector<Moby::JointPtr> joints = abrobot->get_joints();
+
+  for(int i=0;i<joints.size();i++){
+    joints[i]->q = q_start[joints[i]->id];
+    joints[i]->qd = qd_start[joints[i]->id];
+  }
+  
   abrobot->update_link_poses();
 }
 

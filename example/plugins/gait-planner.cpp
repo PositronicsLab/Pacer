@@ -214,6 +214,12 @@ void walk_toward(
       xd.pose = base_frame;
 
       xdd = (dt < Moby::NEAR_ZERO)? 0 : (workv3_ - xd)/dt;
+      double xdd_norm = xdd.norm();
+      double max_foot_accel = 500;
+      if(xdd_norm > max_foot_accel){
+        xdd /= xdd_norm;
+        xdd *= max_foot_accel;
+      }
       
       xd = workv3_;
       xdd.pose = base_frame;
@@ -222,7 +228,7 @@ void walk_toward(
       x = x + xd * dt;
       
 //      if(active_foot){
-//        workv3_ *= 100;
+//        workv3_ *= 10;
 //        J.block(0,3,0,NUM_JOINT_DOFS).transpose_mult(workv3_,workv_);
 //        ctrl_ptr->set_joint_generalized_value(Pacer::Robot::load_goal,workv_);
 //      }
@@ -230,7 +236,7 @@ void walk_toward(
       Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
       Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd);// * (left_in_phase*gait_duration);
       Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,1),0.01)));
-      
+      OUT_LOG(logDEBUG) << "************";
       OUT_LOG(logDEBUG) << "x " << x;
       OUT_LOG(logDEBUG) << "xd " << xd;
       OUT_LOG(logDEBUG) << "xdd " << xdd;
@@ -468,6 +474,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   Origin3d command = sum_command / (double) command_queue.size();
 
+  OUTLOG(command,"SE2_command",logERROR);
+  
   /// Command velocity differential
 //  static Origin3d command = Origin3d(0,0,0);
 //  
@@ -527,12 +535,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
     foot_pos[i] = foot_init[i];
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-//    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-    foot_vel[i] = Vector3d(0,0,0,base_frame); 
+    foot_vel[i] = Vector3d(0,0,0,base_frame);
     ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
-    //double gait_progress = t/gait_time;
-    //gait_progress = gait_progress - (double) ((int) gait_progress);
   }
 
   
@@ -544,8 +549,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           input_gait_pose[5]
         ),
         Origin3d(
-          input_gait_pose[0],
-          input_gait_pose[1],
+          input_gait_pose[0] /*+ command[0]/(4.0*gait_time)*/,
+          input_gait_pose[1] /*+ command[1]/(4.0*gait_time)*/,
           input_gait_pose[2]
         ),
         base_frame

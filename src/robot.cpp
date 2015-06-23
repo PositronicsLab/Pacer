@@ -280,18 +280,49 @@ void Robot::update(){
 
   // Initialize end effectors
   for(unsigned i=0;i<eef_names_.size();i++){
+    set_model_state(generalized_q,generalized_qd);
+
     const Moby::RigidBodyPtr link = _id_link_map[eef_names_[i]];
     Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(base_frame,Ravelin::Vector3d(0,0,0,link->get_pose()));
+//    x.pose = base_frame;
     bool new_var = set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
     
-    Ravelin::Vector3d xd = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear());
+    // RELATIVE TO BASE LINK (non-intertial frame)
+    Ravelin::Vector3d xd,xdd;
+    
+    // Note: This is NOT how you calculate foot link velocity
+//    = Ravelin::Pose3d::transform_vector(base_frame,link->get_velocity().get_linear())
+//      - Ravelin::Pose3d::transform_vector(base_frame,root_link_->get_velocity().get_linear());
+    
+    end_effector_t& foot = *(_id_end_effector_map[eef_names_[i]].get());
+
+    // Calc jacobian for AB at this EEF
+    Ravelin::VectorNd local_q = generalized_q;
+    local_q.set_sub_vec(q.rows(),Utility::pose_to_vec(Ravelin::Pose3d()));
+    Ravelin::MatrixNd J = calc_link_jacobian(local_q,eef_names_[i]);
+    
+    J.block(0,3,0,NUM_JOINT_DOFS).mult(qd,xd);
+    J.block(0,3,0,NUM_JOINT_DOFS).mult(qdd,xdd);
+//    xd.pose = base_frame;
+//    xdd.pose = base_frame;
+    
     set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
+    set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xdd",xdd);
     if(new_var){
       set_data<Ravelin::Vector3d>(eef_names_[i]+".init.x",x);
       set_data<Ravelin::Vector3d>(eef_names_[i]+".init.xd",xd);
     }
   }
   
+  Ravelin::SVelocityd base_vel = Ravelin::Pose3d::transform(base_frame, _root_link->get_velocity());
+  Ravelin::SAcceld base_acc = Ravelin::Pose3d::transform(base_frame, _root_link->get_accel());
+  set_data<Ravelin::Vector3d>("base.state.x",Ravelin::Vector3d(base_frame->x,Moby::GLOBAL));
+  set_data<Ravelin::Quatd>("base.state.q",base_frame->q);
+  set_data<Ravelin::Vector3d>("base.state.xd",base_vel.get_linear());
+  set_data<Ravelin::Vector3d>("base.state.xdd",base_acc.get_linear());
+  set_data<Ravelin::Vector3d>("base.state.w",base_vel.get_angular());
+  set_data<Ravelin::Vector3d>("base.state.wd",base_acc.get_angular());
+
   Ravelin::MatrixNd M;
   
   // Call this somewhere (ID?)

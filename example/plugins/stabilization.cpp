@@ -43,10 +43,10 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
       ws_correct[i] = 0.0;
   OUTLOG(ws_correct,"ws_correct (compressive)",logDEBUG);
 
-//   Remove Tangential Elements (for now)
-//  for(int i=NC;i<ws_correct.rows();i++)
-//      ws_correct[i] = 0.0;
-//  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
+  // Remove Tangential Elements (for now)
+  for(int i=NC;i<ws_correct.rows();i++)
+      ws_correct[i] = 0.0;
+  OUTLOG(ws_correct,"ws_correct (normal)",logDEBUG);
 
   Jq.mult(ws_correct,js_correct,-1.0,0);
   OUTLOG(js_correct,"js_correct",logDEBUG);
@@ -153,9 +153,18 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
     OUTLOG(fb,"viip_fb",logDEBUG);
     
+    bool acceleration_ff = false;
+    ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+
+  if(acceleration_ff){
+    Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);
+    u += fb;
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,u);
+  } else {
     Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
     u += fb;
     ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  }
   }
 }
 

@@ -11,7 +11,7 @@
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;
-# define DEVICE_NAME "/dev/tty.usbserial-A9YL9ZZV"
+  std::string DEVICE_NAME;
 #endif
 
 using Pacer::Controller;
@@ -21,17 +21,22 @@ boost::shared_ptr<Controller> robot_ptr;
 unsigned NDOFS;
 
 static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
-static bool joint_data_lock_ = false;
+
+std::mutex joint_data_mutex_;
 static double FREQ = 500;
+
 static void control_motor(){
   while(true){
     static Ravelin::VectorNd q_motors,qd_motors,u_motors;
-    if(!joint_data_lock_){
+    if(joint_data_mutex_.try_lock()){
       q_motors = q_motors_data;
+      
       qd_motors = qd_motors_data;
       u_motors = u_motors_data;
+      joint_data_mutex_.unlock();
     }
  
+    std::cout << q_motors << std::endl;
     dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
@@ -46,7 +51,7 @@ void init(std::string model_f,std::string vars_f){
   std::cout << "STARTING PACER" << std::endl;
 #ifdef USE_DXL
   // If use robot is active also init dynamixel controllers
-  dxl_ = new DXL::Dynamixel(DEVICE_NAME);
+  dxl_ = new DXL::Dynamixel(DEVICE_NAME.c_str());
 #endif
 
   /// Set up quadruped robot, linking data from moby's articulated body
@@ -97,6 +102,9 @@ void init(std::string model_f,std::string vars_f){
     dxl_->relaxed(false);
 
 #endif
+  
+  joint_data_mutex_.unlock();
+
 }
 
 void controller(double t)
@@ -116,9 +124,7 @@ void controller(double t)
   robot_ptr->control(t);
 
 #ifdef USE_DXL
-  {
-    joint_data_lock_ = true;
-
+  if(joint_data_mutex_.try_lock()){
 //    for(int i=0;i<DXL::N_JOINTS;i++)
 //      qd_motors[i] = robot_ptr->qd_joints[dxl_->JointName(i)];
 
@@ -130,7 +136,7 @@ void controller(double t)
 
     //for(int i=0;i<dxl_->ids.size();i++)
     //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
-    joint_data_lock_ = false;
+    joint_data_mutex_.unlock();
   }
 #endif
   static std::thread motor_thread(control_motor);
@@ -144,15 +150,10 @@ int main(int argc, char* argv[])
     std::cout << argv[i] << std::endl;
   }
 
+  DEVICE_NAME = argv[1];
   double max_time = INFINITY;
-  if(argc == 3){
-    init(std::string(argv[1]),std::string(argv[2]));
-  } else if(argc == 4) {
-    init(std::string(argv[1]),std::string(argv[2]));
-    max_time = std::atof(argv[3]);
-  } else {
-    init("model","vars.xml");
-  }
+    
+  init("model","vars.xml");
 
   
 
@@ -161,7 +162,7 @@ int main(int argc, char* argv[])
 //  struct timeval start_t, now_t;
 //  gettimeofday(&start_t, NULL);
   while(t<max_time){
-    t += 1.0/FREQ * 2.5;
+    t += 1.0/FREQ;
 //    gettimeofday(&now_t, NULL);
 //    double t = (now_t.tv_sec - start_t.tv_sec) + (now_t.tv_usec - start_t.tv_usec) * 1E-6;
     controller(t);

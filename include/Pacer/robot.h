@@ -94,6 +94,7 @@ namespace Pacer{
       double mu_coulomb;
       double mu_viscous;
       double restitution;
+      bool compliant;
     };
 	
 	
@@ -156,7 +157,7 @@ namespace Pacer{
         Ravelin::Vector3d point,
         Ravelin::Vector3d normal,
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
-        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
+        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
       if(_lock_state)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
@@ -168,6 +169,7 @@ namespace Pacer{
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;
+      c->compliant  = compliant;
       _id_contacts_map[id].push_back(c);
     }
     
@@ -176,7 +178,7 @@ namespace Pacer{
         Ravelin::Vector3d point,
         Ravelin::Vector3d normal,
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
-        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0)
+        double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
       boost::shared_ptr<contact_t> c(new contact_t);
       c->id         = id; 
@@ -186,6 +188,7 @@ namespace Pacer{
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;
+      c->compliant  = compliant;
       return c;
     }
     
@@ -418,6 +421,18 @@ namespace Pacer{
     }
     
     template <typename T>
+    std::map<std::string,std::vector<T> > make_id_value_map(){
+      std::map<std::string,std::vector<T> > id_dof_val_map;
+      std::map<std::string,std::vector<int> >::iterator it;
+      for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
+        const std::vector<int>& dof = (*it).second;
+        std::vector<T>& dof_val = id_dof_val_map[(*it).first];
+        dof_val.resize(dof.size());
+      }
+      return id_dof_val_map;
+    }
+
+    template <typename T>
     void convert_from_generalized(const std::vector<T>& generalized_vec, std::map<std::string,std::vector<T> >& id_dof_val_map){
       if(generalized_vec.size() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.size()));
@@ -641,6 +656,8 @@ namespace Pacer{
     void calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
    
     const Moby::RigidBodyPtr get_root_link(){return _root_link;}
+    
+    int joint_dofs(){return NUM_JOINT_DOFS;}
   private:
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);

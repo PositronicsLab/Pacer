@@ -10,10 +10,10 @@
 #include <Pacer/utilities.h>
 
 #define USE_CLAWAR_MODEL
-//#define USE_AP_MODEL
-//#define USE_NO_SLIP_MODEL
-//#define USE_NO_SLIP_LCP_MODEL
-//#define TIMING
+#define USE_AP_MODEL
+#define USE_NO_SLIP_MODEL
+#define USE_NO_SLIP_LCP_MODEL
+#define TIMING
 
 using namespace Pacer;
 
@@ -30,13 +30,100 @@ Ravelin::Vector3d workv3_;
 
 Ravelin::VectorNd STAGE1, STAGE2;
 
-//bool Robot::inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, Ravelin::VectorNd& x){
-//  M.mult(qdd,x) -= fext;
-//}
+// NOT: THis doesn't incorporate base acceleration into ID eqns
+/// M( [q";0] - iM(F_ext + R z) ) = x
+bool inverse_dynamics(const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                         const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf){
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
+
+  Ravelin::VectorNd F_total = fext;
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = N.columns();
+
+  Ravelin::MatrixNd workM1,workM2;
+  Ravelin::VectorNd workv1, workv2;
+
+  Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
+  
+  if(nc != 0){
+    int nk = ST.columns()/nc;
+    int nvars = nc + nc*(nk);
+     // setup R
+    Ravelin::MatrixNd R(n, nc + (nc*nk) );
+    R.block(0,n,0,nc) = N;
+    R.block(0,n,nc,nc*nk+nc) = ST;
+
+    F_total += R.mult(cf,workv1,1.0/h,0);
+  }
+
+  LA_.solve_chol_fast(iM_chol,workv1 = F_total);
+
+  workv2.set_zero(n);
+  workv2.set_sub_vec(0,qdd);
+  workv2 -= workv1;
+  M.mult(workv2,workv1);
+//  workv1 -= fext;
+  x = workv1;//.segment(0,nq);
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics() exited" << std::endl;
+
+  return true;
+}
+
+
+/// [q";0] - iM(F_ext + R z) = iM x
+/// [q";v'] = iM(x + F_ext + R z )
+bool forward_dynamics( Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                      const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, const Ravelin::VectorNd& cf){
+  OUT_LOG(logDEBUG) << ">> forward_dynamics() entered" << std::endl;
+  
+  Ravelin::VectorNd F_total = fext;
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = N.columns();
+  
+  Ravelin::MatrixNd workM1,workM2;
+  Ravelin::VectorNd workv1, workv2;
+  
+  Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
+  
+  if(nc != 0){
+    int nk = ST.columns()/nc;
+    int nvars = nc + nc*(nk);
+    // setup R
+    Ravelin::MatrixNd R(n, nc + (nc*nk) );
+    R.block(0,n,0,nc) = N;
+    R.block(0,n,nc,nc*nk+nc) = ST;
+    
+    // add contact forces to FD
+    F_total += R.mult(cf,workv1,1.0/h,0);
+  }
+  
+  // Fext + [x;0] + R z = M qdd
+
+  // add joint forces to FD
+  workv1.set_zero(n);
+  workv1.set_sub_vec(0,x);
+  F_total += workv1;
+  
+  LA_.solve_chol_fast(iM_chol,workv1 = F_total);
+  
+  qdd = workv1.segment(0,nq);
+  OUT_LOG(logDEBUG) << "<< forward_dynamics() exited" << std::endl;
+
+  return true;
+}
 
 bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
                          const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
-
   OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
 
   Ravelin::VectorNd fext = fext_;
@@ -45,6 +132,10 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   int nq = n - 6;
   int nc = N.columns();
 
+//  if (nc==0) {
+//    return false;
+//  }
+  
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2,fID;
 
@@ -100,13 +191,6 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   // fID + fext = M qdd  ==> fID = M qdd - fext
   C.mult((workv1 = qdd),fID) -= fext.get_sub_vec(0,nq,workv2);
 
-  if(nc == 0){
-    // Inverse dynamics for a floating base w/ no contact
-//    goal accel
-    x = fID;
-    return true;
-  }
-
   int nk = ST.columns()/nc;
   int nvars = nc + nc*(nk);
   // setup R
@@ -132,7 +216,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
   fext.segment(0,nq) += fID;
-
+  
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
 
@@ -149,19 +233,6 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   Ravelin::VectorNd k;
   FET.mult(fext,(k = vq),h,1);
 //  OUTLOG(k,"k = [ % = [F,E']*fext*h  +  vq");
-
-  // Use Sensed contact forces
-  if(cf_final.rows() != 0){
-
-    (x = vqstar) -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf_final,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
-    x += fID;
-
-    return true;
-  }
 
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
@@ -187,6 +258,18 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
 
+  if(cf_final.rows() != 0){
+    // return the inverse dynamics forces
+    // x = iF*(vqstar - k - FET*R*(cf))/h
+    (x = vqstar) -= k;
+    FET.mult(R,workM1);
+    workM1.mult(cf_final,x,-1,1);
+    LA_.solve_chol_fast(iF,x);
+    x /= h;
+    x += fID;
+    return true;
+  }
+  
   /////////////////////////////////////////////////////////////////////////////
   ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////
   /////////////////////////////////////////////////////////////////////////////
@@ -473,6 +556,10 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   int nq = n - 6;
   int nc = N.columns();
 
+  if (nc==0) {
+    return false;
+  }
+  
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2,fID;
 
@@ -533,13 +620,6 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   // fID + fext = M qdd  ==> fID = M qdd - fext
   C.mult((workv1 = qdd),fID) -= fext.get_sub_vec(0,nq,workv2);
 
-  if(nc == 0){
-    // Inverse dynamics for a floating base w/ no contact
-//    goal accel
-    x = fID;
-    return true;
-  }
-
   int nk = ST.columns()/nc;
   int nvars = nc + nc*(nk);
   // setup R
@@ -564,9 +644,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
 
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  workv1.set_zero(n);
-  workv1.set_sub_vec(0,fID);
-  fext += workv1;
+  fext.segment(0,nq) += fID;
 
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -829,14 +907,12 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
 #endif
 
 #ifdef USE_NO_SLIP_LCP_MODEL
-extern bool lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<unsigned>& indices, VectorNd& z, double zero_tol);
-
 bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& nT,
-                         const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless){
+                                   const Ravelin::MatrixNd& D, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, bool frictionless, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = sqrt(Moby::NEAR_ZERO);
+  const double NEAR_ZERO = Moby::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
 
@@ -1106,7 +1182,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= CHECK_ZERO;
+      _Y(j,j) -= NEAR_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     if (!_LA.factor_chol(_Y) || frictionless)
@@ -1144,7 +1220,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
     // skew the matrix away from positive definiteness
     for (unsigned j=0; j< _Y.rows(); j++)
-      _Y(j,j) -= CHECK_ZERO;
+      _Y(j,j) -= NEAR_ZERO;
 
     // see whether check matrix can be Cholesky factorized
     last_success = _LA.factor_chol(_Y);
@@ -1307,28 +1383,16 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   OUTLOG(_qq,"qq",logDEBUG1);
   // setup remainder of LCP vector
 
-  // Setup Indices vector
-  unsigned active_eefs = 0;
-  std::vector<unsigned> indices;
-  //for(int i=0;i<eefs_.size();i++){
-    //if(!eefs_[i].active){
-      //continue;
-    //}
-    //active_eefs++;
-    //for(int j=0;j<eefs_[i].point.size();j++)
-      //indices.push_back(i);
-  //}
   static Ravelin::VectorNd _v;
-  if(_v.size() != _qq.size())
+  if(_v.size() != _qq.size() || !SAME_AS_LAST_CONTACTS)
     _v.resize(0);
-
 
   // attempt to solve the LCP using the fast method
   if(active_eefs > 2){
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
     OUTLOG(_v,"warm_start_v",logDEBUG1);
 
-    if (!lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
+    if (!Utility::lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
     {
       OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
 
@@ -1351,52 +1415,6 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
 
   Ravelin::VectorNd _cs_ct_tau, _v_plus;
 
-  // compute the no-slip friction forces
-  // u = -inv(A)*(a + Cv)
-  // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
-  // recalling that inv(A) =
-  // | inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y | ngc x ngc,    ngc x sz(x)
-  // | Y*X*inv(M)                    -Y          | sz(x) x ngc,  sz(x) x sz(x)
-  // Q is nlcp x (ngc + sz(x))
-  // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn]
-  /*
-  if(nc > 0){
-    // [v+] = -inv(M)-inv(M)*X'*Y*X*inv(M) - Y*X*inv(M)*Q'*[cn]
-    Ravelin::VectorNd a_Cv(n+J_IDX+nq);
-
-    a_Cv.set_sub_vec(n,Cn_v);
-    _workv = vqstar;
-    _workv.negate();
-    a_Cv.set_sub_vec(n+J_IDX,_workv);
-    a_Cv.set_sub_vec(n,Cn_v);
-    a_Cv.set_sub_vec(0,M.mult(v,_workv,-1.0,0));
-
-    Ravelin::MatrixNd iM_XT;
-    Ravelin::MatrixNd::transpose(_X, iM_XT);
-
-    // inv(M)*X'*Y
-    LA_.solve_chol_fast(iM_chol,iM_XT);
-    Ravelin::MatrixNd::transpose(iM_XT,_workM);
-    LA_.solve_chol_fast(_Y, _workM);
-    _workM.transpose_mult(a_Cv.segment(n,a_Cv.size()), _v_plus);
-
-
-    // inv(M)-inv(M)*X'*Y*X*inv(M)
-    iM_XT.mult(_workM,_workM2,-1.0,0);
-    _workM2 += iM;
-    _workM2.mult(a_Cv.segment(0,n),_v_plus,1.0,-1.0);
-    OUTLOG(_v_plus,"v_plus",logERROR);
-
-    N.mult(_v_plus, _workv);
-    OUTLOG(_workv,"Cn_v+",logERROR);
-
-    S.mult(_v_plus, _workv);
-    OUTLOG(_workv,"Cs_v+",logERROR);
-
-    T.mult(_v_plus, _workv);
-    OUTLOG(_workv,"Ct_v+",logERROR);
-  }
-  */
   // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
   _cs_ct_tau = _YXv;
   _cs_ct_tau -= _Yvqstar;
@@ -1479,7 +1497,7 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
 
-  const double CHECK_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = Moby::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
 
   // get number of degrees of freedom and number of contact points
@@ -1865,118 +1883,603 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
 }
 #endif
 
+class Foot{
+enum e_mode{
+  SWING,
+  STANCE
+} mode;
+
+enum e_contact_state{
+  ACTIVE,
+  INACTIVE
+} state;
+};
+
+bool inverse_dynamics_ap2(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& NT,
+                          const Ravelin::MatrixNd& D_, const Ravelin::VectorNd& fext, double dt, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf, const std::vector<int>& inds){
+  Ravelin::MatrixNd _workM, _workM2;
+  Ravelin::VectorNd _workv, _workv2;
+  
+  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
+  
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = NT.columns();
+  int nk = D_.columns()/nc;
+  
+  // setup R
+  Ravelin::MatrixNd R(n, nc*5 ),DT = D_,D(n,nc*nk),N = NT;
+  D = DT;
+  D.transpose();
+  N.transpose();
+  R.block(0,n,0,nc) = NT;
+  R.block(0,n,nc,nc*5) = DT;
+  
+  OUTLOG(NT,"N'",logDEBUG1);
+  OUTLOG(DT,"D'",logDEBUG1);
+  
+  // compute D, E, and F
+  Ravelin::MatrixNd iM_chol = M;
+  bool pass = LA_.factor_chol(iM_chol);
+  assert(pass);
+  
+  Ravelin::MatrixNd iM;
+  iM = Ravelin::MatrixNd::identity(n);
+  LA_.solve_chol_fast(iM_chol,iM);
+  
+  // | F E'|  =  inv(M)
+  // | E D |
+  Ravelin::MatrixNd E(6,nq);
+  iM.get_sub_mat(nq,n,0,nq,E);
+  Ravelin::MatrixNd F(nq,nq);
+  iM.get_sub_mat(0,nq,0,nq,F);
+  Ravelin::MatrixNd iF;
+  iF = F;
+  pass = LA_.factor_chol(iF);
+  assert(pass);
+  
+  // compute j and k
+  // [F,E']
+  Ravelin::MatrixNd FET(F.rows(),F.columns()+E.rows()),
+  ET = E;
+  ET.transpose();
+  FET.set_sub_mat(0,0,F);
+  FET.set_sub_mat(0,F.columns(),ET);
+  
+  Ravelin::VectorNd vq(nq);
+  vel.get_sub_vec(0,nq,vq);
+  
+  Ravelin::VectorNd v = vel;
+  iM.mult(fext,v,dt,1);
+
+  //////////////////////////////////////////////////////////////
+  Ravelin::MatrixNd P;
+  Ravelin::VectorNd vqstar;
+
+  {
+    // IDYN selection matrix
+    int inds_size = inds.size();
+    std::vector<bool> inds_bool(n);
+    
+    std::fill(inds_bool.begin(),inds_bool.end(),false);
+    
+    if (nq == inds_size) {
+      // If all legs are determined, then robot it mid-air, control only joints.
+      P.set_zero(nq,n);
+      P.set_sub_mat(0,0,Ravelin::MatrixNd::identity(nq));
+      for (int i=0; i<nq; i++) {
+        inds_bool[i] = true;
+      }
+    } else {
+      // Else, then robot is controlling base with foot contacts, control DOFS for non-contacting legs and base.
+      P.set_zero(6+inds_size,n);
+      for (int i=0; i<inds_size; i++) {
+        P(i,inds[i]);
+      }
+      P.set_sub_mat(inds_size,nq,Ravelin::MatrixNd::identity(6));
+      
+      for (int i=0; i<inds_size; i++) {
+        inds_bool[inds[i]] = true;
+      }
+      for (int i=0; i<6; i++) {
+        inds_bool[nq + i] = true;
+      }
+    }
+    
+    //  ((vqstar = qdd) *= dt) += vq;
+    v.select(inds_bool, _workv);
+    ((vqstar = qdd) *= dt) += _workv;
+
+  }
+  
+  Ravelin::MatrixNd PT = P;
+  PT.transpose();
+  
+  OUTLOG(PT,"P'",logDEBUG1);
+  
+  Ravelin::MatrixNd Cd_iM_CdT,   Cd_iM_CnT, Cd_iM_JxT,
+  Cn_iM_CdT,   Cn_iM_CnT,   Cn_iM_JxT,
+  /*  Jx_iM_CdT,  Jx_iM_CnT,*/ Jx_iM_JxT;
+  
+  // S
+  LA_.solve_chol_fast(iM_chol,_workM = DT);
+  D.mult(_workM,Cd_iM_CdT);
+  
+  LA_.solve_chol_fast(iM_chol,_workM =  NT);
+  D.mult(_workM,Cd_iM_CnT);
+  
+  LA_.solve_chol_fast(iM_chol,_workM = PT);
+  D.mult(_workM,Cd_iM_JxT);
+  
+  // N
+  LA_.solve_chol_fast(iM_chol,_workM = DT);
+  N.mult(_workM,Cn_iM_CdT);
+  
+  LA_.solve_chol_fast(iM_chol,_workM = NT);
+  N.mult(_workM,Cn_iM_CnT);
+  
+  LA_.solve_chol_fast(iM_chol,_workM = PT);
+  N.mult(_workM,Cn_iM_JxT);
+  
+  // P
+  //  LA_.solve_chol_fast(iM_chol,_workM = DT);
+  //  P.mult(_workM,Jx_iM_CdT);
+  
+  //  LA_.solve_chol_fast(iM_chol,_workM = NT);
+  //  P.mult(_workM,Jx_iM_CnT);
+  
+  LA_.solve_chol_fast(iM_chol,_workM = PT);
+  P.mult(_workM,Jx_iM_JxT);
+  
+  Ravelin::VectorNd Cd_v, Cn_v, Jx_v;
+  D.mult(v,Cd_v);
+  N.mult(v,Cn_v);
+  P.mult(v,Jx_v);
+  
+  // Printouts
+  OUTLOG(Cd_iM_CdT,"Cd_iM_CdT",logDEBUG1);
+  //  OUTLOG(Cd_iM_CnT,"Cd_iM_CnT",logDEBUG1);
+  OUTLOG(Cd_iM_JxT ,"Cd_iM_JxT",logDEBUG1);
+  
+  OUTLOG(Cn_iM_CdT,"Cn_iM_CdT",logDEBUG1);
+  OUTLOG(Cn_iM_CnT,"Cn_iM_CnT",logDEBUG1);
+  OUTLOG(Cn_iM_JxT ,"Cn_iM_JxT",logDEBUG1);
+  
+  //  OUTLOG( Jx_iM_CdT,"Jx_iM_CdT",logDEBUG1);
+  //  OUTLOG( Jx_iM_CnT,"Jx_iM_CnT",logDEBUG1);
+  OUTLOG( Jx_iM_JxT ,"Jx_iM_JxT",logDEBUG1);
+  
+  
+  /////////////////////////////////////////////////////////////////////////////
+  /// Solve System
+  ///
+  const unsigned J_IDX = 0;
+  const unsigned N_IDX = 0;
+  const unsigned D_IDX = nc;
+  const unsigned E_IDX = D_IDX + nc*nk;
+  
+  // we do this by solving the MLCP:
+  // |  A  C  | | x | + | g | = | 0 |
+  // |  D  B  | | y |   | h |   | 0 |
+  
+  // g = [-M*v'; 0; 0; -vq_err]
+  // h = [ 0 ];
+  // A = [ M -P';
+  //       P  0 ];
+  
+  // B = [ 0  0  0
+  //         0  0  E
+  //        mu -E' 0 ];
+  
+  // C = [ -N' -D' 0 ;
+  //        0   0  0 ];
+  // D = -C'
+  // x = [ v^+; tau ]
+  // y = [ cN, cD, lambda]
+  
+  Ravelin::MatrixNd B;
+  // lower left & upper right block of matrix
+  Ravelin::MatrixNd _LL, _UR;
+  if (nk > 4)
+    _LL.set_zero(nc*nk,nc+nc*nk);
+  else
+    _LL.set_zero(nc,nc+nc*nk);
+  _UR.set_zero(_LL.columns(),_LL.rows());
+  for(unsigned i=0,j=0,r=0;i<nc;i++)
+  {
+    unsigned NK = MU.columns();
+    if (NK > 4)
+    {
+      assert(nk == NK);
+      int nk4 = (NK+4)/4;
+      for(unsigned k=0;k<nk4;k++)
+      {
+        // muK
+        _LL(r+k,i)         = MU(i,k);
+        // Xe
+        _LL(r+k,nc+j)      = -cos((M_PI*k)/(2.0*nk4));
+        _LL(r+k,nc+nc+j)   = -cos((M_PI*k)/(2.0*nk4));
+        // Xf
+        _LL(r+k,nc+nc*2+j) = -sin((M_PI*k)/(2.0*nk4));
+        _LL(r+k,nc+nc*3+j) = -sin((M_PI*k)/(2.0*nk4));
+        // XeT
+        _UR(nc+j,r+k)      =  cos((M_PI*k)/(2.0*nk4));
+        _UR(nc+nc+j,r+k)   =  cos((M_PI*k)/(2.0*nk4));
+        // XfT
+        _UR(nc+nc*2+j,r+k) =  sin((M_PI*k)/(2.0*nk4));
+        _UR(nc+nc*3+j,r+k) =  sin((M_PI*k)/(2.0*nk4));
+      }
+      r+=nk4;
+      j++;
+    }
+    else
+    {
+      //      assert(NK == 1);
+      // muK
+      _LL(r,i)         = MU(i,0);
+      // Xe
+      _LL(r,nc+j)      = -1.0;
+      _LL(r,nc+nc+j)   = -1.0;
+      // Xf
+      _LL(r,nc+nc*2+j) = -1.0;
+      _LL(r,nc+nc*3+j) = -1.0;
+      // XeT
+      _UR(nc+j,r)      =  1.0;
+      _UR(nc+nc+j,r)   =  1.0;
+      // XfT
+      _UR(nc+nc*2+j,r) =  1.0;
+      _UR(nc+nc*3+j,r) =  1.0;
+      r += 1;
+      j++;
+    }
+  }
+  B.set_zero(_LL.rows()+_UR.rows(),_LL.columns()+_UR.columns());
+  B.set_sub_mat(_UR.rows(),0,_LL);
+  B.set_sub_mat(0,_LL.columns(),_UR);
+  
+  // Assuming that C is of full row rank (no dependent joint constraints)
+  // A is invertible; then we just need to solve the LCP:
+  
+  // | B - D*inv(A)*C | | v | + | h - D*inv(A)*g | = | w |
+  // and use the result to solve for u:
+  // u = -inv(A)*(g + Cv)
+  
+  // A is the matrix | M X'|
+  //                 | X 0 |  where X is [ S; T; P ]
+  // blockwise inversion yields
+  // inv(A) = [
+  //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
+  //    Y*X*inv(M)                    -Y          ]
+  // where Y = inv(X*inv(M)*X')
+  
+  // defining Q = C and using the result above yields following LCP:
+  // matrix: Q*inv(A)*Q' = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  // vector: Q*inv(A)*a  = -(-Q*v + Q*inv(M)*X'*Y*X*v - Q*inv(M)*X'*Y*[0;0;vq*])
+  //                     = Q*v - Q*inv(M)*X'*Y*X*v + Q*inv(M)*X'*Y*[0;0;vq*])
+  
+  Ravelin::MatrixNd _MM,
+  _Y = Jx_iM_JxT;
+  
+  // Invert (chol factorize) matrix _Y
+  bool success = _LA.factor_chol(_Y);
+  assert(success);
+  
+  Ravelin::MatrixNd _Q_iM_XT;
+  Ravelin::VectorNd _qq;
+  
+  // inv(A) = [
+  //    inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y ;
+  //    Y*X*inv(M)                    -Y          ]
+  // defining Y = inv(X*inv(M)*X') and Q = [Cn]
+  // matrix:B-D*inv(A)*C = Q*inv(M)*Q' - Q*inv(M)*X'*Y*X*inv(M)*Q'
+  //
+  // vector:h-Q*inv(A)*a  = -(-Q*inv(M)*M*v - -Q*inv(M)*X'*Y*X*inv(M)*M*v + -Q*inv(M)*X'*Y*[0;0;vq*])
+  //                     = -(-Q*v + Q*inv(M)*X'*Y*X*v - Q*inv(M)*X'*Y*[0;0;vq*])
+  //                     =    Q*v - Q*inv(M)*X'*Y*X*v + Q*inv(M)*X'*Y*[0;0;vq*]
+  
+  // setup Q*inv(M)*Q'
+  _MM.set_zero(nc+nc*nk+nc,nc+nc*nk+nc);
+  _MM.set_sub_mat(0,0,Cn_iM_CnT);
+  _MM.set_sub_mat(nc,0,Cd_iM_CnT);
+  _MM.set_sub_mat(0,nc,Cn_iM_CdT);
+  _MM.set_sub_mat(nc,nc,Cd_iM_CdT);
+  
+  OUTLOG(_MM,"Q_iM_QT",logDEBUG1);
+  
+  // setup Q*inv(M)*X'
+  // NOTE: with will break if nk != 4
+  _Q_iM_XT.resize(nc+nc*nk+nc,nq);
+  _Q_iM_XT.set_sub_mat(N_IDX, J_IDX, Cn_iM_JxT);
+  _Q_iM_XT.set_sub_mat(D_IDX, J_IDX, Cd_iM_JxT);
+  _Q_iM_XT.set_sub_mat(E_IDX, J_IDX, Ravelin::MatrixNd::zero(nc,nq));
+  
+  OUTLOG(_Q_iM_XT,"Q_iM_XT",logDEBUG1);
+  
+  //  Ravelin::MatrixNd Y;
+  //  Y = Ravelin::MatrixNd::identity(_Y.rows());
+  //  _LA.solve_chol_fast(_Y, Y);
+  
+  // compute Y*X*inv(M)*Q'
+  Ravelin::MatrixNd::transpose(_Q_iM_XT, _workM);
+  _LA.solve_chol_fast(_Y, _workM);
+  
+  // compute Q*inv(M)*X'*Y*X*inv(M)*Q'
+  _Q_iM_XT.mult(_workM, _workM2);
+  _MM  -= _workM2;
+  _MM += B;
+  OUTLOG(_MM,"MM",logDEBUG1);
+  
+  // setup -Q*v
+  _qq.set_zero(nc*(1+nk+1));
+  _qq.set_sub_vec(0,Cn_v);
+  _qq.set_sub_vec(nc,Cd_v);
+  
+  // setup X*v
+  Ravelin::VectorNd _Xv,_YXv;
+  _Xv.resize(nq);
+  _Xv.set_sub_vec(J_IDX, Jx_v);
+  
+  // compute Y*X*v
+  _YXv = _Xv;
+  _LA.solve_chol_fast(_Y, _YXv);
+  
+  // compute Q*inv(M)*X' * Y*X*v
+  // & subtract from LCP Vector
+  _Q_iM_XT.mult(_YXv, _qq,-1.0,1.0);
+  
+  
+  // compute Q*inv(M)*X'*Y*[vq*]
+  Ravelin::VectorNd _Yvqstar;
+  _Yvqstar.set_zero(vqstar.size());
+  _Yvqstar.set_sub_vec(J_IDX, vqstar);
+  _LA.solve_chol_fast(_Y, _Yvqstar);
+  // & add to LCP Vector
+  _Q_iM_XT.mult(_Yvqstar, _qq,1.0,1.0);
+  
+  OUTLOG(_qq,"qq",logDEBUG1);
+  // setup remainder of LCP vector
+  
+  static Ravelin::VectorNd _v;
+  
+  OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
+  
+  if (!_lcp.lcp_fast(_MM, _qq, _v))
+  {
+    OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+    
+    if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+      throw std::runtime_error("Unable to solve constraint LCP!");
+  }
+  OUTLOG(_v,"v",logDEBUG1);
+  
+  Ravelin::VectorNd tau;
+  
+  // compute the friction forces
+  // u = -inv(A)*(a + Cv)
+  // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
+  // recalling that inv(A) =
+  // | inv(M)-inv(M)*X'*Y*X*inv(M)   inv(M)*X'*Y | ngc x ngc,    ngc x sz(x)
+  // | Y*X*inv(M)                    -Y          | sz(x) x ngc,  sz(x) x sz(x)
+  // Q is nlcp x (ngc + sz(x))
+  // [cs; ct] = -Y*X*v - Y*X*inv(M)*Q'*[cn]
+  tau = _YXv;
+  tau -= _Yvqstar;
+  _Q_iM_XT.transpose_mult(_v, _workv);
+  _LA.solve_chol_fast(_Y, _workv);
+  tau += _workv;
+  tau.negate();
+  
+  Ravelin::VectorNd cn,cd;
+  // setup impulses
+  cn = _v.segment(0, nc);
+  cd = _v.segment(nc, nc*(nk+1));
+  
+  OUTLOG(cn,"cN",logDEBUG);
+  OUTLOG(cd,"cD",logDEBUG);
+  
+  cf.set_zero(nc*(nk+1));
+  cf.set_sub_vec(0,cn);
+  cf.set_sub_vec(nc,cd);
+  
+  //   IDYN MLCP
+  //            A             C      x         g
+  //       | M −S' -T' -P'   -N' | | v+ |   |-M v |    | 0 |
+  //       | S  0   0   0     0  | | cS |   |  0  |  = | 0 |
+  //       | T  0   0   0     0  | | cT |   |  0  |    | 0 |
+  //       | P  0   0   0     0  | | a  |   |-vq* |    | 0 |
+  //                              *       +
+  //       | N  0   0   0     0  | | cN |   |  0  | >= | 0 |
+  //            D            B      y         h
+  
+  //   Constraints
+  //   [M −S' -T' -N' -P'  P' ].[ ]' - M*v  = 0
+  //    S v+        = 0
+  //    T v+        = 0
+  //    P v+ - vq*  = 0
+  //    N v+       >= 0
+  
+  //    M v+ - (S'cs + T'cT + N'cN) - a = M v
+  //    M(v+ - v) = (S'cs + T'cT + N'cN)  +  a
+  
+  //   Therefore
+  //    M(v+ - v)           = f_total
+  //    S'cs + T'cT + N'cN  = contact_force
+  //    f = cf + a
+  
+  // Using M(dv) - z = tau
+  x = tau;
+  x /= dt;
+  
+  OUTLOG(x,"tau",logDEBUG);
+  
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics_ap() exited" << std::endl;
+  return true;
+}
+
+
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double last_time = -0.001;
-  const double dt = t - last_time;
-    static double dt_idyn = ctrl->get_data<double>(plugin_namespace+"dt");
-    static double alpha = ctrl->get_data<double>(plugin_namespace+"alpha");
-    static int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
-    static int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs");
-    double DT = (dt_idyn == 0)? dt : dt_idyn;
+  double dt = t - last_time;
+  last_time = t;
+  static double dt_idyn = ctrl->get_data<double>(plugin_namespace+"dt");
+  static double alpha = ctrl->get_data<double>(plugin_namespace+"alpha");
+  static int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
+  static int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs");
+  double DT = (dt_idyn == 0)? dt : dt_idyn;
+  if(DT == 0) DT = 0.001;
 
+  static std::vector<std::string>
+      foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+ 
+  std::vector<std::string> active_feet;
 
-    static std::vector<std::string>
-        foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-   
-    std::vector<std::string> active_feet;
+  int num_feet = foot_names.size();
 
-    int num_feet = foot_names.size();
-
-    Ravelin::VectorNd cf,q,generalized_qd,qdd_des,generalized_fext;
-    ctrl->get_generalized_value(Pacer::Robot::position,q);
-    ctrl->get_generalized_value(Pacer::Robot::velocity,generalized_qd);
-    ctrl->get_generalized_value(Pacer::Robot::load,generalized_fext);
-    ctrl->get_joint_generalized_value(Pacer::Robot::acceleration_goal,qdd_des);
-
-   OUTLOG(qdd_des,"qdd_des",logERROR);
-
-    int NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
-    int NDOFS = NUM_JOINT_DOFS + Pacer::NSPATIAL;
-    Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-
-    Ravelin::MatrixNd N,S,T,D,M;
-    
-    static Ravelin::VectorNd q_last = Ravelin::VectorNd::zero(q.size());
-    // Consider increasing tolerance
-    if((q_last-=q).norm() > Moby::NEAR_ZERO)
-      ctrl->calc_generalized_inertia(q, M);
-   q_last = q;
-    
-    if(USE_DES_CONTACT){
-      for(int i=0;i<foot_names.size();i++){
-        bool is_stance = false;
-        if(ctrl->get_data<bool>(foot_names[i]+".stance",is_stance))
-          if(is_stance)
-            active_feet.push_back(foot_names[i]);
-      }
-    } else
-      active_feet = foot_names;
-
+  Ravelin::VectorNd q,generalized_qd,qdd_des,generalized_fext;
+  Ravelin::VectorNd outputv;
   
+  ctrl->get_generalized_value(Pacer::Robot::position,q);
+  OUTLOG(q,"generalized_q",logERROR); 
+  
+  ctrl->get_generalized_value(Pacer::Robot::velocity,generalized_qd);
+  OUTLOG(generalized_qd,"generalized_qd",logERROR);
+  
+  ctrl->get_generalized_value(Pacer::Robot::load,generalized_fext);
+  OUTLOG(generalized_fext,"generalized_fext",logERROR);
+  
+  ctrl->get_generalized_value(Pacer::Robot::acceleration,outputv);
+  OUTLOG(outputv,"generalized_qdd",logERROR);
 
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
-    for(int i=0;i<active_feet.size();i++){
-      std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
-      ctrl->get_link_contacts(active_feet[i],c);
-      if(!c.empty())
-        contacts.push_back(c[0]);
+  // OUTPUT
+  ctrl->get_joint_generalized_value(Pacer::Robot::position_goal,outputv);
+  OUTLOG(outputv,"q_des",logERROR);
+  
+  ctrl->get_joint_generalized_value(Pacer::Robot::velocity_goal,outputv);
+  OUTLOG(outputv,"qd_des",logERROR);
+  
+  ctrl->get_joint_generalized_value(Pacer::Robot::acceleration_goal,qdd_des);
+  OUTLOG(qdd_des,"qdd_des",logERROR);
+
+  int NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
+  int NDOFS = NUM_JOINT_DOFS + Pacer::NSPATIAL;
+
+  Ravelin::MatrixNd N,S,T,D;
+  static Ravelin::MatrixNd M;
+
+  static Ravelin::VectorNd q_last = Ravelin::VectorNd::zero(q.size());
+  // Consider increasing tolerance
+//    if((q_last-=q).norm() > Moby::NEAR_ZERO)
+    ctrl->calc_generalized_inertia(q, M);
+
+  q_last = q;
+  
+  if(USE_DES_CONTACT){
+    for(int i=0;i<foot_names.size();i++){
+      bool is_stance = false;
+      if(ctrl->get_data<bool>(foot_names[i]+".stance",is_stance))
+        if(is_stance)
+          active_feet.push_back(foot_names[i]);
     }
+  } else
+    active_feet = foot_names;
 
-    ctrl->calc_contact_jacobians(q,contacts,N,S,T);
-    
-    int NC = N.columns();
-    
-    D.set_zero(NDOFS,NC*4);
-    D.set_sub_mat(0,0,S);
-    D.set_sub_mat(0,NC,T);
-    S.negate();
-    T.negate();
-    D.set_sub_mat(0,NC*2,S);
-    D.set_sub_mat(0,NC*3,T);
+  double mcpf = 1e2;
+    ctrl->get_data<double>(plugin_namespace+"max-contacts-per-foot",mcpf);
+  int MAX_CONTACTS_PER_FOOT = mcpf;
+  
+  std::vector<unsigned> indices;
+  std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
 
-    bool inf_friction = true;
-    Ravelin::MatrixNd MU;
-    MU.set_zero(N.columns(),2);
-    for(int i=0;i<contacts.size();i++){
+  for(int i=0;i<active_feet.size();i++){
+    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    ctrl->get_link_contacts(active_feet[i],c);
+    if(!c.empty()){
+      for(int j=0;j<c.size() && j<MAX_CONTACTS_PER_FOOT;j++){
+        contacts.push_back(c[j]);
+        indices.push_back((unsigned) i);
+      }
+    }
+  }
+
+  // Jacobian Calculation
+  ctrl->calc_contact_jacobians(q,contacts,N,S,T);
+  
+  int NC = N.columns();
+  
+  D.set_zero(NDOFS,NC*4);
+  D.set_sub_mat(0,0,S);
+  D.set_sub_mat(0,NC,T);
+  S.negate();
+  T.negate();
+  D.set_sub_mat(0,NC*2,S);
+  D.set_sub_mat(0,NC*3,T);
+
+  // Index of foot check (continuity of contacts)
+  static std::vector<unsigned> last_indices = indices;
+  static int last_NC = NC;
+  bool SAME_INDICES = false;
+  if(NC == last_NC){
+    SAME_INDICES = true;
+    for (int i=0; i<indices.size(); i++) {
+      if(last_indices[i] != indices[i]){
+        SAME_INDICES = false;
+        break;
+      }
+    }
+  }
+  last_NC = NC;
+  last_indices = indices;
+  
+  bool inf_friction = false;
+  Ravelin::MatrixNd MU;
+  MU.set_zero(N.columns(),2);
+  for(int i=0;i<contacts.size();i++){
+    if(contacts[i]->mu_coulomb > 1.5){
+      inf_friction = true;
+      std::fill(MU.row(i).begin(),MU.row(i).end(),1.5);
+    } else {
       std::fill(MU.row(i).begin(),MU.row(i).end(),contacts[i]->mu_coulomb);
-      if(std::accumulate(MU.row(i).begin(),MU.row(i).end(),0)
-         /MU.row(i).rows() < 100.0)
-        inf_friction = false;
     }
-    inf_friction = false;
+  }
 
-    Ravelin::VectorNd cf_init;
-      cf.set_zero(NC*5);
-      for(unsigned i=0;i< contacts.size();i++){
-          Ravelin::Vector3d tan1,tan2;
-          Ravelin::Vector3d::determine_orthonormal_basis(contacts[i]->normal,tan1,tan2);
-          Ravelin::Matrix3d R_foot( contacts[i]->normal[0], contacts[i]->normal[1], contacts[i]->normal[2],
-                                                   tan1[0],                tan1[1],                tan1[2],
-                                                   tan2[0],                tan2[1],                tan2[2]);
-          Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(contacts[i]->impulse,workv3_)*(dt/DT));
-          cf[i] = contact_impulse[0];
-          if(contact_impulse[1] >= 0)
-            cf[NC+i] = contact_impulse[1];
-          else
-            cf[NC+i+NC*2] = -contact_impulse[1];
-          if(contact_impulse[2] >= 0)
-            cf[NC+i+NC] = contact_impulse[2];
-          else
-            cf[NC+i+NC*3] = -contact_impulse[2];
-        }
+  Ravelin::VectorNd cf_init = Ravelin::VectorNd::zero(NC*5);
+  {
+    for(unsigned i=0;i< contacts.size();i++){
+      Ravelin::Vector3d tan1,tan2;
+      Ravelin::Vector3d::determine_orthonormal_basis(contacts[i]->normal,tan1,tan2);
+      Ravelin::Matrix3d R_foot( contacts[i]->normal[0], contacts[i]->normal[1], contacts[i]->normal[2],
+                                               tan1[0],                tan1[1],                tan1[2],
+                                               tan2[0],                tan2[1],                tan2[2]);
       
-      Utility::check_finite(cf);
-    OUTLOG(cf,"cf_moby",logERROR);
-
-    {
-      double sum = std::accumulate(cf.segment(0,NC).begin(),cf.segment(0,NC).end(),0.0);
-
-      OUT_LOG(logERROR) << t-dt <<",M, Sum normal force: " << sum ;
+      Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(contacts[i]->impulse,workv3_));
+       OUT_LOG(logERROR) << "compliant: " << contacts[i]->compliant;
+      if( !contacts[i]->compliant ){
+        contact_impulse/=dt;
+        OUT_LOG(logERROR) << "Contact " << i << " is rigid: " << contact_impulse ;
+      } else {
+        OUT_LOG(logERROR) << "Contact " << i << " is compliant: " << contact_impulse ;
+      }
+      cf_init[i] = contact_impulse[0];
+      if(contact_impulse[1] >= 0)
+        cf_init[NC+i] = contact_impulse[1];
+      else
+        cf_init[NC+i+NC*2] = -contact_impulse[1];
+      if(contact_impulse[2] >= 0)
+        cf_init[NC+i+NC] = contact_impulse[2];
+      else
+        cf_init[NC+i+NC*3] = -contact_impulse[2];
     }
+    Utility::check_finite(cf_init);
 
+    OUTLOG(cf_init,"cf_0",logERROR);
+
+    Ravelin::SharedConstVectorNd cf_normal = cf_init.segment(0,NC);
+    double sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
+    OUT_LOG(logERROR) << "0, Sum normal force: " << sum ;
+  
     if(USE_LAST_CFS){
-
-      cf_init = cf;
       static std::queue<Ravelin::VectorNd>
           cf_delay_queue;
       static std::queue<Ravelin::MatrixNd>
@@ -1987,11 +2490,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
       if(FILTER_CFS && NC>0){
 
-        cf_delay_queue.push(cf);
+        cf_delay_queue.push(cf_init);
         N_delay_queue.push(N);
         D_delay_queue.push(D);
         MU_delay_queue.push(MU);
-        cf = cf_delay_queue.front();
+        cf_init = cf_delay_queue.front();
         N = N_delay_queue.front();
         D = D_delay_queue.front();
         MU = MU_delay_queue.front();
@@ -2007,163 +2510,183 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         D_delay_queue = std::queue<Ravelin::MatrixNd>();
         MU_delay_queue = std::queue<Ravelin::MatrixNd>();
       }
-    } else {
-      cf_init.set_zero(0);
     }
+  }
 
+  OUTLOG(MU,"MU",logERROR);
 
-    const double h_dt = DT/dt;
-    bool solve_flag = false;
-    Ravelin::VectorNd fext_scaled;
+  // IDYN MAXIMAL DISSIPATION MODEL
+  std::vector<std::string> controller_name = ctrl->get_data<std::vector<std::string> >(plugin_namespace+"type");
 
-    // IDYN MAXIMAL DISSIPATION MODEL
-    unsigned ctl_num = 0;
-
-    std::vector<Ravelin::VectorNd> compare_cf_vec;
-
-
-    OUTLOG(NC,"idyn_NC",logERROR);
+  std::map<std::string,Ravelin::VectorNd> cf_map,uff_map;
+  
+  OUTLOG(NC,"idyn_NC",logERROR);
 
     ////////////////////////// simulator DT IDYN //////////////////////////////
+  for (std::vector<std::string>::iterator it=controller_name.begin();
+       it!=controller_name.end(); it++) {
+    
+    const double h_dt = DT/dt;
+    bool solve_flag = false;
 
-if(inf_friction){
-#ifdef USE_NO_SLIP_MODEL
-    // NO-SLIP MODEL
-    {
+    Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
+    Ravelin::VectorNd cf;// = Ravelin::VectorNd::zero(NC*5);
+
+    std::string& name = (*it);
+   
+    OUT_LOG(logERROR) << "CONTROLLER: " << name;
+    OUT_LOG(logERROR) << "USE_LAST_CFS: " << USE_LAST_CFS;
+
+    if (NC == 0) {
+      solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size(),SAME_INDICES);
+    }
+    else if(USE_LAST_CFS){
+
+      cf = cf_init;
+      cf *= dt;
+      OUT_LOG(logERROR) << "USING LAST CFS: " << cf;
+//      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
+      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+      OUT_LOG(logERROR) << "SAME: " << cf;
+
+    } else {
+    
+
 #ifdef TIMING
     struct timeval start_t;
     struct timeval end_t;
     gettimeofday(&start_t, NULL);
 #endif
-    cf = cf_init;
-    id.set_zero(NUM_JOINT_DOFS);
-    if(inverse_dynamics_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf)){
-      compare_cf_vec.push_back(cf.segment(0,NC));
-    } else {
-      compare_cf_vec.push_back(cf);
+    try{
+        if(name.compare("NSQP") == 0){
+          solve_flag = inverse_dynamics_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf);
+          
+          //// Check for Normal direction torque chatter
+          static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+          if(last_cf.rows() == NC){
+            Ravelin::VectorNd diff_cf  = last_cf;
+            diff_cf -= cf.segment(0,NC);
+            if(diff_cf.norm() > 0.01)
+              OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+          }
+          last_cf = cf.segment(0,NC);
+          
+        } else if(name.compare("NSLCP") == 0){
+          cf.set_zero(NC*5);
+          solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size(),SAME_INDICES);
+          
+          //// Check for Normal direction torque chatter
+          static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+          if(last_cf.rows() == NC){
+            Ravelin::VectorNd diff_cf  = last_cf;
+            diff_cf -= cf.segment(0,NC);
+            if(diff_cf.norm() > 0.01)
+              OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+          }
+          last_cf = cf.segment(0,NC);
+          
+        } else if(name.compare("CFQP") == 0){    // IDYN QP
+          solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+          
+          //// Check for Normal direction torque chatter
+          static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+          if(last_cf.rows() == NC){
+            Ravelin::VectorNd diff_cf  = last_cf;
+            diff_cf -= cf.segment(0,NC);
+            if(diff_cf.norm() > 0.01)
+              OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+          }
+          last_cf = cf.segment(0,NC);
+          
+        } else if(name.compare("CFLCP") == 0){
+          cf.set_zero(NC*5);
+          // THIS IS A WORKING THEORETICAL MODEL
+          // BUT IS NOT FOR ACTUAL USE (discontinuous torque commands)
+          // A-P Fast MODEL
+          solve_flag = inverse_dynamics_ap(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+          
+          //// Check for Normal direction torque chatter
+          static Ravelin::VectorNd last_cf = cf.segment(0,NC);
+          if(last_cf.rows() == NC){
+            Ravelin::VectorNd diff_cf  = last_cf;
+            diff_cf -= cf.segment(0,NC);
+            if(diff_cf.norm() > 0.01)
+              OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+          }
+          last_cf = cf.segment(0,NC);
+        }
+    } catch (std::exception e){
+      solve_flag = false;
     }
-    OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-    OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
+    
+//    if (!solve_flag) {
+//      Ravelin::MatrixNd mu = MU;
+//      mu *= 0.005;
+//      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,mu,id,cf);
+//    }
+    
 #ifdef TIMING
     gettimeofday(&end_t, NULL);
     double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
+    OUTLOG(duration*1000.0,"timing_"+name,logERROR);
 #endif
-    ctl_num++;
     }
-#endif
-#ifdef USE_NO_SLIP_LCP_MODEL
-  // NO-SLIP Fast MODEL
+    
+#ifndef NDEBUG
     {
-#ifdef TIMING
-    struct timeval start_t;
-    struct timeval end_t;
-    gettimeofday(&start_t, NULL);
-#endif
-    cf.set_zero(NC*5);
-    id.set_zero(NUM_JOINT_DOFS);
-    {
-      solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf,false);
-      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
-      if(last_cf.rows() == NC){
-        Ravelin::VectorNd diff_cf  = last_cf;
-        diff_cf -= cf.segment(0,NC);
-        if(diff_cf.norm() > 0.01)
-          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+      Ravelin::VectorNd qdd_idyn;
+      forward_dynamics(qdd_idyn,M,N,D,generalized_fext,DT,id,cf);
+      Ravelin::VectorNd idyn_qdd_err = qdd_idyn;
+      idyn_qdd_err -= qdd_des;
+      OUTLOG(qdd_des,"IDYN_QDD_DES",logERROR);
+      OUTLOG(qdd_idyn,"IDYN_QDD_RESULT",logERROR);
+      OUTLOG(idyn_qdd_err,"IDYN_QDD_ERR",logERROR);
+      if (idyn_qdd_err.norm() > 1e-4 || !solve_flag) {
+        throw std::runtime_error("IDYN failed to follow qdd_des");
       }
-      last_cf = cf.segment(0,NC);
-    }
-    compare_cf_vec.push_back(cf.segment(0,NC));
-#ifdef TIMING
-    gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
-#endif
-    ctl_num++;
     }
 #endif
+    
+    if(!std::isfinite(cf.norm()) || !std::isfinite(id.norm())){
+      OUTLOG(DT,"DT",logERROR);
+      OUTLOG(cf,"IDYN_CF",logERROR);
+      OUTLOG(id,"IDYN_U",logERROR);
 
-
-} else {
-
-#ifdef USE_CLAWAR_MODEL
-    // IDYN QP
-  {
-#ifdef TIMING
-    struct timeval start_t;
-    struct timeval end_t;
-    gettimeofday(&start_t, NULL);
-#endif
-    cf = cf_init;
-    id.set_zero(NUM_JOINT_DOFS);
-    if(inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf)){
-      compare_cf_vec.push_back(cf.segment(0,NC));
-    } else {
-      compare_cf_vec.push_back(cf);
+      throw std::runtime_error("IDYN forces are NaN or INF");
     }
-    OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-    OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-#ifdef TIMING
-    gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
-#endif
-    ctl_num++;
-  }
-#endif
-
-
-#ifdef USE_AP_MODEL 
-// THIS IS A WORKING THEORETICAL MODEL 
-// BUT IS NOT FOR ACTUAL USE (discontinuous torque commands)
-    // A-P Fast MODEL
-    {
-#ifdef TIMING
-    struct timeval start_t;
-    struct timeval end_t;
-    gettimeofday(&start_t, NULL);
-#endif
-    cf.set_zero(NC*5);
-    id.set_zero(NUM_JOINT_DOFS);
-    if(NC>0){
-      solve_flag = inverse_dynamics_ap(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf);
-      OUTLOG(id,"uff_"+std::to_string(ctl_num),logERROR);
-      OUTLOG(cf,"cf_"+std::to_string(ctl_num),logERROR);
-      static Ravelin::VectorNd last_cf = cf.segment(0,NC);
-      if(last_cf.rows() == NC){
-        Ravelin::VectorNd diff_cf  = last_cf;
-        diff_cf -= cf.segment(0,NC);
-        if(diff_cf.norm() > 0.01)
-          OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
-      }
-      last_cf = cf.segment(0,NC);
-    } else {
-      solve_flag = inverse_dynamics(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf);
-    }
-    compare_cf_vec.push_back(cf.segment(0,NC));
-#ifdef TIMING
-    gettimeofday(&end_t, NULL);
-    double duration = (end_t.tv_sec - start_t.tv_sec) + (end_t.tv_usec - start_t.tv_usec) * 1E-6;
-    OUTLOG(duration*1000.0,"timing_"+std::to_string(ctl_num),logERROR);
-#endif
-    ctl_num++;
-    }
-#endif
-}
-
-  for(int i=0;i<compare_cf_vec.size();i++){
-    double sum = std::accumulate(compare_cf_vec[i].begin(),compare_cf_vec[i].end(),0.0);
-    OUT_LOG(logERROR) << i << ", Sum normal force: " << sum ;
+    cf /= DT;
+    cf_map[name] = cf;
+    uff_map[name] = id;
   }
 
-  id*=alpha;
+
+  OUTLOG(controller_name,"controller_name",logERROR);
+  //std::vector<std::string>::iterator it=controller_name.begin();
+  //for (;it!=controller_name.end(); it++) {
+  //;it!=controller_name.end(); it++) {
+  for (int i=0;i<controller_name.size();i++){
+    std::string& name = controller_name[i];//(*it);
+    OUTLOG(uff_map[name],"uff_"+std::to_string(i+1),logERROR);
+    OUTLOG(cf_map[name],"cf_"+std::to_string(i+1),logERROR);
+
+    double sum = 0;
+    if(NC > 0){
+      Ravelin::VectorNd cf_normal = cf_map[name].segment(0,NC);
+      sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
+    }
+    
+    OUT_LOG(logERROR) << (i+1) << ", Sum normal force: " << sum ;
+
+  }
+
+  Ravelin::VectorNd uff = uff_map[controller_name.front()];
+  uff*=alpha;
   
   Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
-  OUTLOG(id,"idyn_U",logDEBUG);
-  u += id;
+  OUTLOG(uff,"idyn_U",logERROR);
+  u += uff;
   ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+  OUTLOG(u,"FINAL_U",logERROR);
 }
 
 /** This is a quick way to register your plugin function of the form:

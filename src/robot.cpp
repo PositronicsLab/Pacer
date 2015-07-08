@@ -29,8 +29,8 @@ void Robot::calc_com(){
   
   Ravelin::Vector3d center_of_mass_xd = com_vel.get_upper();
 
-  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w, _root_link->get_accel());
-  Ravelin::Vector3d center_of_mass_xdd = com_acc.get_linear();
+//  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w, _root_link->get_accel());
+  Ravelin::Vector3d center_of_mass_xdd;// = com_acc.get_linear();
 
   center_of_mass_xd.pose = center_of_mass_xdd.pose = Moby::GLOBAL;
 
@@ -315,13 +315,13 @@ void Robot::update(){
   }
   
   Ravelin::SVelocityd base_vel = Ravelin::Pose3d::transform(base_frame, _root_link->get_velocity());
-  Ravelin::SAcceld base_acc = Ravelin::Pose3d::transform(base_frame, _root_link->get_accel());
+  //Ravelin::SAcceld base_acc = Ravelin::Pose3d::transform(base_frame, _root_link->get_accel());
   set_data<Ravelin::Vector3d>("base.state.x",Ravelin::Vector3d(base_frame->x,Moby::GLOBAL));
   set_data<Ravelin::Quatd>("base.state.q",base_frame->q);
   set_data<Ravelin::Vector3d>("base.state.xd",base_vel.get_linear());
-  set_data<Ravelin::Vector3d>("base.state.xdd",base_acc.get_linear());
+  //set_data<Ravelin::Vector3d>("base.state.xdd",base_acc.get_linear());
   set_data<Ravelin::Vector3d>("base.state.w",base_vel.get_angular());
-  set_data<Ravelin::Vector3d>("base.state.wd",base_acc.get_angular());
+  //set_data<Ravelin::Vector3d>("base.state.wd",base_acc.get_angular());
 
   Ravelin::MatrixNd M;
   

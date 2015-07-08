@@ -1,5 +1,5 @@
   <XML>
-  <logging type="string">ERROR</logging>
+  <logging type="string">DEBUG1</logging>
   
   <robot-model type="string">links/model.sdf</robot-model>
   <real-time-factor type="double">1</real-time-factor>
@@ -34,10 +34,10 @@
                       joint-PID-controller      eef-PID-controller idyn-controller   wcpg
                       stabilization  skating-stabilization
                       output</id>
-    <active type="bool">false                         true            true            true            false
+    <active type="bool">false                         false            false            true            true
                         true                         false            false            false
                         false                         false
-                        true</active>
+                        false</active>
     <file type="string">libgamepad.so libwaypoints.so libgait-planner.so  libik-feet.so   libstand-trajectory.so
                       libjoint-PID-controller.so  libeef-PID-controller.so  libinverse-dynamics.so libwcpg.so
                       libstabilization.so  libskating-stabilization.so
@@ -261,6 +261,7 @@
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
     <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
+    <acceleration type="bool">false</acceleration>
     <!-- Gains are for the q of joint ids respectively -->
     <gains>
       <kp type="double">1e3 1e3 1e3   1e3 1e3 1e3   1e3 1e3 1e3   1e3 1e3 1e3</kp>
@@ -286,7 +287,7 @@
   <idyn-controller>
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0</dt>
+    <dt type="double">0.1</dt>
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>

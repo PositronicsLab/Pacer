@@ -12,7 +12,7 @@
 using Pacer::Controller;
 
 // pointer to the simulator
- boost::shared_ptr<Moby::EventDrivenSimulator> sim;
+ boost::shared_ptr<Moby::Simulator> sim;
 // pointer to the articulated body in Moby
 Moby::RCArticulatedBodyPtr abrobot;
 
@@ -316,6 +316,7 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 
 // this is called by Moby for a plugin
 void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
+ boost::shared_ptr<Moby::EventDrivenSimulator> esim;
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
   // If use robot is active also init dynamixel controllers
   // get a reference to the EventDrivenSimulator instance
@@ -323,8 +324,9 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
        i !=read_map.end(); i++)
   {
     // Find the simulator reference
+    
     if (!sim)
-      sim = boost::dynamic_pointer_cast<Moby::EventDrivenSimulator>(i->second);
+      sim = boost::dynamic_pointer_cast<Moby::Simulator>(i->second);
 
     // find the robot reference
     if (!abrobot)
@@ -332,6 +334,8 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
       abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
     }
   }
+    
+//  esim = boost::dynamic_pointer_cast<Moby::EventDrivenSimulator>(sim);
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
@@ -347,8 +351,10 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
  sim->get_contact_parameters_callback_fn = &get_contact_parameters;
 #endif
   // CONTACT CALLBACK
-//  sim->constraint_callback_fn             = &pre_event_callback_fn;
-  sim->constraint_post_callback_fn        = &post_event_callback_fn;
+//  if (esim){
+//  //  sim->constraint_callback_fn             = &pre_event_callback_fn;
+//    esim->constraint_post_callback_fn        = &post_event_callback_fn;
+//  }
   // CONTROLLER CALLBACK
   abrobot->controller                     = &controller_callback;
 

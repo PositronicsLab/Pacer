@@ -190,14 +190,15 @@ void walk_toward(
                       &xd  = foot_vel[i],
                       &xdd = foot_acc[i];
 
-    
+    Origin3d xt(x);
     
     // Check if Spline must be re-evaluated
     bool replan_path = (!inited || last_phase[i] != this_phase);
     bool active_foot = active_feet[foot_names[i]];
     if(this_phase || (STANCE_ON_CONTACT && active_foot)){
       if(STANCE_ON_CONTACT && active_foot)
-        this_phase = true;
+        if (gait_progress > (touchdown[i] + duty_factor[i]/2))
+          this_phase = true;
       replan_path = false;
       VectorNd zero_base_generalized_q;
       zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
@@ -331,65 +332,99 @@ void walk_toward(
           Vector3d x_,xd_,xdd_;
           for(int d=0; d<3;d++)
             Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x_[d],xd_[d],xdd_[d]);
-          
           control_points.push_back(Origin3d(x_));
-          control_points.push_back(Origin3d(x_) + up_step);
         } else {
-          control_points.push_back(Origin3d(x));
-          control_points.push_back(Origin3d(x) + up_step);
+          control_points.push_back(xt);
         }
         
+        control_points.push_back(control_points[0] + up_step);
+
+        Origin3d foot_destinaton = x0 + Origin3d(foot_goal);
         if(footholds.empty()){
-          control_points.push_back(x0 + Origin3d(foot_goal) + up_step);
-          control_points.push_back(x0 + Origin3d(foot_goal));
+          control_points.push_back(foot_destinaton + up_step);
+          control_points.push_back(foot_destinaton);
         } else {
-          Origin3d x_fh;
-          select_foothold(footholds,Pose3d::transform_point(Moby::GLOBAL, Vector3d((x0+Origin3d(foot_goal)).data(),base_frame)).data(),x_fh);
+          // Traj rollout process model and select foothold at touchdown time
+          // Returns foothold in base frame of robot at end of step
+//          Vector3d x_fh = select_foothold(footholds,foot_destinaton,command,base_horizontal_frame);
+//          foot_destinaton = Origin3d(x_fh);
           // Reach new foothold, account for movement of robot during step
-          control_points.push_back(Origin3d(Pose3d::transform_point(base_frame,Vector3d(x_fh.data(),Moby::GLOBAL)).data()) - Origin3d(foot_goal) + Origin3d(0,0,step_height));
-          control_points.push_back(x_fh - Origin3d(foot_goal));
+          control_points.push_back(foot_destinaton + up_step);
+          control_points.push_back(foot_destinaton);
         }
       }
 
       // create spline using set of control points, place at back of history
       int n = control_points.size();
-//      std::vector<Origin3d> new_control_points;
-//      if(redirect_path)
-//        spline_t[i].set_zero(n+1);
-//      else
-        spline_t[i].set_zero(n);
-      VectorNd           &T = spline_t[i];
-      bool unset = true;
-      for(int j=0,jj=0;j<n;j++){
+      std::vector<Origin3d> new_control_points;
+      std::vector<double>           T;
+    
+      // Add current position via point at current time in spline
+      new_control_points.push_back(control_points[0]);
+      T.push_back(t0);
+
+//      bool is_set = false;
+      for(int j=1,jj=1;jj<n;j++){
+        double this_time = t0 + fabs( left_in_phase*gait_duration / (double)(n-1)) * (double)jj ;
 //        if(redirect_path){
-//          T[j] = t0 + fabs( left_in_phase*gait_duration / (double)(n-2)) * (double)jj ;
-//          if (T[j]>t && unset){
-//            unset = false;
-//            T[j] = t;
-//            new_control_points.back() = Origin3d(x.data());
-//            new_control_points.push_back(control_points[jj-1]);
+//          OUTLOG(this_time,"redirect",logERROR);
+//
+//          if (this_time>t && !is_set && (t > t0+Moby::NEAR_ZERO) ){
+//            is_set = true;
+//            T.push_back(t);
+//            new_control_points.push_back(xt);
+//            OUTLOG(t,"insert_at",logERROR);
 //          } else {
+//            if(this_time > T[T.size()-1]+Moby::NEAR_ZERO){
+//              T.push_back(this_time);
+//              new_control_points.push_back(control_points[jj]);
+//            }
 //            jj++;
 //          }
-//          new_control_points.push_back(control_points[jj]);
+//          OUTLOG(new_control_points[j],"control_point",logERROR);
 //        } else {
-          T[j] = t0 + fabs( left_in_phase*gait_duration / (double)(n-1)) * (double)j ;
+          T.push_back(this_time);
+          new_control_points.push_back(control_points[jj]);
+//          OUTLOG(new_control_points[j],"control_point",logERROR);
+          jj++;
 //        }
+//        OUTLOG(T[j],"t",logERROR);
       }
-//      if(redirect_path)
-//        control_points = new_control_points;
-      OUTLOG(T,"T",logDEBUG1);
-      for(int cp=0;cp<control_points.size();cp++){
-        OUTLOG(control_points[cp],"control_point",logDEBUG1);
+      
+      if(redirect_path)
+        control_points = new_control_points;
+      n = control_points.size();
+      spline_t[i] = VectorNd(n,&T[0]);
+      
+      OUTLOG(spline_t[i],"T",logERROR);
+
+      // Get touchdown and takeoff vel;
+      {
+        VectorNd zero_base_generalized_q;
+        zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
+        zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
+        /// STANCE FEET ARE IN GAIT POSE
+        // Put goal in gait pose
+        VectorNd gait_pose_vec = Utility::pose_to_vec(gait_pose);
+        zero_base_generalized_q.set_sub_vec(NUM_JOINT_DOFS,gait_pose_vec);
+        Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
+        
+        J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+Pacer::NSPATIAL).mult(command,workv3_,-1.0,0);
+        OUTLOG(J,"J",logDEBUG);
+        xd = workv3_;
+        xd.pose = base_frame;
       }
-      OUTLOG(xd,"control_point_V",logDEBUG1);
+      
+      n = control_points.size();
       for(int d=0;d<3;d++){
+        VectorNd          &T = spline_t[i];
         VectorNd           X(n);
         VectorNd          &coefs = spline_coef[i][d];
 
         for(int j=0;j<n;j++)
           X[j] = control_points[j][d];
-        OUTLOG(X,"X",logDEBUG1);
+        OUTLOG(T,"T",logERROR);
+        OUTLOG(X,"X",logERROR);
 
         Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],xd[d]),coefs);
 

@@ -34,7 +34,7 @@ IF(USE_OSG_DISPLAY)
     add_definitions (-DUSE_OSG_DISPLAY)
   ENDIF(OSG_FOUND)
 ENDIF(USE_OSG_DISPLAY)
-target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS})
+target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS} gsl)
 
   # Gazebo Interface
 IF(GAZEBO_FOUND)

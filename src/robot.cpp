@@ -23,14 +23,15 @@ void Robot::calc_com(){
   set_data<double>("mass",total_mass);
   center_of_mass_x /= total_mass;
 
-  boost::shared_ptr<Ravelin::Pose3d> base_com_w = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(Moby::GLOBAL));
+  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(Moby::GLOBAL));
   base_com_w->x = Ravelin::Origin3d(center_of_mass_x);
-  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w, _root_link->get_velocity());
+  boost::shared_ptr<const Ravelin::Pose3d> base_com_w_const = boost::const_pointer_cast<const Ravelin::Pose3d>(base_com_w);
+  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w_const, _root_link->get_velocity());
   
   Ravelin::Vector3d center_of_mass_xd = com_vel.get_upper();
 
-//  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w, _root_link->get_accel());
-  Ravelin::Vector3d center_of_mass_xdd;// = com_acc.get_linear();
+  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w_const, _root_link->get_accel(), _root_link->get_velocity());
+  Ravelin::Vector3d center_of_mass_xdd = com_acc.get_linear();
 
   center_of_mass_xd.pose = center_of_mass_xdd.pose = Moby::GLOBAL;
 

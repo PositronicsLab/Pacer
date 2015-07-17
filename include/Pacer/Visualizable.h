@@ -27,7 +27,7 @@ public:
 class Ray : public Visualizable{
 public:
   Ravelin::Vector3d point1,point2;
-  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.1){
+  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.001){
     eType = eRay;
     size = s;
     point2 = p2;
@@ -39,7 +39,7 @@ public:
 class Point : public Visualizable{
 public:
   Ravelin::Vector3d point;
-  Point(Ravelin::Vector3d p,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.1){
+  Point(Ravelin::Vector3d p,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.01){
     eType = ePoint;
     size = s;
     point = p;
@@ -51,7 +51,7 @@ class Pose : public Visualizable{
 public:
   double shade;
   Ravelin::Pose3d pose;
-  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1){
+  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.001){
     pose = Ravelin::Pose3d();
     eType = ePose;
     shade = sd;

@@ -19,6 +19,37 @@ Moby::RCArticulatedBodyPtr abrobot;
  boost::shared_ptr<Controller> robot_ptr;
 
 
+//#define USE_DXL
+#ifdef USE_DXL
+#include <dxl/Dynamixel.h>
+  DXL::Dynamixel * dxl_;
+# define DEVICE_NAME "/dev/tty.usbserial-A9YL9ZZV"
+
+#include <thread>
+static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
+
+std::mutex joint_data_mutex_;
+static double FREQ = 500;
+
+static void control_motor(){
+  while(true){
+    static Ravelin::VectorNd q_motors,qd_motors,u_motors;
+    if(joint_data_mutex_.try_lock()){
+      q_motors = q_motors_data;
+      
+      qd_motors = qd_motors_data;
+      u_motors = u_motors_data;
+      joint_data_mutex_.unlock();
+    }
+ 
+    std::cout << q_motors << std::endl;
+    dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
+//    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
+    sleep(1.0/FREQ);
+  }
+}
+#endif
+
 #ifdef USE_OSG_DISPLAY
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::ConstraintSimulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::ConstraintSimulator> sim ) ;
@@ -274,6 +305,23 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
       abrobot->update_link_poses();
     }
   }
+#ifdef USE_DXL
+  if(joint_data_mutex_.try_lock()){
+    for(int i=0;i<dxl_->ids.size();i++)
+      qd_motors_data[i] = 0;//robot_ptr->qd_joints[dxl_->JointName(i)];
+
+    std::map<std::string,Ravelin::VectorNd> joint_val_map;
+    robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_val_map);
+
+    for(int i=0;i<dxl_->ids.size();i++)
+      q_motors_data[i] = joint_val_map[dxl_->JointName(i)][0];
+
+    //for(int i=0;i<dxl_->ids.size();i++)
+    //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
+    joint_data_mutex_.unlock();
+  }
+  static std::thread motor_thread(control_motor);
+#endif
   
   robot_ptr->reset_state();
 }
@@ -384,6 +432,46 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 // this is called by Moby for a plugin
 void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
+#ifdef USE_DXL
+  // If use robot is active also init dynamixel controllers
+  dxl_ = new DXL::Dynamixel(DEVICE_NAME);
+  // LINKS robot
+
+  // Set Dynamixel Names
+  std::vector<std::string> dxl_name = boost::assign::list_of
+     ("LF_X_1")("RF_X_1")("LH_X_1")("RH_X_1")
+     ("LF_Y_2")("RF_Y_2")("LH_Y_2")("RH_Y_2")
+     ("LF_Y_3")("RF_Y_3")("LH_Y_3")("RH_Y_3");
+
+  dxl_->names = dxl_name;
+  // Set Joint Angles
+  std::vector<int> dxl_tare = boost::assign::list_of
+      (0)(0)(0)(0)
+      (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
+      (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
+
+  dxl_->tare = dxl_tare;
+
+  // Set Dynamixel Type
+  std::vector<DXL::Dynamixel::Type> dxl_type = boost::assign::list_of
+    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)
+    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::MX_64R)(DXL::Dynamixel::MX_64R)
+    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F);
+
+  dxl_->stype = dxl_type;
+
+  for(int i=1;i<=dxl_->names.size();i++){
+    dxl_->ids.push_back(i);
+  }
+    q_motors_data.set_zero(dxl_->ids.size());
+    qd_motors_data.set_zero(dxl_->ids.size());
+    u_motors_data.set_zero(dxl_->ids.size());
+    
+    dxl_->relaxed(false);
+
+  joint_data_mutex_.unlock();
+#endif
+  
   // If use robot is active also init dynamixel controllers
   // get a reference to the ConstraintSimulator instance
   for (std::map<std::string, Moby::BasePtr>::const_iterator i = read_map.begin();
@@ -472,9 +560,9 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   double r = c[0] * VIBRANCY;
   double g = c[1] * VIBRANCY;
   double b = c[2] * VIBRANCY;
-  osg::Vec4 color = osg::Vec4( r, g, b, 1.0/point_radius );
+  osg::Vec4 color = osg::Vec4( r, g, b, 1.0 );
 
-  const double point_scale = 0.01;
+  const double point_scale = point_radius;
 
   // the osg node this event visualization will attach to
   osg::Group* group_root = new osg::Group();

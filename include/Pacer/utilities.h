@@ -52,14 +52,21 @@ public:
   static Ravelin::VectorNd pose_to_vec(const boost::shared_ptr<Ravelin::Pose3d> T){
     Ravelin::VectorNd p(7);
 //    Ravelin::Transform3d T = Ravelin::Pose3d::calc_relative_pose(pose,boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d()));
-    p[0] = T->x[0];
-    p[1] = T->x[1];
-    p[2] = T->x[2];
+    p = pose_to_vec(*(T.get()));
+    return p;
+  }
+  
+  static Ravelin::VectorNd pose_to_vec(const Ravelin::Pose3d& T){
+    Ravelin::VectorNd p(7);
+    //    Ravelin::Transform3d T = Ravelin::Pose3d::calc_relative_pose(pose,boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d()));
+    p[0] = T.x[0];
+    p[1] = T.x[1];
+    p[2] = T.x[2];
     
-    p[3] = T->q.x;
-    p[4] = T->q.y;
-    p[5] = T->q.z;
-    p[6] = T->q.w;
+    p[3] = T.q.x;
+    p[4] = T.q.y;
+    p[5] = T.q.z;
+    p[6] = T.q.w;
     return p;
   }
   

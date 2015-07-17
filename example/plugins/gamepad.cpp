@@ -262,18 +262,21 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     const double wait_time = 0.01;
     static bool pressed = false;
   if (GAMEPAD_TYPE.compare("SABRENT") == 0){
+//    if(j.buttons[0] == 1 && !pressed){
+//      if(t-press_time > wait_time){
+//        pressed = true;
+//        press_time = t;
+//      }
+//    } else if(j.buttons[0] == 1 && pressed) {
+//      if(t-press_time > wait_time){
+//        std::vector<double> target2d(0);
+//        ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
+//        pressed = false;
+//        press_time = t;
+//      }
+//    }
     if(j.buttons[0] == 1 && !pressed){
-      if(t-press_time > wait_time){
-        pressed = true;
-        press_time = t;
-      }
-    } else if(j.buttons[0] == 1 && pressed) {
-      if(t-press_time > wait_time){
-        std::vector<double> target2d(0);
-        ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
-        pressed = false;
-        press_time = t;
-      }
+      exit(0);
     }
   } else if (GAMEPAD_TYPE.compare("PS") == 0){
     const int X_BUTTON = 14;
@@ -356,7 +359,7 @@ const int
     }
       movement*=dt*10;
       target += movement;
-      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(target,Ravelin::Vector3d(1,0.5,0),1.0)));
+//      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(target,Ravelin::Vector3d(1,0.5,0),1.0)));
       std::vector<double> target2d(2);
       target2d[0] = target[0];
       target2d[1] = target[1];

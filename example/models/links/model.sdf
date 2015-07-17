@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <sdf version='1.5'>
   <model name='LINKS'>
-  <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.so"/>
-  <pose>0 0 0.19 0 -0 0</pose>
+    <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.so"/>
+    <pose>0 0 0.19 0 -0 0</pose>
     <link name='BODY0'>
       <pose>0 0 0 0 -0 0</pose>
       <inertial>
@@ -16,45 +16,66 @@
           <izz>0.008633</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='BODY1_visual'>
-      <pose>0.075 0 0 0 -0 0</pose>
+        <pose>0.095 0 0 0 -0 0</pose>
         <geometry>
           <box>
-            <size>0.05 0.16 0.04</size>
+            <size>0.04 0.125 0.04</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      <material>
+        
+      </material>
       </visual>
       <visual name='BODY0_visual'>
         <geometry>
           <box>
-            <size>0.1 0.14 0.02</size>
+            <size>0.15 0.08 0.05</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
       <visual name='BODYN_visual'>
-      <pose>-0.075 0 0 0 -0 0</pose>
+        <pose>-0.095 0 0 0 -0 0</pose>
         <geometry>
           <box>
-            <size>0.05 0.16 0.04</size>
+            <size>0.04 0.125 0.04</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
-
-
+      
+      
       <collision name='BODY0_collision'>
         <geometry>
           <box>
-            <size>0.1 0.14 0.02</size>
+            <size>0.15 0.08 0.05</size>
           </box>
         </geometry>
       </collision>
-
+      
     </link>
-
-<!-- =============================== LF leg =============================== -->
+    
+    <!-- =============================== LF leg =============================== -->
     <joint name='LF_X_1' type='revolute'>
-      <pose>-0.025 0.0 0 0 0 0</pose>
+      <pose>0.0 0.0 0 0 0 0</pose>
       <parent>BODY0</parent>
       <child>LF_LEG_1</child>
       <axis>
@@ -66,11 +87,12 @@
         <dynamics/>
       </axis>
     </joint>
-
-
+    
+    
     <link name='LF_LEG_1'>
-      <pose>0.125 0.06 0 0 0 0</pose>
+      <pose>0.115 0.05 0 0 0 0</pose>
       <inertial>
+        <pose>0.020 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>1.5e-5</ixx>
@@ -81,19 +103,26 @@
           <izz>2.833e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg1_visual'>
+        <pose>0.020 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.05 0.03 0.03</size>
+            <size>0.04 0.03 0.03</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
-
+      
     </link>
-
+    
     <joint name='LF_Y_2' type='revolute'>
-      <pose>-0.05 0 0 0 0 0</pose>
+      <pose>0.0 0 0 0 0 0</pose>
       <parent>LF_LEG_1</parent>
       <child>LF_LEG_2</child>
       <axis>
@@ -104,11 +133,11 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
+    
     <link name='LF_LEG_2'>
-      <pose>0.2 0.06 0 0 0 0</pose>
+      <pose>0.155 0.05 0 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -120,19 +149,26 @@
           <izz>0.001275</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg2_visual'>
+        <pose>0.0395 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.12 0.03 0.02</size>
+            <size>0.1 0.03 0.02</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>1 0.5 0   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
-
+      
     </link>
-
+    
     <joint name='LF_Y_3' type='revolute'>
-      <pose>-0.1 0 0 0 0 0</pose>
+      <pose>-0.129 0 0 0 0 0</pose>
       <parent>LF_LEG_2</parent>
       <child>LF_FOOT</child>
       <axis>
@@ -143,13 +179,13 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
+    
     <link name='LF_FOOT'>
-      <pose>0.35 0.06 0 0 0 0</pose>
+      <pose>0.361 0.05 0 0 0 0</pose>
       <inertial>
-       <pose>-0.05 0 0 0 0 0</pose>
+        <pose>-0.0645 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -160,15 +196,21 @@
           <izz>3.358e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg3_visual'>
-        <pose>-0.05 0 0 0 1.579 0</pose>
+        <pose>-0.0645 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
             <radius>0.005</radius>
-            <length>0.1</length>
+            <length>0.129</length>
           </cylinder>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.9 0.9 0.9   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
       
       <visual name='LF_FOOT_visual'>
@@ -178,8 +220,14 @@
             <radius>0.01</radius>
           </sphere>
         </geometry>
+<!--        <material>-->
+<!--          <ambient>0.2 0.2 0.2 1</ambient>-->
+<!--          <diffuse>0 0 0 0</diffuse>-->
+<!--          <specular>0.1 0.1 0.1 1</specular>-->
+<!--          <emissive>0 0 0 0</emissive>-->
+<!--        </material>-->
       </visual>
-
+      
       <collision name='LF_FOOT_collision'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -191,13 +239,13 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
       </collision>
-
+      
       <sensor name='LF_FOOT_contact' type='contact'>
         <contact>
           <collision>LF_FOOT_collision</collision>
@@ -205,8 +253,8 @@
         <update_rate>1000</update_rate>
       </sensor>
     </link>
-
-<!-- =============================== RF leg =============================== -->
+    
+    <!-- =============================== RF leg =============================== -->
     <joint name='RF_X_1' type='revolute'>
       <pose>-0.025 0 0 0 0 0</pose>
       <parent>BODY0</parent>
@@ -219,12 +267,12 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
-
+    
+    
     <link name='RF_LEG_1'>
-      <pose>0.125 -0.06 0 0 0 0</pose>
+      <pose>0.115 -0.05 0 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -236,18 +284,25 @@
           <izz>2.833e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg1_visual'>
+        <pose>0.020 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.05 0.03 0.03</size>
+            <size>0.04 0.03 0.03</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
     </link>
-
+    
     <joint name='RF_Y_2' type='revolute'>
-      <pose>-0.05 0 0 0 0 0</pose>
+      <pose>0.0 0 0 0 0 0</pose>
       <parent>RF_LEG_1</parent>
       <child>RF_LEG_2</child>
       <axis>
@@ -259,9 +314,9 @@
         <dynamics/>
       </axis>
     </joint>
-
+    
     <link name='RF_LEG_2'>
-      <pose>0.2 -0.06 0 0 0 0</pose>
+      <pose>0.155 -0.05 0 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -273,18 +328,26 @@
           <izz>0.001275</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg2_visual'>
+        <pose>0.0395 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.12 0.03 0.02</size>
+            <size>0.1 0.03 0.02</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>1 0.5 0   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
+      
     </link>
-
+    
     <joint name='RF_Y_3' type='revolute'>
-      <pose>-0.1 0 0 0 0 0</pose>
+      <pose>-0.129 0 0 0 0 0</pose>
       <parent>RF_LEG_2</parent>
       <child>RF_FOOT</child>
       <axis>
@@ -296,11 +359,11 @@
         <dynamics/>
       </axis>
     </joint>
-
+    
     <link name='RF_FOOT'>
-      <pose>0.35 -0.06 0 0 0 0</pose>
+      <pose>0.361 -0.05 0 0 0 0</pose>
       <inertial>
-       <pose>-0.05 0 0 0 0 0</pose>
+        <pose>-0.0645 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -311,15 +374,21 @@
           <izz>3.358e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg3_visual'>
-        <pose>-0.05 0 0 0 1.579 0</pose>
+        <pose>-0.0645 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
             <radius>0.005</radius>
-            <length>0.1</length>
+            <length>0.129</length>
           </cylinder>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.9 0.9 0.9   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
       
       <visual name='RF_FOOT_visual'>
@@ -330,7 +399,7 @@
           </sphere>
         </geometry>
       </visual>
-
+      
       <collision name='RF_FOOT_collision'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -342,13 +411,13 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
       </collision>
-
+      
       <sensor name='RF_FOOT_contact' type='contact'>
         <contact>
           <collision>RF_FOOT_collision</collision>
@@ -356,10 +425,10 @@
         <update_rate>1000</update_rate>
       </sensor>
     </link>
-
-<!-- =============================== LH leg =============================== -->
+    
+    <!-- =============================== LH leg =============================== -->
     <joint name='LH_X_1' type='revolute'>
-      <pose>0.025 0 0 0 0 0</pose>
+      <pose>0.0 0 0 0 0 0</pose>
       <parent>BODY0</parent>
       <child>LH_LEG_1</child>
       <axis>
@@ -370,12 +439,13 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
+    
     <link name='LH_LEG_1'>
-      <pose>-0.125 0.06 0 0 0 0</pose>
+      <pose>-0.115 0.05 0 0 0 0</pose>
       <inertial>
+        <pose>-0.0255 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>1.5e-5</ixx>
@@ -386,18 +456,25 @@
           <izz>2.833e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg1_visual'>
+        <pose>-0.0255 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.05 0.03 0.03</size>
+            <size>0.051 0.03 0.03</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
     </link>
-
+    
     <joint name='LH_Y_2' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <parent>LH_LEG_1</parent>
       <child>LH_LEG_2</child>
       <axis>
@@ -408,12 +485,13 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
+    
     <link name='LH_LEG_2'>
-      <pose>-0.2 0.06 0 0 0 0</pose>
+      <pose>-0.166 0.05 0 0 0 0</pose>
       <inertial>
+        <pose>-0.0385 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>1.083e-5</ixx>
@@ -424,19 +502,26 @@
           <izz>0.001275</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg2_visual'>
+        <pose>-0.0385 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.12 0.03 0.02</size>
+            <size>0.1 0.03 0.02</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>1 0.5 0   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
-
+      
     </link>
-
+    
     <joint name='LH_Y_3' type='revolute'>
-      <pose>0.1 0 0 0 0 0</pose>
+      <pose>0.129 0 0 0 0 0</pose>
       <parent>LH_LEG_2</parent>
       <child>LH_FOOT</child>
       <axis>
@@ -447,13 +532,13 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
+    
     <link name='LH_FOOT'>
-      <pose>-0.35 0.06 0 0 0 0</pose>
+      <pose>-0.372 0.05 0 0 0 0</pose>
       <inertial>
-       <pose>0.05 0 0 0 0 0</pose>
+        <pose>0.0645 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -464,15 +549,21 @@
           <izz>3.358e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg3_visual'>
-        <pose>0.05 0 0 0 1.579 0</pose>
+        <pose>0.0645 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
             <radius>0.005</radius>
-            <length>0.1</length>
+            <length>0.129</length>
           </cylinder>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.9 0.9 0.9   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
       
       <visual name='LH_FOOT_visual'>
@@ -483,7 +574,7 @@
           </sphere>
         </geometry>
       </visual>
-
+      
       <collision name='LH_FOOT_collision'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -495,13 +586,13 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
       </collision>
-
+      
       <sensor name='LH_FOOT_contact' type='contact'>
         <contact>
           <collision>LH_FOOT_collision</collision>
@@ -509,10 +600,10 @@
         <update_rate>1000</update_rate>
       </sensor>
     </link>
-
-<!-- =============================== RH leg =============================== -->
+    
+    <!-- =============================== RH leg =============================== -->
     <joint name='RH_X_1' type='revolute'>
-      <pose>0.025 0 0 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <parent>BODY0</parent>
       <child>RH_LEG_1</child>
       <axis>
@@ -524,10 +615,11 @@
         <dynamics/>
       </axis>
     </joint>
-
+    
     <link name='RH_LEG_1'>
-      <pose>-0.125 -0.06 0 0 0 0</pose>
+      <pose>-0.115 -0.05 0 0 0 0</pose>
       <inertial>
+        <pose>-0.0255 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>1.5e-5</ixx>
@@ -538,18 +630,26 @@
           <izz>2.833e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg1_visual'>
+        <pose>-0.0255 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.05 0.03 0.03</size>
+            <size>0.051 0.03 0.03</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
+      
     </link>
-
+    
     <joint name='RH_Y_2' type='revolute'>
-      <pose>0.05 0 0 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <parent>RH_LEG_1</parent>
       <child>RH_LEG_2</child>
       <axis>
@@ -560,12 +660,13 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
+    
     <link name='RH_LEG_2'>
-      <pose>-0.2 -0.06 0 0 0 0</pose>
+      <pose>-0.166 -0.05 0 0 0 0</pose>
       <inertial>
+        <pose>-0.0385 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>1.083e-5</ixx>
@@ -576,19 +677,26 @@
           <izz>0.001275</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg2_visual'>
+        <pose>-0.0385 0 0 0 0 0</pose>
         <geometry>
           <box>
-            <size>0.12 0.03 0.02</size>
+            <size>0.1 0.03 0.02</size>
           </box>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>1 0.5 0   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
-
+      
     </link>
-
+    
     <joint name='RH_Y_3' type='revolute'>
-      <pose>0.1 0  0 0 0 0</pose>
+      <pose>0.129 0 0 0 0 0</pose>
       <parent>RH_LEG_2</parent>
       <child>RH_FOOT</child>
       <axis>
@@ -599,14 +707,14 @@
         </limit>
         <dynamics/>
       </axis>
-
+      
     </joint>
-
-
+    
+    
     <link name='RH_FOOT'>
-      <pose>-0.35 -0.06 0 0 0 0</pose>
+      <pose>-0.372 -0.05 0 0 0 0</pose>
       <inertial>
-       <pose>0.05 0 0 0 0 0</pose>
+        <pose>0.0645 0 0 0 0 0</pose>
         <mass>0.10</mass>
         <inertia>
           <ixx>5e-7</ixx>
@@ -617,15 +725,21 @@
           <izz>3.358e-5</izz>
         </inertia>
       </inertial>
-
+      
       <visual name='leg3_visual'>
-        <pose>0.05 0 0 0 1.579 0</pose>
+        <pose>0.0645 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
             <radius>0.005</radius>
-            <length>0.1</length>
+            <length>0.129</length>
           </cylinder>
         </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.9 0.9 0.9   1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
       </visual>
       
       <visual name='RH_FOOT_visual'>
@@ -636,7 +750,7 @@
           </sphere>
         </geometry>
       </visual>
-
+      
       <collision name='RH_FOOT_collision'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -648,13 +762,13 @@
           <restitution_coefficient>0</restitution_coefficient>
           <friction>
             <ode>
-              <mu>100</mu>
-              <mu2>100</mu2>
+              <mu>1</mu>
+              <mu2>1</mu2>
             </ode>
           </friction>
         </surface>
       </collision>
-
+      
       <sensor name='RH_FOOT_contact' type='contact'>
         <contact>
           <collision>RH_FOOT_collision</collision>

@@ -271,7 +271,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     static std::vector<double> walk = boost::assign::list_of(0.25)(0.75)(0.0)(0.5);
     static std::vector<double> walk2= boost::assign::list_of(0.25)(0.5)(0.0)(0.75);
     static std::vector<double> pace = boost::assign::list_of(0.25)(0.75)(0.25)(0.75);
-    static std::vector<double> bound = boost::assign::list_of(0.25)(0.25)(0.75)(0.75);
     if(j.buttons[5] == 1){
       exit(0);
     } else
@@ -286,9 +285,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     } else
     if(j.buttons[3] == 1){
       ctrl->set_data< std::vector<double> >("gait-planner.gait",pace);
-    } else
-    if(j.buttons[4] == 1){
-      ctrl->set_data< std::vector<double> >("gait-planner.gait",walk2);
     }
   }
 //  } else if (is_ps){
@@ -354,7 +350,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         }
       }
       
-      if (j.buttons[7] == 0 && j.buttons[9] == 0) {
+      if (j.buttons[7] == 0 && j.buttons[9] == 0 && j.buttons[4] == 0 ) {
         // Pose Adjustments
         static std::vector<double> pose_adjustment = boost::assign::list_of(0)(0)(0)(0)(0)(0);
         static std::vector<double> pose_adjustment_limit = boost::assign::list_of(0.05)(0.05)(0.05)(0.392)(0.2)(0.2);
@@ -386,7 +382,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         }
         ctrl->set_data< std::vector<double> >("gait-planner.pose",new_pose);
         
-      } else {
+      } else if (j.buttons[7] == 1 || j.buttons[9] == 1) {
         // Gait Adjustment
         static double initial_width = ctrl->get_data<double>("gait-planner.width");
         static double initial_length = ctrl->get_data<double>("gait-planner.length");
@@ -423,6 +419,21 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           ctrl->set_data<double>("gait-planner.step-height",initial_step_height);
           ctrl->set_data<double>("gait-planner.gait-duration",initial_gait_duration+gait_duration);
         }
+      } else // j.buttons[4] == 1
+      {
+        static std::vector<double> initial_duty_factor = ctrl->get_data< std::vector<double> >("gait-planner.duty-factor");
+        std::vector<double> new_duty_factor = initial_duty_factor;
+        static double duty_factor = initial_duty_factor[0];
+        duty_factor += adjustment[0]*10.0;
+        if(duty_factor < 0.1)
+          duty_factor = 0.1;
+        if(duty_factor > 0.9)
+          duty_factor = 0.9;
+        for (int i=0; i<4; i++) {
+          new_duty_factor[i] = duty_factor;
+        }
+        ctrl->set_data< std::vector<double> >("gait-planner.duty-factor",new_duty_factor);
+
       }
 
 

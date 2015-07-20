@@ -404,6 +404,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           if(step_height < -initial_step_height)
             step_height = -initial_step_height;
 
+          if(step_height+initial_step_height > 0.06)
+            step_height = 0.06-initial_step_height;
+
           gait_duration -= adjustment[1]*100.0;
           if(gait_duration < (-initial_gait_duration+0.1))
             gait_duration = (-initial_gait_duration+0.1);

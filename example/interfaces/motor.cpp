@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/controller.h>
+#include <time.h>
 #include <thread>
 
 #define USE_DXL
@@ -36,7 +37,7 @@ static void control_motor(){
       joint_data_mutex_.unlock();
     }
  
-    std::cout << q_motors << std::endl;
+//    std::cout << q_motors << std::endl;
     dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
@@ -104,7 +105,15 @@ void init(std::string model_f,std::string vars_f){
 #endif
   
   joint_data_mutex_.unlock();
+}
 
+/// Gets the current time (as a floating-point number)
+double get_current_time()
+{
+  const double MICROSEC = 1.0/1000000;
+  timeval t;
+  gettimeofday(&t, NULL);
+  return (double) t.tv_sec + (double) t.tv_usec * MICROSEC;
 }
 
 void controller(double t)
@@ -142,6 +151,18 @@ void controller(double t)
   static std::thread motor_thread(control_motor);
 
     last_t = t;
+//#define TIMING
+#ifdef TIMING
+  static double last_time, this_time;
+  static bool inited = false;
+  if(inited){
+    this_time = get_current_time();
+    double duration_ms = (this_time - last_time)*1000.0;
+//    std::cerr<< "dt = " << duration_ms<<std::endl;
+  }
+  inited = true;
+  last_time = get_current_time();
+#endif
 }
 
 int main(int argc, char* argv[])

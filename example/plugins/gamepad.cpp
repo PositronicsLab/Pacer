@@ -16,7 +16,7 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 // 02111-1307, USA.
 
-//#define USE_CURSES
+#define USE_CURSES
 //#define PS3
 #define SABRENT
 //#define XBOX
@@ -246,28 +246,59 @@ class Joystick
   }
 };
 
+#include <boost/assign/list_of.hpp>
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+
   // SDL2 will only report events when the window has focus, so set
   // this hint as we don't have a window
   const int JDEADZONE = 2000;
-  
   std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+"type");
+
   try {
     static Joystick j = Joystick(0);
 
     j.update();
+    
+    static bool is_sabrent = (GAMEPAD_TYPE.compare("SABRENT") == 0);
+    static bool is_ps = (GAMEPAD_TYPE.compare("PS") == 0);
+    static bool is_xbox = (GAMEPAD_TYPE.compare("XBOX") == 0);
 
-    static double press_time = 0;
-    const double wait_time = 0.01;
-    static bool pressed = false;
-  if (GAMEPAD_TYPE.compare("SABRENT") == 0){
-//    if(j.buttons[0] == 1 && !pressed){
+//    static double press_time = 0;
+//    const double wait_time = 0.01;
+  if (is_sabrent){
+    static std::vector<double> trot = boost::assign::list_of(0.25)(0.75)(0.75)(0.25);
+    static std::vector<double> walk = boost::assign::list_of(0.25)(0.75)(0.0)(0.5);
+    static std::vector<double> walk2= boost::assign::list_of(0.25)(0.5)(0.0)(0.75);
+    static std::vector<double> pace = boost::assign::list_of(0.25)(0.75)(0.25)(0.75);
+    static std::vector<double> bound = boost::assign::list_of(0.25)(0.25)(0.75)(0.75);
+    if(j.buttons[5] == 1){
+      exit(0);
+    } else
+    if(j.buttons[1] == 1){
+      ctrl->set_data< std::vector<double> >("gait-planner.gait",trot);
+    } else
+    if(j.buttons[0] == 1){
+      ctrl->set_data< std::vector<double> >("gait-planner.gait",walk);
+    } else
+    if(j.buttons[2] == 1){
+      ctrl->set_data< std::vector<double> >("gait-planner.gait",walk2);
+    } else
+    if(j.buttons[3] == 1){
+      ctrl->set_data< std::vector<double> >("gait-planner.gait",pace);
+    } else
+    if(j.buttons[4] == 1){
+      ctrl->set_data< std::vector<double> >("gait-planner.gait",walk2);
+    }
+  }
+//  } else if (is_ps){
+//    const int X_BUTTON = 14;
+//    if(j.buttons[X_BUTTON] == 1 && !pressed){ // X button
 //      if(t-press_time > wait_time){
 //        pressed = true;
 //        press_time = t;
 //      }
-//    } else if(j.buttons[0] == 1 && pressed) {
+//    } else if(j.buttons[X_BUTTON] == 1 && pressed) {
 //      if(t-press_time > wait_time){
 //        std::vector<double> target2d(0);
 //        ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
@@ -275,25 +306,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 //        press_time = t;
 //      }
 //    }
-    if(j.buttons[0] == 1 && !pressed){
-      exit(0);
-    }
-  } else if (GAMEPAD_TYPE.compare("PS") == 0){
-    const int X_BUTTON = 14;
-    if(j.buttons[X_BUTTON] == 1 && !pressed){ // X button
-      if(t-press_time > wait_time){
-        pressed = true;
-        press_time = t;
-      }
-    } else if(j.buttons[X_BUTTON] == 1 && pressed) {
-      if(t-press_time > wait_time){
-        std::vector<double> target2d(0);
-        ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
-        pressed = false;
-        press_time = t;
-      }
-    }
-  }
+//  }
 
 
     Ravelin::Origin3d command_SE2(0,0,0);
@@ -302,78 +315,163 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double last_time = t;
   double dt = t - last_time;
   last_time = t;
-    static Ravelin::Vector3d target(0,0,0);
-  
-    if(pressed){ // Move Waypoint
-      Ravelin::Vector3d movement;
-    if (GAMEPAD_TYPE.compare("SABRENT") == 0){
+    if (is_sabrent){
+
+      double increment = 0.0002;
+      std::vector<double> adjustment = boost::assign::list_of(0)(0);
       for(int i = 0; i < j.num_hats; ++i)
       {
-        if((j.hats[i] & SDL_HAT_UP) && (j.hats[i] & SDL_HAT_LEFT)) 
-          movement = Ravelin::Vector3d(1,1,0);
-        if((j.hats[i] & SDL_HAT_UP) && !(j.hats[i] & (SDL_HAT_LEFT | SDL_HAT_RIGHT)))
-          movement = Ravelin::Vector3d(1,0,0);
-        if((j.hats[i] & SDL_HAT_UP) && (j.hats[i] & SDL_HAT_RIGHT))
-          movement = Ravelin::Vector3d(1,-1,0);
-       
-        if(!(j.hats[i] & (SDL_HAT_UP | SDL_HAT_DOWN)) && (j.hats[i] & SDL_HAT_LEFT))
-          movement = Ravelin::Vector3d(0,1,0);
-        if(!(j.hats[i] & (SDL_HAT_UP | SDL_HAT_DOWN)) && !(j.hats[i] & (SDL_HAT_LEFT | SDL_HAT_RIGHT))) 
-          movement = Ravelin::Vector3d(0,0,0);
-        if(!(j.hats[i] & (SDL_HAT_UP | SDL_HAT_DOWN)) && (j.hats[i] & SDL_HAT_RIGHT))
-          movement = Ravelin::Vector3d(0,-1,0);
-       
-        if((j.hats[i] & SDL_HAT_DOWN) && (j.hats[i] & SDL_HAT_LEFT))
-          movement = Ravelin::Vector3d(-1,1,0);
-        if((j.hats[i] & SDL_HAT_DOWN) && !(j.hats[i] & (SDL_HAT_LEFT | SDL_HAT_RIGHT)))
-          movement = Ravelin::Vector3d(-1,0,0);
-        if((j.hats[i] & SDL_HAT_DOWN) && (j.hats[i] & SDL_HAT_RIGHT))
-          movement = Ravelin::Vector3d(-1,-1,0);
+        if((j.hats[i] & SDL_HAT_UP) && (j.hats[i] & SDL_HAT_LEFT)) {
+          adjustment[0] += increment;
+          adjustment[1] += increment;
+        }
+        if((j.hats[i] & SDL_HAT_UP) && !(j.hats[i] & (SDL_HAT_LEFT | SDL_HAT_RIGHT))) {
+          adjustment[0] += increment;
+        }
+        if((j.hats[i] & SDL_HAT_UP) && (j.hats[i] & SDL_HAT_RIGHT)) {
+          adjustment[0] += increment;
+          adjustment[1] -= increment;
+        }
+        if(!(j.hats[i] & (SDL_HAT_UP | SDL_HAT_DOWN)) && (j.hats[i] & SDL_HAT_LEFT)) {
+          adjustment[1] += increment;
+        }
+        if(!(j.hats[i] & (SDL_HAT_UP | SDL_HAT_DOWN)) && !(j.hats[i] & (SDL_HAT_LEFT | SDL_HAT_RIGHT))) {
+          //           Do nothing
+        }
+        if(!(j.hats[i] & (SDL_HAT_UP | SDL_HAT_DOWN)) && (j.hats[i] & SDL_HAT_RIGHT)) {
+          adjustment[1] -= increment;
+        }
+        if((j.hats[i] & SDL_HAT_DOWN) && (j.hats[i] & SDL_HAT_LEFT)) {
+          adjustment[0] -= increment;
+          adjustment[1] += increment;
+        }
+        if((j.hats[i] & SDL_HAT_DOWN) && !(j.hats[i] & (SDL_HAT_LEFT | SDL_HAT_RIGHT))) {
+          adjustment[0] -= increment;
+        }
+        if((j.hats[i] & SDL_HAT_DOWN) && (j.hats[i] & SDL_HAT_RIGHT)) {
+          adjustment[0] -= increment;
+          adjustment[1] -= increment;
+        }
       }
-  } else if (GAMEPAD_TYPE.compare("PS") == 0){
-const int
-      BUTTON_UP = 4,
-      BUTTON_LEFT = 7,
-      BUTTON_RIGHT = 5,
-      BUTTON_DOWN = 6;
-      if((j.buttons[BUTTON_UP] == 1) && (j.buttons[BUTTON_LEFT] == 1))
-        movement = Ravelin::Vector3d(1,1,0);
-      else if((j.buttons[BUTTON_UP] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
-        movement = Ravelin::Vector3d(1,0,0);
-      else if((j.buttons[BUTTON_UP] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
-        movement = Ravelin::Vector3d(1,-1,0);
       
-      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_LEFT] == 1))
-        movement = Ravelin::Vector3d(0,1,0);
-      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
-        movement = Ravelin::Vector3d(0,0,0);
-      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
-        movement = Ravelin::Vector3d(0,-1,0);
-      
-      else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_LEFT] == 1))
-        movement = Ravelin::Vector3d(-1,1,0);
-      else if((j.buttons[BUTTON_DOWN] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
-        movement = Ravelin::Vector3d(-1,0,0);
-      else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
-        movement = Ravelin::Vector3d(-1,-1,0);
-    }
-      movement*=dt*10;
-      target += movement;
+      if (j.buttons[7] == 0 && j.buttons[9] == 0) {
+        // Pose Adjustments
+        static std::vector<double> pose_adjustment = boost::assign::list_of(0)(0)(0)(0)(0)(0);
+        static std::vector<double> pose_adjustment_limit = boost::assign::list_of(0.05)(0.05)(0.05)(0.392)(0.2)(0.2);
+
+        if(j.buttons[6] == 0 && j.buttons[8] == 0 ){
+          pose_adjustment[0] += adjustment[0];
+          pose_adjustment[1] += adjustment[1];
+        } else if(j.buttons[6] == 1 && j.buttons[8] == 0 ) {
+          pose_adjustment[3] += adjustment[1]*10.0;
+          pose_adjustment[4] += adjustment[0]*10.0;
+        } else if(j.buttons[6] == 0 && j.buttons[8] == 1 ) {
+          pose_adjustment[2] += adjustment[0];
+          pose_adjustment[5] += adjustment[1]*10.0;
+        } else if(j.buttons[6] == 1 && j.buttons[8] == 1 ) {
+          for (int i=0;i<6; i++) {
+            pose_adjustment[i] = pose_adjustment[i]*0.95;
+          }
+        }
+        
+        static std::vector<double> initial_pose = ctrl->get_data< std::vector<double> >("gait-planner.pose");
+        std::vector<double> new_pose(6);
+        for (int i=0;i<6; i++) {
+          if(pose_adjustment[i] > pose_adjustment_limit[i]){
+            pose_adjustment[i] = pose_adjustment_limit[i];
+          } else if(pose_adjustment[i] < -pose_adjustment_limit[i]){
+            pose_adjustment[i] = -pose_adjustment_limit[i];
+          }
+          new_pose[i] = initial_pose[i] + pose_adjustment[i];
+        }
+        ctrl->set_data< std::vector<double> >("gait-planner.pose",new_pose);
+        
+      } else {
+        // Gait Adjustment
+        static double initial_width = ctrl->get_data<double>("gait-planner.width");
+        static double initial_length = ctrl->get_data<double>("gait-planner.length");
+        static double initial_step_height = ctrl->get_data<double>("gait-planner.step-height");
+        static double initial_gait_duration = ctrl->get_data<double>("gait-planner.gait-duration");
+
+        static double width = 0;
+        static double length = 0;
+        static double step_height = 0;
+        static double gait_duration = 0;
+        
+        if(j.buttons[7] == 1 && j.buttons[9] == 0 ){
+          width  -= adjustment[1];
+          length += adjustment[0];
+          ctrl->set_data<double>("gait-planner.length",initial_length+length);
+          ctrl->set_data<double>("gait-planner.width",initial_width+width);
+        } else if(j.buttons[7] == 0 && j.buttons[9] == 1 ){
+          step_height += adjustment[0];
+          if(step_height < -initial_step_height)
+            step_height = -initial_step_height;
+
+          gait_duration -= adjustment[1]*100.0;
+          if(gait_duration < (-initial_gait_duration+0.1))
+            gait_duration = (-initial_gait_duration+0.1);
+          ctrl->set_data<double>("gait-planner.step-height",initial_step_height+step_height);
+          ctrl->set_data<double>("gait-planner.gait-duration",initial_gait_duration+gait_duration);
+        }  else if(j.buttons[7] == 1 && j.buttons[9] == 1 ){
+          width  = 0;
+          length = 0;
+          step_height = 0;
+          gait_duration = 0;
+          ctrl->set_data<double>("gait-planner.length",initial_length);
+          ctrl->set_data<double>("gait-planner.width",initial_width);
+          ctrl->set_data<double>("gait-planner.step-height",initial_step_height);
+          ctrl->set_data<double>("gait-planner.gait-duration",initial_gait_duration+gait_duration);
+        }
+      }
+
+
+  }
+//      else if (is_ps){
+//const int
+//      BUTTON_UP = 4,
+//      BUTTON_LEFT = 7,
+//      BUTTON_RIGHT = 5,
+//      BUTTON_DOWN = 6;
+//      if((j.buttons[BUTTON_UP] == 1) && (j.buttons[BUTTON_LEFT] == 1))
+//        movement = Ravelin::Vector3d(1,1,0);
+//      else if((j.buttons[BUTTON_UP] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
+//        movement = Ravelin::Vector3d(1,0,0);
+//      else if((j.buttons[BUTTON_UP] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
+//        movement = Ravelin::Vector3d(1,-1,0);
+//      
+//      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_LEFT] == 1))
+//        movement = Ravelin::Vector3d(0,1,0);
+//      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
+//        movement = Ravelin::Vector3d(0,0,0);
+//      else if(!(j.buttons[BUTTON_UP] == 1 ||  j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
+//        movement = Ravelin::Vector3d(0,-1,0);
+//      
+//      else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_LEFT] == 1))
+//        movement = Ravelin::Vector3d(-1,1,0);
+//      else if((j.buttons[BUTTON_DOWN] == 1) && !(j.buttons[BUTTON_LEFT] == 1 ||  j.buttons[BUTTON_LEFT] == 1))
+//        movement = Ravelin::Vector3d(-1,0,0);
+//      else if((j.buttons[BUTTON_DOWN] == 1) && (j.buttons[BUTTON_RIGHT] == 1))
+//        movement = Ravelin::Vector3d(-1,-1,0);
+//    }
+//      movement*=dt*10;
+//      target += movement;
 //      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(target,Ravelin::Vector3d(1,0.5,0),1.0)));
-      std::vector<double> target2d(2);
-      target2d[0] = target[0];
-      target2d[1] = target[1];
-      ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
-    } else {
+//      std::vector<double> target2d(2);
+//      target2d[0] = target[0];
+//      target2d[1] = target[1];
+//      ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
+//    } else
+    {
       double max_forward_speed = ctrl->get_data<double>(plugin_namespace+"max-forward-speed");
       double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+"max-strafe-speed");
       double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
       
       const int MAX_VAL =32767;
       int X = 1,Y = 0,THETA = 2;
-      if (GAMEPAD_TYPE.compare("SABRENT") == 0 || GAMEPAD_TYPE.compare("PS") == 0){
+      if (is_sabrent || is_ps){
         X = 1;Y = 0;THETA = 2;
-      } else if(GAMEPAD_TYPE.compare("XBOX") == 0){
+      } else if(is_xbox){
         X = 1;Y = 0;THETA = 3;
       }
       double disp = sqrt(j.axes[X]*j.axes[X]+j.axes[Y]*j.axes[Y]);

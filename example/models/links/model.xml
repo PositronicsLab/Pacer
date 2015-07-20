@@ -20,12 +20,12 @@
 <TimeSteppingSimulator dissipator-id="dissipator" min-step-size="0.001">
   <RecurrentForce recurrent-force-id="gravity" />
   <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
-<!--  <DisabledPair object1-id="STEP" object2-id="GROUND"/>-->
+  <DisabledPair object1-id="STEP" object2-id="GROUND"/>
   <DynamicBody dynamic-body-id="LINKS" />
   <DynamicBody dynamic-body-id="GROUND" />
-<!--  <DynamicBody dynamic-body-id="STEP" />-->
+  <DynamicBody dynamic-body-id="STEP" />
   <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="100" mu-viscous="0" epsilon="0.0" penalty-kp="1000" penalty-kv="250" friction-cone-edges="4" />
-<!--  <ContactParameters object1-id="LINKS" object2-id="STEP" mu-coulomb="100" mu-viscous="0" epsilon="0.0" penalty-kp="1000" penalty-kv="250" friction-cone-edges="4" />-->
+  <ContactParameters object1-id="LINKS" object2-id="STEP" mu-coulomb="100" mu-viscous="0" epsilon="0.0" penalty-kp="1000" penalty-kv="250" friction-cone-edges="4" />
 </TimeSteppingSimulator>
 
 <SDF filename="model.sdf"/>
@@ -40,7 +40,7 @@
 </RigidBody>
 
   <!-- setup the platform rigid body; it is not active -->
-     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="5" ylen="0.001" zlen="5" />
+     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />
      <Plane id="ground-primitive" rpy="1.5708 0 0" />
 <!--<Heightmap id="ground-primitive" filename="heightmap.mat" width="1" depth="1" rpy="1.5708 0 0" />-->
 <RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"

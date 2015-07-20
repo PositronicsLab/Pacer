@@ -409,7 +409,7 @@ void walk_toward(
 
         Origin3d foot_destinaton = x0 + Origin3d(foot_goal);
         if(footholds.empty()){
-          control_points.push_back(foot_destinaton + up_step);
+          control_points.push_back(foot_destinaton + up_step + Origin3d(foot_goal)*0.1);
           control_points.push_back(foot_destinaton);
         } else {
           Vector3d x_fh = select_foothold(footholds, end_of_step_state, foot_destinaton);
@@ -601,12 +601,12 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   go_to[1] = command[1];
   go_to[5] = command[2];
 
-  static std::vector<double>
+  std::vector<double>
       duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"duty-factor"),
     this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gait"),
     input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"pose");
-  static double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+"gait-duration");
-  static double step_height = ctrl_ptr->get_data<double>(plugin_namespace+"step-height");
+  double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+"gait-duration");
+  double step_height = ctrl_ptr->get_data<double>(plugin_namespace+"step-height");
   
   double vec_width = 5;
   std::vector<std::vector<double> > footholds;
@@ -624,9 +624,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"feet");
 
-  static double width = ctrl_ptr->get_data<double>(plugin_namespace+"width");
-  static double length = ctrl_ptr->get_data<double>(plugin_namespace+"length");
-  static double height = ctrl_ptr->get_data<double>(plugin_namespace+"height");
+  double width = ctrl_ptr->get_data<double>(plugin_namespace+"width");
+  double length = ctrl_ptr->get_data<double>(plugin_namespace+"length");
+  double height = ctrl_ptr->get_data<double>(plugin_namespace+"height");
 
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
         ctrl->get_data<Pose3d>("base_link_frame")));

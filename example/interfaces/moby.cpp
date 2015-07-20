@@ -438,7 +438,7 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 
 // this is called by Moby for a plugin
 void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
- boost::shared_ptr<Moby::EventDrivenSimulator> esim;
+ boost::shared_ptr<Moby::ConstraintSimulator> esim;
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
 #ifdef USE_DXL
   // If use robot is active also init dynamixel controllers

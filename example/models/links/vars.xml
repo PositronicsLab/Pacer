@@ -156,10 +156,8 @@
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.00</step-height>
-    <gait-duration type="double">0.8</gait-duration>
-    <!-- 0.178056, 0.0762394, -0.161853 -->
-     [0.154963, 0.0672248, -0.171674]
+    <step-height type="double">0.03</step-height>
+    <gait-duration type="double">0.3</gait-duration>
     <length type="double">0.309926</length>
     <width type="double">0.1344496</width>
     <height type="double">0.161853</height>

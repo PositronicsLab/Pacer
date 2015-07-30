@@ -169,6 +169,10 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 
   static double last_time = -0.001;
   double dt = t - last_time;
+ 
+  if(dt > 1e-4){
+  robot_ptr->reset_state();
+  
   last_time = t;
 
   Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
@@ -282,6 +286,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 
   robot_ptr->control(t);
 
+  }
 #ifdef USE_OSG_DISPLAY
   render(Utility::visualize);
 #endif
@@ -323,7 +328,6 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   static std::thread motor_thread(control_motor);
 #endif
   
-  robot_ptr->reset_state();
 }
 
 // ============================================================================

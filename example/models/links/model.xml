@@ -17,15 +17,12 @@
       <Body id="LINKS" lambda="0.95" />
     </Dissipation>
 
-<TimeSteppingSimulator dissipator-id="dissipator" min-step-size="0.001">
+<TimeSteppingSimulator dissipator-id="dissipator" min-step-size="5e-4">
   <RecurrentForce recurrent-force-id="gravity" />
   <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
-  <DisabledPair object1-id="STEP" object2-id="GROUND"/>
   <DynamicBody dynamic-body-id="LINKS" />
   <DynamicBody dynamic-body-id="GROUND" />
-  <DynamicBody dynamic-body-id="STEP" />
-  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="100" mu-viscous="0" epsilon="0.0" penalty-kp="1000" penalty-kv="250" friction-cone-edges="4" />
-  <ContactParameters object1-id="LINKS" object2-id="STEP" mu-coulomb="100" mu-viscous="0" epsilon="0.0" penalty-kp="1000" penalty-kv="250" friction-cone-edges="4" />
+  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"/>
 </TimeSteppingSimulator>
 
 <SDF filename="model.sdf"/>

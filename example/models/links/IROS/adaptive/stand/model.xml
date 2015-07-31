@@ -13,9 +13,9 @@
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
     <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />
-    <Dissipation id="dissipator">
-      <Body id="LINKS" lambda="0.95" />
-    </Dissipation>
+    <ExponentialDissipation id="exp-dissipator">
+      <Body id="LINKS" lambda="1.00" />
+    </ExponentialDissipation>
 
 <TimeSteppingSimulator dissipator-id="dissipator" min-step-size="0.0005">
   <RecurrentForce recurrent-force-id="gravity" />

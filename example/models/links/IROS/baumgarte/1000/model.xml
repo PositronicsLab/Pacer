@@ -13,11 +13,11 @@
 
     <GravityForce id="gravity" accel="0 0 -9.81" />
     <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />
-    <Dissipation id="dissipator">
+    <ExponentialDissipation id="exp-dissipator">
       <Body id="LINKS" lambda="1" />
-    </Dissipation>
+    </ExponentialDissipation>
 
-<TimeSteppingSimulator dissipator-id="dissipator" min-step-size="0.001">
+<TimeSteppingSimulator  min-step-size="0.001">
   <RecurrentForce recurrent-force-id="gravity" />
   <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
   <DynamicBody dynamic-body-id="LINKS" />

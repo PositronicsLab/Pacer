@@ -1,9 +1,9 @@
 #!/bin/bash
-
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 for var in "$@"
 do
       pushd .
       cd "$var"
-      ../../parse_data.sh 
+      $DIR/parse_data.sh
       popd
 done

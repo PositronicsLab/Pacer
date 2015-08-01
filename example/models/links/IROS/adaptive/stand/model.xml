@@ -14,15 +14,18 @@
     <GravityForce id="gravity" accel="0 0 -9.81" />
     <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />
     <ExponentialDissipation id="exp-dissipator">
-      <Body id="LINKS" lambda="1.00" />
+      <Body id="LINKS" lambda="1" />
     </ExponentialDissipation>
+    <RayleighDissipation id="dissipator">
+      <Body id="LINKS" lambda="0" />
+    </RayleighDissipation>
 
 <TimeSteppingSimulator dissipator-id="dissipator" min-step-size="0.0005">
   <RecurrentForce recurrent-force-id="gravity" />
   <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
   <DynamicBody dynamic-body-id="LINKS" />
   <DynamicBody dynamic-body-id="GROUND" />
-  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="0" />
+  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
 </TimeSteppingSimulator>
 
 <SDF filename="../../model.sdf"/>

@@ -16,6 +16,9 @@
     <ExponentialDissipation id="exp-dissipator">
       <Body id="LINKS" lambda="1" />
     </ExponentialDissipation>
+    <RayleighDissipation id="dissipator">
+      <Body id="LINKS" lambda="0" />
+    </RayleighDissipation>
 
 <TimeSteppingSimulator  min-step-size="0.001">
   <RecurrentForce recurrent-force-id="gravity" />

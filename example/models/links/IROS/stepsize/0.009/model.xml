@@ -1,0 +1,54 @@
+<XML>
+  <DRIVER>
+    <camera position="0.35 -0.55 0.5" target="0 0 0" up="0 0 1" />
+    <window location="0 0" size="640 480" />
+  </DRIVER>
+  <MOBY>
+    <!-- multiple servo rigid bodies -->
+    <ODEPACKIntegrator id="odepack" abs-err-tol="1e-3" rel-err-tol="1e-3" />
+    <EulerIntegrator id="euler" />
+    <RungeKuttaIntegrator id="rk4" />
+    <RungeKuttaFehlbergIntegrator id="rkf" abs-err-tol="1e-1" rel-err-tol="1e-1" />
+    <BulirschStoerIntegrator id="bs" abs-err-tol="1e-1" rel-err-tol="1e-1" />
+
+    <GravityForce id="gravity" accel="0 0 -9.81" />
+    <StokesDragForce id="drag" drag-b=".01" drag-b-ang=".01" />
+    <ExponentialDissipation id="exp-dissipator">
+      <Body id="LINKS" lambda="1" />
+    </ExponentialDissipation>
+    <RayleighDissipation id="dissipator">
+      <Body id="LINKS" lambda="0" />
+    </RayleighDissipation>
+
+<TimeSteppingSimulator dissipator-id="dissipator" min-step-size="0.009">
+  <RecurrentForce recurrent-force-id="gravity" />
+  <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
+  <DynamicBody dynamic-body-id="LINKS" />
+  <DynamicBody dynamic-body-id="GROUND" />
+  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="0" />
+</TimeSteppingSimulator>
+
+<SDF filename="../../model.sdf"/>
+
+<Box id="step" xlen="0.05" ylen="0.4" zlen="0.02" />
+
+<RigidBody id="STEP" color="0.6 0.6 0.6 0" enabled="false"
+  position="0.28 0.1 0.01"
+  visualization-id="step"
+  compliant="false">
+  <CollisionGeometry primitive-id="step" />
+</RigidBody>
+
+  <!-- setup the platform rigid body; it is not active -->
+     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />
+     <Plane id="ground-primitive" rpy="1.5708 0 0" />
+<!--<Heightmap id="ground-primitive" filename="heightmap.mat" width="1" depth="1" rpy="1.5708 0 0" />-->
+<RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"
+  position="0 0 0.0"
+  visualization-id="ground-primitive-viz"
+  compliant="false">
+    <CollisionGeometry primitive-id="ground-primitive" />
+  </RigidBody>
+
+  </MOBY>
+</XML>

@@ -1,3 +1,61 @@
+### IROS 2015 Experiments Branch of Pacer
+
+If there are any issues reproducing experimental data please submit a bug report to this branch so we can correct any issues, Thanks!
+
+Requires: (specific versions of dependencies)
+
+- [Moby]
+branch: stable-int
+commit: [85a526c19efb0f62e52f95e8459cdad694b65293]
+
+[85a526c19efb0f62e52f95e8459cdad694b65293]: https://github.com/PositronicsLab/Moby/tree/85a526c19efb0f62e52f95e8459cdad694b65293
+
+- [Ravelin] 
+branch: accel-update
+commit: [930f9f826f76d825f7fe554afb4d6b561bac025d]
+[930f9f826f76d825f7fe554afb4d6b561bac025d]: https://github.com/PositronicsLab/Ravelin/tree/930f9f826f76d825f7fe554afb4d6b561bac025d
+[Moby]: https://github.com/PositronicsLab/Moby
+[Ravelin]: https://github.com/PositronicsLab/Ravelin
+
+#Building:
+In the Pacer base directory:
+```
+$ mkdir build
+$ cd build
+$ ccmake .. # configure cmake project
+$ make all
+```
+#Running
+```
+$ source setup.sh
+$ cd $PACER_HOME/example/models/links/IROS
+```
+This directory is organized as:
+```
+IROS/<experiment>/<sample>
+```
+each `<sample>` directory contains a `RUN.sh` script that will start Moby and collect data for the experiment. 
+After the sample has completed execution, running the script `IROS/parse_all_data.sh <sample directory paths>` will generate MATLAB readable data files:
+
+
+In directory `${PACER_HOME}/example/models/links/IROS`, run `./run_all_tests.sh */*` to run all tests then `./parse_all_data.sh */*` to generate all data for the experiments.
+
+Moby must be installed on the system for the `RUN.sh` scripts to function properly.
+
+
+ EXPERIMENT | DESCRIPTION
+----------- | ------------------------
+stepsize    | Measure how quickly larger step sizes destabilize simulationi for a walking quadruped (Section IV-A: [IROS '15 paper])
+euler    | Measure how much explicity versus semi-implicit first-order Euler integration affects simulation stability for a walking quadruped (Section IV-C: [IROS '15 paper])
+adaptive    | Measure the largest step size for a walking and standing quadruped (Section IV-D: [IROS '15 paper])
+exponential | Measure how much exponential dissipation stabilizes simulation for a walking robot (Section IV-E: [IROS '15 paper])
+rayleigh | Measure how much rayleigh dissipation stabilizes simulation for a walking robot
+baumgarte | Measure how much baumgarte stabilization (error-correction) destabilizes simulation for a walking robot
+
+octave/MATLAB scripts `plot_data.m` and `plot_data2.m` are provided to assist the user in parsing and plotting experimental data.
+
+[IROS '15 paper]: http://robotics.gwu.edu/positronics/wp-content/uploads/2014/08/IROS2015-Zapolsky.pdf
+
 ###Pacer Project Repository
 by Sam Zapolsky @ the [Positronics Lab]
 

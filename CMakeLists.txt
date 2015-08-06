@@ -89,23 +89,9 @@ link_directories(
                   /usr/local/lib
                   )
 
-set(SOURCES
-            output.cpp
-            robot.cpp
-            kinematics.cpp
-            utilities.cpp
-            variables.cpp
-            splines.cpp
-            solve_qp.cpp
-            solve_lcp_fast.cpp
-            controller.cpp
-           )
-
-# prepend "src/" to each source file
-FOREACH(i ${SOURCES})
-  set(LIBSOURCES ${LIBSOURCES} "${CMAKE_SOURCE_DIR}/src/${i}")
-ENDFOREACH(i)
-
+file(GLOB LIBSOURCES
+"src/*.cpp"
+)
 
 add_library(Pacer ${LIBSOURCES})
 
@@ -123,8 +109,9 @@ install(TARGETS Pacer DESTINATION lib)
 # install include dirs
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
 
-# install environment variables file
-install (CODE "file(WRITE setup.sh \"#!/bin/bash\nexport PACER_MODEL_PATH=${CMAKE_INSTALL_PREFIX}/share/Pacer/models\nexport PACER_PLUGIN_PATH=${CMAKE_INSTALL_PREFIX}/lib/Pacer/plugins\nexport GAZEBO_MODEL_PATH=$PACER_MODEL_PATH:$GAZEBO_MODEL_PATH\nexport GAZEBO_PLUGIN_PATH=$PACER_PLUGIN_PATH:$GAZEBO_PLUGIN_PATH\n\n\")")
+# Setup configuration file
+configure_file(${CMAKE_SOURCE_DIR}/CMakeModules/setup.sh.in ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
+
 install (FILES ${CMAKE_BINARY_DIR}/setup.sh DESTINATION share/Pacer)
 
 # install plugins and models
@@ -133,9 +120,6 @@ install (DIRECTORY ${CMAKE_BINARY_DIR}/example/plugins DESTINATION ${CMAKE_INSTA
 install (DIRECTORY ${CMAKE_BINARY_DIR}/example/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
 
 set(REQLIBS ${REQLIBS} Pacer)
-
-# create environment variables file (no install version)
-file (WRITE ${CMAKE_BINARY_DIR}/setup.sh "#!/bin/bash\nexport PACER_HOME=${CMAKE_SOURCE_DIR}\nexport PACER_MODEL_PATH=$PACER_HOME/example/models\nexport PACER_PLUGIN_PATH=${CMAKE_BINARY_DIR}/example/plugins\nexport GAZEBO_MODEL_PATH=$PACER_HOME/example/models:$GAZEBO_MODEL_PATH\nexport GAZEBO_PLUGIN_PATH=${CMAKE_BINARY_DIR}/example/interfaces:$GAZEBO_PLUGIN_PATH\n\n")
 
 # EXAMPLES
 IF(BUILD_EXAMPLES)
@@ -149,9 +133,8 @@ ENDIF(BUILD_EXAMPLES)
 
 # uninstall target
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-

@@ -47,21 +47,22 @@ bool Controller::init_plugins(){
   std::vector<init_t> INIT;
 
   // call the initializers, if any
-  std::vector<std::string> plugin_names = get_data<std::vector<std::string> >("plugin.id");
-  std::vector<std::string> plugin_files = get_data<std::vector<std::string> >("plugin.file");
-  std::vector<int> plugin_active = get_data<std::vector<int> >("plugin.active");
+  std::vector<std::string> plugin_names = get_data<std::vector<std::string> >("plugins");
 
   // Load all the plugins
   for(unsigned i=0;i<plugin_names.size();i++){
-    if(plugin_active[i] == 0) continue;
-    std::string filename = plugin_files[i];
+    std::string plugin_name = plugin_names[i];
+    std::string filename;
+    bool plugin_filename_found = get_data<std::string>(plugin_name+".file",filename);
+    if (!plugin_filename_found)
+      throw std::runtime_error("Plugin "+plugin_name+" needs a filename!");
 
-  if (!getenv("PACER_PLUGIN_PATH"))
-    throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
+    if (!getenv("PACER_PLUGIN_PATH"))
+      throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
 
     std::string pPath(getenv("PACER_PLUGIN_PATH"));
     std::string lib_path = pPath+"/"+filename;
-    OUT_LOG(logINFO) << "Loading Plugin: " << plugin_names[i];
+    OUT_LOG(logINFO) << "Loading Plugin: " << plugin_name;
     OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();
     OUT_LOG(logINFO) << "\tPATH: " << pPath.c_str();
     // attempt to read the file
@@ -71,6 +72,7 @@ bool Controller::init_plugins(){
       std::cerr << "driver: failed to read plugin from " << filename << std::endl;
       std::cerr << "  " << dlerror() << std::endl;
       RETURN_FLAG = false;
+      throw std::runtime_error("driver: failed to read plugin from " + filename);
     }
  
     handles.push_back(HANDLE);

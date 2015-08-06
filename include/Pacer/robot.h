@@ -147,6 +147,10 @@ namespace Pacer{
       return calc_jacobian(q,link,Ravelin::Origin3d(0,0,0));
     }
     
+    const std::map<std::string,Moby::RigidBodyPtr>& get_links(){
+      return _id_link_map;
+    }
+    
     const Moby::RigidBodyPtr get_link(const std::string& link){
       return _id_link_map[link];
     }

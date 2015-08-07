@@ -69,7 +69,7 @@ Access the library by using the examples found in the examples directory:
 
  Vectors and Matrices output is readable in Matlab.  The examples in [scripts] demonstrate exporting output from Pacer's logs to MATLAB readable space delimited files.
 
-[scripts]: https://github.com/PositronicsLab/Pacer/tree/master/examples/test-scripts
+[scripts]: https://github.com/PositronicsLab/Pacer/tree/master/test
 
 ### File Structure
 

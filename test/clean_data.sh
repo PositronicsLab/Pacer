@@ -1,4 +1,3 @@
-rm $1/pivot.steps
 rm $1/*.mat
 rm $1/*.log
 find $1 -maxdepth 1 -name "driver.out*.osg" -type f -print | xargs rm

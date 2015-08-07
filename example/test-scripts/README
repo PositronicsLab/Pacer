@@ -1,9 +1,0 @@
-FILE/DIRECTORY		DESCRIPTION
-------------------------------------------------------------------------------
-animate.sh		Utility bash shell script for rendering OpenSceneGraph
-		  	  outputs (from Moby) using POVray for making movies
-clean_data.sh		Utility bash shell script for removing Moby detritus
-parse_all_data.sh  
-parse_data.sh		Parses outputs from Pacer for input into MATLAB
-run_all_test.sh
-

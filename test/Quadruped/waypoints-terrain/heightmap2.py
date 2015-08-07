@@ -16,9 +16,12 @@ gmix = fit_samples(samples,100)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-x = y = np.arange(0, 1.0, 0.01)
+x = np.arange(0, 1.0, 0.01)
+x = x + 0.1 
+x = x * 0.8
+y = x;
 X, Y = np.meshgrid(x, y)
-z = gmix.predict(zip(np.ravel(X), np.ravel(Y)))
+z,other = gmix.score_samples(zip(np.ravel(X), np.ravel(Y)))
 # place on ground
 z = z - min(z)
 # normalize
@@ -31,7 +34,7 @@ Z = z.reshape(X.shape)
 zsize = Z.shape
 zsize_txt = ''.join((str(zsize[0]),' ',str(zsize[1])))
 print zsize_txt
-np.savetxt('heightmap.dat',Z,delimiter=' ',header=zsize_txt)
+np.savetxt('heightmap2.dat',Z,delimiter=' ',header=zsize_txt)
 
 ax.plot_surface(X, Y, Z)
 

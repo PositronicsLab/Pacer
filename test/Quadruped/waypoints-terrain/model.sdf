@@ -63,13 +63,13 @@
       </visual>
       
       
-      <collision name='BODY0_collision'>
+      <!--collision name='BODY0_collision'>
         <geometry>
           <box>
             <size>0.15 0.08 0.05</size>
           </box>
         </geometry>
-      </collision>
+      </collision -->
       
     </link>
     

@@ -40,7 +40,7 @@
     <kinematic type="bool">false</kinematic>
 
     <base>
-      <x type="double"> 0.05 -0.05 0.185 0 0 0</x>
+      <x type="double"> 0 0.0 0.25 0 0 0</x>
       <xd type="double">0 0 0   0 0 0</xd>
     </base>
 
@@ -67,6 +67,7 @@
       eef-PID-controller
       gait-planner
       ik-feet
+      error-check
   </plugins>
   
   <!--
@@ -88,6 +89,12 @@
       <real-time-factor type="double">1</real-time-factor>
       <priority type="double">0</priority>
   </plugin-template>
+  
+  <error-check>
+    <file type="string">liberror-check.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </error-check>
   
   <center-of-mass>
     <file type="string">libcenter-of-mass.so</file>
@@ -167,7 +174,7 @@
     <file type="string">libwaypoints.so</file>
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">0</priority>
-     <max-forward-speed type="double">0.1</max-forward-speed>
+     <max-forward-speed type="double">0.2</max-forward-speed>
      <max-strafe-speed type="double">0.05</max-strafe-speed>
      <max-turn-speed type="double">0.5</max-turn-speed>
      <tolerance type="double">0.1</tolerance>
@@ -220,8 +227,8 @@
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.03</step-height>
-    <gait-duration type="double">0.3</gait-duration>
+    <step-height type="double">0.02</step-height>
+    <gait-duration type="double">0.5</gait-duration>
     <length type="double">0.309926</length>
     <width type="double">0.1344496</width>
     <height type="double">0.161853</height>

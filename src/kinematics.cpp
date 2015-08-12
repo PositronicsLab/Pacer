@@ -123,7 +123,7 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   }
   
   // NOTE: WARNING: Only revolute joints
-  if(err < 1e-3)
+  if(err < 1e-4)
     for(int k=0;k<foot.chain.size();k++)
       q_des[foot.chain[k]] = x[k];
   else

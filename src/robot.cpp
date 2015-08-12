@@ -162,7 +162,8 @@ void Robot::update(){
   Ravelin::VectorNd qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);
   Ravelin::VectorNd fext = generalized_fext.segment(0,NUM_JOINT_DOFS);
   
-  set_data<Ravelin::VectorNd>("q",q);
+  if(set_data<Ravelin::VectorNd>("q",q))
+    set_data<Ravelin::VectorNd>("init.q",q);
   set_data<Ravelin::VectorNd>("qd",qd);
   set_data<Ravelin::VectorNd>("qdd",qdd);
   
@@ -339,7 +340,6 @@ void Robot::init_robot(){
   
   Ravelin::VectorNd init_q_vec;
   convert_to_generalized(init_q,init_q_vec);
-  set_data<Ravelin::VectorNd>("init.q",init_q_vec);
   OUT_LOG(logDEBUG) << "<< Robot::init_robot(.)";
   
 }

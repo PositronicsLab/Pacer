@@ -113,7 +113,7 @@ std::vector<Trajectory> calc_jump(){
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   ctrl = ctrl_ptr;
-  double start_jump_time = ctrl->get_data<double>(plugin_namespace + "start-jump-time");
+  double start_jump_time = t;
   double duration = ctrl->get_data<double>(plugin_namespace + "duration");
 
   static bool first_step = true;
@@ -142,6 +142,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
       //      if(leap_spline[0].T[leap_spline[0].T.rows()-1] > t-start_time)
       //        throw std::runtime_error("End of jump!");
       
+//      // Disable joint Feedback
+//      VectorNd q_current, qd_current;
+//      ctrl->get_joint_generalized_value(Pacer::Controller::position,q_current);
+//      ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_current);
+//      
+//      ctrl->get_joint_generalized_value(Pacer::Controller::velocity,qd_current);
+//      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_current);
       
       // Find base trajectory
       if(!eval_Nd_cubic_spline(leap_spline,t-start_jump_time,x,xd,xdd)){
@@ -151,62 +158,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
           ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",Vector3d(0,0,0));
         }
         return;
-//        throw std::runtime_error("Spline evaluation failed!");
       }
-      
-      VectorNd q_current, qd_current;
-      ctrl->get_joint_generalized_value(Pacer::Controller::position,q_current);
-      ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_current);
-
-      ctrl->get_joint_generalized_value(Pacer::Controller::velocity,qd_current);
-      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_current);
-
     } else {
-      std::cout << "Resetting jump" << std::endl;
-      static VectorNd q_start  = ctrl->get_data<Ravelin::VectorNd>("init.q");
-
-      if (!leap_spline.empty()) {
-        first_step = true;
-        leap_spline.clear();
-        ctrl->get_joint_generalized_value(Pacer::Controller::position,q_start);
-      }
-      
-      // Disable eef controller gains
-      for(unsigned i=0;i<eef_names_.size();i++){
-        Ravelin::Vector3d x_foot, xd_foot,xdd_foot;
-
-        ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x_foot);
-        ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd_foot);
-
-        ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot);
-        ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-        ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",Vector3d(0,0,0));
-      }
-
-      VectorNd
-        q_goal = ctrl->get_data<Ravelin::VectorNd>("init.q");
-      VectorNd
-        qd_goal = Ravelin::VectorNd::zero(q_goal.rows()),
-        qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
-      
-      VectorNd q_target = q_start;
-      double alpha = (t-(start_jump_time+duration))/0.25;
-      std::cout << "alpha " << alpha << std::endl;
-      OUTLOG(q_start, "q_start", logDEBUG);
-      OUTLOG(q_goal, "q_goal", logDEBUG);
-
-      if(alpha <= 1){
-        q_target *= 1-alpha;
-        q_goal *= alpha;
-        q_target += q_goal;
-      } else {
-        q_target = q_goal;
-      }
-      OUTLOG(q_target, "q_target", logDEBUG);
-      ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_target);
-      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
-      ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
-      
       return;
     }
   }

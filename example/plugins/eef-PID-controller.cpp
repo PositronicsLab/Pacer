@@ -125,8 +125,7 @@ public:
   }
 };
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  
+void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){  
   ctrl_ptr = ctrl;
   static eefPID pid;
       

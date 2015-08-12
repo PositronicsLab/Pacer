@@ -69,7 +69,6 @@
       eef-PID-controller
       error-check
       stabilization
-      clone
   </plugins>
   
   <!--
@@ -254,6 +253,7 @@
     <file type="string">libstand-trajectory.so</file>
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">3</priority>
+     <time-to-pose type="double">0.25</time-to-pose>
   </stand-trajectory>
   
   <gait-planner>

@@ -22,28 +22,85 @@ Controller::Controller(): Robot(){
 }
 
 Controller::~Controller(){
-  close_plugins();
+  close_all_plugins();
 }
 
 
-std::vector<void*> handles;
-bool Controller::close_plugins(){
+std::map<std::string,void*> handles;
+bool Controller::close_all_plugins(){
+  typedef std::pair<std::string,void*> handle_pair;
   // close the loaded plugin libraries
-  for(size_t i = 0; i < handles.size(); ++i){
-    dlclose(handles[i]);
+  BOOST_FOREACH( handle_pair handle, handles){
+    dlclose(handle.second);
+//    delete handle.second; // DLCLOSE deletes handle object
   }
+
   handles.clear();
   _update_priority_map.clear();
   return true;
 }
 
 typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
+std::map<std::string, init_t> INIT;
 
-bool Controller::init_plugins(){
+bool Controller::remove_plugin(const std::string& plugin_name){
+  void * &handle = handles[plugin_name];
+  dlclose(handle);
+  //  delete handle; // DLCLOSE deletes handle object
+  handles.erase(plugin_name);
+  INIT.erase(plugin_name);
+  remove_plugin_update(plugin_name);
+}
+
+bool Controller::init_plugin(const std::string& plugin_name){
+  std::string filename;
+  bool plugin_filename_found = get_data<std::string>(plugin_name+".file",filename);
+  if (!plugin_filename_found)
+    throw std::runtime_error("Plugin "+plugin_name+" needs a filename!");
+  
+  if (!getenv("PACER_PLUGIN_PATH"))
+    throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
+  
+  std::string pPath(getenv("PACER_PLUGIN_PATH"));
+  std::string lib_path = pPath+"/"+filename;
+  OUT_LOG(logINFO) << "Loading Plugin: " << plugin_name;
+  OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();
+  OUT_LOG(logINFO) << "\tPATH: " << pPath.c_str();
+  // attempt to read the file
+  void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
+  if (!HANDLE)
+  {
+    std::cerr << "driver: failed to read plugin from " << filename << std::endl;
+    std::cerr << "  " << dlerror() << std::endl;
+    throw std::runtime_error("driver: failed to read plugin from " + filename);
+    return false;
+  }
+  
+  handles[plugin_name] = HANDLE;
+  
+  // attempt to load the initializer
+  dlerror();
+  INIT[plugin_name] = (init_t) dlsym(HANDLE, "init");
+  const char* dlsym_error = dlerror();
+  if (dlsym_error)
+  {
+    std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
+    std::cerr << "        error follows: " << std::endl << dlsym_error << std::endl;
+    INIT.erase(plugin_name);
+    throw std::runtime_error("driver: cannot load symbol 'init' from " + filename);
+    return false;
+  } else {
+    // Init the plugin
+    (*INIT[plugin_name])(this->ptr(),plugin_name.c_str());
+  }
+  return true;
+}
+
+bool Controller::init_all_plugins(){
   OUT_LOG(logDEBUG) << ">> Controller::init_plugins()";
 
   bool RETURN_FLAG = true;
-  close_plugins();
+  close_all_plugins();
   std::vector<init_t> INIT;
 
   // call the initializers, if any
@@ -51,46 +108,8 @@ bool Controller::init_plugins(){
 
   // Load all the plugins
   for(unsigned i=0;i<plugin_names.size();i++){
-    std::string plugin_name = plugin_names[i];
-    std::string filename;
-    bool plugin_filename_found = get_data<std::string>(plugin_name+".file",filename);
-    if (!plugin_filename_found)
-      throw std::runtime_error("Plugin "+plugin_name+" needs a filename!");
-
-    if (!getenv("PACER_PLUGIN_PATH"))
-      throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
-
-    std::string pPath(getenv("PACER_PLUGIN_PATH"));
-    std::string lib_path = pPath+"/"+filename;
-    OUT_LOG(logINFO) << "Loading Plugin: " << plugin_name;
-    OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();
-    OUT_LOG(logINFO) << "\tPATH: " << pPath.c_str();
-    // attempt to read the file
-    void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
-    if (!HANDLE)
-    {
-      std::cerr << "driver: failed to read plugin from " << filename << std::endl;
-      std::cerr << "  " << dlerror() << std::endl;
+    if(!init_plugin(plugin_names[i]))
       RETURN_FLAG = false;
-      throw std::runtime_error("driver: failed to read plugin from " + filename);
-    }
- 
-    handles.push_back(HANDLE);
- 
-    // attempt to load the initializer
-    dlerror();
-    INIT.push_back((init_t) dlsym(HANDLE, "init"));
-    const char* dlsym_error = dlerror();
-    if (dlsym_error)
-    {
-      std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
-      std::cerr << "        error follows: " << std::endl << dlsym_error << std::endl;
-      INIT.pop_back();
-      RETURN_FLAG = false;
-    } else {
-      // Init the plugin
-      (*INIT.back())(this->ptr(),plugin_names[i].c_str());
-    }
   }
     
   OUT_LOG(logDEBUG) << "<< Controller::init_plugins()";

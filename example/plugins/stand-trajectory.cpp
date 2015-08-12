@@ -9,7 +9,49 @@
 std::string plugin_namespace;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  Ravelin::VectorNd 
+  // Alpha calculation
+  static start_time = t;
+  static duration = 0.25;
+  double alpha = (t-(start_time+duration))/0.25;
+
+  VectorNd
+    q_goal = ctrl->get_data<Ravelin::VectorNd>("init.q");
+
+  static VectorNd q_start = q_goal;
+  if(alpha > 1.0 || alpha == 0){
+    VectorNd q_current, vwork;
+    ctrl->get_joint_generalized_value(Pacer::Controller::position,q_start);
+    if( ((vwork = q_current) -= q_goal).inf_norm() > 0.1){
+      start_time = t;
+      alpha = (t-(start_time+duration))/0.25;
+      q_start = q_current;
+    }
+  }
+  
+  VectorNd
+    qd_goal = Ravelin::VectorNd::zero(q_goal.rows()),
+    qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
+  
+  VectorNd q_target = q_start;
+  std::cout << "alpha " << alpha << std::endl;
+  OUTLOG(q_start, "q_start", logDEBUG);
+  OUTLOG(q_goal, "q_goal", logDEBUG);
+  
+  if(alpha <= 1){
+    q_target *= 1-alpha;
+    q_goal *= alpha;
+    q_target += q_goal;
+  } else {
+    q_target = q_goal;
+  }
+  OUTLOG(q_target, "q_target", logDEBUG);
+  ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_target);
+  ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
+  ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
+  
+  
+  // Configuration space
+  Ravelin::VectorNd
     q_goal = ctrl->get_data<Ravelin::VectorNd>("init.q");
   Ravelin::VectorNd
     qd_goal = Ravelin::VectorNd::zero(q_goal.rows()),

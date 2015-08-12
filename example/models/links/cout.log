@@ -1,0 +1,1135 @@
+STARTING MOBY PLUGIN
+STARTING ROBOT
+adding clone to plugins.
+ROBOT INITED
+iteration: 0  simulation time: 0
+inited is false
+------------ First time ------------
+0.1 : 0.001
+Resetting jump
+alpha -2.396
+iteration: 1  simulation time: 0.001
+inited is true
+0.1 : 0.002
+Resetting jump
+alpha -2.392
+iteration: 2  simulation time: 0.002
+inited is true
+0.1 : 0.003
+Resetting jump
+alpha -2.388
+iteration: 3  simulation time: 0.003
+inited is true
+0.1 : 0.004
+Resetting jump
+alpha -2.384
+iteration: 4  simulation time: 0.004
+inited is true
+0.1 : 0.005
+Resetting jump
+alpha -2.38
+iteration: 5  simulation time: 0.005
+inited is true
+0.1 : 0.006
+Resetting jump
+alpha -2.376
+iteration: 6  simulation time: 0.006
+inited is true
+0.1 : 0.007
+Resetting jump
+alpha -2.372
+iteration: 7  simulation time: 0.007
+inited is true
+0.1 : 0.008
+Resetting jump
+alpha -2.368
+iteration: 8  simulation time: 0.008
+inited is true
+0.1 : 0.009
+Resetting jump
+alpha -2.364
+iteration: 9  simulation time: 0.009
+inited is true
+0.1 : 0.01
+Resetting jump
+alpha -2.36
+iteration: 10  simulation time: 0.01
+inited is true
+0.1 : 0.011
+Resetting jump
+alpha -2.356
+iteration: 11  simulation time: 0.011
+inited is true
+0.1 : 0.012
+Resetting jump
+alpha -2.352
+iteration: 12  simulation time: 0.012
+inited is true
+0.1 : 0.013
+Resetting jump
+alpha -2.348
+iteration: 13  simulation time: 0.013
+inited is true
+0.1 : 0.014
+Resetting jump
+alpha -2.344
+iteration: 14  simulation time: 0.014
+inited is true
+0.1 : 0.015
+Resetting jump
+alpha -2.34
+iteration: 15  simulation time: 0.015
+inited is true
+0.1 : 0.016
+Resetting jump
+alpha -2.336
+iteration: 16  simulation time: 0.016
+inited is true
+0.1 : 0.017
+Resetting jump
+alpha -2.332
+iteration: 17  simulation time: 0.017
+inited is true
+0.1 : 0.018
+Resetting jump
+alpha -2.328
+iteration: 18  simulation time: 0.018
+inited is true
+0.1 : 0.019
+Resetting jump
+alpha -2.324
+iteration: 19  simulation time: 0.019
+inited is true
+0.1 : 0.02
+Resetting jump
+alpha -2.32
+iteration: 20  simulation time: 0.02
+inited is true
+0.1 : 0.021
+Resetting jump
+alpha -2.316
+iteration: 21  simulation time: 0.021
+inited is true
+0.1 : 0.022
+Resetting jump
+alpha -2.312
+iteration: 22  simulation time: 0.022
+inited is true
+0.1 : 0.023
+Resetting jump
+alpha -2.308
+iteration: 23  simulation time: 0.023
+inited is true
+0.1 : 0.024
+Resetting jump
+alpha -2.304
+iteration: 24  simulation time: 0.024
+inited is true
+0.1 : 0.025
+Resetting jump
+alpha -2.3
+iteration: 25  simulation time: 0.025
+inited is true
+0.1 : 0.026
+Resetting jump
+alpha -2.296
+iteration: 26  simulation time: 0.026
+inited is true
+0.1 : 0.027
+Resetting jump
+alpha -2.292
+iteration: 27  simulation time: 0.027
+inited is true
+0.1 : 0.028
+Resetting jump
+alpha -2.288
+iteration: 28  simulation time: 0.028
+inited is true
+0.1 : 0.029
+Resetting jump
+alpha -2.284
+iteration: 29  simulation time: 0.029
+inited is true
+0.1 : 0.03
+Resetting jump
+alpha -2.28
+iteration: 30  simulation time: 0.03
+inited is true
+0.1 : 0.031
+Resetting jump
+alpha -2.276
+iteration: 31  simulation time: 0.031
+inited is true
+0.1 : 0.032
+Resetting jump
+alpha -2.272
+iteration: 32  simulation time: 0.032
+inited is true
+0.1 : 0.033
+Resetting jump
+alpha -2.268
+iteration: 33  simulation time: 0.033
+inited is true
+0.1 : 0.034
+Resetting jump
+alpha -2.264
+iteration: 34  simulation time: 0.034
+inited is true
+0.1 : 0.035
+Resetting jump
+alpha -2.26
+iteration: 35  simulation time: 0.035
+inited is true
+0.1 : 0.036
+Resetting jump
+alpha -2.256
+iteration: 36  simulation time: 0.036
+inited is true
+0.1 : 0.037
+Resetting jump
+alpha -2.252
+iteration: 37  simulation time: 0.037
+inited is true
+0.1 : 0.038
+Resetting jump
+alpha -2.248
+iteration: 38  simulation time: 0.038
+inited is true
+0.1 : 0.039
+Resetting jump
+alpha -2.244
+iteration: 39  simulation time: 0.039
+inited is true
+0.1 : 0.04
+Resetting jump
+alpha -2.24
+iteration: 40  simulation time: 0.04
+inited is true
+0.1 : 0.041
+Resetting jump
+alpha -2.236
+iteration: 41  simulation time: 0.041
+inited is true
+0.1 : 0.042
+Resetting jump
+alpha -2.232
+iteration: 42  simulation time: 0.042
+inited is true
+0.1 : 0.043
+Resetting jump
+alpha -2.228
+iteration: 43  simulation time: 0.043
+inited is true
+0.1 : 0.044
+Resetting jump
+alpha -2.224
+iteration: 44  simulation time: 0.044
+inited is true
+0.1 : 0.045
+Resetting jump
+alpha -2.22
+iteration: 45  simulation time: 0.045
+inited is true
+0.1 : 0.046
+Resetting jump
+alpha -2.216
+iteration: 46  simulation time: 0.046
+inited is true
+0.1 : 0.047
+Resetting jump
+alpha -2.212
+iteration: 47  simulation time: 0.047
+inited is true
+0.1 : 0.048
+Resetting jump
+alpha -2.208
+iteration: 48  simulation time: 0.048
+inited is true
+0.1 : 0.049
+Resetting jump
+alpha -2.204
+iteration: 49  simulation time: 0.049
+inited is true
+0.1 : 0.05
+Resetting jump
+alpha -2.2
+iteration: 50  simulation time: 0.05
+inited is true
+0.1 : 0.051
+Resetting jump
+alpha -2.196
+iteration: 51  simulation time: 0.051
+inited is true
+0.1 : 0.052
+Resetting jump
+alpha -2.192
+iteration: 52  simulation time: 0.052
+inited is true
+0.1 : 0.053
+Resetting jump
+alpha -2.188
+iteration: 53  simulation time: 0.053
+inited is true
+0.1 : 0.054
+Resetting jump
+alpha -2.184
+iteration: 54  simulation time: 0.054
+inited is true
+0.1 : 0.055
+Resetting jump
+alpha -2.18
+iteration: 55  simulation time: 0.055
+inited is true
+0.1 : 0.056
+Resetting jump
+alpha -2.176
+iteration: 56  simulation time: 0.056
+inited is true
+0.1 : 0.057
+Resetting jump
+alpha -2.172
+iteration: 57  simulation time: 0.057
+inited is true
+0.1 : 0.058
+Resetting jump
+alpha -2.168
+iteration: 58  simulation time: 0.058
+inited is true
+0.1 : 0.059
+Resetting jump
+alpha -2.164
+iteration: 59  simulation time: 0.059
+inited is true
+0.1 : 0.06
+Resetting jump
+alpha -2.16
+iteration: 60  simulation time: 0.06
+inited is true
+0.1 : 0.061
+Resetting jump
+alpha -2.156
+iteration: 61  simulation time: 0.061
+inited is true
+0.1 : 0.062
+Resetting jump
+alpha -2.152
+iteration: 62  simulation time: 0.062
+inited is true
+0.1 : 0.063
+Resetting jump
+alpha -2.148
+iteration: 63  simulation time: 0.063
+inited is true
+0.1 : 0.064
+Resetting jump
+alpha -2.144
+iteration: 64  simulation time: 0.064
+inited is true
+0.1 : 0.065
+Resetting jump
+alpha -2.14
+iteration: 65  simulation time: 0.065
+inited is true
+0.1 : 0.066
+Resetting jump
+alpha -2.136
+iteration: 66  simulation time: 0.066
+inited is true
+0.1 : 0.067
+Resetting jump
+alpha -2.132
+iteration: 67  simulation time: 0.067
+inited is true
+0.1 : 0.068
+Resetting jump
+alpha -2.128
+iteration: 68  simulation time: 0.068
+inited is true
+0.1 : 0.069
+Resetting jump
+alpha -2.124
+iteration: 69  simulation time: 0.069
+inited is true
+0.1 : 0.07
+Resetting jump
+alpha -2.12
+iteration: 70  simulation time: 0.07
+inited is true
+0.1 : 0.071
+Resetting jump
+alpha -2.116
+iteration: 71  simulation time: 0.071
+inited is true
+0.1 : 0.072
+Resetting jump
+alpha -2.112
+iteration: 72  simulation time: 0.072
+inited is true
+0.1 : 0.073
+Resetting jump
+alpha -2.108
+iteration: 73  simulation time: 0.073
+inited is true
+0.1 : 0.074
+Resetting jump
+alpha -2.104
+iteration: 74  simulation time: 0.074
+inited is true
+0.1 : 0.075
+Resetting jump
+alpha -2.1
+iteration: 75  simulation time: 0.075
+inited is true
+0.1 : 0.076
+Resetting jump
+alpha -2.096
+iteration: 76  simulation time: 0.076
+inited is true
+0.1 : 0.077
+Resetting jump
+alpha -2.092
+iteration: 77  simulation time: 0.077
+inited is true
+0.1 : 0.078
+Resetting jump
+alpha -2.088
+iteration: 78  simulation time: 0.078
+inited is true
+0.1 : 0.079
+Resetting jump
+alpha -2.084
+iteration: 79  simulation time: 0.079
+inited is true
+0.1 : 0.08
+Resetting jump
+alpha -2.08
+iteration: 80  simulation time: 0.08
+inited is true
+0.1 : 0.081
+Resetting jump
+alpha -2.076
+iteration: 81  simulation time: 0.081
+inited is true
+0.1 : 0.082
+Resetting jump
+alpha -2.072
+iteration: 82  simulation time: 0.082
+inited is true
+0.1 : 0.083
+Resetting jump
+alpha -2.068
+iteration: 83  simulation time: 0.083
+inited is true
+0.1 : 0.084
+Resetting jump
+alpha -2.064
+iteration: 84  simulation time: 0.084
+inited is true
+0.1 : 0.085
+Resetting jump
+alpha -2.06
+iteration: 85  simulation time: 0.085
+inited is true
+0.1 : 0.086
+Resetting jump
+alpha -2.056
+iteration: 86  simulation time: 0.086
+inited is true
+0.1 : 0.087
+Resetting jump
+alpha -2.052
+iteration: 87  simulation time: 0.087
+inited is true
+0.1 : 0.088
+Resetting jump
+alpha -2.048
+iteration: 88  simulation time: 0.088
+inited is true
+0.1 : 0.089
+Resetting jump
+alpha -2.044
+iteration: 89  simulation time: 0.089
+inited is true
+0.1 : 0.09
+Resetting jump
+alpha -2.04
+iteration: 90  simulation time: 0.09
+inited is true
+0.1 : 0.091
+Resetting jump
+alpha -2.036
+iteration: 91  simulation time: 0.091
+inited is true
+0.1 : 0.092
+Resetting jump
+alpha -2.032
+iteration: 92  simulation time: 0.092
+inited is true
+0.1 : 0.093
+Resetting jump
+alpha -2.028
+iteration: 93  simulation time: 0.093
+inited is true
+0.1 : 0.094
+Resetting jump
+alpha -2.024
+iteration: 94  simulation time: 0.094
+inited is true
+0.1 : 0.095
+Resetting jump
+alpha -2.02
+iteration: 95  simulation time: 0.095
+inited is true
+0.1 : 0.096
+Resetting jump
+alpha -2.016
+iteration: 96  simulation time: 0.096
+inited is true
+0.1 : 0.097
+Resetting jump
+alpha -2.012
+iteration: 97  simulation time: 0.097
+inited is true
+0.1 : 0.098
+Resetting jump
+alpha -2.008
+iteration: 98  simulation time: 0.098
+inited is true
+0.1 : 0.099
+Resetting jump
+alpha -2.004
+iteration: 99  simulation time: 0.099
+inited is true
+0.1 : 0.1
+Calculating jump
+Jumping
+iteration: 100  simulation time: 0.1
+inited is true
+0.1 : 0.101
+Jumping
+iteration: 101  simulation time: 0.101
+Self Removal: 
+inited is true
+0.1 : 0.102
+Jumping
+iteration: 102  simulation time: 0.102
+adding clone to plugins.
+inited is false
+------------ First time ------------
+0.1 : 0.103
+Jumping
+iteration: 103  simulation time: 0.103
+inited is true
+0.1 : 0.104
+Jumping
+iteration: 104  simulation time: 0.104
+inited is true
+0.1 : 0.105
+Jumping
+iteration: 105  simulation time: 0.105
+inited is true
+0.1 : 0.106
+Jumping
+iteration: 106  simulation time: 0.106
+inited is true
+0.1 : 0.107
+Jumping
+iteration: 107  simulation time: 0.107
+inited is true
+0.1 : 0.108
+Jumping
+iteration: 108  simulation time: 0.108
+inited is true
+0.1 : 0.109
+Jumping
+iteration: 109  simulation time: 0.109
+inited is true
+0.1 : 0.11
+Jumping
+iteration: 110  simulation time: 0.11
+inited is true
+0.1 : 0.111
+Jumping
+iteration: 111  simulation time: 0.111
+inited is true
+0.1 : 0.112
+Jumping
+iteration: 112  simulation time: 0.112
+inited is true
+0.1 : 0.113
+Jumping
+iteration: 113  simulation time: 0.113
+inited is true
+0.1 : 0.114
+Jumping
+iteration: 114  simulation time: 0.114
+inited is true
+0.1 : 0.115
+Jumping
+iteration: 115  simulation time: 0.115
+inited is true
+0.1 : 0.116
+Jumping
+iteration: 116  simulation time: 0.116
+inited is true
+0.1 : 0.117
+Jumping
+iteration: 117  simulation time: 0.117
+inited is true
+0.1 : 0.118
+Jumping
+iteration: 118  simulation time: 0.118
+inited is true
+0.1 : 0.119
+Jumping
+iteration: 119  simulation time: 0.119
+inited is true
+0.1 : 0.12
+Jumping
+iteration: 120  simulation time: 0.12
+inited is true
+0.1 : 0.121
+Jumping
+iteration: 121  simulation time: 0.121
+inited is true
+0.1 : 0.122
+Jumping
+iteration: 122  simulation time: 0.122
+inited is true
+0.1 : 0.123
+Jumping
+iteration: 123  simulation time: 0.123
+inited is true
+0.1 : 0.124
+Jumping
+iteration: 124  simulation time: 0.124
+inited is true
+0.1 : 0.125
+Jumping
+iteration: 125  simulation time: 0.125
+inited is true
+0.1 : 0.126
+Jumping
+iteration: 126  simulation time: 0.126
+inited is true
+0.1 : 0.127
+Jumping
+iteration: 127  simulation time: 0.127
+inited is true
+0.1 : 0.128
+Jumping
+iteration: 128  simulation time: 0.128
+inited is true
+0.1 : 0.129
+Jumping
+iteration: 129  simulation time: 0.129
+inited is true
+0.1 : 0.13
+Jumping
+iteration: 130  simulation time: 0.13
+inited is true
+0.1 : 0.131
+Jumping
+iteration: 131  simulation time: 0.131
+inited is true
+0.1 : 0.132
+Jumping
+iteration: 132  simulation time: 0.132
+inited is true
+0.1 : 0.133
+Jumping
+iteration: 133  simulation time: 0.133
+inited is true
+0.1 : 0.134
+Jumping
+iteration: 134  simulation time: 0.134
+inited is true
+0.1 : 0.135
+Jumping
+iteration: 135  simulation time: 0.135
+inited is true
+0.1 : 0.136
+Jumping
+iteration: 136  simulation time: 0.136
+inited is true
+0.1 : 0.137
+Jumping
+iteration: 137  simulation time: 0.137
+inited is true
+0.1 : 0.138
+Jumping
+iteration: 138  simulation time: 0.138
+inited is true
+0.1 : 0.139
+Jumping
+iteration: 139  simulation time: 0.139
+inited is true
+0.1 : 0.14
+Jumping
+iteration: 140  simulation time: 0.14
+inited is true
+0.1 : 0.141
+Jumping
+iteration: 141  simulation time: 0.141
+inited is true
+0.1 : 0.142
+Jumping
+iteration: 142  simulation time: 0.142
+inited is true
+0.1 : 0.143
+Jumping
+iteration: 143  simulation time: 0.143
+inited is true
+0.1 : 0.144
+Jumping
+iteration: 144  simulation time: 0.144
+inited is true
+0.1 : 0.145
+Jumping
+iteration: 145  simulation time: 0.145
+inited is true
+0.1 : 0.146
+Jumping
+iteration: 146  simulation time: 0.146
+inited is true
+0.1 : 0.147
+Jumping
+iteration: 147  simulation time: 0.147
+inited is true
+0.1 : 0.148
+Jumping
+iteration: 148  simulation time: 0.148
+inited is true
+0.1 : 0.149
+Jumping
+iteration: 149  simulation time: 0.149
+inited is true
+0.1 : 0.15
+Jumping
+iteration: 150  simulation time: 0.15
+inited is true
+0.1 : 0.151
+Jumping
+iteration: 151  simulation time: 0.151
+inited is true
+0.1 : 0.152
+Jumping
+iteration: 152  simulation time: 0.152
+inited is true
+0.1 : 0.153
+Jumping
+iteration: 153  simulation time: 0.153
+inited is true
+0.1 : 0.154
+Jumping
+iteration: 154  simulation time: 0.154
+inited is true
+0.1 : 0.155
+Jumping
+iteration: 155  simulation time: 0.155
+inited is true
+0.1 : 0.156
+Jumping
+iteration: 156  simulation time: 0.156
+inited is true
+0.1 : 0.157
+Jumping
+iteration: 157  simulation time: 0.157
+inited is true
+0.1 : 0.158
+Jumping
+iteration: 158  simulation time: 0.158
+inited is true
+0.1 : 0.159
+Jumping
+iteration: 159  simulation time: 0.159
+inited is true
+0.1 : 0.16
+Jumping
+iteration: 160  simulation time: 0.16
+inited is true
+0.1 : 0.161
+Jumping
+iteration: 161  simulation time: 0.161
+inited is true
+0.1 : 0.162
+Jumping
+iteration: 162  simulation time: 0.162
+inited is true
+0.1 : 0.163
+Jumping
+iteration: 163  simulation time: 0.163
+inited is true
+0.1 : 0.164
+Jumping
+iteration: 164  simulation time: 0.164
+inited is true
+0.1 : 0.165
+Jumping
+iteration: 165  simulation time: 0.165
+inited is true
+0.1 : 0.166
+Jumping
+iteration: 166  simulation time: 0.166
+inited is true
+0.1 : 0.167
+Jumping
+iteration: 167  simulation time: 0.167
+inited is true
+0.1 : 0.168
+Jumping
+iteration: 168  simulation time: 0.168
+inited is true
+0.1 : 0.169
+Jumping
+iteration: 169  simulation time: 0.169
+inited is true
+0.1 : 0.17
+Jumping
+iteration: 170  simulation time: 0.17
+inited is true
+0.1 : 0.171
+Jumping
+iteration: 171  simulation time: 0.171
+inited is true
+0.1 : 0.172
+Jumping
+iteration: 172  simulation time: 0.172
+inited is true
+0.1 : 0.173
+Jumping
+iteration: 173  simulation time: 0.173
+inited is true
+0.1 : 0.174
+Jumping
+iteration: 174  simulation time: 0.174
+inited is true
+0.1 : 0.175
+Jumping
+iteration: 175  simulation time: 0.175
+inited is true
+0.1 : 0.176
+Jumping
+iteration: 176  simulation time: 0.176
+inited is true
+0.1 : 0.177
+Jumping
+iteration: 177  simulation time: 0.177
+inited is true
+0.1 : 0.178
+Jumping
+iteration: 178  simulation time: 0.178
+inited is true
+0.1 : 0.179
+Jumping
+iteration: 179  simulation time: 0.179
+inited is true
+0.1 : 0.18
+Jumping
+iteration: 180  simulation time: 0.18
+inited is true
+0.1 : 0.181
+Jumping
+iteration: 181  simulation time: 0.181
+inited is true
+0.1 : 0.182
+Jumping
+iteration: 182  simulation time: 0.182
+inited is true
+0.1 : 0.183
+Jumping
+iteration: 183  simulation time: 0.183
+inited is true
+0.1 : 0.184
+Jumping
+iteration: 184  simulation time: 0.184
+inited is true
+0.1 : 0.185
+Jumping
+iteration: 185  simulation time: 0.185
+inited is true
+0.1 : 0.186
+Jumping
+iteration: 186  simulation time: 0.186
+inited is true
+0.1 : 0.187
+Jumping
+iteration: 187  simulation time: 0.187
+inited is true
+0.1 : 0.188
+Jumping
+iteration: 188  simulation time: 0.188
+inited is true
+0.1 : 0.189
+Jumping
+iteration: 189  simulation time: 0.189
+inited is true
+0.1 : 0.19
+Jumping
+iteration: 190  simulation time: 0.19
+inited is true
+0.1 : 0.191
+Jumping
+iteration: 191  simulation time: 0.191
+inited is true
+0.1 : 0.192
+Jumping
+iteration: 192  simulation time: 0.192
+inited is true
+0.1 : 0.193
+Jumping
+iteration: 193  simulation time: 0.193
+inited is true
+0.1 : 0.194
+Jumping
+iteration: 194  simulation time: 0.194
+inited is true
+0.1 : 0.195
+Jumping
+iteration: 195  simulation time: 0.195
+inited is true
+0.1 : 0.196
+Jumping
+iteration: 196  simulation time: 0.196
+inited is true
+0.1 : 0.197
+Jumping
+iteration: 197  simulation time: 0.197
+inited is true
+0.1 : 0.198
+Jumping
+iteration: 198  simulation time: 0.198
+inited is true
+0.1 : 0.199
+Jumping
+iteration: 199  simulation time: 0.199
+inited is true
+0.1 : 0.2
+Jumping
+iteration: 200  simulation time: 0.2
+inited is true
+0.1 : 0.201
+Jumping
+iteration: 201  simulation time: 0.201
+inited is true
+0.1 : 0.202
+Jumping
+iteration: 202  simulation time: 0.202
+inited is true
+0.1 : 0.203
+Jumping
+iteration: 203  simulation time: 0.203
+Self Removal: 
+inited is true
+0.1 : 0.204
+Jumping
+iteration: 204  simulation time: 0.204
+adding clone to plugins.
+inited is false
+------------ First time ------------
+0.1 : 0.205
+Jumping
+iteration: 205  simulation time: 0.205
+inited is true
+0.1 : 0.206
+Jumping
+iteration: 206  simulation time: 0.206
+inited is true
+0.1 : 0.207
+Jumping
+iteration: 207  simulation time: 0.207
+inited is true
+0.1 : 0.208
+Jumping
+iteration: 208  simulation time: 0.208
+inited is true
+0.1 : 0.209
+Jumping
+iteration: 209  simulation time: 0.209
+inited is true
+0.1 : 0.21
+Jumping
+iteration: 210  simulation time: 0.21
+inited is true
+0.1 : 0.211
+Jumping
+iteration: 211  simulation time: 0.211
+inited is true
+0.1 : 0.212
+Jumping
+iteration: 212  simulation time: 0.212
+inited is true
+0.1 : 0.213
+Jumping
+iteration: 213  simulation time: 0.213
+inited is true
+0.1 : 0.214
+Jumping
+iteration: 214  simulation time: 0.214
+inited is true
+0.1 : 0.215
+Jumping
+iteration: 215  simulation time: 0.215
+inited is true
+0.1 : 0.216
+Jumping
+iteration: 216  simulation time: 0.216
+inited is true
+0.1 : 0.217
+Jumping
+iteration: 217  simulation time: 0.217
+inited is true
+0.1 : 0.218
+Jumping
+iteration: 218  simulation time: 0.218
+inited is true
+0.1 : 0.219
+Jumping
+iteration: 219  simulation time: 0.219
+inited is true
+0.1 : 0.22
+Jumping
+iteration: 220  simulation time: 0.22
+inited is true
+0.1 : 0.221
+Jumping
+iteration: 221  simulation time: 0.221
+inited is true
+0.1 : 0.222
+Jumping
+iteration: 222  simulation time: 0.222
+inited is true
+0.1 : 0.223
+Jumping
+iteration: 223  simulation time: 0.223
+inited is true
+0.1 : 0.224
+Jumping
+iteration: 224  simulation time: 0.224
+inited is true
+0.1 : 0.225
+Jumping
+iteration: 225  simulation time: 0.225
+inited is true
+0.1 : 0.226
+Jumping
+iteration: 226  simulation time: 0.226
+inited is true
+0.1 : 0.227
+Jumping
+iteration: 227  simulation time: 0.227
+inited is true
+0.1 : 0.228
+Jumping
+iteration: 228  simulation time: 0.228
+inited is true
+0.1 : 0.229
+Jumping
+iteration: 229  simulation time: 0.229
+inited is true
+0.1 : 0.23
+Jumping
+iteration: 230  simulation time: 0.23
+inited is true
+0.1 : 0.231
+Jumping
+iteration: 231  simulation time: 0.231
+inited is true
+0.1 : 0.232
+Jumping
+iteration: 232  simulation time: 0.232
+inited is true
+0.1 : 0.233
+Jumping
+iteration: 233  simulation time: 0.233
+inited is true
+0.1 : 0.234
+Jumping
+iteration: 234  simulation time: 0.234
+inited is true
+0.1 : 0.235
+Jumping
+iteration: 235  simulation time: 0.235
+inited is true
+0.1 : 0.236
+Jumping
+iteration: 236  simulation time: 0.236
+inited is true
+0.1 : 0.237
+Jumping
+iteration: 237  simulation time: 0.237
+inited is true
+0.1 : 0.238
+Jumping
+iteration: 238  simulation time: 0.238
+inited is true
+0.1 : 0.239
+Jumping
+iteration: 239  simulation time: 0.239
+inited is true
+0.1 : 0.24
+Jumping
+iteration: 240  simulation time: 0.24
+inited is true
+0.1 : 0.241
+Jumping
+iteration: 241  simulation time: 0.241
+inited is true
+0.1 : 0.242
+Jumping
+iteration: 242  simulation time: 0.242
+inited is true
+0.1 : 0.243
+Jumping
+iteration: 243  simulation time: 0.243
+inited is true
+0.1 : 0.244
+Jumping
+iteration: 244  simulation time: 0.244
+inited is true
+0.1 : 0.245
+Jumping
+iteration: 245  simulation time: 0.245
+inited is true
+0.1 : 0.246
+Jumping
+iteration: 246  simulation time: 0.246
+inited is true
+0.1 : 0.247
+Jumping
+iteration: 247  simulation time: 0.247
+inited is true
+0.1 : 0.248
+Jumping
+iteration: 248  simulation time: 0.248
+inited is true
+0.1 : 0.249
+Jumping
+iteration: 249  simulation time: 0.249
+inited is true
+0.1 : 0.25
+Jumping
+iteration: 250  simulation time: 0.25
+inited is true
+0.1 : 0.251
+Jumping
+iteration: 251  simulation time: 0.251
+inited is true
+0.1 : 0.252
+Jumping
+iteration: 252  simulation time: 0.252
+inited is true
+0.1 : 0.253
+Jumping
+iteration: 253  simulation time: 0.253
+inited is true
+0.1 : 0.254
+Jumping
+iteration: 254  simulation time: 0.254
+inited is true
+0.1 : 0.255
+Jumping
+iteration: 255  simulation time: 0.255
+inited is true
+0.1 : 0.256
+Jumping

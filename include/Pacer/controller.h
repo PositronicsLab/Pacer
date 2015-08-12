@@ -52,7 +52,7 @@ class Controller : public Robot, public boost::enable_shared_from_this<Controlle
       close_plugins();
       return init_plugins();
     }
-
+  
     void add_plugin_update(int priority,std::string name,update_t f){
       // Fix priority
       if(priority > LOWEST_PRIORITY || priority < NON_REALTIME){

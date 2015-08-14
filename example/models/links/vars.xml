@@ -111,52 +111,6 @@
         stand-trajectory
       </close>
     </walk1>
-    
-<!--    <!--   JUMP   -->-->
-<!--    <jump>-->
-<!--      <time type="double">0.39</time>-->
-<!--      <open type="string vector">-->
-<!--        jump-to-->
-<!--      </open>-->
-<!--      <close type="string vector">-->
-<!--        gait-planner-->
-<!--        ik-feet-->
-<!--        joint-PID-controller-->
-<!--      </close>-->
-<!--    </jump>-->
-<!--    -->
-<!--    <!--   RESET   -->-->
-<!--    <reset>-->
-<!--      <time type="double">0.7</time>-->
-<!--      <open type="string vector">-->
-<!--        stand-trajectory-->
-<!--        joint-PID-controller-->
-<!--      </open>-->
-<!--      <close type="string vector">-->
-<!--        jump-to-->
-<!--        eef-PID-controller-->
-<!--        ik-feet-->
-<!--      </close>-->
-<!--    </reset>-->
-<!--    -->
-<!--    <walk2>-->
-<!--      <time type="double">1</time>-->
-<!--      <open type="string vector">-->
-<!--        gait-planner-->
-<!--        eef-PID-controller-->
-<!--        ik-feet-->
-<!--      </open>-->
-<!--      <close type="string vector">-->
-<!--        stand-trajectory-->
-<!--      </close>-->
-<!--    </walk2>-->
-<!--    -->
-<!--    <exit>-->
-<!--      <time type="double">1.1</time>-->
-<!--      <open type="string vector">-->
-<!--        exit-->
-<!--      </open>-->
-<!--    </exit>-->
   </plugin-scheduler>
   
   <error-check>

@@ -41,9 +41,9 @@ public:
     OUTLOG(joint_names,"joint_names",logERROR);
 
     static std::vector<double>
-        Kp = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
-        Kv = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
-        Ki = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.ki"),
+        Kp = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gains.kp"),
+        Kv = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gains.kv"),
+        Ki = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gains.ki"),
         dofs = ctrl_ptr->get_data<std::vector<double> >("init.joint.dofs");
 
     OUTLOG(Kp,"Kp",logERROR);
@@ -115,7 +115,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   pid.update();
 
   bool acceleration_ff = false;
-  ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+  ctrl->get_data<bool>(plugin_namespace+".acceleration",acceleration_ff);
 
   if(acceleration_ff){
     Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);

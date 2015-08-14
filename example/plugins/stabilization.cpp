@@ -53,7 +53,7 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
 }
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
+  int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+".des-contact");
   
    std::vector<std::string>
         foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
@@ -73,7 +73,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     active_feet = foot_names;
 
   double activation_tol = 0;
-  ctrl->get_data<double>(plugin_namespace+"min-allowed-friction",activation_tol);
+  ctrl->get_data<double>(plugin_namespace+".min-allowed-friction",activation_tol);
   
   std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
   for(int i=0;i<active_feet.size();i++){
@@ -88,8 +88,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NC = contacts.size();
   if(NC > 0){
     /// Current State
-    std::vector<double> x_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.x");
-    std::vector<double> xd_des = ctrl->get_data<std::vector<double> >(plugin_namespace+"desired.xd");
+    std::vector<double> x_des = ctrl->get_data<std::vector<double> >(plugin_namespace+".desired.x");
+    std::vector<double> xd_des = ctrl->get_data<std::vector<double> >(plugin_namespace+".desired.xd");
     
     Ravelin::VectorNd
     generalized_qd = ctrl->get_generalized_value(Pacer::Controller::velocity),
@@ -144,9 +144,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
     /// Feedback gains
     static std::vector<double>
-      Kp = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
-      Kv = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
-      Ki = ctrl->get_data<std::vector<double> >(plugin_namespace+"gains.ki");
+      Kp = ctrl->get_data<std::vector<double> >(plugin_namespace+".gains.kp"),
+      Kv = ctrl->get_data<std::vector<double> >(plugin_namespace+".gains.kv"),
+      Ki = ctrl->get_data<std::vector<double> >(plugin_namespace+".gains.ki");
 
     Ravelin::VectorNd fb = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
     contact_jacobian_stabilizer(Jb,Jq,Kp,Kv,Ki,pos_base,x_des,vel_base,xd_des,fb);
@@ -154,7 +154,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     OUTLOG(fb,"viip_fb",logDEBUG);
     
     bool acceleration_ff = false;
-    ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+    ctrl->get_data<bool>(plugin_namespace+".acceleration",acceleration_ff);
 
   if(acceleration_ff){
     Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);

@@ -55,11 +55,11 @@ bool eval_Nd_cubic_spline(std::vector<Trajectory>& trajs, double t, VectorNd& x,
 
 std::vector<Trajectory> calc_jump(){
   // Set takeoff angle
-  double angle_of_elevation = ctrl->get_data<double>(plugin_namespace + "angle-of-elevation");
-  double heading_angle = ctrl->get_data<double>(plugin_namespace + "heading");
+  double angle_of_elevation = ctrl->get_data<double>(plugin_namespace + ".angle-of-elevation");
+  double heading_angle = ctrl->get_data<double>(plugin_namespace + ".heading");
   //distance to goal
-  double x = ctrl->get_data<double>(plugin_namespace + "range");
-  double duration = ctrl->get_data<double>(plugin_namespace + "duration");
+  double x = ctrl->get_data<double>(plugin_namespace + ".range");
+  double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
   
   // 3d velocity
   double v_spatial = sqrt((grav * x) / sin(2.0 * angle_of_elevation));
@@ -114,7 +114,7 @@ std::vector<Trajectory> calc_jump(){
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   ctrl = ctrl_ptr;
   double start_jump_time = t;
-  double duration = ctrl->get_data<double>(plugin_namespace + "duration");
+  double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
 
   static bool first_step = true;
   
@@ -142,13 +142,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
       //      if(leap_spline[0].T[leap_spline[0].T.rows()-1] > t-start_time)
       //        throw std::runtime_error("End of jump!");
       
-//      // Disable joint Feedback
-//      VectorNd q_current, qd_current;
-//      ctrl->get_joint_generalized_value(Pacer::Controller::position,q_current);
-//      ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_current);
-//      
-//      ctrl->get_joint_generalized_value(Pacer::Controller::velocity,qd_current);
-//      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_current);
+      // Disable joint Feedback
+      VectorNd q_current, qd_current;
+      ctrl->get_joint_generalized_value(Pacer::Controller::position,q_current);
+      ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_current);
+      
+      ctrl->get_joint_generalized_value(Pacer::Controller::velocity,qd_current);
+      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_current);
       
       // Find base trajectory
       if(!eval_Nd_cubic_spline(leap_spline,t-start_jump_time,x,xd,xdd)){
@@ -207,7 +207,44 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
 }
 
 
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 /** This is a quick way to register your plugin function of the form:
  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+ * void Deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl)
  */
-#include "register-plugin"
+
+void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  static int ITER = 0;
+  int RTF = (int) ctrl->get_data<double>(plugin_namespace+".real-time-factor");
+  if(ITER%RTF == 0)
+    Update(ctrl,t);
+  ITER+=1;
+}
+
+void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  std::vector<std::string>
+  foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  
+  int NUM_FEET = foot_names.size();
+  
+  for(int i=0;i<NUM_FEET;i++){
+    ctrl->remove_data(foot_names[i]+".goal.x");
+    ctrl->remove_data(foot_names[i]+".goal.xd");
+    ctrl->remove_data(foot_names[i]+".goal.xdd");
+  }
+}
+
+extern "C" {
+  void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
+    plugin_namespace = std::string(std::string(name));
+    
+    int priority = ctrl->get_data<double>(plugin_namespace+".priority");
+    
+    ctrl->add_plugin_update(priority,name,&update);
+    ctrl->add_plugin_deconstructor(name,&deconstruct);
+  }
+}

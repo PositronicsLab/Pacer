@@ -67,6 +67,11 @@ namespace Pacer{
       _name_priority_map[name] = priority;
     }
     
+    void add_plugin_deconstructor(const std::string& name,update_t f){
+      _plugin_deconstruct_map[name] = f;
+    }
+    
+    
     void close_plugin(const std::string& name){
       plugins_to_close.push_back(name);
     }
@@ -77,6 +82,7 @@ namespace Pacer{
   private:
     typedef std::map<std::string , update_t> name_update_t;
     std::map<int , name_update_t> _update_priority_map;
+    name_update_t _plugin_deconstruct_map;
     std::map< std::string , int > _name_priority_map;
     std::vector<std::string> plugins_to_open, plugins_to_close;
     
@@ -88,9 +94,13 @@ namespace Pacer{
     bool init_plugin(const std::string& name);
     bool remove_plugin(const std::string& plugin_name);
     void remove_plugin_update(const std::string& name){
+      (*_plugin_deconstruct_map[name])(this->ptr(),0);
+      
       //delete _update_priority_map.at(_name_priority_map.at(name)).at(name)->second;
       _update_priority_map[_name_priority_map[name]].erase(name);
       _name_priority_map.erase(name);
+      _plugin_deconstruct_map.erase(name);
+
     }
     
     bool close_all_plugins();
@@ -109,23 +119,6 @@ namespace Pacer{
       //OUT_LOG(logDEBUG1) << "<< " << update.first;
       //}
       
-      // add the plugins that have been marked for addition
-      if(!plugins_to_open.empty()){
-        BOOST_FOREACH( const std::string& name, plugins_to_open){
-          init_plugin(name);
-        }
-        plugins_to_open.clear();
-      }
-      // Update plugins in priority queue
-      for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++)
-        if(!_update_priority_map[i].empty()) // SRZ: do I need this line?
-          BOOST_FOREACH( const name_update_t::value_type& update, _update_priority_map[i])
-        {
-          OUT_LOG(logDEBUG1) << ">> " << update.first;
-          (*(update.second))(this->ptr(),t);
-          OUT_LOG(logDEBUG1) << "<< " << update.first;
-        }
-      
       // remove the plugins that have been marked for closure
       if(!plugins_to_close.empty()){
         BOOST_FOREACH( const std::string& name, plugins_to_close){
@@ -134,6 +127,24 @@ namespace Pacer{
         plugins_to_close.clear();
       }
       
+      // add the plugins that have been marked for addition
+      if(!plugins_to_open.empty()){
+        BOOST_FOREACH( const std::string& name, plugins_to_open){
+          init_plugin(name);
+        }
+        plugins_to_open.clear();
+      }
+      
+      // Update plugins in priority queue
+      for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++){
+        if(!_update_priority_map[i].empty()){ // SRZ: do I need this line?
+          BOOST_FOREACH( const name_update_t::value_type& update, _update_priority_map[i]){
+            OUT_LOG(logDEBUG1) << ">> " << update.first;
+            (*(update.second))(this->ptr(),t);
+            OUT_LOG(logDEBUG1) << "<< " << update.first;
+          }
+        }
+      }
       
       OUT_LOG(logDEBUG1) << "<< update_plugins()";
     }

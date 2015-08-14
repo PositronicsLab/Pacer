@@ -47,7 +47,7 @@ inline std::ostringstream& Log::Get(TLogLevel level)
 inline Log::~Log()
 {
     os << std::endl;
-#ifdef LOGGING
+#ifdef LOG_TO_FILE
     FILE * pFile;
     pFile = fopen ("out.log","a");
     fprintf(pFile, "%s", os.str().c_str());

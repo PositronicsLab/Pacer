@@ -39,18 +39,18 @@ std::vector<Ravelin::Vector3d>& foot_oscilator(
    * bf    : the transition rate between phases
    */
   // a/b/c : affect the convergence rate of the limit cycle
-  double a = ctrl_ptr->get_data<double>(plugin_namespace+"convergence.a");
-  double b = ctrl_ptr->get_data<double>(plugin_namespace+"convergence.b");
-  double c = ctrl_ptr->get_data<double>(plugin_namespace+"convergence.c");
+  double a = ctrl_ptr->get_data<double>(plugin_namespace+".convergence.a");
+  double b = ctrl_ptr->get_data<double>(plugin_namespace+".convergence.b");
+  double c = ctrl_ptr->get_data<double>(plugin_namespace+".convergence.c");
   
 //  // B is negative
 //  b*=-1.0;
 
   // Stepping Filter params
   // depth of step phase where touchdown occurs (fraction of Hs)
-  double ztd = ctrl_ptr->get_data<double>(plugin_namespace+"Ztd"); //0
+  double ztd = ctrl_ptr->get_data<double>(plugin_namespace+".Ztd"); //0
   // speed at which behavior changes (arbitrary scale)
-  double bf = ctrl_ptr->get_data<double>(plugin_namespace+"Bf"); //1000
+  double bf = ctrl_ptr->get_data<double>(plugin_namespace+".Bf"); //1000
 
   std::vector<Ravelin::Vector3d> xb(NUM_EEFS);
   for(int i=0;i<NUM_EEFS;i++)
@@ -70,7 +70,7 @@ std::vector<Ravelin::Vector3d>& foot_oscilator(
     double ws  = M_PI * (Vf/Ls) * ((Df[i]*Sp1)/(1.0-Df[i]) + Sp2);
 
     // realtively thin gait [shoulder width]
-    double dyc = ctrl_ptr->get_data<double>(plugin_namespace+"Dyc"); //0;
+    double dyc = ctrl_ptr->get_data<double>(plugin_namespace+".Dyc"); //0;
 
     // \dot{x}
     // Eqn: 1, 2, 3
@@ -161,7 +161,7 @@ void cpg_trot(
   }
 
   // Additional parameters for CPG
-  double bp = ctrl_ptr->get_data<double>(plugin_namespace+"Bp"); //1000
+  double bp = ctrl_ptr->get_data<double>(plugin_namespace+".Bp"); //1000
 
 
   for(int i=0;i<NUM_EEFS;i++){
@@ -231,17 +231,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   go_to[5] = command[2];
   
   static std::vector<double>
-  duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"duty-factor"),
-  this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gait"),
-  input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"pose");
-  static double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+"gait-duration");
-  static double step_height = ctrl_ptr->get_data<double>(plugin_namespace+"step-height");
+  duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
+  this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gait"),
+  input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".pose");
+  static double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+".gait-duration");
+  static double step_height = ctrl_ptr->get_data<double>(plugin_namespace+".step-height");
   static std::vector<Vector3d> footholds(0);
-  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"feet");
+  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
   
-  static double width = ctrl_ptr->get_data<double>(plugin_namespace+"width");
-  static double length = ctrl_ptr->get_data<double>(plugin_namespace+"length");
-  static double height = ctrl_ptr->get_data<double>(plugin_namespace+"height");
+  static double width = ctrl_ptr->get_data<double>(plugin_namespace+".width");
+  static double length = ctrl_ptr->get_data<double>(plugin_namespace+".length");
+  static double height = ctrl_ptr->get_data<double>(plugin_namespace+".height");
   
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
                                                      ctrl->get_data<Pose3d>("base_link_frame")));

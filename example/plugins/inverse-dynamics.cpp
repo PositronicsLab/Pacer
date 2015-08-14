@@ -2323,10 +2323,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double last_time = -0.001;
   double dt = t - last_time;
   last_time = t;
-  static double dt_idyn = ctrl->get_data<double>(plugin_namespace+"dt");
-  static double alpha = ctrl->get_data<double>(plugin_namespace+"alpha");
-  static int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+"des-contact");
-  static int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs");
+  static double dt_idyn = ctrl->get_data<double>(plugin_namespace+".dt");
+  static double alpha = ctrl->get_data<double>(plugin_namespace+".alpha");
+  static int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+".des-contact");
+  static int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+".last-cfs");
   double DT = (dt_idyn == 0)? dt : dt_idyn;
   if(DT == 0) DT = 0.001;
 
@@ -2386,7 +2386,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     active_feet = foot_names;
 
   double mcpf = 1e2;
-    ctrl->get_data<double>(plugin_namespace+"max-contacts-per-foot",mcpf);
+    ctrl->get_data<double>(plugin_namespace+".max-contacts-per-foot",mcpf);
   int MAX_CONTACTS_PER_FOOT = mcpf;
   
   std::vector<unsigned> indices;
@@ -2486,7 +2486,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           N_delay_queue,
           D_delay_queue,
           MU_delay_queue;
-      static int FILTER_CFS = ctrl->get_data<int>(plugin_namespace+"last-cfs-filter");
+      static int FILTER_CFS = ctrl->get_data<int>(plugin_namespace+".last-cfs-filter");
 
       if(FILTER_CFS && NC>0){
 
@@ -2516,7 +2516,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   OUTLOG(MU,"MU",logERROR);
 
   // IDYN MAXIMAL DISSIPATION MODEL
-  std::vector<std::string> controller_name = ctrl->get_data<std::vector<std::string> >(plugin_namespace+"type");
+  std::vector<std::string> controller_name = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".type");
 
   std::map<std::string,Ravelin::VectorNd> cf_map,uff_map;
   

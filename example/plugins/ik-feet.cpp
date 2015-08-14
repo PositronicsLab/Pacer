@@ -26,9 +26,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
   for(int i=0;i<NUM_FEET;i++){     
     //NOTE: Change so some eefs can be non-feet 
-    foot_pos[i] = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x");
-    foot_vel[i] = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd");
-    foot_acc[i] = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd");
+    if(!ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]))
+      return;
+    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
+    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
     foot_pos[i].pose = Moby::GLOBAL;
   }
   
@@ -42,7 +43,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   q[N+5] = 0;
   q[N+6] = 1;
   
-  double TOL = ctrl->get_data<double>(plugin_namespace+"abs-err-tolerance");
+  double TOL = ctrl->get_data<double>(plugin_namespace+".abs-err-tolerance");
   // This is calculated in global frame always (assume base_link is at origin)
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
                                         q_goal,qd_goal,qdd_goal,TOL);

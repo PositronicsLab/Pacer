@@ -29,7 +29,12 @@ namespace Pacer{
 
   /// --------------------  Data Storage  -------------------- ///
   private:
-  
+    template<typename T>
+    struct is_pointer { static const bool value = false; };
+    
+    template<typename T>
+    struct is_pointer<T*> { static const bool value = true; };
+    
     std::map<std::string,boost::shared_ptr<void> > _data_map;
     std::mutex _data_map_mutex;
   public:
@@ -37,6 +42,10 @@ namespace Pacer{
     // Returns 'true' if new key was created in map
     template<class T>
     bool set_data(std::string n, const T& v){
+      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+      if(is_pointer<T>::value){
+        throw std::runtime_error("Can't save pointer: " + n);
+      }
       _data_map_mutex.lock();
       // TODO: Improve this functionality, shouldn't be copying into new class
       std::map<std::string,boost::shared_ptr<void> >::iterator it
@@ -49,10 +58,20 @@ namespace Pacer{
       }
       _data_map_mutex.unlock();
 
-      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
       return new_var;
     }
     
+    void remove_data(std::string n){
+      _data_map_mutex.lock();
+      // TODO: Improve this functionality, shouldn't be copying into new class
+      std::map<std::string,boost::shared_ptr<void> >::iterator it
+      =_data_map.find(n);
+      if (it != _data_map.end()){
+        _data_map.erase(it);
+      }
+      _data_map_mutex.unlock();
+    }
+  
     template<class T>
     T get_data(std::string n){
       std::map<std::string,boost::shared_ptr<void> >::iterator it;

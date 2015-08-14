@@ -46,7 +46,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // Frames
   {
     to_print.clear();
-    ctrl->get_data<std::vector<std::string> >(plugin_namespace+"print-data.pose3",to_print);
+    ctrl->get_data<std::vector<std::string> >(plugin_namespace+".print-data.pose3",to_print);
 
     Ravelin::Pose3d data;
     for (std::vector<std::string>::iterator it = to_print.begin();
@@ -59,7 +59,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // Vector3
   {
     to_print.clear();
-    ctrl->get_data<std::vector<std::string> >(plugin_namespace+"print-data.vec3",to_print);
+    ctrl->get_data<std::vector<std::string> >(plugin_namespace+".print-data.vec3",to_print);
     
     Ravelin::Origin3d data;
     for (std::vector<std::string>::iterator it = to_print.begin();
@@ -72,7 +72,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // Bool
   {
     to_print.clear();
-    ctrl->get_data<std::vector<std::string> >(plugin_namespace+"print-data.bool",to_print);
+    ctrl->get_data<std::vector<std::string> >(plugin_namespace+".print-data.bool",to_print);
     
     bool data;
     for (std::vector<std::string>::iterator it = to_print.begin();
@@ -85,7 +85,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // double
   {
     to_print.clear();
-    ctrl->get_data<std::vector<std::string> >(plugin_namespace+"print-data.real",to_print);
+    ctrl->get_data<std::vector<std::string> >(plugin_namespace+".print-data.real",to_print);
     
     double data;
     for (std::vector<std::string>::iterator it = to_print.begin();

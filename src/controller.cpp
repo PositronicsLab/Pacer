@@ -44,12 +44,19 @@ typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
 std::map<std::string, init_t> INIT;
 
 bool Controller::remove_plugin(const std::string& plugin_name){
-  void * &handle = handles[plugin_name];
+  std::map<std::string, void*>::iterator it = handles.find(plugin_name);
+  
+  if(it == handles.end())
+    return false;
+
+  INIT.erase(plugin_name);
+  remove_plugin_update(plugin_name);
+  void * &handle = (*it).second;
   dlclose(handle);
   //  delete handle; // DLCLOSE deletes handle object
   handles.erase(plugin_name);
-  INIT.erase(plugin_name);
-  remove_plugin_update(plugin_name);
+  
+  return true;
 }
 
 bool Controller::init_plugin(const std::string& plugin_name){

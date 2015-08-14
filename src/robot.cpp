@@ -8,6 +8,28 @@
 
 using namespace Pacer;
 
+// TEMPLATE SPECIALIZATIONS
+//
+//template<>
+//bool Robot::set_data<Ravelin::Pose3d>(std::string n,const Ravelin::Pose3d& _v){
+//  Ravelin::Pose3d v(Ravelin::Quatd(_v.q.x,_v.q.y,_v.q.z,_v.q.w),Ravelin::Origin3d(_v.x[0],_v.x[1],_v.x[2]),Moby::GLOBAL);
+//  _data_map_mutex.lock();
+//  // TODO: Improve this functionality, shouldn't be copying into new class
+//  std::map<std::string,boost::shared_ptr<void> >::iterator it
+//  =_data_map.find(n);
+//  bool new_var = (it == _data_map.end());
+//  if(new_var){
+//    _data_map[n] = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(v));
+//  }else{
+//    (*it).second = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(v));
+//  }
+//  _data_map_mutex.unlock();
+//  
+//  OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+//  return new_var;
+//}
+
+
 void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
   Ravelin::VectorNd set_q,set_qd;
   _abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);

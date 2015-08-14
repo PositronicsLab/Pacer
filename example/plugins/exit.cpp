@@ -1,0 +1,11 @@
+#include <Pacer/controller.h>
+std::string plugin_namespace;
+
+void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  exit(0);
+}
+
+/** This is a quick way to register your plugin function of the form:
+ * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+ */
+#include "register-plugin"

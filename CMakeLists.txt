@@ -75,7 +75,7 @@ add_definitions(-DSAFESTATIC=static)
 add_definitions(-DUSE_GLPK)
 
 IF(LOGGING)
-  add_definitions( -DLOGGING )
+  add_definitions( -DLOG_TO_FILE )
 ENDIF(LOGGING)
 
 include_directories(

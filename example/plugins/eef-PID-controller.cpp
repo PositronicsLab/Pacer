@@ -34,14 +34,14 @@ public:
 
   void init(){
 
-    eef_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"id");
+    eef_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".id");
     num_eefs = eef_names.size();
     eef_u.resize(num_eefs);
     
     std::vector<double>
-        Kp = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kp"),
-        Kv = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.kv"),
-        Ki = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gains.ki");
+        Kp = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gains.kp"),
+        Kv = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gains.kv"),
+        Ki = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gains.ki");
  
     assert(num_eefs*3 == Kp.size());
     assert(num_eefs*3 == Kv.size());
@@ -90,6 +90,8 @@ public:
         //      Vector3d a = Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p1,   Vector3d(0,1,0),0.01)));
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  p2,   p1,   Vector3d(1,0,0),0.01)));
+        Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,vel_des)/10;
+        Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p1,   p1,   Vector3d(0,1,0),0.01)));
       }
       
       Ravelin::Vector3d 
@@ -132,7 +134,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   pid.update();
 
   bool acceleration_ff = false;
-  ctrl->get_data<bool>(plugin_namespace+"acceleration",acceleration_ff);
+  ctrl->get_data<bool>(plugin_namespace+".acceleration",acceleration_ff);
   
   if(acceleration_ff){
     Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal);

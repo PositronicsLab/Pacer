@@ -39,9 +39,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     Ravelin::VectorNd command;
     command.set_zero(6);
 
-    double max_forward_speed = ctrl->get_data<double>(plugin_namespace+"max-forward-speed");
-    double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+"max-strafe-speed");
-    double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
+    double max_forward_speed = ctrl->get_data<double>(plugin_namespace+".max-forward-speed");
+    double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+".max-strafe-speed");
+    double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+".max-turn-speed");
 
     // if FALSE, drive like a car (x and theta)
     // Q: if TRUE, turn toward waypoint while stepping in direction of waypoint
@@ -51,7 +51,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
     /// Assign WAYPOINTS in the plane ///
     static std::vector<Point> waypoints;
   
-    std::vector<double> waypoints_vec = ctrl->get_data<std::vector<double> >(plugin_namespace+"waypoints");
+    std::vector<double> waypoints_vec = ctrl->get_data<std::vector<double> >(plugin_namespace+".waypoints");
   
     // if (waypoints not inititalized) OR (waypoints changed) OR (only one waypoint)
     // update waypoints
@@ -80,7 +80,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       }
       double distance_to_wp = (Ravelin::Origin3d(next_waypoint.data()) - Ravelin::Origin3d(com[X],com[Y],0)).norm();
 
-      double max_dist = ctrl->get_data<double>(plugin_namespace+"tolerance");
+      double max_dist = ctrl->get_data<double>(plugin_namespace+".tolerance");
       if( distance_to_wp < max_dist){
       OUT_LOG(logDEBUG1) << "waypoint reached, incrementing waypoint.";
       OUTLOG(next_waypoint,"this_wp",logDEBUG1);

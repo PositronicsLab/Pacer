@@ -253,7 +253,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // SDL2 will only report events when the window has focus, so set
   // this hint as we don't have a window
   const int JDEADZONE = 2000;
-  std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+"type");
+  std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+".type");
 
   try {
     static Joystick j = Joystick(0);
@@ -477,9 +477,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 //      ctrl->set_data<std::vector<double> >("waypoints.waypoints",target2d);
 //    } else
     {
-      double max_forward_speed = ctrl->get_data<double>(plugin_namespace+"max-forward-speed");
-      double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+"max-strafe-speed");
-      double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+"max-turn-speed");
+      double max_forward_speed = ctrl->get_data<double>(plugin_namespace+".max-forward-speed");
+      double max_strafe_speed  = ctrl->get_data<double>(plugin_namespace+".max-strafe-speed");
+      double max_turn_speed    = ctrl->get_data<double>(plugin_namespace+".max-turn-speed");
       
       const int MAX_VAL =32767;
       int X = 1,Y = 0,THETA = 2;

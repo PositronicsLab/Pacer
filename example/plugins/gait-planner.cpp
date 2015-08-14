@@ -525,12 +525,6 @@ void walk_toward(
 
 ///* VISUALIZE
 //#ifdef NDEBUG
-    {
-      Vector3d p = Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]);
-      Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,foot_vel[i])/10;
-//      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,0,1),0.005)));
-//      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.005)));
-    }
     if(last_phase[i])
       continue;
 
@@ -602,16 +596,16 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   go_to[5] = command[2];
 
   std::vector<double>
-      duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"duty-factor"),
-    this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"gait"),
-    input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+"pose");
-  double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+"gait-duration");
-  double step_height = ctrl_ptr->get_data<double>(plugin_namespace+"step-height");
+      duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
+    this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gait"),
+    input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".pose");
+  double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+".gait-duration");
+  double step_height = ctrl_ptr->get_data<double>(plugin_namespace+".step-height");
   
   double vec_width = 5;
   std::vector<std::vector<double> > footholds;
   std::vector<double> footholds_vec;
-  ctrl->get_data<std::vector<double> >(plugin_namespace+"footholds",footholds_vec);
+  ctrl->get_data<std::vector<double> >(plugin_namespace+".footholds",footholds_vec);
   if(footholds.empty() || footholds_vec.size()/vec_width != footholds.size()){
     footholds.clear();
     for(int i=0, ind=0;i<footholds_vec.size()/vec_width;i++){
@@ -622,11 +616,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
   
-  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+"feet");
+  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
 
-  double width = ctrl_ptr->get_data<double>(plugin_namespace+"width");
-  double length = ctrl_ptr->get_data<double>(plugin_namespace+"length");
-  double height = ctrl_ptr->get_data<double>(plugin_namespace+"height");
+  double width = ctrl_ptr->get_data<double>(plugin_namespace+".width");
+  double length = ctrl_ptr->get_data<double>(plugin_namespace+".length");
+  double height = ctrl_ptr->get_data<double>(plugin_namespace+".height");
 
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
         ctrl->get_data<Pose3d>("base_link_frame")));
@@ -695,12 +689,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
   
+  gait_pose->update_relative_pose(Moby::GLOBAL);
   ctrl->set_data<Pose3d>("base_stability_frame",*(gait_pose.get()));
-
+  
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
 
-  int STANCE_ON_CONTACT = ctrl_ptr->get_data<int>(plugin_namespace+"stance-on-contact");
+  int STANCE_ON_CONTACT = ctrl_ptr->get_data<int>(plugin_namespace+".stance-on-contact");
   
   for(int i=0;i<foot_names.size();i++){
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
@@ -720,7 +715,48 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
 }
 
+/****************************************************************************
+ * Copyright 2014 Samuel Zapolsky
+ * This library is distributed under the terms of the Apache V2.0
+ * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
+ ****************************************************************************/
 /** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "register-plugin"
+ * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
+ * void Deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl)
+ */
+
+void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  static int ITER = 0;
+  int RTF = (int) ctrl->get_data<double>(plugin_namespace+".real-time-factor");
+  if(ITER%RTF == 0)
+    Update(ctrl,t);
+  ITER+=1;
+}
+
+void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+  ctrl->remove_data("base_stability_frame");
+
+  std::vector<std::string> foot_names
+  = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
+
+  int NUM_FEET = foot_names.size();
+
+  for(int i=0;i<NUM_FEET;i++){
+    ctrl->remove_data(foot_names[i]+".goal.x");
+    ctrl->remove_data(foot_names[i]+".goal.xd");
+    ctrl->remove_data(foot_names[i]+".goal.xdd");
+    ctrl->remove_data(foot_names[i]+".stance");
+  }
+}
+
+extern "C" {
+  void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
+    plugin_namespace = std::string(std::string(name));
+    
+    int priority = ctrl->get_data<double>(plugin_namespace+".priority");
+    
+    ctrl->add_plugin_update(priority,name,&update);
+    ctrl->add_plugin_deconstructor(name,&deconstruct);
+  }
+}
+

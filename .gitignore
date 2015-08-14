@@ -1,6 +1,8 @@
 .DS_Store
 *~
 *.swp
+*.log
+*.mat
 build/**/* 
 debug/**/* 
 release/**/* 

@@ -108,7 +108,7 @@ namespace Pacer{
     struct contact_t{
       std::string id;
       Ravelin::Vector3d point;
-      Ravelin::Vector3d normal;
+      Ravelin::Vector3d normal, tangent;
       Ravelin::Vector3d impulse;
       double mu_coulomb;
       double mu_viscous;
@@ -179,35 +179,29 @@ namespace Pacer{
         std::string& id,
         Ravelin::Vector3d point,
         Ravelin::Vector3d normal,
+        Ravelin::Vector3d tangent,
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
         double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
       if(_lock_state)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      boost::shared_ptr<contact_t> c(new contact_t);
-      c->id         = id; 
-      c->point      = point; 
-      c->normal     = normal; 
-      c->impulse    = impulse; 
-      c->mu_coulomb = mu_coulomb; 
-      c->mu_viscous = mu_viscous;
-      c->restitution= restitution;
-      c->compliant  = compliant;
-      _id_contacts_map[id].push_back(c);
+      _id_contacts_map[id].push_back(create_contact(id,point,normal, tangent, impulse,mu_coulomb,mu_viscous,restitution,compliant));
     }
     
     boost::shared_ptr<contact_t> create_contact(
         std::string& id,
         Ravelin::Vector3d point,
         Ravelin::Vector3d normal,
+        Ravelin::Vector3d tangent,
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
         double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
       boost::shared_ptr<contact_t> c(new contact_t);
       c->id         = id; 
       c->point      = point; 
-      c->normal     = normal; 
-      c->impulse    = impulse; 
+      c->normal     = normal;
+      c->tangent    = tangent;
+      c->impulse    = impulse;
       c->mu_coulomb = mu_coulomb; 
       c->mu_viscous = mu_viscous;
       c->restitution= restitution;

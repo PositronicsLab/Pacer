@@ -153,15 +153,15 @@ bool Utility::solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, c
   qqq.set_sub_vec(2*n,nb);
 
 #ifndef NDEBUG
-  OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;
-  OUT_LOG(logDEBUG1)  << "%QP variables" << std::endl;
-  OUTLOG(Q,"Q",logDEBUG1);
-  OUTLOG(c,"c",logDEBUG1);
-  OUTLOG(A,"AA",logDEBUG1);
-  OUTLOG(b,"bb",logDEBUG1);
-  OUT_LOG(logDEBUG1)  << "LCP variables" << std::endl;
-  OUTLOG(MMM,"MMM",logDEBUG1);
-  OUTLOG(qqq,"qqq",logDEBUG1);
+//  OUT_LOG(logDEBUG1)  << "% >> solve qp" << std::endl;
+//  OUT_LOG(logDEBUG1)  << "%QP variables" << std::endl;
+//  OUTLOG(Q,"Q",logDEBUG1);
+//  OUTLOG(c,"c",logDEBUG1);
+//  OUTLOG(A,"AA",logDEBUG1);
+//  OUTLOG(b,"bb",logDEBUG1);
+//  OUT_LOG(logDEBUG1)  << "LCP variables" << std::endl;
+//  OUTLOG(MMM,"MMM",logDEBUG1);
+//  OUTLOG(qqq,"qqq",logDEBUG1);
 #endif
 
   // solve the LCP
@@ -182,10 +182,10 @@ bool Utility::solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, c
     x[i] = zzz[i] - zzz[n+i];
 
 #ifndef NDEBUG
-  OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;
-  OUTLOG(zzz,"zzz",logDEBUG1);
-  OUTLOG(x,"xx",logDEBUG1);
-  OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
+//  OUT_LOG(logDEBUG1)  << "%Solutions" << std::endl;
+//  OUTLOG(zzz,"zzz",logDEBUG1);
+//  OUTLOG(x,"xx",logDEBUG1);
+//  OUT_LOG(logDEBUG1)  << "% << solve qp" << std::endl;
 #endif
   return SOLVE_FLAG;
 }

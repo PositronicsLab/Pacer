@@ -13,9 +13,8 @@ This repository hosts code for [Pacer] an open source robot locomotion library f
 
 In the project base directory:
 ```
-$ mkdir build
-$ cd build
-$ ccmake .. # configure cmake project
+$ mkdir <build> && cd <build>
+$ cmake .. # configure cmake project
 $ make all
 ```
 Make sure that all Plugins and Interfaces build successfully
@@ -24,8 +23,8 @@ Make sure that all Plugins and Interfaces build successfully
 
 In the project base directory (bash terminal):
 ```
-$ source setup.sh
-$ cd $PACER_HOME/example/models/links
+$ source <build>/setup.sh
+$ cd $PACER_HOME/test/Quadruped/waypoints-terrain
 ```
 in Gazebo:
 ```
@@ -33,7 +32,7 @@ $ gazebo links.world
 ```
 in Moby:
 ```
-$ moby-driver -p=$PACER_HOME/build/example/interfaces/libPacerMobyPlugin.so model.xml
+$ moby-driver -p=${PACER_INTERFACE_PATH}/libPacerMobyPlugin.so model.xml
 ```
 ###Dependencies 
 
@@ -79,4 +78,3 @@ Access the library by using the examples found in the examples directory:
  example         |  Data files and examples for Pacer
  include         |  Header files for calling functions in Pacer
  src             |  Pacer source code
- setup.sh        |  source this file to configure Pacer and Gazebo environment variables

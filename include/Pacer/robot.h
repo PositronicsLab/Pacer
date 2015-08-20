@@ -127,7 +127,7 @@ namespace Pacer{
       // permanent data
       std::string            id;
       // Foot link pointer
-      Moby::RigidBodyPtr     link;
+      boost::shared_ptr<Ravelin::RigidBodyd>     link;
       // kinematic chain indexing generalized coordinates
       std::vector<unsigned> chain;
       std::vector<bool>      chain_bool;
@@ -166,11 +166,11 @@ namespace Pacer{
       return calc_jacobian(q,link,Ravelin::Origin3d(0,0,0));
     }
     
-    const std::map<std::string,Moby::RigidBodyPtr>& get_links(){
+    const std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd>>& get_links(){
       return _id_link_map;
     }
     
-    const Moby::RigidBodyPtr get_link(const std::string& link){
+    const boost::shared_ptr<Ravelin::RigidBodyd> get_link(const std::string& link){
       return _id_link_map[link];
     }
    
@@ -672,19 +672,19 @@ namespace Pacer{
 
     void calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M);
    
-    const Moby::RigidBodyPtr get_root_link(){return _root_link;}
+    const boost::shared_ptr<Ravelin::RigidBodyd> get_root_link(){return _root_link;}
     
     int joint_dofs(){return NUM_JOINT_DOFS;}
   private:
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
  
-    Moby::RCArticulatedBodyPtr        _abrobot;
-    Moby::DynamicBodyPtr              _dbrobot;
+    boost::shared_ptr<Ravelin::RCArticulatedBodyd>        _abrobot;
+    boost::shared_ptr<Ravelin::DynamicBodyd>              _dbrobot;
     
-    std::map<std::string,Moby::RigidBodyPtr> _id_link_map;
-    Moby::RigidBodyPtr _root_link;
-    std::map<std::string,Moby::JointPtr> _id_joint_map;
+    std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd>> _id_link_map;
+    boost::shared_ptr<Ravelin::RigidBodyd> _root_link;
+    std::map<std::string,boost::shared_ptr<Ravelin::Jointd>> _id_joint_map;
 
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;

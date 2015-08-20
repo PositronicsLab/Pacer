@@ -19,10 +19,11 @@
 #include <Ravelin/SForced.h>
 #include <Ravelin/Pose3d.h>
 
-#include <Moby/RCArticulatedBody.h>
-#include <Moby/DynamicBody.h>
-#include <Moby/RNEAlgorithm.h>
-#include <Moby/LCP.h>
+// Dynamics
+#include <Ravelin/RigidBodyd.h>
+#include <Ravelin/DynamicBodyd.h>
+#include <Ravelin/RCArticulatedBodyd.h>
+
 #include <math.h>
 
 #include <cmath>

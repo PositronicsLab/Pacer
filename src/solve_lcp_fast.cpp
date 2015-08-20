@@ -162,7 +162,7 @@ bool Utility::lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<u
           !_represented[indices[i]])
       {
         _nonbas.push_back(i);
-        Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
+        Ravelin::insertion_sort(_nonbas.begin(), _nonbas.end());
         _represented[indices[i]] = true;
       }
   }
@@ -211,7 +211,7 @@ bool Utility::lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<u
 
         // move index to basic set and continue looping
         _bas.push_back(idx);
-        Moby::insertion_sort(_bas.begin(), _bas.end());
+        Ravelin::insertion_sort(_bas.begin(), _bas.end());
       }
       else
       {
@@ -232,7 +232,7 @@ bool Utility::lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<u
       unsigned idx = _bas[minw];
       _bas.erase(_bas.begin()+minw);
       _nonbas.push_back(idx);
-      Moby::insertion_sort(_nonbas.begin(), _nonbas.end());
+      Ravelin::insertion_sort(_nonbas.begin(), _nonbas.end());
 
       // look whether any component of z needs to move to basic set
       unsigned minz = select_pivot(_z, _nonbas, indices, zero_tol);
@@ -242,7 +242,7 @@ bool Utility::lcp_fast(const MatrixNd& M, const VectorNd& q, const std::vector<u
         unsigned idx = _nonbas[minz];
         _nonbas.erase(_nonbas.begin()+minz);
         _bas.push_back(idx);
-        Moby::insertion_sort(_bas.begin(), _bas.end());
+        Ravelin::insertion_sort(_bas.begin(), _bas.end());
       }
     }
   }

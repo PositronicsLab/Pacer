@@ -14,9 +14,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 using boost::shared_ptr;
-using Moby::XMLTree;
-using Moby::XMLTreePtr;
-using Moby::XMLAttrib;
+using Ravelin::XMLTree;
+using Ravelin::XMLTreePtr;
+using Ravelin::XMLAttrib;
 
 boost::shared_ptr<Pacer::Robot> robot_ptr;
 

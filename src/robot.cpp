@@ -12,7 +12,7 @@ using namespace Pacer;
 //
 //template<>
 //bool Robot::set_data<Ravelin::Pose3d>(std::string n,const Ravelin::Pose3d& _v){
-//  Ravelin::Pose3d v(Ravelin::Quatd(_v.q.x,_v.q.y,_v.q.z,_v.q.w),Ravelin::Origin3d(_v.x[0],_v.x[1],_v.x[2]),Moby::GLOBAL);
+//  Ravelin::Pose3d v(Ravelin::Quatd(_v.q.x,_v.q.y,_v.q.z,_v.q.w),Ravelin::Origin3d(_v.x[0],_v.x[1],_v.x[2]),Ravelin::GLOBAL);
 //  _data_map_mutex.lock();
 //  // TODO: Improve this functionality, shouldn't be copying into new class
 //  std::map<std::string,boost::shared_ptr<void> >::iterator it
@@ -32,14 +32,14 @@ using namespace Pacer;
 
 void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
   Ravelin::VectorNd set_q,set_qd;
-  _abrobot->get_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
-  _abrobot->get_generalized_velocity(Moby::DynamicBody::eSpatial,set_qd);
+  _abrobot->get_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,set_q);
+  _abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,set_qd);
   
   set_q.set_sub_vec(0,q);
   set_qd.set_sub_vec(0,qd);
   
-  _abrobot->set_generalized_coordinates(Moby::DynamicBody::eEuler,set_q);
-  _abrobot->set_generalized_velocity(Moby::DynamicBody::eSpatial,set_qd);
+  _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,set_q);
+  _abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,set_qd);
   _abrobot->update_link_poses();
   _abrobot->update_link_velocities();
 }
@@ -51,12 +51,12 @@ void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::Matrix
 }
 
 void Robot::compile(){
-  NDOFS = _abrobot->num_generalized_coordinates(Moby::DynamicBody::eSpatial);
+  NDOFS = _abrobot->num_generalized_coordinates(Ravelin::DynamicBodyd::eSpatial);
   NUM_JOINT_DOFS = NDOFS - NSPATIAL;
   
-  _dbrobot = boost::dynamic_pointer_cast<Moby::DynamicBody>(_abrobot);
+  _dbrobot = boost::dynamic_pointer_cast<Ravelin::DynamicBodyd>(_abrobot);
   
-  std::vector<Moby::JointPtr> joints = _abrobot->get_joints();
+  std::vector<boost::shared_ptr<Ravelin::Jointd>> joints = _abrobot->get_joints();
   
   for(unsigned i=0;i<joints.size();i++){
     OUT_LOG(logINFO) << joints[i]->id << ", dofs = " << joints[i]->num_dof();
@@ -67,7 +67,7 @@ void Robot::compile(){
   
   {
     OUT_LOG(logDEBUG1) << "Joint Map";
-    std::map<std::string, Moby::JointPtr>::iterator it;
+    std::map<std::string, boost::shared_ptr<Ravelin::Jointd>>::iterator it;
     for(it=_id_joint_map.begin();it!=_id_joint_map.end();it++)
       OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
   }
@@ -78,9 +78,9 @@ void Robot::compile(){
   _disabled_dofs.resize(NDOFS);
   std::fill(_disabled_dofs.begin(),_disabled_dofs.end(),true);
   
-  std::map<std::string, Moby::JointPtr>::iterator it;
+  std::map<std::string, boost::shared_ptr<Ravelin::Jointd>>::iterator it;
   for(it=_id_joint_map.begin();it!=_id_joint_map.end();it++){
-    const std::pair<std::string, Moby::JointPtr>& id_joint = (*it);
+    const std::pair<std::string, boost::shared_ptr<Ravelin::Jointd>>& id_joint = (*it);
     _id_dof_coord_map[id_joint.first] = std::vector<int>(id_joint.second->num_dof());
     for(int j=0;j<id_joint.second->num_dof();j++){
       if(id_joint.second->num_dof() == 0)
@@ -104,7 +104,7 @@ void Robot::compile(){
   reset_state();
   
   // Set up link references
-  std::vector<Moby::RigidBodyPtr> links = _abrobot->get_links();
+  std::vector<boost::shared_ptr<Ravelin::RigidBodyd>> links = _abrobot->get_links();
   _root_link = links[0];
   for(unsigned i=0;i<links.size();i++){
     _id_link_map[links[i]->id] = links[i];
@@ -112,7 +112,7 @@ void Robot::compile(){
   
   {
     OUT_LOG(logDEBUG1) << "Link Map";
-    std::map<std::string, Moby::RigidBodyPtr>::iterator it;
+    std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd>>::iterator it;
     for(it=_id_link_map.begin();it!=_id_link_map.end();it++)
       OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
   }
@@ -129,12 +129,12 @@ void Robot::compile(){
     
     eef->id = eef->link->id;
     
-    Moby::RigidBodyPtr rb_ptr = eef->link;
+    boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = eef->link;
     OUT_LOG(logDEBUG) << eef->id ;
     eef->chain_bool.resize(NUM_JOINT_DOFS);
     do {
       OUT_LOG(logDEBUG) << "  " << rb_ptr->id;
-      Moby::JointPtr joint_ptr = rb_ptr->get_inner_joint_explicit();
+      boost::shared_ptr<Ravelin::Jointd> joint_ptr = rb_ptr->get_inner_joint_explicit();
       OUT_LOG(logDEBUG) << "  " << joint_ptr->id;
       
       const std::vector<int>& dof = _id_dof_coord_map[joint_ptr->id];
@@ -204,7 +204,7 @@ void Robot::update_poses(){
   new_R;
   OUT_LOG(logINFO) << "Rotating base_link_frame saggitally by: theta = " << -base_start[4];
   R_base.mult(R_pitch,new_R);
-  base_link_frame = Ravelin::Pose3d( new_R,base_link_frame.x,Moby::GLOBAL);
+  base_link_frame = Ravelin::Pose3d( new_R,base_link_frame.x,Ravelin::GLOBAL);
   Ravelin::Origin3d roll_pitch_yaw;
   base_link_frame.q.to_rpy(roll_pitch_yaw);
   
@@ -212,7 +212,7 @@ void Robot::update_poses(){
   // preserve yaw
   Ravelin::Pose3d base_horizontal_frame(
                                         Ravelin::AAngled(0,0,1,roll_pitch_yaw[2]),
-                                        base_link_frame.x,Moby::GLOBAL);
+                                        base_link_frame.x,Ravelin::GLOBAL);
   
   set_data<Ravelin::Pose3d>("base_stability_frame",base_link_frame);
   set_data<Ravelin::Pose3d>("base_link_frame",base_link_frame);
@@ -221,7 +221,7 @@ void Robot::update_poses(){
   
   Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_link_frame,0.8)));
   Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_horizontal_frame,1.5)));
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(Moby::GLOBAL,1.0)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(Ravelin::GLOBAL,1.0)));
   
 }
 
@@ -278,15 +278,15 @@ void Robot::init_robot(){
   
   /// The map of objects read from the simulation XML file
   if(model_type.compare("sdf") == 0){
-    std::map<std::string, Moby::DynamicBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file);
+    std::map<std::string, boost::shared_ptr<Ravelin::DynamicBodyd>> READ_MAP = Ravelin::SDFReader::read_models(robot_model_file);
     
-    for (std::map<std::string, Moby::DynamicBodyPtr>::const_iterator i = READ_MAP.begin();
+    for (std::map<std::string, boost::shared_ptr<Ravelin::DynamicBodyd>>::const_iterator i = READ_MAP.begin();
          i !=READ_MAP.end(); i++)
     {
       // find the robot reference
       if (!_abrobot)
       {
-        _abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+        _abrobot = boost::dynamic_pointer_cast<Ravelin::RCArticulatedBody>(i->second);
       }
     }
     
@@ -296,14 +296,14 @@ void Robot::init_robot(){
   } else if(model_type.compare("xml") == 0){
     std::cerr << "look for model: " << robot_model_file << std::endl;
     
-    std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(robot_model_file));
-    for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
+    std::map<std::string, Ravelin::BasePtr> READ_MAP = Ravelin::XMLReader::read(std::string(robot_model_file));
+    for (std::map<std::string, Ravelin::BasePtr>::const_iterator i = READ_MAP.begin();
          i !=READ_MAP.end(); i++)
     {
       // find the robot reference
       if (!_abrobot)
       {
-        _abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(i->second);
+        _abrobot = boost::dynamic_pointer_cast<Ravelin::RCArticulatedBody>(i->second);
       }
     }
     

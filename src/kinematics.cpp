@@ -42,8 +42,8 @@ Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::str
   
   boost::shared_ptr<Ravelin::Pose3d> jacobian_frame(
                                                     new Ravelin::Pose3d(Ravelin::Quatd::identity(),
-                                                                        Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
-                                                                        ,Moby::GLOBAL)
+                                                                        Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Ravelin::GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
+                                                                        ,Ravelin::GLOBAL)
                                                     );
   
   _abrobot->calc_jacobian(jacobian_frame,_id_link_map[link],J);
@@ -237,7 +237,7 @@ void Robot::calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost
   Ravelin::MatrixNd J(3,NDOFS);
   for(int i=0;i<NC;i++){
     boost::shared_ptr<const Ravelin::Pose3d>
-    impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),c[i]->point.data(),Moby::GLOBAL));
+    impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),c[i]->point.data(),Ravelin::GLOBAL));
     
     _abrobot->calc_jacobian(impulse_frame,_id_link_map[c[i]->id],workM_);
     workM_.get_sub_mat(0,3,0,NDOFS,J);
@@ -285,8 +285,8 @@ void Robot::end_effector_inverse_kinematics(
     end_effector_t& foot = *(_id_end_effector_map[foot_id[i]].get());
     
     // POSITION
-    OUTLOG(Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(foot.link->get_pose())),foot.id + "_x",logDEBUG1);
-    OUTLOG(Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]),foot.id + "_x_des",logDEBUG1);
+    OUTLOG(Ravelin::Pose3d::transform_point(Ravelin::GLOBAL,Ravelin::Vector3d(foot.link->get_pose())),foot.id + "_x",logDEBUG1);
+    OUTLOG(Ravelin::Pose3d::transform_point(Ravelin::GLOBAL,foot_pos[i]),foot.id + "_x_des",logDEBUG1);
     RMRC(foot,q,foot_pos[i],q_des,TOL);
     //    RMRC(foot,q,Ravelin::VectorNd(6,Ravelin::SVector6d(foot_pos[i],Ravelin::Vector3d::zero()).data()),q_des,TOL);
     OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
@@ -296,7 +296,7 @@ void Robot::end_effector_inverse_kinematics(
     Ravelin::VectorNd x(foot.chain.size());
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
       x[k] = q[foot.chain[k]];
-    link_jacobian(x,foot,Moby::GLOBAL,J);
+    link_jacobian(x,foot,Ravelin::GLOBAL,J);
     J = J.get_sub_mat(0,6,0,J.columns(),workM_);
     
     Ravelin::VectorNd qd_foot,qdd_foot;

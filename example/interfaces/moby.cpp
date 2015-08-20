@@ -3,6 +3,11 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
+#include <Moby/RCArticulatedBody.h>
+#include <Moby/DynamicBody.h>
+#include <Moby/RNEAlgorithm.h>
+#include <Moby/LCP.h>
+
 #include <Moby/Simulator.h>
 #include <Moby/EventDrivenSimulator.h>
 #include <Moby/ConstraintSimulator.h>
@@ -15,7 +20,7 @@ using Pacer::Controller;
 // pointer to the simulator
  boost::shared_ptr<Moby::Simulator> sim;
 // pointer to the articulated body in Moby
-Moby::RCArticulatedBodyPtr abrobot;
+ boost::shared_ptr<Moby::RCArticulatedBody> abrobot;
 
 // pointer to the Pacer controller
  boost::shared_ptr<Controller> robot_ptr;

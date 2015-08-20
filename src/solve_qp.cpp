@@ -9,7 +9,7 @@
 #include <Moby/LCP.h>
 
 extern bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
-Moby::LCP lcp_;
+Ravelin::LCP lcp_;
 
 const int MAX_ITER = 1000;
 const double NEAR_ZERO = sqrt(std::numeric_limits<double>::epsilon());
@@ -371,7 +371,7 @@ bool Utility::lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd&
     std::swap(z, znew);
 
     // if there is little difference between the two, quit
-    if ((znew -= z).norm() < Moby::NEAR_ZERO)
+    if ((znew -= z).norm() < Ravelin::NEAR_ZERO)
       break;
   }
 

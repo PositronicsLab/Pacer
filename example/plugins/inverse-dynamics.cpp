@@ -228,6 +228,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
   if(nc > 0){
     
     Ravelin::MatrixNd Y = iX.block(0,n,0,n);
+    Ravelin::MatrixNd Y2 = iX.block(0,n,n,n+nq);
     //  OUTLOG(Y,"Y",logDEBUG1);
 
     //  Ravelin::MatrixNd YMY, J, K;
@@ -240,7 +241,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
     /////////////////////////////////////////////////////////////////////////////
     
     /////////////////////////////// OBJECTIVE ///////////////////////////////////
-    // z' R' Y' M Y R z + (v' M' + h fext) Y' M Y R z
+    // z' R' Y' M Y R z + ( (v' M' + h fext) Y' + iX_TR vq*)M Y R z
     // Matrix: G = R' Y' M Y R
     Ravelin::MatrixNd G, YR, MYR;
     Y.mult(R,YR);
@@ -250,8 +251,11 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
     // Vector: c = (v' M' + h fext) Y' M Y R z
     Ravelin::VectorNd c, Y_Mv_fext;
     Y.mult(Mv_fext,Y_Mv_fext);
+//    Y_Mv_fext += Y2.mult(vqstar,workv1,1,0);
+    OUTLOG(workv1,"iXtr vq*",logERROR);
+
     MYR.transpose_mult(Y_Mv_fext,c);
-    
+    // iX_TR vq*
     
     ////////////////////////////// CONSTRAINTS ///////////////////////////////////
     

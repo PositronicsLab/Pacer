@@ -7,9 +7,9 @@
 #include <Moby/ConstraintSimulator.h>
 
 #include <Pacer/controller.h>
-#include <random>
+#ifdef SIMULATE_UNCERTAINTY
 #include "Random.h"
-
+#endif
 using Pacer::Controller;
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
@@ -210,6 +210,8 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
 
     num_joint_dof = q_joints.size();
   }
+  
+#ifdef SIMULATE_UNCERTAINTY
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Apply Noise: /////////////////////////////////
  static std::vector<std::string> noise_variables,joint_names;
@@ -278,6 +280,7 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
       }
     }
   }
+#endif
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Apply State: /////////////////////////////////
   static Ravelin::VectorNd  generalized_qd_last = generalized_qd;

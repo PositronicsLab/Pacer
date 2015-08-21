@@ -5,7 +5,7 @@
  ****************************************************************************/
 #include <Moby/Simulator.h>
 #include <Moby/EventDrivenSimulator.h>
-#include <Moby/ConstraintSimulator.h>
+//#include <Moby/ConstraintSimulator.h>
 #include <Pacer/controller.h>
 #include <random>
 #include "Random.h"
@@ -289,61 +289,61 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   
   /////////////////////////////////////////////////////////////////////////////
   /////////////////////// Collision Detection: ////////////////////////////////
-  boost::shared_ptr<Moby::ConstraintSimulator> csim;
-  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
-
-  std::vector<Moby::UnilateralConstraint>& rigid_constraints = csim->get_rigid_constraints();
-  std::vector<Moby::UnilateralConstraint>& compliant_constraints = csim->get_compliant_constraints();
-  std::vector<Moby::UnilateralConstraint> e;
-  e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
-  e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
-  for(unsigned i=0;i<e.size();i++){
-    csim->preprocess_constraint(e[i]);
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
-    {
-      Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
-      Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
-      
-      Ravelin::Vector3d
-      normal = e[i].contact_normal,
-      tangent = e[i].contact_tan1,
-      impulse = Ravelin::Vector3d(0,0,0);//e[i].contact_impulse.get_linear();
-      impulse.pose = e[i].contact_point.pose;
-      tangent.normalize();
-      normal.normalize();
-      
-      bool compliant =
-      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-      
-      
-//      OUT_LOG(logERROR) << "compliant: " << compliant;
-//      OUT_LOG(logERROR) << "normal: " << normal;
-//      OUT_LOG(logERROR) << "tangent: " << tangent;
-//      OUT_LOG(logERROR) << "point: " << e[i].contact_point;
-      if(robot_ptr->is_end_effector(sb1->id)){
-        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
-      } else if(robot_ptr->is_end_effector(sb2->id)){
-        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
-      } else {
-        continue;  // Contact doesn't include an end-effector
-      }
-      
-#ifdef USE_OSG_DISPLAY
-      visualize_ray(  e[i].contact_point,
-                    e[i].contact_point + impulse*10.0,
-                    Ravelin::Vector3d(1,0.5,0),
-                    0.1,
-                    sim
-                    );
-      visualize_ray(  e[i].contact_point,
-                    e[i].contact_point + normal*0.1,
-                    Ravelin::Vector3d(1,1,0),
-                    0.1,
-                    sim
-                    );
-#endif
-    }
-  }
+//  boost::shared_ptr<Moby::ConstraintSimulator> csim;
+//  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
+//
+//  std::vector<Moby::UnilateralConstraint>& rigid_constraints = csim->get_rigid_constraints();
+//  std::vector<Moby::UnilateralConstraint>& compliant_constraints = csim->get_compliant_constraints();
+//  std::vector<Moby::UnilateralConstraint> e;
+//  e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
+//  e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
+//  for(unsigned i=0;i<e.size();i++){
+//    csim->preprocess_constraint(e[i]);
+//    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+//    {
+//      Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
+//      Moby::SingleBodyPtr sb2 = e[i].contact_geom2->get_single_body();
+//      
+//      Ravelin::Vector3d
+//      normal = e[i].contact_normal,
+//      tangent = e[i].contact_tan1,
+//      impulse = Ravelin::Vector3d(0,0,0);//e[i].contact_impulse.get_linear();
+//      impulse.pose = e[i].contact_point.pose;
+//      tangent.normalize();
+//      normal.normalize();
+//      
+//      bool compliant =
+//      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
+//      
+//      
+////      OUT_LOG(logERROR) << "compliant: " << compliant;
+////      OUT_LOG(logERROR) << "normal: " << normal;
+////      OUT_LOG(logERROR) << "tangent: " << tangent;
+////      OUT_LOG(logERROR) << "point: " << e[i].contact_point;
+//      if(robot_ptr->is_end_effector(sb1->id)){
+//        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
+//      } else if(robot_ptr->is_end_effector(sb2->id)){
+//        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
+//      } else {
+//        continue;  // Contact doesn't include an end-effector
+//      }
+//      
+//#ifdef USE_OSG_DISPLAY
+//      visualize_ray(  e[i].contact_point,
+//                    e[i].contact_point + impulse*10.0,
+//                    Ravelin::Vector3d(1,0.5,0),
+//                    0.1,
+//                    sim
+//                    );
+//      visualize_ray(  e[i].contact_point,
+//                    e[i].contact_point + normal*0.1,
+//                    Ravelin::Vector3d(1,1,0),
+//                    0.1,
+//                    sim
+//                    );
+//#endif
+//    }
+//  }
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Control Robot: ///////////////////////////////
   robot_ptr->control(t);
@@ -442,9 +442,11 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       if(robot_ptr->is_end_effector(sb1->id)){
         normal_sum += impulse.dot(normal);
         contacts.push_back(robot_ptr->create_contact(sb1->id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant));
+        robot_ptr->add_contact(sb1->id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else if(robot_ptr->is_end_effector(sb2->id)){
         normal_sum -= impulse.dot(normal);
         contacts.push_back(robot_ptr->create_contact(sb2->id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant));
+        robot_ptr->add_contact(sb2->id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else {
         continue;  // Contact doesn't include an end-effector  
       }
@@ -636,10 +638,10 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   }
   
   boost::shared_ptr<Moby::EventDrivenSimulator> esim;
-  boost::shared_ptr<Moby::ConstraintSimulator> csim;
+//  boost::shared_ptr<Moby::ConstraintSimulator> csim;
 
   esim = boost::dynamic_pointer_cast<Moby::EventDrivenSimulator>(sim);
-  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
+//  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
@@ -659,10 +661,10 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   //  sim->constraint_callback_fn             = &pre_event_callback_fn;
     esim->constraint_post_callback_fn        = &post_event_callback_fn;
   }
-  if (csim){
-    //  sim->constraint_callback_fn             = &pre_event_callback_fn;
-    csim->constraint_post_callback_fn        = &post_event_callback_fn;
-  }
+//  if (csim){
+//    //  sim->constraint_callback_fn             = &pre_event_callback_fn;
+//    csim->constraint_post_callback_fn        = &post_event_callback_fn;
+//  }
   // CONTROLLER CALLBACK
   abrobot->controller                     = &controller_callback;
 

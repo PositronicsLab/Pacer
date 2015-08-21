@@ -98,7 +98,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(
                                                                        ctrl->get_data<Ravelin::Pose3d>("base_stability_frame")));
     
-    base_frame->update_relative_pose(Moby::GLOBAL);
+    base_frame->update_relative_pose(Pacer::GLOBAL);
     
     //  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(*(base_frame.get()),0.1,1)));
     

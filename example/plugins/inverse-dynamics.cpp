@@ -9,6 +9,9 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
+#include <Moby/LCP.h>
+
+
 #define USE_CLAWAR_MODEL
 #define USE_AP_MODEL
 #define USE_NO_SLIP_MODEL
@@ -326,7 +329,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
     
     if(feas.rows() > 0){
       double min_elem = *std::min_element(feas.begin(), feas.end());
-      if(min_elem < -Moby::NEAR_ZERO){
+      if(min_elem < -Pacer::NEAR_ZERO){
         OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
         return false;
       } else {
@@ -499,7 +502,7 @@ bool inverse_dynamics(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, 
         OUTLOG(feas,"feas_z_OP2 =[ % (A*z-b >= 0)",logDEBUG1);
         if(feas.rows() > 0){
           double min_elem = *std::min_element(feas.begin(), feas.end());
-          if(min_elem < -Moby::NEAR_ZERO){
+          if(min_elem < -Pacer::NEAR_ZERO){
             OUT_LOG(logERROR)  << "ERROR: Optimization 2 produced an infeasible result!" << min_elem;
           } else {
             cf_final = z;
@@ -1330,7 +1333,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = Pacer::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
   
@@ -1810,7 +1813,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
     OUTLOG(_v,"warm_start_v",logDEBUG1);
     
-    if (!Utility::lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
+    if (!Utility::lcp_fast(_MM, _qq,indices, _v,Pacer::NEAR_ZERO))
     {
       OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
       
@@ -1915,7 +1918,7 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = Pacer::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points
@@ -2318,7 +2321,7 @@ bool inverse_dynamics_ap2(const Ravelin::VectorNd& vel, const Ravelin::VectorNd&
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = Pacer::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points
@@ -2826,7 +2829,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   static Ravelin::VectorNd q_last = Ravelin::VectorNd::zero(q.size());
   // Consider increasing tolerance
-  //    if((q_last-=q).norm() > Moby::NEAR_ZERO)
+  //    if((q_last-=q).norm() > Pacer::NEAR_ZERO)
   ctrl->calc_generalized_inertia(q, M);
   q_last = q;
   

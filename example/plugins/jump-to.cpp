@@ -85,7 +85,7 @@ std::vector<Trajectory> calc_jump(){
   OUTLOG(fabs(v_spatial), "|v_spatial|", logERROR);
   
   // Check that we did this right
-  assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Moby::NEAR_ZERO);
+  assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Pacer::NEAR_ZERO);
   
   std::vector<VectorNd> X, Xd;
   //Xd0
@@ -188,8 +188,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
     
     // Now that model state is set ffrom jacobian calculation
     if(first_step){
-      const Moby::RigidBodyPtr link = ctrl->get_link(eef_names_[i]);
-      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
+      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
+      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xd,xd_foot,-1,0);

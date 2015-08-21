@@ -254,7 +254,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
   
   { /// Display command
-    Origin3d dir(Pose3d::transform_vector(Moby::GLOBAL,Vector3d(command,base_horizontal_frame)).data());
+    Origin3d dir(Pose3d::transform_vector(Pacer::GLOBAL,Vector3d(command,base_horizontal_frame)).data());
     dir *= 2.0;
     dir[2] = command[2]/10;
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  (dir+base_horizontal_frame->x).data(),   (base_horizontal_frame->x).data(),   Vector3d(0,1,0),0.5)));
@@ -330,7 +330,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     foot_acc[i].set_zero();
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i]).data(),   (Ravelin::Pose3d::transform_point(Moby::GLOBAL,foot_pos[i])+Ravelin::Pose3d::transform_vector(Moby::GLOBAL,foot_vel[i])).data(),   Vector3d(0,1,0),0.5)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Ravelin::Pose3d::transform_point(Pacer::GLOBAL,foot_pos[i]).data(),   (Ravelin::Pose3d::transform_point(Pacer::GLOBAL,foot_pos[i])+Ravelin::Pose3d::transform_vector(Pacer::GLOBAL,foot_vel[i])).data(),   Vector3d(0,1,0),0.5)));
 
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
   }

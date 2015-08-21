@@ -30,7 +30,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       return;
     ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
-    foot_pos[i].pose = Moby::GLOBAL;
+    foot_pos[i].pose = Pacer::GLOBAL;
   }
   
   ctrl->get_generalized_value(Pacer::Controller::position,q);

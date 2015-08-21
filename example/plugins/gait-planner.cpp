@@ -25,7 +25,7 @@ Origin3d planar_robot(Origin3d x,Origin3d xd){
 }
 
 Pose3d end_state(Pose3d state,Origin3d planar_command, double t_max,double dt = 0.001){
-  state.update_relative_pose(Moby::GLOBAL);
+  state.update_relative_pose(Pacer::GLOBAL);
   Ravelin::Origin3d roll_pitch_yaw;
   state.q.to_rpy(roll_pitch_yaw);
 
@@ -37,7 +37,7 @@ Pose3d end_state(Pose3d state,Origin3d planar_command, double t_max,double dt = 
   
   Ravelin::Pose3d state_t_max(
     Ravelin::AAngled(0,0,1,planar_state[2]),
-    Origin3d(planar_state[0],planar_state[1],state.x[2]),Moby::GLOBAL);
+    Origin3d(planar_state[0],planar_state[1],state.x[2]),GLOBAL);
 
   return state_t_max;
 }
@@ -46,13 +46,13 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
   // Find future robot position (command, time)
   // update: Planar process model
   boost::shared_ptr<Pose3d> state_ptr(new Pose3d(state));
-  Vector3d x_global = Pose3d::transform_point(Moby::GLOBAL,Vector3d(x.data(),state_ptr));
+  Vector3d x_global = Pose3d::transform_point(Pacer::GLOBAL,Vector3d(x.data(),state_ptr));
   
   // Find foothold closest to "x" at future base position (x,footholds)
   double min_dist = INFINITY;
   int    min_vec = 0;
   for(int i=0;i<footholds.size();i++){
-    Vector3d foothold(footholds[i][0],footholds[i][1],footholds[i][2],Moby::GLOBAL);
+    Vector3d foothold(footholds[i][0],footholds[i][1],footholds[i][2],GLOBAL);
     double norm = (foothold-x_global).norm();
     if(norm < min_dist){
       min_dist = norm;
@@ -62,7 +62,7 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
   
   const std::vector<double> &this_foothold = footholds[min_vec];
   
-  Vector3d final_foothold(this_foothold[0],this_foothold[1],this_foothold[2], Moby::GLOBAL);
+  Vector3d final_foothold(this_foothold[0],this_foothold[1],this_foothold[2], Pacer::GLOBAL);
   
   double max_dist = 0.05;
   // Interpolate closest point to desired foothold (featured are horizontal and planar circles)
@@ -77,7 +77,7 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
       final_foothold[2] = this_foothold[2];
     } else {
       return Vector3d(x.data(),state_ptr);
-      final_foothold = Vector3d(x_global[0],x_global[1],x_global[2], Moby::GLOBAL);
+      final_foothold = Vector3d(x_global[0],x_global[1],x_global[2], Pacer::GLOBAL);
     }
   }
   
@@ -199,7 +199,7 @@ void walk_toward(
   
   // Get the decimal part of gait_progress
   gait_progress = gait_progress - (double) ((int) gait_progress);
-  if(gait_progress >= 1) gait_progress = Moby::NEAR_ZERO;
+  if(gait_progress >= 1) gait_progress = Pacer::NEAR_ZERO;
 
 //  Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
 //  turn_origin = Pose3d::transform_point(base_frame, turn_origin);
@@ -224,7 +224,7 @@ void walk_toward(
 //                Origin3d(command[0],command[1],command[5]),
 //                1.0);
 //  
-//  furture_state.update_relative_pose(Moby::GLOBAL);
+//  furture_state.update_relative_pose(Pacer::GLOBAL);
 //  
 //  Utility::visualize.push_back(
 //    Pacer::VisualizablePtr(
@@ -249,7 +249,7 @@ void walk_toward(
                   Origin3d(command[0],command[1],command[5]),
                   fabs(left_in_phase*gait_duration));
     
-    end_of_step_state.update_relative_pose(Moby::GLOBAL);
+    end_of_step_state.update_relative_pose(Pacer::GLOBAL);
 
     Utility::visualize.push_back(
       Pacer::VisualizablePtr(
@@ -286,7 +286,7 @@ void walk_toward(
       workv3_.pose = base_frame;
       xd.pose = base_frame;
 
-      if (dt < Moby::NEAR_ZERO)
+      if (dt < Pacer::NEAR_ZERO)
         xdd.set_zero();
       else 
         xdd = (workv3_ - xd)/dt;
@@ -298,8 +298,8 @@ void walk_toward(
       x = x + xd * dt;
     
       { // Visualize this
-        Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
-        Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd) * (left_in_phase*gait_duration);
+        Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
+        Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd) * (left_in_phase*gait_duration);
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.05)));
       }
       
@@ -345,7 +345,7 @@ void walk_toward(
       
       // Get the decimal part of gait_progress
       gait_progress = gait_progress - (double) ((int) gait_progress);
-      if(gait_progress >= 1) gait_progress = Moby::NEAR_ZERO;
+      if(gait_progress >= 1) gait_progress = Pacer::NEAR_ZERO;
       
       bool this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
       double left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,this_phase);
@@ -362,7 +362,7 @@ void walk_toward(
       foot_goal = Pose3d::transform_vector(foot_frame,foot_goal);
 
       
-      if(fabs(command[5]) > Moby::NEAR_ZERO){
+      if(fabs(command[5]) > Pacer::NEAR_ZERO){
         // Determine shape of step needed to yaw robot
         Origin3d rotation_axis = Origin3d(up.data());
 
@@ -437,13 +437,13 @@ void walk_toward(
 //        if(redirect_path){
 //          OUTLOG(this_time,"redirect",logERROR);
 //
-//          if (this_time>t && !is_set && (t > t0+Moby::NEAR_ZERO) ){
+//          if (this_time>t && !is_set && (t > t0+Pacer::NEAR_ZERO) ){
 //            is_set = true;
 //            T.push_back(t);
 //            new_control_points.push_back(xt);
 //            OUTLOG(t,"insert_at",logERROR);
 //          } else {
-//            if(this_time > T[T.size()-1]+Moby::NEAR_ZERO){
+//            if(this_time > T[T.size()-1]+Pacer::NEAR_ZERO){
 //              T.push_back(this_time);
 //              new_control_points.push_back(control_points[jj]);
 //            }
@@ -530,7 +530,7 @@ void walk_toward(
 
     VectorNd &T = spline_t[i];
     double max_t = T[T.rows()-1];
-    double min_t = T[0]+Moby::NEAR_ZERO;
+    double min_t = T[0]+Pacer::NEAR_ZERO;
     for(double t=min_t ; t<=max_t ; t += (max_t-min_t)/20){
       Vector3d x,xd,xdd;
       for(int d=0;d<3;d++){
@@ -539,9 +539,9 @@ void walk_toward(
       x.pose = base_frame;
       xd.pose = base_frame;
       xdd.pose = base_frame;
-      Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
-      Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-//      Vector3d a = Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+      Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
+      Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd)/10;
+//      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
       Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,1,0),0.05)));
 //      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,0),0.005)));
 //     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Vector3d(1,0.5,0)));
@@ -633,7 +633,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
   
 //  { /// Display command
-//    Origin3d dir(Pose3d::transform_vector(Moby::GLOBAL,Vector3d(command,base_horizontal_frame)).data());
+//    Origin3d dir(Pose3d::transform_vector(Pacer::GLOBAL,Vector3d(command,base_horizontal_frame)).data());
 //    dir *= 2.0;
 //    dir[2] = command[2]/10;
 //    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  (dir+base_horizontal_frame->x).data(),   (base_horizontal_frame->x).data(),   Vector3d(0,1,0),0.5)));
@@ -689,7 +689,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
   
-  gait_pose->update_relative_pose(Moby::GLOBAL);
+  gait_pose->update_relative_pose(Pacer::GLOBAL);
   ctrl->set_data<Pose3d>("base_stability_frame",*(gait_pose.get()));
   
   OUTLOG(this_gait,"this_gait",logINFO);

@@ -2,13 +2,13 @@
 //    // Potential Energy: this calculation assumes that ground is always at zero
 //    Ravelin::VectorNd workv_;
 //    double PE = 0;
-//    std::map<std::string, Moby::RigidBodyPtr>::const_iterator it;
+//    std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >::const_iterator it;
 //    for(it=_id_link_map.begin();it!=_id_link_map.end();it++){
-//        const Moby::RigidBodyPtr link = (*it).second;
+//        const boost::shared_ptr<Ravelin::RigidBodyd>  link = (*it).second;
 //        double m = link->get_mass();
 //        Ravelin::Pose3d
 //        link_com(link->get_inertial_pose());
-//        link_com.update_relative_pose(Moby::GLOBAL);
+//        link_com.update_relative_pose(Pacer::GLOBAL);
 //        PE += link_com.x[2] * m * grav;
 //    }
 //    M.mult(v, workv_);
@@ -27,21 +27,21 @@ std::string plugin_namespace;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   Ravelin::Vector3d center_of_mass_x;
-  center_of_mass_x.pose = Moby::GLOBAL;
+  center_of_mass_x.pose = Pacer::GLOBAL;
   double total_mass=0;
   
-  const std::map<std::string, Moby::RigidBodyPtr>& _id_link_map = ctrl->get_links();
-  std::map<std::string, Moby::RigidBodyPtr>::const_iterator it;
+  const std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >& _id_link_map = ctrl->get_links();
+  std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >::const_iterator it;
   for(it=_id_link_map.begin();it!=_id_link_map.end();it++){
     double m = (*it).second->get_mass();
     total_mass += m;
-    center_of_mass_x += (Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,(*it).second->get_inertial_pose())) *= m);
+    center_of_mass_x += (Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,(*it).second->get_inertial_pose())) *= m);
   }
   ctrl->set_data<double>("mass",total_mass);
   center_of_mass_x /= total_mass;
   
-  Moby::RigidBodyPtr _root_link = ctrl->get_root_link();
-  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(Moby::GLOBAL));
+  boost::shared_ptr<Ravelin::RigidBodyd>  _root_link = ctrl->get_root_link();
+  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(Pacer::GLOBAL));
   base_com_w->x = Ravelin::Origin3d(center_of_mass_x);
   boost::shared_ptr<const Ravelin::Pose3d> base_com_w_const = boost::const_pointer_cast<const Ravelin::Pose3d>(base_com_w);
 //  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w_const, _root_link->get_velocity());
@@ -51,7 +51,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 //  Ravelin::SAcceld com_acc = Ravelin::Pose3d::transform(base_com_w_const, _root_link->get_accel(), _root_link->get_velocity());
 //  Ravelin::Vector3d center_of_mass_xdd = com_acc.get_linear();
   
-//  center_of_mass_xd.pose = center_of_mass_xdd.pose = Moby::GLOBAL;
+//  center_of_mass_xd.pose = center_of_mass_xdd.pose = Pacer::GLOBAL;
   
   ctrl->set_data<Ravelin::Vector3d>("center_of_mass.x",center_of_mass_x);
   //  ctrl->set_data<Ravelin::Vector3d>("center_of_mass.xd",center_of_mass_xd);
@@ -78,19 +78,19 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   // e = p - p_ref
   //
-//  Ravelin::Vector3d C(1,0,-center_of_mass_x[2]/grav,Moby::GLOBAL);
+//  Ravelin::Vector3d C(1,0,-center_of_mass_x[2]/grav,GLOBAL);
 //  Ravelin::Vector3d zero_moment_point =
-//  Ravelin::Vector3d(C.dot(Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_xd[0],center_of_mass_xdd[0],Moby::GLOBAL)),
-//                    C.dot(Ravelin::Vector3d(center_of_mass_x[1],center_of_mass_xd[1],center_of_mass_xdd[1],Moby::GLOBAL)),
-//                    0,Moby::GLOBAL);
+//  Ravelin::Vector3d(C.dot(Ravelin::Vector3d(center_of_mass_x[0],center_of_mass_xd[0],center_of_mass_xdd[0],GLOBAL)),
+//                    C.dot(Ravelin::Vector3d(center_of_mass_x[1],center_of_mass_xd[1],center_of_mass_xdd[1],GLOBAL)),
+//                    0,GLOBAL);
 //  ctrl->set_data<Ravelin::Vector3d>("zero_moment_point",zero_moment_point);
 //  
 //  // ZMP and COM
-//  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.10,Moby::GLOBAL);
+//  Ravelin::Vector3d CoM_2D(center_of_mass_x[0],center_of_mass_x[1],center_of_mass_x[2]-0.10,GLOBAL);
 //  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(CoM_2D,center_of_mass_x,Ravelin::Vector3d(0,0,1))));
 //  //  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(CoM_2D + center_of_mass_xd*0.1,CoM_2D,Ravelin::Vector3d(0.5,0,1)));
 //  //  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(CoM_2D + center_of_mass_xd*0.1 + center_of_mass_xdd*0.01,CoM_2D + center_of_mass_xd*0.1,Ravelin::Vector3d(1,0,0)));
-//  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,Moby::GLOBAL)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
+//  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,GLOBAL)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
 }
 
 

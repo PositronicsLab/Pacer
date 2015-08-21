@@ -85,12 +85,12 @@ public:
       vel_des.pose = base_link_frame;
       
       {
-        Vector3d p1 = Pose3d::transform_point(Moby::GLOBAL,pos_des);
-        Vector3d p2 = Pose3d::transform_point(Moby::GLOBAL,pos);
-        //      Vector3d a = Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
+        Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,pos_des);
+        Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,pos);
+        //      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p1,   Vector3d(0,1,0),0.01)));
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  p2,   p1,   Vector3d(1,0,0),0.01)));
-        Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,vel_des)/10;
+        Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,vel_des)/10;
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p1,   p1,   Vector3d(0,1,0),0.01)));
       }
       

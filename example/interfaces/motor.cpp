@@ -122,7 +122,7 @@ void controller(double t)
   double dt = t-last_t;
 
 //  static Ravelin::VectorNd  generalized_qd_last = generalized_qd;
-//  //NOTE: Pre-contact    abrobot->get_generalized_acceleration(Moby::DynamicBody::eSpatial,generalized_qdd);
+//  //NOTE: Pre-contact    abrobot->get_generalized_acceleration(Ravelin::DynamicBodyd::eSpatial,generalized_qdd);
 //  ((generalized_qdd = generalized_qd) -= generalized_qd_last) /= dt;
 //  generalized_qd_last = generalized_qd;
 

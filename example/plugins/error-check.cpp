@@ -19,7 +19,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   boost::shared_ptr<Ravelin::Pose3d> base_link_frame(new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
 
   Ravelin::Vector3d up(0,0,1,base_link_frame);
-  up = Ravelin::Pose3d::transform_vector(Moby::GLOBAL,up);
+  up = Ravelin::Pose3d::transform_vector(Pacer::GLOBAL,up);
   if(up[2] < 0)
     throw std::runtime_error("Robot flipped over!");
 

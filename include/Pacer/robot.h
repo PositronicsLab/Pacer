@@ -11,7 +11,15 @@
 #include <Pacer/Visualizable.h>
 #include <boost/enable_shared_from_this.hpp>
 
+#include <Ravelin/ArticulatedBodyd.h>
+
 namespace Pacer{
+  const boost::shared_ptr<const Ravelin::Pose3d> GLOBAL;
+  const double NEAR_ZERO = std::sqrt(std::numeric_limits<double>::epsilon());
+  const Ravelin::Matrix3d ZEROS_3x3 = Ravelin::Matrix3d::zero();
+  const Ravelin::Matrix3d IDENTITY_3x3 = Ravelin::Matrix3d::identity();
+  const Ravelin::VectorNd EMPTY_VEC(0);
+
   class Robot;
   
  static const unsigned NSPATIAL = 6;
@@ -679,8 +687,7 @@ namespace Pacer{
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
  
-    boost::shared_ptr<Ravelin::RCArticulatedBodyd>        _abrobot;
-    boost::shared_ptr<Ravelin::DynamicBodyd>              _dbrobot;
+    boost::shared_ptr<Ravelin::ArticulatedBodyd>        _abrobot;
     
     std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd>> _id_link_map;
     boost::shared_ptr<Ravelin::RigidBodyd> _root_link;

@@ -148,8 +148,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     EndEffector& foot = eefs_[i];
     
     // Positional Correction
-    Ravelin::Vector3d x_now_g = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
-    Ravelin::Vector3d x_des_g = Ravelin::Pose3d::transform_point(Moby::GLOBAL,x_des[i]);
+    Ravelin::Vector3d x_now_g = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,eefs_[i].link->get_pose()));
+    Ravelin::Vector3d x_des_g = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,x_des[i]);
     Ravelin::Vector3d x_err  = x_des_g - x_now_g;
     OUTLOG( x_now_g,foot.id + "_x",logINFO);
     OUTLOG( x_des_g,foot.id + "_x_des",logINFO);

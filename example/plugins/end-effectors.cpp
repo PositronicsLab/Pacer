@@ -22,8 +22,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     Ravelin::MatrixNd J = ctrl->calc_link_jacobian(local_q,eef_names_[i]);
     
     // Now that model state is set ffrom jacobian calculation
-    const Moby::RigidBodyPtr link = ctrl->get_link(eef_names_[i]);
-    Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
+    const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
+    Ravelin::Vector3d x = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
     x.pose = base_frame;
     bool new_var = ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".state.x",x);
     

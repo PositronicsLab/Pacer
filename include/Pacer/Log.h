@@ -15,11 +15,11 @@ inline std::string NowTime();
 enum TLogLevel { logNONE, logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
 
 
-class Log
+class Logger
 {
 public:
-    Log();
-    virtual ~Log();
+    Logger();
+    virtual ~Logger();
     std::ostringstream& Get(TLogLevel level = logINFO);
 public:
     static TLogLevel& ReportingLevel();
@@ -28,15 +28,15 @@ public:
 protected:
     std::ostringstream os;
 private:
-    Log(const Log&);
-    Log& operator =(const Log&);
+    Logger(const Logger&);
+    Logger& operator =(const Logger&);
 };
 
-inline Log::Log()
+inline Logger::Logger()
 {
 }
 
-inline std::ostringstream& Log::Get(TLogLevel level)
+inline std::ostringstream& Logger::Get(TLogLevel level)
 {
 //    os << "- " << NowTime();
 //    os << " " << ToString(level) << ": ";
@@ -44,7 +44,7 @@ inline std::ostringstream& Log::Get(TLogLevel level)
     return os;
 }
 
-inline Log::~Log()
+inline Logger::~Logger()
 {
     os << std::endl;
 #ifdef LOG_TO_FILE
@@ -59,19 +59,19 @@ inline Log::~Log()
 #endif
 }
 
-inline TLogLevel& Log::ReportingLevel()
+inline TLogLevel& Logger::ReportingLevel()
 {
     static TLogLevel reportingLevel = logDEBUG4;
     return reportingLevel;
 }
 
-inline std::string Log::ToString(TLogLevel level)
+inline std::string Logger::ToString(TLogLevel level)
 {
     static const char* const buffer[] = {"NONE","ERROR", "WARNING", "INFO", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
     return buffer[level];
 }
 
-inline TLogLevel Log::FromString(const std::string& level)
+inline TLogLevel Logger::FromString(const std::string& level)
 {
     if (level == "DEBUG4")
         return logDEBUG4;
@@ -91,15 +91,15 @@ inline TLogLevel Log::FromString(const std::string& level)
         return logERROR;
     if (level == "NONE")
         return logNONE;
-    Log().Get(logWARNING) << "Unknown logging level '" << level << "'. Using INFO level as default.";
+    Logger().Get(logWARNING) << "Unknown logging level '" << level << "'. Using INFO level as default.";
     return logINFO;
 }
 
-typedef Log FILELog;
+typedef Logger FILELog;
 
 #define OUT_LOG(level) \
     if (level > FILELog::ReportingLevel()) ; \
-    else Log().Get(level)
+    else FILELog().Get(level)
 
 #define LOG(level) (level > FILELog::ReportingLevel())
 

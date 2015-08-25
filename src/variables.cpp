@@ -69,21 +69,21 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
           if(a)
              help = a->get_string_value();
 
+          std::cout << tag+n->name << " <-- (" <<  data_type << ") " <<  n->content;
           std::vector<std::string> elements = split(n->content);
 
 //          OUT_LOG(logDEBUG1) << tag+n->name << "<" <<  data_type << "> = " <<  n->content;
           if(elements.size() == 0)
             continue;
-          switch(str2int(data_type.c_str())){
-            case (str2int("string")):
+            if(data_type.compare("string") == 0){
               if(elements.size()>1){
                   robot_ptr->set_data<std::vector<std::string> >(tag+n->name,elements);
               }
               else{
                   robot_ptr->set_data<std::string>(tag+n->name,elements[0]);
               }
-            break;
-            case (str2int("double")):
+            }
+            else if(data_type.compare("double") == 0){
               if(elements.size()>1)
               {
                 std::vector<double> typed_elements;
@@ -95,8 +95,8 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
               else{
                   robot_ptr->set_data<double>(tag+n->name,std::stod(elements[0]));
               }
-            break;
-            case (str2int("bool")):
+            }
+            else if(data_type.compare("bool") == 0){
               if(elements.size()>1)
               {
                 std::vector<int> typed_elements;
@@ -108,33 +108,28 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
               else{
                   robot_ptr->set_data<int>(tag+n->name,str2bool(elements[0]));
               }
-            break;
-            case (str2int("string vector")):
+            }
+            else if(data_type.compare("string vector") == 0){
                   robot_ptr->set_data<std::vector<std::string> >(tag+n->name,elements);
-            break;
-            case (str2int("double vector")):
-            {  
+            }
+            else if(data_type.compare("double vector") == 0){
                 std::vector<double> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                         [](std::string const& val) {return std::stod(val);});
                   robot_ptr->set_data<std::vector<double> >(tag+n->name,typed_elements );
             }
-            break;
-            case (str2int("bool vector")):
-            {
+            else if(data_type.compare("bool vector") == 0){
                 std::vector<int> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                         [](std::string const& val) {return str2bool(val);});
                   robot_ptr->set_data<std::vector<int> >(tag+n->name,typed_elements);
             }
-            break;
-            default:
+            else {
               OUT_LOG(logINFO) << tag+n->name << "<" <<  data_type << "> = " <<  n->content << "\n"  << data_type << " is not a valid type!" ;
               assert(false);
-            break;
-          }
+            }
         } else {
           process_tag(tag+n->name+".",n);
         }

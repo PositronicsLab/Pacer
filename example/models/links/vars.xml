@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">DEBUG1</logging>
+  <logging type="string">ERROR</logging>
   
   <robot-model type="string">links/model.sdf</robot-model>
   <real-time-factor type="double">1</real-time-factor>
@@ -62,12 +62,12 @@
   </init>
   
   <plugins type="string vector">
+    gamepad
     center-of-mass
     end-effectors
-    error-check
-    ik-feet
     gait-planner
-    idyn-controller
+    ik-feet
+    joint-PID-controller
   </plugins>
   
   <!--
@@ -79,11 +79,10 @@
    stabilization
    gamepad
    waypoints
-   output
-   gait-planner
-   joint-PID-controller
+   stand-trajectory
    eef-PID-controller
    
+    idyn-controller
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
@@ -222,7 +221,7 @@
   </stabilization>
   
   <gamepad>
-    <file type="string">libgamepad.so</file>
+    <file type="string">gamepad/libgamepad.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <max-forward-speed type="double">0.3</max-forward-speed>
     <max-strafe-speed type="double">0.2</max-strafe-speed>
@@ -291,10 +290,11 @@
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.03</step-height>
-    <gait-duration type="double">0.3</gait-duration>
+    <step-height type="double">0.04</step-height>
+    <gait-duration type="double">0.6</gait-duration>
     <length type="double">0.309926</length>
-    <width type="double">0.1344496</width>
+<!--    <width type="double">0.1344496</width>-->
+    <width type="double">0.18</width>
     <height type="double">0.161853</height>
     <!--troting gait-->
     <!--    <gait type="double">0  0.5  0.5  0</gait>-->
@@ -346,11 +346,24 @@
     <acceleration type="bool">false</acceleration>
     <!-- Gains are for the q of joint ids respectively -->
     <gains>
+      <kp type="double">1e1 1e1 1e1     1e1 1e1 1e1     1e1 1e1 1e1   1e1 1e1 1e1  </kp>
+      <kv type="double">5e-2 5e-2 5e-2  5e-2 5e-2 5e-2  5e-2 5e-2 5e-2  5e-2 5e-2 5e-2   </kv>
+      <ki type="double">0     0     0       0   0   0     0     0     0     0   0   0</ki>
+    </gains>
+  </joint-PID-controller>
+  
+  <joint-PID-controller2>
+    <file type="string">libjoint-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
       <kp type="double">2e1 2e1 2e1      2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1   </kp>
       <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
       <ki type="double">0     0     0       0   0   0     0     0     0     0   0   0</ki>
     </gains>
-  </joint-PID-controller>
+  </joint-PID-controller2>
   
   <joint-PID-controller-accel>
     <file type="string">libjoint-PID-controller.so</file>

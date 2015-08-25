@@ -44,7 +44,7 @@ link_directories(${GAZEBO_LIBRARY_DIRS})
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
 # these are the setting for the in-source compiler flow control
-option(LOGGING "Write logs to <working_dir>/out.log" OFF)
+option(LOGGING "Write logs to <working_dir>/out.log" ON)
 option(BUILD_EXAMPLES "Build simulation examples" ON)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)
   option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)

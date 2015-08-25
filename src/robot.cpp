@@ -32,16 +32,15 @@ using namespace Pacer;
 
 void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
   Ravelin::VectorNd set_q,set_qd;
-  _abrobot->get_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,set_q);
-  _abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,set_qd);
-  
-  set_q.set_sub_vec(0,q);
-  set_qd.set_sub_vec(0,qd);
-  
-  _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,set_q);
-  _abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,set_qd);
-  // _abrobot->update_link_poses(); //TODO -- FIND THIS
-  // _abrobot->update_link_velocities(); //TODO -- FIND THIS
+  if(get_data<Ravelin::VectorNd>("generalized_q", set_q)){
+    set_q.set_sub_vec(0,q);
+    _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,set_q);
+  }
+
+  if(get_data<Ravelin::VectorNd>("generalized_qd", set_qd)){
+    set_qd.set_sub_vec(0,qd);
+    _abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,set_qd);
+  }
 }
 
 void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::MatrixNd& M){

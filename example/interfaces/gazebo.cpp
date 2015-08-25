@@ -76,7 +76,7 @@ using namespace Pacer;
        math::Pose p(base_start[0],base_start[1],base_start[2],base_start[3],base_start[4],base_start[5]);
        model->SetWorldPose(p);
        OUT_LOG(logERROR) << "Gazebo model name = " << model->GetName();
-       model->SetLinkWorldPose(p,model->GetName()+"::"+robot_ptr->get_root_link()->id);
+       model->SetLinkWorldPose(p,model->GetName()+"::"+robot_ptr->get_root_link()->body_id);
 
        // Re-map state simulation->robot joints
        std::map<std::string, Ravelin::VectorNd> q_start;
@@ -139,13 +139,14 @@ using namespace Pacer;
                 Ravelin::Vector3d point(c.contact(i).position(j).x(),c.contact(i).position(j).y(),c.contact(i).position(j).z());
 
                 // Add contact point to this end effector
-                Ravelin::Vector3d normal(c.contact(i).normal(j).x(),c.contact(i).normal(j).y(),c.contact(i).normal(j).z());
+               Ravelin::Vector3d normal(c.contact(i).normal(j).x(),c.contact(i).normal(j).y(),c.contact(i).normal(j).z());
+               Ravelin::Vector3d tangent(c.contact(i).normal(j).y(),-c.contact(i).normal(j).x(),c.contact(i).normal(j).z());
 
                 // Add contact point to this end effector
                 Ravelin::Vector3d impulse(c.contact(i).wrench(j).body_1_wrench().force().x(),c.contact(i).wrench(j).body_1_wrench().force().y(),c.contact(i).wrench(j).body_1_wrench().force().z());
                 impulse *= dt;
                 double mu_coulomb = 0.1;
-                robot_ptr->add_contact(foot_names[f],point,normal,impulse,mu_coulomb);
+                robot_ptr->add_contact(foot_names[f],point,normal,tangent,impulse,mu_coulomb);
               }
            }
          }
@@ -166,15 +167,16 @@ using namespace Pacer;
 
        // Re-map state simulation->robot joints
        {
-         physics::LinkPtr base_ptr = model->GetLink(model->GetName()+"::"+robot_ptr->get_root_link()->id);
+         physics::LinkPtr base_ptr = model->GetLink(model->GetName()+"::"+robot_ptr->get_root_link()->body_id);
+         // Get Gazebo Pose
          math::Pose base_pose = base_ptr->GetWorldInertialPose();
          math::Vector3    pos = base_pose.pos;
          math::Quaternion rot = base_pose.rot;
-         base_q.set_sub_vec(0  ,Ravelin::Vector3d(pos.x,pos.y,pos.z));
-         base_q[3+3] = rot.w;
-         base_q[3+0] = rot.x;
-         base_q[3+1] = rot.y;
-         base_q[3+2] = rot.z;
+
+         // Set Ravelin Pose
+         Ravelin::Pose3d robot_pose(Ravelin::Quatd(rot.x,rot.y,rot.z,rot.w),Ravelin::Origin3d(pos.x,pos.y,pos.z));
+         base_q = Utility::pose_to_vec(robot_pose);
+
 
          math::Vector3    vel = base_ptr->GetWorldLinearVel();
          math::Vector3   avel = base_ptr->GetWorldAngularVel();

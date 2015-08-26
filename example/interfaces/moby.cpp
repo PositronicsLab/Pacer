@@ -298,7 +298,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
   e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
   for(unsigned i=0;i<e.size();i++){
-    csim->preprocess_constraint(e[i]);
+//    csim->preprocess_constraint(e[i]);
     if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();

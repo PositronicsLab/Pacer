@@ -67,6 +67,7 @@
     error-check
     ik-feet
     gait-planner
+    joint-PID-controller
     idyn-controller
   </plugins>
   

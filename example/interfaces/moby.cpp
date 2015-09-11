@@ -156,7 +156,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
  // ============================================================================
  // ================================ CONTROLLER ================================
  // ============================================================================
-
+double dt = 0.001;
 // implements a controller callback for Moby
 void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
 {
@@ -170,7 +170,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   }
 
   static double last_time = -0.001;
-  double dt = t - last_time;
+  dt = t - last_time;
   last_time = t;
 
   /////////////////////////////////////////////////////////////////////////////
@@ -298,7 +298,7 @@ void controller_callback(Moby::DynamicBodyPtr dbp, double t, void*)
   e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
   e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
   for(unsigned i=0;i<e.size();i++){
-//    csim->preprocess_constraint(e[i]);
+    csim->preprocess_constraint(e[i]);
     if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
       Moby::SingleBodyPtr sb1 = e[i].contact_geom1->get_single_body();
@@ -403,9 +403,6 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
   double t = sim->current_time;
-  static double last_time = -0.001;
-  double dt = t - last_time;
-  last_time = t;
   
   std::vector<boost::shared_ptr<Pacer::Robot::contact_t> > contacts;
   // PROCESS CONTACTS
@@ -511,8 +508,8 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     num_joint_dof = q_joints.size();
   }
   
-  OUT_LOG(logERROR) << "generalized_q (post-contact) " << generalized_q << normal_sum ;
-  OUT_LOG(logERROR) << "generalized_qd (post-contact) " << generalized_qd << normal_sum ;
+  OUT_LOG(logERROR) << "generalized_q (post-contact) " << generalized_q ;
+  OUT_LOG(logERROR) << "generalized_qd (post-contact) " << generalized_qd ;
 
 }
 
@@ -520,7 +517,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
 #ifdef SET_CONTACT_PARAMS
 //# define RANDOM_FRICTION
-# define LOW_FRICTION
+//# define LOW_FRICTION
 #endif
 // sets friction parameters for the feet randomly (when used)
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
@@ -551,17 +548,26 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
     e->mu_coulomb = 1000;
 
 #endif
-  return e;
+  
 }
 
 // hooks into Moby's post integration step callback function
 void post_step_callback_fn(Moby::Simulator* s){}
 
+# define ADD_CONTACTS
+
 /// Event callback function for setting friction vars pre-event
 void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
-  for(int i=0;i< e.size();i++){
-    OUT_LOG(logDEBUG1) << e[i] << std::endl;
+  int N = e.size();
+  int contact_multiplier = 10;
+  for(int i=0;i<N;i++){
+//    OUT_LOG(logDEBUG1) << e[i] << std::endl;
+#ifdef ADD_CONTACTS
+    for(int j=0;j<contact_multiplier;j++)
+      e.push_back(e[i]);
+#endif
   }
+  
 }
 
 // ============================================================================
@@ -656,11 +662,11 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
 #endif
   // CONTACT CALLBACK
   if (esim){
-  //  sim->constraint_callback_fn             = &pre_event_callback_fn;
+//    esim->constraint_callback_fn             = &pre_event_callback_fn;
     esim->constraint_post_callback_fn        = &post_event_callback_fn;
   }
   if (csim){
-    //  sim->constraint_callback_fn             = &pre_event_callback_fn;
+//    csim->constraint_callback_fn             = &pre_event_callback_fn;
     csim->constraint_post_callback_fn        = &post_event_callback_fn;
   }
   // CONTROLLER CALLBACK

@@ -5,6 +5,7 @@
  ****************************************************************************/
 #include <Pacer/project_common.h>
 
+#undef OUTLOG
 void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
 
   std::ostringstream str;
@@ -161,3 +162,5 @@ void OUTLOG(double x, std::string name,TLogLevel LL){
     OUT_LOG(LL) << name << " = " << x << ";" << std::endl;
 
 }
+#define OUTLOG(val,name,level)
+

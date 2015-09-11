@@ -219,7 +219,47 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
     q_des[foot.chain[k]] = x[k];
 }
 
-
+void Robot::calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T){
+  static Ravelin::VectorNd workv_;
+  static Ravelin::MatrixNd workM_;
+  
+  set_model_state(q);
+  
+  int NC = c.size();
+  N.set_zero(NDOFS,NC);
+  S.set_zero(NDOFS,NC);
+  T.set_zero(NDOFS,NC);
+  if(NC==0) return;
+  
+  // Contact Jacobian [GLOBAL frame]
+  Ravelin::MatrixNd J(3,NDOFS);
+  for(int i=0;i<NC;i++){
+    boost::shared_ptr<const Ravelin::Pose3d>
+    impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),c[i]->point.data(),Moby::GLOBAL));
+    
+    _abrobot->calc_jacobian(impulse_frame,_id_link_map[c[i]->id],workM_);
+    workM_.get_sub_mat(0,3,0,NDOFS,J);
+    
+    Vector3d
+    normal  = c[i]->normal,
+    tan1 = c[i]->tangent,
+    tan2 = Ravelin::Vector3d::cross(c[i]->normal,c[i]->tangent);
+    tan2.normalize();
+    //      Ravelin::Vector3d::determine_orthonormal_basis(normal,tan1,tan2);
+    
+    // Normal direction
+    J.transpose_mult(normal,workv_);
+    N.set_column(i,workv_);
+    
+    // 1st tangent
+    J.transpose_mult(tan1,workv_);
+    S.set_column(i,workv_);
+    
+    // 2nd tangent
+    J.transpose_mult(tan2,workv_);
+    T.set_column(i,workv_);
+  }
+}
 
 void Robot::calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T){
   static Ravelin::VectorNd workv_;

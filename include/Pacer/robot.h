@@ -221,11 +221,11 @@ namespace Pacer{
     }
     
     void get_link_contacts(const std::string& link_id, std::vector< boost::shared_ptr<const contact_t> >& contacts){
-      contacts = _id_contacts_map[link_id];
+      std::vector< boost::shared_ptr<const contact_t> >& c = _id_contacts_map[link_id];
+      contacts.insert(contacts.end(), c.begin(), c.end());
     }
     
     void get_link_contacts(const std::vector<std::string> link_id,std::vector< boost::shared_ptr<const contact_t> >& contacts){
-      contacts.clear();
       for(int i=0;i<link_id.size();i++){
         std::vector< boost::shared_ptr<const contact_t> >& c = _id_contacts_map[link_id[i]];
         contacts.insert(contacts.end(), c.begin(), c.end());
@@ -639,6 +639,8 @@ namespace Pacer{
 
     /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
     void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
+    
+    void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
     
     /// @brief Calculate 6x(N+6) jacobian for point(in frame) on link at state q
     Ravelin::MatrixNd calc_jacobian(const Ravelin::VectorNd& q, const std::string& link, Ravelin::Origin3d point);

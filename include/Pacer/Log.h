@@ -101,7 +101,7 @@ typedef Log FILELog;
     if (level > FILELog::ReportingLevel()) ; \
     else Log().Get(level)
 
-#define LOG(level) (level > FILELog::ReportingLevel())
+#define LOG(level) (level >= FILELog::ReportingLevel())
 
 #include <sys/time.h>
 
@@ -119,6 +119,7 @@ inline std::string NowTime()
     return result;
 }
 
+#ifndef NDEBUG
 void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
 void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
 void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
@@ -135,6 +136,9 @@ void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL);
 void OUTLOG(double x, std::string name,TLogLevel LL);
 void OUTLOG(const std::string& z, std::string name,TLogLevel LL);
 void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
+#else
+#define OUTLOG(val,name,level)
+#endif
 extern std::string LOG_TYPE;
 
 #endif // LOG_H

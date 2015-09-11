@@ -149,13 +149,13 @@ void Controller::control(double t){
     static std::vector<double> load_max = get_data<std::vector<double> >("init.joint.limits.u");
 
     Ravelin::VectorNd u = get_joint_generalized_value(Pacer::Controller::load_goal);
-    OUTLOG(u,"U_NO_LIMIT",logERROR);
+    OUTLOG(u,"U_NO_LIMIT",logDEBUG);
 
     for (int i=0;i<u.rows(); i++) {
       if(u[i] > load_max[0]) u[i] = load_max[0];
       else if(u[i] < -load_max[0]) u[i] = -load_max[0];
     }
-    OUTLOG(u,"U_WITH_LIMIT",logERROR);
+    OUTLOG(u,"U_WITH_LIMIT",logDEBUG);
     set_joint_generalized_value(Pacer::Controller::load_goal,u);
   }
   

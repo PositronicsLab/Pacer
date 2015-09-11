@@ -134,8 +134,9 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
 /// Working kinematics function [y] = f(x,foot,pt,y,J)
 /// evaluated in foot link frame
 Ravelin::VectorNd& Robot::link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::VectorNd& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk){
-  /*
-   link_jacobian(x,foot,frame,gk);
+  // Warning this code is not currently functional!
+  throw std::runtime_error("Unimplemented code!"); 
+  link_jacobian(x,foot,frame,gk);
    const Ravelin::Vector3d upper(goal[0],goal[1],goal[2],frame);
    const Ravelin::Vector3d lower(goal[3],goal[4],goal[5],frame);
    fk = Ravelin::VectorNd(6,Ravelin::Pose3d::transform(
@@ -149,7 +150,6 @@ Ravelin::VectorNd& Robot::link_kinematics(const Ravelin::VectorNd& x,const end_e
    frame)).data()
    );
    return fk;
-   */
 }
 
 

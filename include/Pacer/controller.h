@@ -147,6 +147,7 @@ namespace Pacer{
       }
       
       OUT_LOG(logDEBUG1) << "<< update_plugins()";
+      return true;
     }
   };
 }

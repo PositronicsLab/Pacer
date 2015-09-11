@@ -16,7 +16,9 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-#define TIMING
+#include <Moby/LCP.h>
+
+//#define TIMING
 
 using namespace Pacer;
 
@@ -120,7 +122,7 @@ void log_idyn_matrices(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M,co
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
   
@@ -435,7 +437,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   static Ravelin::VectorNd q_last = Ravelin::VectorNd::zero(q.size());
   // Consider increasing tolerance
-  //    if((q_last-=q).norm() > Moby::NEAR_ZERO)
+  //    if((q_last-=q).norm() > NEAR_ZERO)
   ctrl->calc_generalized_inertia(q, M);
   q_last = q;
   // Jacobian Calculation
@@ -608,7 +610,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
 #ifndef TIMING
       throw std::runtime_error("IDYN forces are NaN or INF");
-#else TIMING
+#else 
       continue;
 #endif
     }

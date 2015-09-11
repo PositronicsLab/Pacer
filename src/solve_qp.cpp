@@ -17,7 +17,7 @@ const double NEAR_INF = 1.0/NEAR_ZERO;
 
 //#define SPLITTING_METHOD
 
-bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
+bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x, Ravelin::VectorNd& v, bool warm_start)
 {
      const int n = Q.rows();
      const int m = A.rows();
@@ -56,18 +56,32 @@ bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& 
   //OUTLOG(MMM,"MM",logDEBUG1);
   //OUTLOG(qqq,"qq",logDEBUG1);
 #endif
-
+  
 #ifndef SPLITTING_METHOD
   double zero_tol = MMM.norm_inf()*MMM.rows()*std::numeric_limits<double>::epsilon() * 1e4;
-  if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
-//  if(!lcp_.lcp_lemke(MMM,qqq,zzz))
-    SOLVE_FLAG = false;
-  else
-    SOLVE_FLAG = isvalid(zzz);
+  if (warm_start) {
+    zzz = v;
+    if(!lcp_.lcp_fast(MMM,qqq,zzz)){
+      if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+        SOLVE_FLAG = false;
+      else
+        SOLVE_FLAG = isvalid(zzz);
+    } else {
+      SOLVE_FLAG = false;
+    }
+  } else {
+    if(!lcp_.lcp_lemke_regularized(MMM,qqq,zzz,-20,4,0,-1.0,zero_tol))
+      SOLVE_FLAG = false;
+    else
+      SOLVE_FLAG = isvalid(zzz);
+  }
+  
+  if (SOLVE_FLAG) {
+    v = zzz;
+  }
 #else
   lcp_symm_iter(MMM, qqq, zzz, 0.5, 1.0, MAX_ITER);
 #endif
-
   // extract x
   for(int i=0;i<n;i++)
       x[i] = zzz[i];
@@ -81,7 +95,7 @@ bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& 
 }
 //bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x)
 
-bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x)
+bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x, bool warm_start)
 {
      const int n = Q.rows();
      const int m = 0;
@@ -96,12 +110,23 @@ bool Utility::solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& 
 //  OUTLOG(Q,"MM");
 //  OUTLOG(c,"qq");
 #endif
-
-  if(!lcp_.lcp_lemke_regularized(Q,c,x))
-//    if(!lcp_.lcp_lemke(Q,c,x))
+  
+  double zero_tol = Q.norm_inf()*Q.rows()*std::numeric_limits<double>::epsilon() * 1e4;
+  if (warm_start) {
+    if(!lcp_.lcp_fast(Q,c,x)){
+      if(!lcp_.lcp_lemke_regularized(Q,c,x,-20,4,0,-1.0,zero_tol))
+        SOLVE_FLAG = false;
+      else
+        SOLVE_FLAG = isvalid(x);
+    } else {
       SOLVE_FLAG = false;
-  else
-    SOLVE_FLAG = isvalid(x);
+    }
+  } else {
+    if(!lcp_.lcp_lemke_regularized(Q,c,x,-20,4,0,-1.0,zero_tol))
+      SOLVE_FLAG = false;
+    else
+      SOLVE_FLAG = isvalid(x);
+  }
 
 #ifndef NDEBUG
   OUT_LOG(logDEBUG1)  << "Solutions" ;

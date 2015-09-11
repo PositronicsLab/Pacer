@@ -1,7 +1,7 @@
 <XML>
   <logging type="string">DEBUG1</logging>
   
-  <robot-model type="string">links/model.sdf</robot-model>
+  <robot-model type="string">links/model.xml</robot-model>
   <real-time-factor type="double">1</real-time-factor>
   <noise> <!-- standard normal gaussian distribution bounded by [min,max] -->
     <!-- with mu and sigma not set, sigma = (max-min)/6 ; mu = (min+max)/2 -->

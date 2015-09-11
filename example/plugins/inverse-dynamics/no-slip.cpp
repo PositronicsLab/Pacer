@@ -3,7 +3,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
   
@@ -482,7 +482,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
     OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
     OUTLOG(_v,"warm_start_v",logDEBUG1);
     
-    if (!Utility::lcp_fast(_MM, _qq,indices, _v,Moby::NEAR_ZERO))
+    if (!Utility::lcp_fast(_MM, _qq,indices, _v,NEAR_ZERO))
     {
       OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
       

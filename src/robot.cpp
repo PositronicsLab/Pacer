@@ -278,6 +278,12 @@ void Robot::init_robot(){
       {
         _abrobot = boost::dynamic_pointer_cast<Ravelin::ArticulatedBodyd>(i->second);
       }
+      
+      if (_abrobot)
+      {
+        OUT_LOG(logINFO) << "Using robot: " << i->first;
+        break;
+      }
     }
     
     if (!_abrobot){
@@ -294,6 +300,12 @@ void Robot::init_robot(){
       if (!_abrobot)
       {
         _abrobot = boost::dynamic_pointer_cast<Ravelin::ArticulatedBodyd>(i->second);
+      }
+      
+      if (_abrobot)
+      {
+        OUT_LOG(logINFO) << "Using robot: " << i->first;
+        break;
       }
     }
     

@@ -7,13 +7,11 @@
 #include <time.h>
 #include <thread>
 
-#define USE_DXL
-
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;
-  std::string DEVICE_NAME;
 #endif
+std::string DEVICE_NAME;
 
 using Pacer::Controller;
 using Pacer::Robot;
@@ -37,10 +35,12 @@ static void control_motor(){
       joint_data_mutex_.unlock();
     }
  
+#ifdef USE_DXL
 //    std::cout << q_motors << std::endl;
     dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
+#endif
   }
 }
 

@@ -648,6 +648,9 @@ namespace Pacer{
     /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
     void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
     
+    /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
+    void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
+    
     /// @brief Calculate 6x(N+6) jacobian for point(in frame) on link at state q
     Ravelin::MatrixNd calc_jacobian(const Ravelin::VectorNd& q, const std::string& link, Ravelin::Origin3d point);
 

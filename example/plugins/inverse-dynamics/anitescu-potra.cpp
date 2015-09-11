@@ -4,7 +4,7 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Moby::NEAR_ZERO;
+  const double NEAR_ZERO = NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points

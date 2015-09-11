@@ -16,7 +16,7 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 // 02111-1307, USA.
 
-//#define USE_CURSES
+#define USE_CURSES
 //#define PS3
 #define SABRENT
 //#define XBOX
@@ -51,7 +51,7 @@ void print_bar(int pos, int len)
 }
 #endif
 
-int str2int(const char* str, int* val)
+int str2int(const char* str, long int* val)
 {
   char* endptr;
   errno = 0;    /* To distinguish success/failure after call */
@@ -496,7 +496,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         command_SE2[0] = max_forward_speed * - (double) j.axes[X] / (double) MAX_VAL;
         command_SE2[1] = max_strafe_speed * - (double) j.axes[Y] / (double) MAX_VAL;
       }
-      if(fabs(j.axes[THETA]) < JDEADZONE)
+      if(abs(j.axes[THETA]) < JDEADZONE)
         command_SE2[2] = 0;
       else
         command_SE2[2] = max_turn_speed * - (double) j.axes[THETA] / (double) MAX_VAL;

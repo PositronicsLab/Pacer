@@ -41,7 +41,7 @@
       <solver>
         <type>quick</type>
         <min_step_size>1e-6</min_step_size>
-        <iters>10000</iters>
+        <iters>100</iters>
         <sor>1.0</sor>
       </solver>
       <constraints>

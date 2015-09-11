@@ -246,20 +246,6 @@ void Robot::init_robot(){
   std::string pPath(getenv ("PACER_MODEL_PATH"));
   OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
   
-  // ================= SETUP LOGGING ==========================
-  
-  const std::string LOG_TYPE = get_data<std::string>("logging");
-  
-  FILELog::ReportingLevel() =
-  FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "INFO");
-#ifdef LOGGING
-  FILE * pFile;
-  pFile = fopen ("out.log","w");
-  fprintf(pFile, "");
-  fflush(pFile);
-  fclose (pFile);
-#endif
-  OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
   
   // ================= BUILD ROBOT ==========================
   std::string robot_model_file = get_data<std::string>("robot-model");

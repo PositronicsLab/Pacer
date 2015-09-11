@@ -5,6 +5,26 @@
  ****************************************************************************/
 #include <Pacer/project_common.h>
 
+void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,TLogLevel LL){
+  OUT_LOG(LL) << name << " = [\n";
+  for (std::map<std::string,Ravelin::VectorNd>::const_iterator it = z.begin(); it != z.end(); it++) {
+    std::ostringstream str;
+    for(int i=0;i<(*it).second.rows();i++){
+      str << std::setprecision(9) << (*it).second[i] << " ";
+    }
+    OUT_LOG(LL) << (*it).first << " = [" << str.str() << "]\n";
+  }
+  OUT_LOG(LL) << "]";
+}
+
+void OUTLOG(const std::map<std::string,double>& z, std::string name,TLogLevel LL){
+  std::ostringstream str;
+  for (std::map<std::string,double>::const_iterator it = z.begin(); it != z.end(); it++) {
+    str << (*it).first << " = [" << (*it).second << "]';\n";
+  }
+  OUT_LOG(LL) << name << " = [\n" << str.str() << "]';";
+}
+
 void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
 
   std::ostringstream str;

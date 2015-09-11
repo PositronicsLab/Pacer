@@ -33,8 +33,24 @@ namespace Pacer{
     Controller();
     virtual ~Controller();
     void init(){
+      // ================= INIT LOGGING ==========================
+      FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
+#ifdef LOGGING
+      FILE * pFile;
+      pFile = fopen ("out.log","w");
+      fprintf(pFile, "INITED LOGGER\n");
+      fflush(pFile);
+      fclose (pFile);
+#endif
+      // ================= LOAD VARS ==========================
       PARAMS_FILE = std::string("vars.xml");
       load_variables(PARAMS_FILE,boost::dynamic_pointer_cast<Robot>(ptr()));
+      // ================= SETUP LOGGING ==========================
+      const std::string LOG_TYPE = get_data<std::string>("logging");
+      OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
+      FILELog::ReportingLevel() =
+      FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "ERROR");
+      // ================= INIT ROBOT ==========================
       unlock_state();
       init_robot();
       // After Robot loads, load plugins
@@ -100,7 +116,7 @@ namespace Pacer{
       _update_priority_map[_name_priority_map[name]].erase(name);
       _name_priority_map.erase(name);
       _plugin_deconstruct_map.erase(name);
-
+      
     }
     
     bool close_all_plugins();

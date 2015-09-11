@@ -1,4 +1,4 @@
-STARTING MOBY PLUGIN
-STARTING ROBOT
-ROBOT INITED
-iteration: 0  simulation time: 0
+MOBY_INCLUDE_DIR                 /Users/samzapo/Projects/Experimental/Moby/include
+MOBY_LIBRARY                     /Users/samzapo/Projects/Experimental/Moby/release/libMoby.dylib
+RAVELIN_INCLUDE_DIR              /Users/samzapo/Projects/Experimental/Ravelin/include
+RAVELIN_LIBRARY                  /Users/samzapo/Projects/Experimental/Ravelin/release/libRavelin.dylib

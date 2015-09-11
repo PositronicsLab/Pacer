@@ -69,7 +69,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
           if(a)
              help = a->get_string_value();
 
-          std::cout << tag+n->name << " <-- (" <<  data_type << ") " <<  n->content;
+//          OUT_LOG(logDEBUG1) << tag+n->name << " <-- (" <<  data_type << ") " <<  n->content;
           std::vector<std::string> elements = split(n->content);
 
 //          OUT_LOG(logDEBUG1) << tag+n->name << "<" <<  data_type << "> = " <<  n->content;

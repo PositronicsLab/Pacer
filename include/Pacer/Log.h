@@ -8,6 +8,7 @@
 
 #include <sstream>
 #include <string>
+#include <map>
 #include <stdio.h>
 
 inline std::string NowTime();
@@ -135,6 +136,9 @@ void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL);
 void OUTLOG(double x, std::string name,TLogLevel LL);
 void OUTLOG(const std::string& z, std::string name,TLogLevel LL);
 void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
+void OUTLOG(const std::map<std::string,double>& z, std::string name,TLogLevel LL);
+void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,TLogLevel LL);
+
 extern std::string LOG_TYPE;
 
 #endif // LOG_H

@@ -152,6 +152,11 @@ void Controller::control(double t){
     OUTLOG(u,"U_NO_LIMIT",logERROR);
 
     for (int i=0;i<u.rows(); i++) {
+      if (!std::isfinite(u[i])) {
+        throw std::runtime_error("Joint command is not finite!");
+      }
+      
+      // Limit clamp values
       if(u[i] > load_max[0]) u[i] = load_max[0];
       else if(u[i] < -load_max[0]) u[i] = -load_max[0];
     }

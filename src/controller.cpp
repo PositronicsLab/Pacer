@@ -107,7 +107,6 @@ bool Controller::init_all_plugins(){
   OUT_LOG(logDEBUG) << ">> Controller::init_plugins()";
 
   bool RETURN_FLAG = true;
-  close_all_plugins();
   std::vector<init_t> INIT;
 
   // call the initializers, if any

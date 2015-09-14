@@ -22,7 +22,7 @@ typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
  boost::shared_ptr<Controller> robot_ptr;
 
 
-//#define USE_DXL
+#undef USE_DXL
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;

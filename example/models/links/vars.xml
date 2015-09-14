@@ -62,12 +62,7 @@
   </init>
   
   <plugins type="string vector">
-   waypoints
-    center-of-mass
-    output
-    end-effectors
-    gait-planner
-    ik-feet
+   stand-trajectory
     joint-PID-controller
   </plugins>
   
@@ -85,6 +80,14 @@
     joint-PID-controller
    
     idyn-controller
+   
+   waypoints
+    center-of-mass
+    output
+    end-effectors
+    gait-planner
+    ik-feet
+    joint-PID-controller
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->

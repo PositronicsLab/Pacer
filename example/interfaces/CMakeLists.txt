@@ -33,6 +33,7 @@ IF(GAZEBO_FOUND)
   target_link_libraries(PacerGazeboPlugin ${REQLIBS} ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf ${EXTRA_LIBS})
 ENDIF(GAZEBO_FOUND)
 
+set(DXL_FOUND CACHE BOOL false)
 # look for DXL
 find_package(DXL)
 IF(DXL_FOUND)

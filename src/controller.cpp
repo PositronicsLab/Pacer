@@ -105,7 +105,7 @@ bool Controller::init_plugin(const std::string& plugin_name){
 
 bool Controller::init_all_plugins(){
   OUT_LOG(logDEBUG) << ">> Controller::init_plugins()";
-
+  handles = std::map<std::string,void*>();
   bool RETURN_FLAG = true;
   std::vector<init_t> INIT;
 

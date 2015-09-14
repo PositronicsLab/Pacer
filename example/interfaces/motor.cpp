@@ -7,6 +7,9 @@
 #include <time.h>
 #include <thread>
 
+#include <boost/assign/list_of.hpp>
+#include <boost/assign/std/vector.hpp>
+
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;

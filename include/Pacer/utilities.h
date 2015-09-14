@@ -28,7 +28,7 @@ static const double _TWO_PI= 6.2831853071795864769252867665590057683943387987502
 #include <Pacer/Visualizable.h>
 #include <Pacer/output.h>
 
-#include <Ravelin/Linalgd.h>
+#include <Ravelin/LinAlgd.h>
 static Ravelin::LinAlgd LA_;
 
 class Utility{

@@ -15,6 +15,7 @@
 #include <numeric>
 #include <math.h>
 #include <cmath>
+#include <mutex>
 #include <sys/types.h>
 #include <sys/times.h>
 

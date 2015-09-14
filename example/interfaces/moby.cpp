@@ -174,24 +174,6 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
 //      abrobot->update_link_poses();
     }
   }
-#ifdef USE_DXL
-  if(joint_data_mutex_.try_lock()){
-    for(int i=0;i<dxl_->ids.size();i++)
-      qd_motors_data[i] = 0;//robot_ptr->qd_joints[dxl_->JointName(i)];
-
-    std::map<std::string,Ravelin::VectorNd> joint_val_map;
-    robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_val_map);
-
-    for(int i=0;i<dxl_->ids.size();i++)
-      q_motors_data[i] = joint_val_map[dxl_->JointName(i)][0];
-
-    //for(int i=0;i<dxl_->ids.size();i++)
-    //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
-    joint_data_mutex_.unlock();
-  }
-  static std::thread motor_thread(control_motor);
-#endif
-  
   robot_ptr->reset_state();
 }
 

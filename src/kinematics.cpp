@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Pacer/robot.h>
+#include <Pacer/utilities.h>
 
 using namespace Ravelin;
 using namespace Pacer;

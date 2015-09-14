@@ -6,15 +6,7 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-    static const double     _PI= 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348;
-    static const double _TWO_PI= 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696;
-#include <Ravelin/MatrixNd.h>
-#include <Ravelin/Transform3d.h>
-#include <Ravelin/VectorNd.h>
-#include <Ravelin/SVector6d.h>
-#include <Ravelin/Vector3d.h>
 #include <mutex>
-#include <Pacer/Log.h>
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
@@ -29,19 +21,15 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
-#include <Pacer/Visualizable.h>
 
-template < class T >
-std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
-{
-  os << "[";
-  for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
-  {
-    os << " " << *ii;
-  }
-  os << "]";
-  return os;
-}
+static const double     _PI= 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348;
+static const double _TWO_PI= 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696;
+
+#include <Pacer/Visualizable.h>
+#include <Pacer/output.h>
+
+#include <Ravelin/Linalgd.h>
+static Ravelin::LinAlgd LA_;
 
 class Utility{
 

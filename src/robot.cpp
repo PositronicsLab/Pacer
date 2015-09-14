@@ -5,6 +5,7 @@
  ****************************************************************************/
 #include <Pacer/robot.h>
 #include <boost/algorithm/string.hpp>
+#include <Pacer/utilities.h>
 
 using namespace Pacer;
 

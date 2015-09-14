@@ -12,6 +12,8 @@
 
 #include <stdio.h>
 
+#include <Pacer/utilities.h>
+
 using namespace Pacer;
 
 boost::shared_ptr<Controller> robot_ptr;

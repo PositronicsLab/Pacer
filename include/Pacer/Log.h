@@ -120,25 +120,6 @@ inline std::string NowTime()
     return result;
 }
 
-void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SharedConstMatrixNd& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL);
-void OUTLOG(double x, std::string name,TLogLevel LL);
-void OUTLOG(const std::string& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::map<std::string,double>& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,TLogLevel LL);
-
 extern std::string LOG_TYPE;
 
 #endif // LOG_H

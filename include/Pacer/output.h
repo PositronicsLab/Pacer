@@ -3,9 +3,38 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <Pacer/project_common.h>
+#ifndef OUTPUT_H
+#define OUTPUT_H
 
-void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,TLogLevel LL){
+#include <Pacer/Log.h>
+
+#include <fstream>
+#include <iostream>     // std::cout, std::fixed
+#include <iomanip>      // std::setprecision
+
+#include <map>
+#include <vector>
+#include <string>
+
+#include <Ravelin/VectorNd.h>
+#include <Ravelin/MatrixNd.h>
+#include <Ravelin/Transform3d.h>
+#include <Ravelin/SVector6d.h>
+#include <Ravelin/Vector3d.h>
+
+template < class T >
+std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
+{
+  os << "[";
+  for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+  {
+    os << " " << *ii;
+  }
+  os << "]";
+  return os;
+}
+
+static void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,TLogLevel LL){
   OUT_LOG(LL) << name << " = [\n";
   for (std::map<std::string,Ravelin::VectorNd>::const_iterator it = z.begin(); it != z.end(); it++) {
     std::ostringstream str;
@@ -17,7 +46,7 @@ void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,T
   OUT_LOG(LL) << "]";
 }
 
-void OUTLOG(const std::map<std::string,double>& z, std::string name,TLogLevel LL){
+static void OUTLOG(const std::map<std::string,double>& z, std::string name,TLogLevel LL){
   std::ostringstream str;
   for (std::map<std::string,double>::const_iterator it = z.begin(); it != z.end(); it++) {
     str << (*it).first << " = [" << (*it).second << "]';\n";
@@ -25,7 +54,7 @@ void OUTLOG(const std::map<std::string,double>& z, std::string name,TLogLevel LL
   OUT_LOG(LL) << name << " = [\n" << str.str() << "]';";
 }
 
-void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
 
   std::ostringstream str;
     for(int i=0;i<M.rows();i++){
@@ -37,7 +66,7 @@ void OUTLOG(const Ravelin::MatrixNd& M, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::SharedConstMatrixNd& M, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::SharedConstMatrixNd& M, std::string name,TLogLevel LL){
 
   std::ostringstream str;
     for(int i=0;i<M.rows();i++){
@@ -49,7 +78,7 @@ void OUTLOG(const Ravelin::SharedConstMatrixNd& M, std::string name,TLogLevel LL
 
 }
 
-void OUTLOG(const Ravelin::Matrix3d& M, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::Matrix3d& M, std::string name,TLogLevel LL){
 
   std::ostringstream str;
     for(int i=0;i<M.rows();i++){
@@ -61,7 +90,7 @@ void OUTLOG(const Ravelin::Matrix3d& M, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL){
 
   static Ravelin::Matrix3d R;
   R = Ravelin::Matrix3d(P.q);
@@ -75,7 +104,7 @@ void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::VectorNd& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::VectorNd& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<z.rows();i++)
@@ -85,7 +114,7 @@ void OUTLOG(const Ravelin::VectorNd& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL){
+static void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<z.size();i++)
@@ -95,7 +124,7 @@ void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL){
+static void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<z.size();i++)
@@ -105,7 +134,7 @@ void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL){
+static void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<z.size();i++)
@@ -114,7 +143,7 @@ void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const std::string& z, std::string name,TLogLevel LL){
+static void OUTLOG(const std::string& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
 
@@ -122,7 +151,7 @@ void OUTLOG(const std::string& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<z.rows();i++)
@@ -132,7 +161,7 @@ void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<3;i++)
@@ -141,7 +170,7 @@ void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<3;i++)
@@ -150,7 +179,7 @@ void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<2;i++)
@@ -159,7 +188,7 @@ void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::SharedVectorNd& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::SharedVectorNd& z, std::string name,TLogLevel LL){
 
     std::ostringstream str;
     for(int i=0;i<z.rows();i++)
@@ -168,7 +197,7 @@ void OUTLOG(const Ravelin::SharedVectorNd& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL){
+static void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL){
 
     OUT_LOG(LL) << std::setprecision(9)
                 << name << " = <"
@@ -176,8 +205,10 @@ void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL){
 
 }
 
-void OUTLOG(double x, std::string name,TLogLevel LL){
+static void OUTLOG(double x, std::string name,TLogLevel LL){
 
     OUT_LOG(LL) << name << " = " << x << ";" << std::endl;
 
 }
+
+#endif

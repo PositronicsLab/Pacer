@@ -4,6 +4,8 @@
 std::string plugin_namespace;
 using namespace Ravelin;
 
+const double grav     = 9.81; // m / s*s
+
 boost::shared_ptr<Pacer::Controller> ctrl;
 
 struct Trajectory {

@@ -19,6 +19,9 @@
 #include <Moby/LCP.h>
 
 //#define TIMING
+#ifdef TIMING
+#include <ctime>
+#endif
 
 using namespace Pacer;
 

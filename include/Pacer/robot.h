@@ -6,14 +6,20 @@
 #ifndef ROBOT_H
 #define ROBOT_H
 
-#include <Pacer/project_common.h>
-#include <Pacer/utilities.h>
-#include <Pacer/Visualizable.h>
+#include <Ravelin/RCArticulatedBodyd.h>
+#include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 
-#include <Ravelin/ArticulatedBodyd.h>
+#include <Pacer/output.h>
+
+#include <numeric>
+#include <math.h>
+#include <cmath>
+#include <sys/types.h>
+#include <sys/times.h>
 
 namespace Pacer{
+  
   const boost::shared_ptr<const Ravelin::Pose3d> GLOBAL;
   const double NEAR_ZERO = std::sqrt(std::numeric_limits<double>::epsilon());
   const Ravelin::Matrix3d ZEROS_3x3 = Ravelin::Matrix3d::zero();
@@ -705,4 +711,5 @@ namespace Pacer{
     void compile();
 };
 }
+
 #endif // ROBOT_H

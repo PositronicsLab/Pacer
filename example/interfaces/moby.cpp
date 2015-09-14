@@ -7,9 +7,7 @@
 #include <Moby/ConstraintSimulator.h>
 
 #include <Pacer/controller.h>
-#ifdef SIMULATE_UNCERTAINTY
-#include "Random.h"
-#endif
+
 using Pacer::Controller;
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
@@ -20,139 +18,6 @@ typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
 // pointer to the Pacer controller
  boost::shared_ptr<Controller> robot_ptr;
-
-
-#undef USE_DXL
-#ifdef USE_DXL
-#include <dxl/Dynamixel.h>
-  DXL::Dynamixel * dxl_;
-# define DEVICE_NAME "/dev/tty.usbserial-A9YL9ZZV"
-
-#include <thread>
-static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
-
-std::mutex joint_data_mutex_;
-static double FREQ = 500;
-
-static void control_motor(){
-  while(true){
-    static Ravelin::VectorNd q_motors,qd_motors,u_motors;
-    if(joint_data_mutex_.try_lock()){
-      q_motors = q_motors_data;
-      
-      qd_motors = qd_motors_data;
-      u_motors = u_motors_data;
-      joint_data_mutex_.unlock();
-    }
- 
-    std::cout << q_motors << std::endl;
-    dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
-//    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
-    sleep(1.0/FREQ);
-  }
-}
-#endif
-
-#ifdef USE_OSG_DISPLAY
-void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::Simulator> sim ) ;
-void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::Simulator> sim ) ;
-void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> sim,double lightness = 1, double size=0.1);
-
-void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
-   for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
-   {
-    switch((*it)->eType){
-    case Pacer::Visualizable::eRay:{
-      Pacer::Ray * v = static_cast<Pacer::Ray*>((it)->get());
-      visualize_ray(v->point1,v->point2,v->color,v->size,sim);
-      break;
-    }
-    case Pacer::Visualizable::ePoint:{
-      Pacer::Point * v = static_cast<Pacer::Point*>((it)->get());
-      visualize_ray(v->point,v->point,v->color,v->size,sim);
-      break;
-    }
-    case Pacer::Visualizable::ePose:{
-      Pacer::Pose * v = static_cast<Pacer::Pose*>((it)->get());
-      draw_pose(v->pose,sim,v->shade,v->size);
-      break;
-    }
-    default:   std::cout << "UNKNOWN VISUAL: " << (*it)->eType << std::endl; break;
-    }
-   }
-   viz_vect.clear();
-}
-#endif
-
-// ============================================================================
- // ================================ CUSTOM FNS ================================
- // ============================================================================
-
- // adds perturbations to the robot for testing stability
- /*
- void apply_sim_perturbations(){
-   static std::vector<JointPtr>& joints_ = robot_ptr->get_joints();
-   int num_joints = joints_.size();
-
-   static std::vector<double> workv_,
-       &unknown_base_perturbation = robot_ptr->get_data("sim.unknown-base-perturbation",workv_),
-       &known_base_perturbation = robot_ptr->get_data("sim.known-base-perturbation",workv_),
-       &known_leading_force = robot_ptr->get_data("sim.known-leading-force",workv_);
-
-   Ravelin::Vector3d lead(known_leading_force[3],
-                          known_leading_force[4],
-                          known_leading_force[5],
-                          Pacer::GLOBAL);
-   OUTLOG(lead,"LEAD_g",logDEBUG);
-
-   Ravelin::Vector3d point_on_robot(known_leading_force[0],
-                                    known_leading_force[1],
-                                    known_leading_force[2],
-                                    robot_ptr->get_base_link_frame());
-                                    
-   boost::shared_ptr<Ravelin::Pose3d> lead_transform =
-       boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(
-         Ravelin::Quatd::identity(),
-         Ravelin::Origin3d(
-           Ravelin::Pose3d::transform_point(Pacer::GLOBAL,point_on_robot)
-         )
-       ));
-       
-   Ravelin::SForced lead_force = Ravelin::SForced(0,0,0,0,0,0,Pacer::GLOBAL);
-   if(lead.norm() > Moby::NEAR_ZERO)
-     lead_force = Ravelin::Pose3d::transform(
-                                              Pacer::GLOBAL,
-                                              Ravelin::SForced(lead,Ravelin::Vector3d(0,0,0),lead_transform)
-                                            );
-   
-
-   Ravelin::SForced known_force(&known_leading_force[0],Pacer::GLOBAL);
-
-   OUTLOG(lead,"LEAD_bt",logDEBUG);
-
-   Ravelin::VectorNd perturbation(num_joints+6);
-   perturbation.set_zero();
-
-   for(int i=0;i<6;i++){
-     perturbation[num_joints+i] += ( unknown_base_perturbation[i]
-                                    + known_base_perturbation[i]
-                                    + lead_force[i]);
-   }
-
-   abrobot->add_generalized_force(perturbation);
- }
-
- Ravelin::VectorNd& remap_values(const std::map<int,int>& value_map,const Ravelin::VectorNd v1,Ravelin::VectorNd& v2,bool reverse = false){
-   v2 = v1;
-   for(int i=0;i<value_map.size();i++){
-     if(reverse)
-       v2[i] = v1[value_map.at(i)];
-     else
-       v2[value_map.at(i)] = v1[i];
-   }
-    return v2;
- }
-*/
 
  // ============================================================================
  // ================================ CONTROLLER ================================
@@ -211,76 +76,6 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
     num_joint_dof = q_joints.size();
   }
   
-#ifdef SIMULATE_UNCERTAINTY
-  /////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////// Apply Noise: /////////////////////////////////
- static std::vector<std::string> noise_variables,joint_names;
-  bool apply_noise = robot_ptr->get_data< std::vector<std::string> >("noise.variables",noise_variables);
-  
-  if(joint_names.empty())
-    robot_ptr->get_data< std::vector<std::string> >("init.joint.id",joint_names);
-  
-  static
-  std::map< std::string , std::vector< boost::shared_ptr<Generator> > >
-    noise_generator;
-  
-  if (apply_noise) {
-    if(noise_generator.empty()){
-      for (std::vector<std::string>::iterator it = noise_variables.begin(); it != noise_variables.end(); it++) {
-        std::string& name = (*it);
-
-        std::vector<double> mu,sigma,xmin, xmax;
-
-        bool use_mu_sigma = true;
-        if(!robot_ptr->get_data<std::vector<double> >("noise."+name+".mu",mu))
-          use_mu_sigma = false;
-        if(!robot_ptr->get_data<std::vector<double> >("noise."+name+".sigma",sigma))
-          use_mu_sigma = false;
-
-        robot_ptr->get_data<std::vector<double> >("noise."+name+".min",xmin);
-        robot_ptr->get_data<std::vector<double> >("noise."+name+".max",xmax);
-        
-        std::vector< boost::shared_ptr<Generator> > noise_vec;
-        for (int i=0; i<xmin.size(); i++) {
-          if(use_mu_sigma)
-            noise_vec.push_back(boost::shared_ptr<Generator>(new Generator(mu[i],sigma[i],xmin[i],xmax[i])));
-          else
-            noise_vec.push_back(boost::shared_ptr<Generator>(new Generator(xmin[i],xmax[i])));
-        }
-        noise_generator[name] = noise_vec;
-      }
-    }
-   
-    for (std::vector<std::string>::iterator it = noise_variables.begin(); it != noise_variables.end(); it++) {
-      std::string& name = (*it);
-      std::vector< boost::shared_ptr<Generator> >& generator = noise_generator[name];
-      Ravelin::VectorNd noise_vector = Ravelin::VectorNd(generator.size());
-      for (int i=0; i<generator.size(); i++) {
-        noise_vector[i] = generator[i]->generate();
-      }
-      
-      OUTLOG(noise_vector,name+"_perturbation",logERROR);
-      
-      if (name.compare("q") == 0) {
-        assert(generator.size() == num_joint_dof);
-        generalized_q.segment(0,num_joint_dof) += noise_vector;
-      } else if (name.compare("qd") == 0) {
-        assert(generator.size() == num_joint_dof);
-        generalized_qd.segment(0,num_joint_dof) += noise_vector;
-      } else if (name.compare("position") == 0) {
-        generalized_q.segment(num_joint_dof,num_joint_dof+6) += noise_vector;
-      } else if (name.compare("velocity") == 0) {
-        generalized_q.segment(num_joint_dof,num_joint_dof+6) += noise_vector;
-      } else if ("u") {
-        for (int i = 0; i<noise_vector.rows(); i++) {
-          Ravelin::VectorNd U(1);
-          U[0] = noise_vector[i];
-          joints_map[joint_names[i]]->add_force(U);
-        }
-      }
-    }
-  }
-#endif
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Apply State: /////////////////////////////////
   static Ravelin::VectorNd  generalized_qd_last = generalized_qd;
@@ -522,13 +317,6 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
 
 }
 
-//#define SET_CONTACT_PARAMS
-
-#ifdef SET_CONTACT_PARAMS
-//# define RANDOM_FRICTION
-# define LOW_FRICTION
-#endif
-// sets friction parameters for the feet randomly (when used)
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
 
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
@@ -574,55 +362,12 @@ void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::sh
 // ================================ INIT ======================================
 // ============================================================================
 
-
-//boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2);
-//void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty);
-//void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty);
-
 /// plugin must be "extern C"
+extern "C" {
 
-// this is called by Moby for a plugin
-void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time){
+void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
+{
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
-#ifdef USE_DXL
-  // If use robot is active also init dynamixel controllers
-  dxl_ = new DXL::Dynamixel(DEVICE_NAME);
-  // LINKS robot
-
-  // Set Dynamixel Names
-  std::vector<std::string> dxl_name = boost::assign::list_of
-     ("LF_X_1")("RF_X_1")("LH_X_1")("RH_X_1")
-     ("LF_Y_2")("RF_Y_2")("LH_Y_2")("RH_Y_2")
-     ("LF_Y_3")("RF_Y_3")("LH_Y_3")("RH_Y_3");
-
-  dxl_->names = dxl_name;
-  // Set Joint Angles
-  std::vector<int> dxl_tare = boost::assign::list_of
-      (0)(0)(0)(0)
-      (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
-      (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
-
-  dxl_->tare = dxl_tare;
-
-  // Set Dynamixel Type
-  std::vector<DXL::Dynamixel::Type> dxl_type = boost::assign::list_of
-    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)
-    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::MX_64R)(DXL::Dynamixel::MX_64R)
-    (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F);
-
-  dxl_->stype = dxl_type;
-
-  for(int i=1;i<=dxl_->names.size();i++){
-    dxl_->ids.push_back(i);
-  }
-    q_motors_data.set_zero(dxl_->ids.size());
-    qd_motors_data.set_zero(dxl_->ids.size());
-    u_motors_data.set_zero(dxl_->ids.size());
-    
-    dxl_->relaxed(false);
-
-  joint_data_mutex_.unlock();
-#endif
   
   // If use robot is active also init dynamixel controllers
   // get a reference to the Simulator instance
@@ -631,9 +376,10 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
   {
     // Find the simulator reference
     
-    if (!sim)
+    if (!sim){
       sim = boost::dynamic_pointer_cast<Moby::Simulator>(i->second);
-
+    }
+    
     // find the robot reference
     if (!abrobot)
     {
@@ -641,193 +387,49 @@ void init_cpp(const std::map<std::string, Moby::BasePtr>& read_map, double time)
     }
   }
   
+  
+  if(!sim)
+    throw std::runtime_error("Could not find simulator!");
+  
   if(!abrobot)
     throw std::runtime_error("Could not find robot in simulator!");
   
-  boost::shared_ptr<Moby::ConstraintSimulator> csim;
-
-  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
-
+  boost::shared_ptr<Moby::ConstraintSimulator>
+    csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
+  
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
-
+  
   std::cout << "STARTING ROBOT" << std::endl;
-
+  
   robot_ptr = boost::shared_ptr<Controller>(new Controller());
   robot_ptr->init();
   
   std::cout << "ROBOT INITED" << std::endl;
-
-  // CONTACT PARAMETER CALLBACK (MUST BE SET)
-#ifdef SET_CONTACT_PARAMS
- sim->get_contact_parameters_callback_fn = &get_contact_parameters;
-#endif
+  
   // CONTACT CALLBACK
   if (csim){
-    //  sim->constraint_callback_fn             = &pre_event_callback_fn;
     csim->constraint_post_callback_fn        = &post_event_callback_fn;
   }
+  
   // CONTROLLER CALLBACK
   abrobot->controller                     = &controller_callback;
-
+  
   // ================= INIT ROBOT STATE ==========================
   int is_kinematic = robot_ptr->get_data<int>("init.kinematic");
-
+  
   if(is_kinematic)
     abrobot->set_kinematic(true);
-
+  
   std::map<std::string,Ravelin::VectorNd > q_start, qd_start;
   robot_ptr->get_joint_value(Pacer::Robot::position,q_start);
   robot_ptr->get_joint_value(Pacer::Robot::velocity,qd_start);
-
+  
   Ravelin::VectorNd base_x, base_xd;
   robot_ptr->get_generalized_value(Pacer::Robot::position,base_x);
   robot_ptr->get_generalized_value(Pacer::Robot::velocity,base_xd);
   
   abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,base_x);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,base_xd);
-//  abrobot->update_link_poses();
-
-  std::vector<JointPtr> joints = abrobot->get_joints();
-
-  for(int i=0;i<joints.size();i++){
-    joints[i]->q = q_start[joints[i]->joint_id];
-    joints[i]->qd = qd_start[joints[i]->joint_id];
-  }
-  
-//  abrobot->update_link_poses();
-}
-
-// plugins must be declared 'extern "C"'
-extern "C" {
-
-void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
-{
-  init_cpp(read_map,time);
 }
 } // end extern C
-
-
-#ifdef USE_OSG_DISPLAY
-///////////////////////////////////////////////////////////////////////////////
-/////////////////////////////// Visualization /////////////////////////////////
-
-#include <boost/shared_ptr.hpp>
-#include <Moby/Simulator.h>
-
-#include <osgDB/ReadFile>
-#include <osgDB/WriteFile>
-#include <osg/MatrixTransform>
-#include <osg/ShapeDrawable>
-#include <osg/PositionAttitudeTransform>
-#include <osg/Plane>
-#include <osg/LineSegment>
-#include <osg/LineWidth>
-
-using namespace Moby;
-using namespace Ravelin;
-const double VIBRANCY = 1;
-
-/// Draws a ray directed from a contact point along the contact normal
-void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c,double point_radius, boost::shared_ptr<Simulator> sim ) {
-
-  // random color for this contact visualization
-  double r = c[0] * VIBRANCY;
-  double g = c[1] * VIBRANCY;
-  double b = c[2] * VIBRANCY;
-  osg::Vec4 color = osg::Vec4( r, g, b, 1.0 );
-
-  const double point_scale = point_radius*0.01;
-
-  // the osg node this event visualization will attach to
-  osg::Group* group_root = new osg::Group();
-
-  // turn off lighting for this node
-  osg::StateSet *point_state = group_root->getOrCreateStateSet();
-  point_state->setMode( GL_LIGHTING, osg::StateAttribute::PROTECTED | osg::StateAttribute::OFF );
-
-  // a geode for the visualization geometry
-  osg::Geode* point_geode = new osg::Geode();
-
-  // add some hints to reduce the polygonal complexity of the visualization
-  osg::TessellationHints *hints = new osg::TessellationHints();
-  hints->setTessellationMode( osg::TessellationHints::USE_TARGET_NUM_FACES );
-  hints->setCreateNormals( true );
-  hints->setDetailRatio( 0.001 );
-
-  osg::Sphere* point_geometry = new osg::Sphere( osg::Vec3( 0,0,0 ), point_radius );
-  osg::ShapeDrawable* point_shape = new osg::ShapeDrawable( point_geometry, hints );
-  point_shape->setColor( color );
-  point_geode->addDrawable( point_shape );
-
-  osg::PositionAttitudeTransform* point_transform;
-  point_transform = new osg::PositionAttitudeTransform();
-  point_transform->setPosition( osg::Vec3( point[0], point[1], point[2] ) );
-  point_transform->setScale( osg::Vec3( point_scale, point_scale, point_scale ) );
-
-  // add the geode to the transform
-  point_transform->addChild( point_geode );
-
-  // add the transform to the root
-  group_root->addChild( point_transform );
-
-  // add the root to the transient data scene graph
-  sim->add_transient_vdata( group_root );
-
-  // ----- LINE -------
-
-//  osg::Group* vec_root = new osg::Group();
-  osg::Geode* vec_geode = new osg::Geode();
-  osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
-  osg::ref_ptr<osg::DrawArrays> drawArrayLines =
-      new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP);
-
-  osg::ref_ptr<osg::Vec3Array> vertexData = new osg::Vec3Array;
-
-  geom->addPrimitiveSet(drawArrayLines);
-  geom->setVertexArray(vertexData);
-
-  //loop through points
-  vertexData->push_back(osg::Vec3d(point[0],point[1],point[2]));
-  vertexData->push_back(osg::Vec3d(vec[0],vec[1],vec[2]));
-
-  drawArrayLines->setFirst(0);
-  drawArrayLines->setCount(vertexData->size());
-
-  // Add the Geometry (Drawable) to a Geode and return the Geode.
-  vec_geode->addDrawable( geom.get() );
-  // the osg node this event visualization will attach to
-
-  // add the root to the transient data scene graph
-  // create the visualization transform
-  osg::PositionAttitudeTransform* vec_transform;
-  vec_transform = new osg::PositionAttitudeTransform();
-
-  // add the geode to the transform
-  vec_transform->addChild( vec_geode );
-
-  // add the transform to the root
-  group_root->addChild( vec_transform );
-
-  // add the root to the transient data scene graph
-  sim->add_transient_vdata( group_root );
-}
-
-void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<Simulator> sim ) {
-  visualize_ray(point,vec,c,0.1,sim);
-}
-
-void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<Simulator> sim ,double lightness, double size){
-  Ravelin::Pose3d pose(p);
-  assert(lightness >= 0.0 && lightness <= 2.0);
-  pose.update_relative_pose(Pacer::GLOBAL);
-  Ravelin::Matrix3d Rot(pose.q);
-  Rot*= 0.3;
-  double alpha = (lightness > 1.0)? 1.0 : lightness,
-         beta = (lightness > 1.0)? lightness-1.0 : 0.0;
-
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),size,sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),size,sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),size,sim);
-}
-#endif // USE_OSG_DISPLAY

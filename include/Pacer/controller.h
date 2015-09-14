@@ -7,7 +7,6 @@
 #define CONTROL_H
 
 #include <Pacer/robot.h>
-#include <boost/shared_ptr.hpp>
 namespace Pacer{
   
   class Controller;

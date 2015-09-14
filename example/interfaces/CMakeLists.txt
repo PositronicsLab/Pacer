@@ -27,6 +27,9 @@ IF(USE_OSG_DISPLAY)
 ENDIF(USE_OSG_DISPLAY)
 target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS} gsl)
 
+add_library(MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby-simple.cpp)
+target_link_libraries(MobyPlugin ${REQLIBS})
+
   # Gazebo Interface
 IF(GAZEBO_FOUND)
   add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/interfaces/gazebo.cpp)

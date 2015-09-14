@@ -8,7 +8,6 @@
 #include<vector>
 #include<algorithm>
 #include<cmath>
-#include <Pacer/project_common.h>
 #include <Pacer/utilities.h>
 
 static Ravelin::VectorNd workv_;

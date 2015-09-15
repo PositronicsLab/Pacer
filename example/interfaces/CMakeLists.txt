@@ -1,5 +1,5 @@
   # Gazebo Interface
-  add_library(PacerMobyPlugin ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
+  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
 # osg
 option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
 IF(USE_OSG_DISPLAY)
@@ -31,20 +31,33 @@ add_library(MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby-simple
 target_link_libraries(MobyPlugin ${REQLIBS})
 
   # Gazebo Interface
+  set(USE_GAZEBO CACHE BOOL false)
+  IF(USE_GAZEBO)
+include (FindPkgConfig)
+IF(PKG_CONFIG_FOUND)
+  pkg_check_modules(GAZEBO gazebo)
+ENDIF(PKG_CONFIG_FOUND)
+include_directories(${GAZEBO_INCLUDE_DIRS})
+link_directories(${GAZEBO_LIBRARY_DIRS})
 IF(GAZEBO_FOUND)
   add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/interfaces/gazebo.cpp)
   target_link_libraries(PacerGazeboPlugin ${REQLIBS} ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf ${EXTRA_LIBS})
 ENDIF(GAZEBO_FOUND)
+ENDIF(USE_GAZEBO)
 
-set(DXL_FOUND CACHE BOOL false)
+set(USE_DXL CACHE BOOL false)
 # look for DXL
+IF(USE_DXL)
 find_package(DXL)
 IF(DXL_FOUND)
   add_definitions(-DUSE_DXL)
 ENDIF(DXL_FOUND)
+ENDIF(USE_DXL)
   add_executable(PacerMotorDriver ${CMAKE_SOURCE_DIR}/example/interfaces/motor.cpp)
   target_link_libraries(PacerMotorDriver ${REQLIBS})
+IF(USE_DXL)
 IF(DXL_FOUND)
   target_link_libraries(PacerMotorDriver dxl)
   target_link_libraries(PacerMobyPlugin dxl)
 ENDIF(DXL_FOUND)
+ENDIF(USE_DXL)

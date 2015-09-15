@@ -20,11 +20,6 @@ using Moby::XMLAttrib;
 
 boost::shared_ptr<Pacer::Robot> robot_ptr;
 
-constexpr unsigned int str2int(const char* str, int h = 0)
-{
-    return !str[h] ? 5381 : (str2int(str, h+1)*33) ^ str[h];
-}
-
 static int str2bool(const std::string& str)
 {
   if(str.compare(std::string("true")) == 0)
@@ -50,6 +45,15 @@ std::vector<std::string> split(std::string const &input) {
 //  return X();
 //}
 
+// Replacing: [](std::string const& val) {return std::stod(val);});
+double string_to_double(std::string const& val){
+  return std::stod(val);
+}
+
+// Replacing: [](std::string const& val) {return std::stod(val);});
+int string_to_int(std::string const& val){
+  return (str2bool(val))? 1 : 0;
+}
 
 void process_tag(std::string tag,shared_ptr<const XMLTree> node){
     // do something with the current node instead of System.out
@@ -89,7 +93,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 std::vector<double> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
-                        [](std::string const& val) {return std::stod(val);});
+                        string_to_double);
                   robot_ptr->set_data<std::vector<double> >(tag+n->name,typed_elements );
               }
               else{
@@ -102,7 +106,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 std::vector<int> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
-                        [](std::string const& val) {return str2bool(val);});
+                        string_to_int);
                   robot_ptr->set_data<std::vector<int> >(tag+n->name,typed_elements);
               }
               else{
@@ -116,14 +120,14 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                 std::vector<double> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
-                        [](std::string const& val) {return std::stod(val);});
+                        string_to_double);
                   robot_ptr->set_data<std::vector<double> >(tag+n->name,typed_elements );
             }
             else if(data_type.compare("bool vector") == 0){
                 std::vector<int> typed_elements;
                 typed_elements.reserve(elements.size());
                 std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
-                        [](std::string const& val) {return str2bool(val);});
+                        string_to_int);
                   robot_ptr->set_data<std::vector<int> >(tag+n->name,typed_elements);
             }
             else {

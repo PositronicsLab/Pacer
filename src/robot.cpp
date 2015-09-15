@@ -238,7 +238,7 @@ void Robot::update_poses(){
 #include <Moby/XMLReader.h>
 #include <Moby/ArticulatedBody.h>
 void Robot::init_robot(){
-  OUT_LOG(logDEBUG) << ">> Robot::init_robot(.)";
+  OUT_LOG(logDEBUG) << "> > Robot::init_robot(.)";
   // ================= LOAD SCRIPT DATA ==========================
   
   if (!getenv("PACER_MODEL_PATH"))

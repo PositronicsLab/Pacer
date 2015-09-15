@@ -198,7 +198,8 @@ class Joystick
 #endif
   } // while
  
-  Joystick(): Joystick(0) {}
+  Joystick(){}
+  
   Joystick(int joy_idx){
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
  
@@ -256,7 +257,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+".type");
 
   try {
-    static Joystick j = Joystick(0);
+    static Joystick j(0);
 
     j.update();
     

@@ -11,8 +11,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 include_directories("include")
 set(PROJECT_SRC_DIR ./src)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-
 #find BOOST libraries
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
 find_package(Boost REQUIRED)
@@ -34,12 +32,6 @@ find_package(LibXml2 REQUIRED)
 link_directories(${LIBXML2_LIBRARY_DIR})
 include_directories(${LIBXML2_INCLUDE_DIR})
 
-include (FindPkgConfig)
-IF(PKG_CONFIG_FOUND)
-  pkg_check_modules(GAZEBO gazebo)
-ENDIF(PKG_CONFIG_FOUND)
-include_directories(${GAZEBO_INCLUDE_DIRS})
-link_directories(${GAZEBO_LIBRARY_DIRS})
 
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 

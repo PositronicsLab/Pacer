@@ -181,7 +181,7 @@ namespace Pacer{
       return calc_jacobian(q,link,Ravelin::Origin3d(0,0,0));
     }
     
-    const std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd>>& get_links(){
+    const std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd> >& get_links(){
       return _id_link_map;
     }
     
@@ -377,7 +377,7 @@ namespace Pacer{
 
     void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
       _state_mutex.lock();
-      std::map<std::string,std::vector<double>>::const_iterator it;
+      std::map<std::string,std::vector<double> >::const_iterator it;
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
         const std::vector<double>& dof_val = (*it).second;
@@ -699,9 +699,9 @@ namespace Pacer{
  
     boost::shared_ptr<Ravelin::ArticulatedBodyd>        _abrobot;
     
-    std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd>> _id_link_map;
+    std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd> > _id_link_map;
     boost::shared_ptr<Ravelin::RigidBodyd> _root_link;
-    std::map<std::string,boost::shared_ptr<Ravelin::Jointd>> _id_joint_map;
+    std::map<std::string,boost::shared_ptr<Ravelin::Jointd> > _id_joint_map;
 
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;

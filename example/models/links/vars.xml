@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">DEBUG1</logging>
+  <logging type="string">ERROR</logging>
   
   <robot-model type="string">links/model.sdf</robot-model>
   <real-time-factor type="double">1</real-time-factor>
@@ -62,13 +62,14 @@
   </init>
   
   <plugins type="string vector">
+    gamepad
     center-of-mass
     end-effectors
     error-check
     gait-planner
     ik-feet
     idyn-controller
-    joint-PID-controller
+    eef-PID-controller
   </plugins>
   
   <!--
@@ -84,7 +85,8 @@
    gait-planner
    joint-PID-controller
    eef-PID-controller
-   
+   joint-PID-controller-accel
+   eef-PID-controller-accel
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
@@ -397,13 +399,13 @@
     <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
     <priority type="double">10</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0.005</dt>
-    <alpha type="double">0</alpha>
+    <dt type="double">0.001</dt>
+    <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">false</des-contact>
-    <max-contacts-per-foot type="double">10</max-contacts-per-foot>
-    <type type="string vector">CFQP1</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <des-contact type="bool">true</des-contact>
+    <max-contacts-per-foot type="double">1</max-contacts-per-foot>
+    <type type="string vector">SCFQP</type> <!-- SCFQP (simple CFQP), CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
     <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

@@ -64,8 +64,8 @@
   <plugins type="string vector">
     end-effectors
     center-of-mass
-    gamepad
     gait-planner
+    ik-feet
     joint-PID-controller
   </plugins>
   

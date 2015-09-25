@@ -16,6 +16,9 @@
 #include <vector>
 
 using namespace Pacer;
+
+std::map<std::string,void*> Controller::handles;
+std::map<std::string, Controller::init_t> Controller::INIT;
   
 Controller::Controller(): Robot(){
 
@@ -26,7 +29,6 @@ Controller::~Controller(){
 }
 
 
-std::map<std::string,void*> handles;
 bool Controller::close_all_plugins(){
   typedef std::pair<std::string,void*> handle_pair;
   // close the loaded plugin libraries
@@ -40,8 +42,6 @@ bool Controller::close_all_plugins(){
   return true;
 }
 
-typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
-std::map<std::string, init_t> INIT;
 
 bool Controller::remove_plugin(const std::string& plugin_name){
   std::map<std::string, void*>::iterator it = handles.find(plugin_name);

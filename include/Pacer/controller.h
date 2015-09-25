@@ -95,7 +95,11 @@ namespace Pacer{
     }
     
   private:
+    typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
+    static std::map<std::string, void*> handles;
+    static std::map<std::string, init_t> INIT;
     typedef std::map<std::string , update_t> name_update_t;
+    
     std::map<int , name_update_t> _update_priority_map;
     name_update_t _plugin_deconstruct_map;
     std::map< std::string , int > _name_priority_map;

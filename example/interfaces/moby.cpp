@@ -398,10 +398,6 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   abrobot->controller                     = &controller_callback;
   
   // ================= INIT ROBOT STATE ==========================
-  int is_kinematic = robot_ptr->get_data<int>("init.kinematic");
-  
-  if(is_kinematic)
-    abrobot->set_kinematic(true);
   
   std::map<std::string,Ravelin::VectorNd > q_start, qd_start;
   robot_ptr->get_joint_value(Pacer::Robot::position,q_start);

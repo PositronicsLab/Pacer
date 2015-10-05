@@ -368,8 +368,9 @@ namespace Pacer{
     }
     
     void get_joint_value(unit_e u, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
+      std::map<std::string,Ravelin::VectorNd>& m = _state[u];
       std::map<std::string,Ravelin::VectorNd >::iterator it;
-      for(it=_state[u].begin();it!=_state[u].end();it++){
+      for(it=m.begin();it!=m.end();it++){
         const Ravelin::VectorNd& dof_val_internal = (*it).second;
         id_dof_val_map[(*it).first] = dof_val_internal;
       }

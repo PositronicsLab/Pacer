@@ -72,9 +72,10 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   Ravelin::VectorNd x(foot.chain.size());
   Ravelin::VectorNd step(foot.chain.size());
   
-  boost::shared_ptr<const Ravelin::Pose3d>
+  boost::shared_ptr<Ravelin::Pose3d>
   //base_frame(new Ravelin::Pose3d(get_data<Ravelin::Pose3d>("base_link_frame")));
-  base_frame(new Ravelin::Pose3d(goal.pose));
+  base_frame(new Ravelin::Pose3d);
+  base_frame->rpose = goal.pose;
   
   double alpha = 1, err = 1, last_err = 2;
   for(int k=0;k<foot.chain.size();k++)                // actuated joints

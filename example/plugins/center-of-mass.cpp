@@ -41,7 +41,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   center_of_mass_x /= total_mass;
   
   boost::shared_ptr<Ravelin::RigidBodyd>  _root_link = ctrl->get_root_link();
-  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d(Pacer::GLOBAL));
+  boost::shared_ptr<Ravelin::Pose3d> base_com_w(new Ravelin::Pose3d);
   base_com_w->x = Ravelin::Origin3d(center_of_mass_x);
   boost::shared_ptr<const Ravelin::Pose3d> base_com_w_const = boost::const_pointer_cast<const Ravelin::Pose3d>(base_com_w);
 //  Ravelin::SVector6d com_vel = Ravelin::Pose3d::transform(base_com_w_const, _root_link->get_velocity());

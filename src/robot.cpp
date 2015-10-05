@@ -224,9 +224,10 @@ void Robot::update_poses(){
   set_data<Ravelin::Origin3d>("roll_pitch_yaw",roll_pitch_yaw);
   set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);
   
+  Ravelin::Pose3d GLOBAL_POSE;
   Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_link_frame,0.8)));
   Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_horizontal_frame,1.5)));
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(GLOBAL,1.0)));
+  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(GLOBAL_POSE,1.0)));
   
 }
 

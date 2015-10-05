@@ -9,7 +9,6 @@ static Ravelin::VectorNd workv_;
 static Ravelin::Vector3d workv3_;
 static Ravelin::MatrixNd workM_;
 
-    //static std::vector<Pacer::VisualizablePtr> visualize;
 std::vector<Pacer::VisualizablePtr> Utility::visualize;
 
 /// Calculates The null pace for matrix M and places it in Vk

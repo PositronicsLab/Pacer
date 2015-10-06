@@ -61,7 +61,7 @@
   </init>
   
   <plugins type="string vector">
-   gamepad
+    gamepad
     end-effectors
     center-of-mass
     gait-planner
@@ -341,7 +341,7 @@
   
   <ik-feet>
     <file type="string">libik-feet.so</file>
-    <priority type="double">9</priority>
+    <priority type="double">8</priority>
     <real-time-factor type="double">1</real-time-factor>
     <abs-err-tolerance type="double">1e-4</abs-err-tolerance>
   </ik-feet>
@@ -374,7 +374,7 @@
   
   <joint-PID-controller-accel>
     <file type="string">libjoint-PID-controller.so</file>
-    <priority type="double">10</priority>
+    <priority type="double">9</priority>
     <real-time-factor type="double">1</real-time-factor>
     <acceleration type="bool">true</acceleration>
     <!-- Gains are for the q of joint ids respectively -->
@@ -399,7 +399,7 @@
   
   <eef-PID-controller-accel>
     <file type="string">libeef-PID-controller.so</file>
-    <priority type="double">10</priority>
+    <priority type="double">9</priority>
     <real-time-factor type="double">1</real-time-factor>
     <acceleration type="bool">true</acceleration>
     <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
@@ -415,13 +415,13 @@
     <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
     <priority type="double">10</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0.001</dt>
+    <dt type="double">0</dt>
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">SCFQP</type> <!-- SCFQP (simple CFQP), CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">CFQP</type> <!-- SCFQP (simple CFQP), CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
     <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
   

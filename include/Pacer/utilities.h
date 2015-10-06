@@ -23,8 +23,7 @@
 #include <numeric>
 #include <boost/icl/type_traits/to_string.hpp>
 
-static const double     _PI= 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348;
-static const double _TWO_PI= 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696;
+static const double _TWO_PI= M_PI*2.0;
 
 #include <Pacer/Visualizable.h>
 #include <Pacer/output.h>
@@ -104,7 +103,7 @@ public:
     // wrap [rad] angle to [-PI..PI)
     static double WrapPosNegPI(double fAng)
     {
-        return Mod(fAng + _PI, _TWO_PI) - _PI;
+        return Mod(fAng + M_PI, _TWO_PI) - M_PI;
     }
 
     // wrap [rad] angle to [0..TWO_PI)
@@ -213,9 +212,9 @@ public:
 
 	// Solvers
   static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
-	static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x, Ravelin::VectorNd& v, bool warm_start = false);
-	static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x, bool warm_start = false);
-	static bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+  static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x, Ravelin::VectorNd& v, bool warm_start = false,bool regularize = true);
+  static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x, bool warm_start = false);
+  static bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 	static bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
   static bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
 };

@@ -18,10 +18,7 @@
 
 #include <Moby/LCP.h>
 
-//#define TIMING
-#ifdef TIMING
-#include <ctime>
-#endif
+#define TIMING
 
 using namespace Pacer;
 
@@ -116,6 +113,26 @@ Ravelin::VectorNd STAGE1, STAGE2;
 
 //extern bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& NT, const Ravelin::MatrixNd& D_, const Ravelin::VectorNd& fext, double dt, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf);
 
+/////////////////////////////////////////
+/////////// MAKE TRAJ FEASIBLE //////////
+/////////////////////////////////////////
+//#include "fix-trajectory.cpp"
+/** Rigid Contact Model (contact + inverse dynamics)
+ *  min{v+, tau}  || P v+ - qdd ||
+ *  such that:
+ *  v+ = v + inv(M)([ N, ST+, ST- ] z + h fext + P tau)
+ *  N' v+ >= 0
+ *  f_N >= 0
+ *  IF(mu < INF)
+ *    mu * f_N{i} >= 1' [f_S{i}; f_T{i}] for i=1:nc
+ *  ELSE
+ *    S' v+ >= 0
+ *    T' v+ >= 0
+ *  P' v+ = v + h qdd
+ **/
+//extern bool fix_trajectory(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,const Ravelin::MatrixNd& S,const Ravelin::MatrixNd& T, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU);
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////// END EXTERNAL DECLEARATIONS //////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -125,9 +142,9 @@ void log_idyn_matrices(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M,co
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = NEAR_ZERO;
+  const double NEAR_ZERO = Pacer::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
-  OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
+  OUT_LOG(logDEBUG) << ">> log_idyn_matrices() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
@@ -276,6 +293,8 @@ void log_idyn_matrices(const Ravelin::VectorNd& v, const Ravelin::MatrixNd& M,co
   //  OUTLOG( Jx_iM_CtT,"Jx_iM_CtT",logDEBUG1);
   //  OUTLOG( Jx_iM_CnT,"Jx_iM_CnT",logDEBUG1);
   OUTLOG( Jx_iM_JxT ,"Jx_iM_JxT",logDEBUG1);
+  
+  OUT_LOG(logDEBUG) << "<< log_idyn_matrices() exited" << std::endl;
 }
 
 /** Calculate forward dynamics
@@ -375,11 +394,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int MAX_CONTACTS_PER_FOOT = mcpf;
   
   // TODO: REMOVE
-  int MULTIPLIER = std::ceil(t*5);
+//  int MULTIPLIER = std::ceil(t*5);
   
-  static std::vector<int> num_added(num_feet);
+//  static std::vector<int> num_added(num_feet);
   // TODO: REMOVE
-  num_added[(( (int) (t*5.0*4.0) ) % 4 )] = MULTIPLIER;
+//  num_added[(( (int) (t*5.0*4.0) ) % 4 )] = MULTIPLIER;
   
   std::vector<unsigned> indices;
   std::vector< boost::shared_ptr<Pacer::Robot::contact_t> > contacts;
@@ -395,10 +414,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         OUT_LOG(logERROR) << "point: " << c[j]->point;
 //        contacts.push_back(c[j]);
         std::string id(c[j]->id);
-        for (int k=0; k<num_added[i]; k++) {
+//        for (int k=0; k<num_added[i]; k++) {
           contacts.push_back(ctrl->create_contact(id,c[j]->point,c[j]->normal,c[j]->tangent,c[j]->impulse,c[j]->mu_coulomb,c[j]->mu_viscous,0,c[j]->compliant));
           indices.push_back((unsigned) i);
-        }
+//        }
       }
     }
   }
@@ -440,7 +459,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   static Ravelin::VectorNd q_last = Ravelin::VectorNd::zero(q.size());
   // Consider increasing tolerance
-  //    if((q_last-=q).norm() > NEAR_ZERO)
+  //    if((q_last-=q).norm() > Pacer::NEAR_ZERO)
   ctrl->calc_generalized_inertia(q, M);
   q_last = q;
   // Jacobian Calculation
@@ -476,7 +495,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   Ravelin::MatrixNd MU;
   MU.set_zero(N.columns(),2);
   for(int i=0;i<MU.rows();i++){
-      std::fill(MU.row(i).begin(),MU.row(i).end(),0.1);
+      std::fill(MU.row(i).begin(),MU.row(i).end(),contacts[i]->mu_coulomb);
   }
   
   Ravelin::VectorNd cf_init = Ravelin::VectorNd::zero(NC*5);
@@ -601,6 +620,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           solve_flag = inverse_dynamics_one_stage(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf,indices,active_feet.size(),SAME_INDICES);
         } else if(name.compare("CFLCP") == 0){
           solve_flag = inverse_dynamics_ap(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+        }  else if(name.compare("SCFQP") == 0){
+          solve_flag = inverse_dynamics_two_stage_simple(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
         }
       } catch (std::exception e){
         solve_flag = false;
@@ -613,7 +634,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
 #ifndef TIMING
       throw std::runtime_error("IDYN forces are NaN or INF");
-#else 
+#else TIMING
       continue;
 #endif
     }
@@ -625,7 +646,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
     
     //// Check for Normal direction torque chatter
-    {
+    if (NC > 0 && solve_flag){
       static std::map<std::string,Ravelin::VectorNd> last_cf;
       std::map<std::string,Ravelin::VectorNd>::iterator it = last_cf.find(name);
       if(it != last_cf.end()){
@@ -642,6 +663,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
     double normal_sum = 0;
     
+    /*
 #ifndef NDEBUG
     if (solve_flag) {
       for (int j=0;j<NC;j++){
@@ -777,6 +799,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       }
     }
 #endif
+     */
     cf /= DT;
     cf_map[name] = cf;
     uff_map[name] = id;
@@ -789,8 +812,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   for (int i=0;i<controller_name.size();i++){
     std::string& name = controller_name[i];//(*it);
     Ravelin::VectorNd& cf = cf_map[name];
-    OUTLOG(uff_map[name],"uff_"+boost::icl::to_string<double>::apply(i+1),logERROR);
-    OUTLOG(cf,"cf_"+boost::icl::to_string<double>::apply(i+1),logERROR);
+    OUTLOG(uff_map[name],"uff_"+std::to_string(i+1),logERROR);
+    OUTLOG(cf,"cf_"+std::to_string(i+1),logERROR);
   }
   
   Ravelin::VectorNd uff = uff_map[controller_name.front()];

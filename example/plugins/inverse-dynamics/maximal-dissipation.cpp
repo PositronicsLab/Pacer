@@ -26,7 +26,7 @@ bool predict_contact_forces(const Ravelin::VectorNd& v, const Ravelin::MatrixNd&
   int n = M.rows();
   int nq = n - 6;
   int nc = N.columns();
-  
+
   // Invert M
   Ravelin::MatrixNd iM_chol;
   iM_chol = M;
@@ -142,7 +142,7 @@ bool predict_contact_forces(const Ravelin::VectorNd& v, const Ravelin::MatrixNd&
     
     if(feas.rows() > 0){
       double min_elem = *std::min_element(feas.begin(), feas.end());
-      if(min_elem < -NEAR_ZERO){
+      if(min_elem < -Pacer::NEAR_ZERO){
         OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
         return false;
       }
@@ -173,16 +173,20 @@ bool predict_contact_forces(const Ravelin::VectorNd& v, const Ravelin::MatrixNd&
  *  mu * f_N{i} >= 1' [f_S{i}; f_T{i}] for i=1:nc
  *  P' v+ = v + h qdd
  **/
-bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final){
+bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final,double elasticity = 1e-8){
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2;
   
-  OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics_two_stage_simple() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
   int nc = N.columns();
+  
+  OUTLOG(nc,"nc",logDEBUG1);
+  OUTLOG(nq,"nq",logDEBUG1);
+  OUTLOG(n,"n",logDEBUG1);
   
   Ravelin::VectorNd vq = v.segment(0,nq);
   Ravelin::VectorNd vb = v.segment(nq,n);
@@ -212,7 +216,12 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
   X.set_sub_mat(0,0,M);
   X.set_sub_mat(n,0,P);
   X.set_sub_mat(0,n,P,Ravelin::eTranspose);
+  // Hard contact
+  Ravelin::MatrixNd ELAS = Ravelin::MatrixNd::identity(nq);
+  ELAS *= elasticity;
+  X.set_sub_mat(n,n,ELAS);
   
+  /*
   // inv(X) matrix
   // | gamma        delta    |
   // | delta'       epsilon  |
@@ -265,9 +274,30 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
     OUTLOG(gamma.mult(M.mult(delta,workM1),workM2).norm_inf(),"0 == gamma*M*delta",logDEBUG1);
   }
 #endif
+  */
+  
+  Ravelin::MatrixNd delta, gamma,epsilon;
+  Ravelin::MatrixNd iX = X;
+  LA_.inverse_symmetric(iX);
+
+  OUTLOG(iX,"iX",logDEBUG1);
+
+  gamma = iX.block(0,n,0,n);
+  delta = iX.block(0,n,n,n+nq);
+  epsilon = iX.block(n,n+nq,n,n+nq);
+  
+  OUTLOG(gamma,"gamma",logDEBUG1);
+  OUTLOG(delta,"delta",logDEBUG1);
+  OUTLOG(epsilon,"epsilon",logDEBUG1);
+
+  
   // Compute Jacobians
   int nk = (nc == 0)? 0 : ST.columns()/nc;
   int nvars = nc + nc*(nk);
+  
+  OUTLOG(nk,"nk",logDEBUG1);
+  OUTLOG(nvars,"nvars",logDEBUG1);
+
   // setup R
   Ravelin::MatrixNd R(n, nc + (nc*nk) );
   R.block(0,n,0,nc) = N;
@@ -368,7 +398,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
     Ravelin::VectorNd z(nvars);
     
     static Ravelin::VectorNd _v;
-    if(!Utility::solve_qp_pos(G,c,A,b,z,_v,false)){
+    if(!Utility::solve_qp_pos(G,c,A,b,z,_v,false,false)){
       OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!";
       return false;
     }
@@ -383,7 +413,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
     
     if(feas.rows() > 0){
       double min_elem = *std::min_element(feas.begin(), feas.end());
-      if(min_elem < -NEAR_ZERO){
+      if(min_elem < -Pacer::NEAR_ZERO){
         OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
         return false;
       } else {
@@ -416,6 +446,8 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
       OUTLOG(x.norm(),"||tau|| -- 1",logDEBUG1);
     }
     
+    OUT_LOG(logDEBUG) << "<< inverse_dynamics_two_stage_simple() exited" << std::endl;
+
     return true;
     
     /////////////////////////////////////////////////////////////////////////////
@@ -556,7 +588,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
         OUTLOG(feas,"feas_z_OP2 =[ % (A*z-b >= 0)",logDEBUG1);
         if(feas.rows() > 0){
           double min_elem = *std::min_element(feas.begin(), feas.end());
-          if(min_elem < -NEAR_ZERO){
+          if(min_elem < -Pacer::NEAR_ZERO){
             OUT_LOG(logERROR)  << "ERROR: Optimization 2 produced an infeasible result!" << min_elem;
           } else {
             cf_final = z;
@@ -597,7 +629,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
   
   
   // Some debugging dialogue
-  OUT_LOG(logDEBUG) << "<< inverse_dynamics() exited" << std::endl;
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics_two_stage_simple() exited" << std::endl;
   return true;
 }
 
@@ -855,7 +887,7 @@ bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   
   static Ravelin::VectorNd _v;
   bool warm_start = true;
-  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
+//  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
     warm_start = false;
   
   if(!Utility::solve_qp_pos(qG,qc,qM,qq,z,_v,warm_start)){
@@ -1142,7 +1174,7 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   
   static Ravelin::VectorNd _v;
   bool warm_start = true;
-  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
+//  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
     warm_start = false;
   
   if(!Utility::solve_qp_pos(qG,qc,qM,qq,z,_v,warm_start)){
@@ -1543,7 +1575,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   
   static Ravelin::VectorNd _v;
   bool warm_start = true;
-  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
+//  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
     warm_start = false;
   
   if(!Utility::solve_qp_pos(qG,qc,qM,qq,z,_v,warm_start)){

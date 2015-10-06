@@ -51,7 +51,11 @@ Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::str
                  new Ravelin::Pose3d(Ravelin::Quatd::identity(),
                                      Ravelin::Origin3d(Ravelin::Pose3d::transform_point(GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
                                      ,GLOBAL));
+  
   _abrobot->calc_jacobian(_root_link->get_mixed_pose(),jacobian_frame,_id_link_map[link],J);
+  
+  OUTLOG(_root_link->get_mixed_pose(),"base_frame",logERROR);
+  OUTLOG(jacobian_frame,"jacobian_frame",logERROR);
   
   return J;
 }

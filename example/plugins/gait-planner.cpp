@@ -214,12 +214,17 @@ void walk_toward(
 //  turn_origin = Pose3d::transform_point(base_frame, turn_origin);
   Origin3d turn_origin(0,command[0]/command[5],0);
   
-  boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
+  if (command[5] > Pacer::NEAR_ZERO) {
+    boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
 
-  turning_frame->update_relative_pose(Pacer::GLOBAL);
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data())-Vector3d(0,0,1), Vector3d(turning_frame->x.data())+Vector3d(0,0,1),   Vector3d(0,1,0),0.05)));
-  turning_frame->update_relative_pose(base_horizontal_frame);
+    turning_frame->update_relative_pose(Pacer::GLOBAL);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data())-Vector3d(0,0,1), Vector3d(turning_frame->x.data())+Vector3d(0,0,1),   Vector3d(0,1,0),0.05)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data()), Vector3d(base_horizontal_frame->x.data()),   Vector3d(0,1,0),0.05)));
+    
+    turning_frame->update_relative_pose(base_horizontal_frame);
+  }
 
+  
   // (Re)Populate spline vectors
   if(!inited){
     for(int i=0;i<NUM_FEET;i++){
@@ -231,19 +236,6 @@ void walk_toward(
       spline_t[i] = VectorNd::zero(2);
     }
   }
-  
-//  Pose3d furture_state
-//    = end_state(*(base_horizontal_frame.get()),
-//                Origin3d(command[0],command[1],command[5]),
-//                1.0);
-//  
-//  furture_state.update_relative_pose(Pacer::GLOBAL);
-//  
-//  Utility::visualize.push_back(
-//    Pacer::VisualizablePtr(
-//      new Pacer::Point(
-//       Vector3d(furture_state.x[0],furture_state.x[1],furture_state.x[2]),
-//       Vector3d(0,0,0),1)));
   
   ////////////////// PHASE PLANNING ///////////////////////
   static std::vector<bool> last_phase = std::vector<bool>(NUM_FEET);
@@ -265,6 +257,16 @@ void walk_toward(
     end_of_step_state.update_relative_pose(Pacer::GLOBAL);
 
     OUTLOG(end_of_step_state.x,"end_of_step_state["+boost::icl::to_string<double>::apply(i)+"]",logERROR);
+    
+    Pose3d mid_of_next_step_state
+    = end_state(end_of_step_state,
+                Origin3d(command[0],command[1],command[5]),
+                fabs( (((this_phase)? duty_factor[i] : 1.0-duty_factor[i] )/2.0) *gait_duration));
+    
+    end_of_step_state.update_relative_pose(Pacer::GLOBAL);
+    
+    OUTLOG(end_of_step_state.x,"end_of_step_state["+boost::icl::to_string<double>::apply(i)+"]",logERROR);
+    
     
     Vector3d color;
     switch(i){
@@ -307,22 +309,17 @@ void walk_toward(
       /// STANCE FEET ARE IN GAIT POSE
       // Put goal in gait pose
       VectorNd gait_pose_vec = Utility::pose_to_vec(gait_pose);
+      OUTLOG(gait_pose,"gait_pose",logDEBUG);
       zero_base_generalized_q.set_sub_vec(NUM_JOINT_DOFS,gait_pose_vec);
-      OUTLOG(gait_pose_vec,"gait_pose_vec",logERROR);
-      OUTLOG(zero_base_generalized_q,"zero_base_generalized_q",logERROR);
+      OUTLOG(gait_pose_vec,"gait_pose_vec",logDEBUG);
+      OUTLOG(zero_base_generalized_q,"zero_base_generalized_q",logDEBUG);
 
       Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
       
       J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(command,workv3_,-1.0,0);
-      
-      OUTLOG(J,"J_"+foot_names[i],logERROR);
-      OUTLOG(command,"command",logERROR);
-      OUTLOG(xd,"xd",logERROR);
 
       workv3_.pose = base_frame;
       xd.pose = base_frame;
-
-
       
       if (dt < Pacer::NEAR_ZERO)
         xdd.set_zero();
@@ -337,7 +334,7 @@ void walk_toward(
     
       { // Visualize this
         Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
-        Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd);// * (left_in_phase*gait_duration);
+        Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd) * (left_in_phase*gait_duration);
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.05)));
       }
       
@@ -394,7 +391,7 @@ void walk_toward(
       ///////////////////////////////////////////////////////////////////////
       
       /// SWING FEET ARE IN HORIZONTAL POSE
-      boost::shared_ptr<Pose3d> state_ptr(new Pose3d(end_of_step_state));
+      boost::shared_ptr<Pose3d> state_ptr(new Pose3d(mid_of_next_step_state));
       Vector3d foot_goal(origins[i].data(),state_ptr);
       foot_goal = Pose3d::transform_vector(base_horizontal_frame,foot_goal);
       
@@ -701,9 +698,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
   
-  gait_pose->update_relative_pose(Pacer::GLOBAL);
-  ctrl->set_data<Pose3d>("base_stability_frame",*(gait_pose.get()));
-  
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
 
@@ -719,6 +713,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
   
   walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
+  
+  gait_pose->update_relative_pose(Pacer::GLOBAL);
+  ctrl->set_data<Pose3d>("base_stability_frame",*(gait_pose.get()));
   
   for(int i=0;i<NUM_FEET;i++){
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);

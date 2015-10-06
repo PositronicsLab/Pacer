@@ -130,7 +130,3 @@ configure_file(
     IMMEDIATE @ONLY)
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-add_executable(test src/test.cpp)
-link_directories(${CMAKE_BINARY_DIR}/example/interface)
-target_link_libraries (test PacerMobyPlugin)

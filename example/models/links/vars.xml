@@ -230,9 +230,9 @@
   <gamepad>
     <file type="string">gamepad/libgamepad.so</file>
     <real-time-factor type="double">1</real-time-factor>
-    <max-forward-speed type="double">0.2</max-forward-speed>
-    <max-strafe-speed type="double">0.1</max-strafe-speed>
-    <max-turn-speed type="double">0.5</max-turn-speed>
+    <max-forward-speed type="double">0.3</max-forward-speed>
+    <max-strafe-speed type="double">0.2</max-strafe-speed>
+    <max-turn-speed type="double">1</max-turn-speed>
     <priority type="double">1</priority>
     <type type="string">SABRENT</type>
     <!--<type type="string">PS</type>-->
@@ -298,7 +298,7 @@
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
     <step-height type="double">0.015</step-height>
-    <gait-duration type="double">0.3</gait-duration>
+    <gait-duration type="double">0.5</gait-duration>
     <length type="double">0.309926</length>
     <width type="double">0.1344496</width>
 <!--    <width type="double">0.18</width>-->
@@ -411,18 +411,18 @@
     </gains>
   </eef-PID-controller-accel>
   
-  
   <idyn-controller>
-    <file type="string">libinverse-dynamics.so</file>
+    <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
     <priority type="double">10</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0</dt>
+    <dt type="double">0.001</dt>
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
-    <des-contact type="bool">false</des-contact>
+    <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">CFQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">SCFQP</type> <!-- SCFQP (simple CFQP), CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
     <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
+  
 </XML>

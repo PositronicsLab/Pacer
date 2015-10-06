@@ -10,7 +10,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   ctrl = ctrl_ptr;
   
   static std::vector<std::string>
-    eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
   static double last_time = t;
   double dt = t - last_time;
@@ -27,17 +27,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
     Vector3d x_foot,xd_foot,xdd_foot;
     
     ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot);
-//    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-//    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
-    
-    double speed = 0.5; // m/s
-    
-    xd_foot = -Vector3d(0,0,speed);
-    x_foot += dt*xd_foot;
+    //    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
+    //    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
 
+    
+    
     ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot);
     ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-//    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
+    //    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }
 }
 

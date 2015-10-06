@@ -80,7 +80,7 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
   Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
 
   {
-    abrobot->get_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,generalized_q);
+    abrobot->get_generalized_coordinates_euler(generalized_q);
     abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,generalized_qd);
     abrobot->get_generalized_forces(generalized_fext);
   }
@@ -298,7 +298,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
   
   {
-    abrobot->get_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,generalized_q);
+    abrobot->get_generalized_coordinates_euler(generalized_q);
     abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,generalized_qd);
 //    abrobot->get_generalized_forces(generalized_fext);
   }
@@ -440,7 +440,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   robot_ptr->get_generalized_value(Pacer::Robot::position,base_x);
   robot_ptr->get_generalized_value(Pacer::Robot::velocity,base_xd);
   
-  abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,base_x);
+  abrobot->set_generalized_coordinates_euler(base_x);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,base_xd);
 }
 } // end extern C

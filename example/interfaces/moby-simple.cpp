@@ -28,7 +28,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
   
   {
-    abrobot->get_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,generalized_q);
+    abrobot->get_generalized_coordinates_euler(generalized_q);
     abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,generalized_qd);
     abrobot->get_generalized_forces(generalized_fext);
   }

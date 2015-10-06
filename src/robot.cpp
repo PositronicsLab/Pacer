@@ -35,7 +35,7 @@ void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& 
   Ravelin::VectorNd set_q,set_qd;
   if(get_data<Ravelin::VectorNd>("generalized_q", set_q)){
     set_q.set_sub_vec(0,q);
-    _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,set_q);
+    _abrobot->set_generalized_coordinates_euler(set_q);
   }
 
   if(get_data<Ravelin::VectorNd>("generalized_qd", set_qd)){

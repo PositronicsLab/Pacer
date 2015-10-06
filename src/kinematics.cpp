@@ -20,7 +20,7 @@ Ravelin::MatrixNd& Robot::link_jacobian(const Ravelin::VectorNd& x,const end_eff
     q[foot.chain[i]] = x[i];
   }
   
-  _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,q);
+  _abrobot->set_generalized_coordinates_euler(q);
   
   //  _abrobot->update_link_poses(); //TODO -- FIND THIS
   gk.resize(6,foot.chain.size());
@@ -44,7 +44,7 @@ Ravelin::MatrixNd& Robot::link_jacobian(const Ravelin::VectorNd& x,const end_eff
 Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::string& link, Ravelin::Origin3d point){
   Ravelin::MatrixNd J;
   
-  _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,q);
+  _abrobot->set_generalized_coordinates_euler(q);
   
   boost::shared_ptr<Ravelin::Pose3d>
   jacobian_frame(

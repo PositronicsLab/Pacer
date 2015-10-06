@@ -29,8 +29,8 @@ std::vector<Trajectory> init_Nd_cubic_spline(const std::vector<VectorNd>& X,cons
       traj.X[i] = X[i][d];
       traj.T[i] = T[i];
     }
-    OUTLOG(traj.T,"T"+std::to_string(d),logDEBUG);
-    OUTLOG(traj.X,"X"+std::to_string(d),logDEBUG);
+    OUTLOG(traj.T,"T"+boost::icl::to_string<double>::apply(d),logDEBUG);
+    OUTLOG(traj.X,"X"+boost::icl::to_string<double>::apply(d),logDEBUG);
   }
   return trajs;
 }

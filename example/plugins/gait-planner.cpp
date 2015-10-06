@@ -264,7 +264,7 @@ void walk_toward(
     
     end_of_step_state.update_relative_pose(Pacer::GLOBAL);
 
-    OUTLOG(end_of_step_state.x,"end_of_step_state["+std::to_string(i)+"]",logERROR);
+    OUTLOG(end_of_step_state.x,"end_of_step_state["+boost::icl::to_string<double>::apply(i)+"]",logERROR);
     
     Vector3d color;
     switch(i){

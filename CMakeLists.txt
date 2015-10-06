@@ -13,7 +13,7 @@ set(PROJECT_SRC_DIR ./src)
 
 #find BOOST libraries
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS system REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
@@ -92,7 +92,7 @@ IF(LIBXML2_FOUND)
   target_link_libraries (Pacer ${LIBXML2_LIBRARIES})
 ENDIF(LIBXML2_FOUND)
 
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES})
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -130,3 +130,7 @@ configure_file(
     IMMEDIATE @ONLY)
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
+add_executable(test src/test.cpp)
+link_directories(${CMAKE_BINARY_DIR}/example/interface)
+target_link_libraries (test PacerMobyPlugin)

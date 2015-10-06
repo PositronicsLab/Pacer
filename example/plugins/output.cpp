@@ -11,7 +11,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   for (std::map<std::string,std::vector<std::string> >::iterator it = joint_names_map.begin();
        it != joint_names_map.end(); it++) {
     for (int j = 0; j<(*it).second.size(); j++) {
-      (*it).second[j] = std::string((*it).first + ":" + std::to_string(j));
+      (*it).second[j] = std::string((*it).first + ":" + boost::icl::to_string<double>::apply(j));
     }
   }
   
@@ -177,10 +177,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   for(int i=0;i<NUM_EEFS;i++){
     OUT_LOG(logINFO) << eefs_[i].id << " contacts: " << eefs_[i].point.size();
     for(int j=0;j<eefs_[i].point.size();j++,ii++){
-      OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + std::to_string(i) + "]",logINFO);
-      OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + std::to_string(i) + "]",logINFO);
-      OUTLOG(eefs_[i].impulse[j],eefs_[i].id + "_impulse[" + std::to_string(i) + "]",logINFO);
-      OUTLOG(eefs_[i].mu_coulomb[j],eefs_[i].id + "_mu[" + std::to_string(i) + "]",logINFO);
+      OUTLOG(eefs_[i].point[j],eefs_[i].id + "_point[" + boost::icl::to_string<double>::apply(i) + "]",logINFO);
+      OUTLOG(eefs_[i].normal[j],eefs_[i].id + "_normal[" + boost::icl::to_string<double>::apply(i) + "]",logINFO);
+      OUTLOG(eefs_[i].impulse[j],eefs_[i].id + "_impulse[" + boost::icl::to_string<double>::apply(i) + "]",logINFO);
+      OUTLOG(eefs_[i].mu_coulomb[j],eefs_[i].id + "_mu[" + boost::icl::to_string<double>::apply(i) + "]",logINFO);
     }
   }
   OUT_LOG(logINFO) << "num_contacts = " << ii;

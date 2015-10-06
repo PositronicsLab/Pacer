@@ -789,8 +789,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   for (int i=0;i<controller_name.size();i++){
     std::string& name = controller_name[i];//(*it);
     Ravelin::VectorNd& cf = cf_map[name];
-    OUTLOG(uff_map[name],"uff_"+std::to_string(i+1),logERROR);
-    OUTLOG(cf,"cf_"+std::to_string(i+1),logERROR);
+    OUTLOG(uff_map[name],"uff_"+boost::icl::to_string<double>::apply(i+1),logERROR);
+    OUTLOG(cf,"cf_"+boost::icl::to_string<double>::apply(i+1),logERROR);
   }
   
   Ravelin::VectorNd uff = uff_map[controller_name.front()];

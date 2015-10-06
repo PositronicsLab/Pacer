@@ -9,13 +9,14 @@
 #include <Ravelin/RCArticulatedBodyd.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/icl/type_traits/to_string.hpp>
 
 #include <Pacer/output.h>
 
 #include <numeric>
 #include <math.h>
 #include <cmath>
-#include <mutex>
+#include <boost/thread/mutex.hpp>
 #include <sys/types.h>
 #include <sys/times.h>
 
@@ -51,7 +52,7 @@ namespace Pacer{
     struct is_pointer<T*> { static const bool value = true; };
     
     std::map<std::string,boost::shared_ptr<void> > _data_map;
-    std::mutex _data_map_mutex;
+    boost::mutex _data_map_mutex;
   public:
     
     // Returns 'true' if new key was created in map
@@ -271,7 +272,7 @@ namespace Pacer{
 	
     std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;    
     std::map<unit_e , Ravelin::VectorNd> _base_state;    
-    std::mutex _state_mutex;
+    boost::mutex _state_mutex;
     bool _lock_state;
 
     // TODO: Populate these value in Robot::compile()
@@ -337,7 +338,7 @@ namespace Pacer{
       _state_mutex.lock();
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.rows())
-        throw std::runtime_error("Missized dofs in joint "+id+": internal="+std::to_string(dof.rows())+" , provided="+std::to_string(dof_val.rows()));
+        throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
       dof = dof_val;
       _state_mutex.unlock();
     }
@@ -349,7 +350,7 @@ namespace Pacer{
       _state_mutex.lock();
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.size())
-        throw std::runtime_error("Missized dofs in joint "+id+": internal="+std::to_string(dof.rows())+" , provided="+std::to_string(dof_val.size()));
+        throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
       for(int i=0;i<dof.rows();i++)
         dof[i] = dof_val[i];
       _state_mutex.unlock();
@@ -383,8 +384,8 @@ namespace Pacer{
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
         const std::vector<double>& dof_val = (*it).second;
         if(dof_val_internal.rows() != dof_val.size()){
-          std::cerr << "Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string(dof_val.size()) << std::endl;
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string(dof_val.size()));
+          std::cerr << "Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()) << std::endl;
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
         }
         for(int j=0;j<(*it).second.size();j++){
           dof_val_internal[j] = dof_val[j]; 
@@ -399,7 +400,7 @@ namespace Pacer{
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
         if(dof_val_internal.rows() != (*it).second.rows())
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof_val_internal.rows())+" , provided="+std::to_string((*it).second.rows()));
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply((*it).second.rows()));
         dof_val_internal = (*it).second;
       }
       _state_mutex.unlock();
@@ -415,7 +416,7 @@ namespace Pacer{
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         const std::vector<double>& dof_val = (*it).second;
         if(dof.size() != dof_val.size())
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.size()));
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
         for(int j=0;j<(*it).second.size();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
@@ -431,7 +432,7 @@ namespace Pacer{
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         const std::vector<T>& dof_val = (*it).second;
         if(dof.size() != dof_val.size())
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.size()));
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
         for(int j=0;j<(*it).second.size();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
@@ -446,7 +447,7 @@ namespace Pacer{
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         const Ravelin::VectorNd& dof_val = (*it).second;
         if(dof.size() != dof_val.rows())
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.rows()));
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
         for(int j=0;j<(*it).second.rows();j++){
           generalized_vec[dof[j]] = dof_val[j];
         }
@@ -468,7 +469,7 @@ namespace Pacer{
     template <typename T>
     void convert_from_generalized(const std::vector<T>& generalized_vec, std::map<std::string,std::vector<T> >& id_dof_val_map){
       if(generalized_vec.size() != NUM_JOINT_DOFS)
-        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.size()));
+        throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.size()));
 
       std::map<std::string,std::vector<int> >::iterator it;
       for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
@@ -483,7 +484,7 @@ namespace Pacer{
     
     void convert_from_generalized(const Ravelin::VectorNd& generalized_vec, std::map<std::string,std::vector<double> >& id_dof_val_map){
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
-        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.rows()));
+        throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
       std::map<std::string,std::vector<int> >::iterator it;
       for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
@@ -498,7 +499,7 @@ namespace Pacer{
     
     void convert_from_generalized(const Ravelin::VectorNd& generalized_vec, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
-        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.rows()));
+        throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
       std::map<std::string,std::vector<int> >::iterator it;
       for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
@@ -518,7 +519,7 @@ namespace Pacer{
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
-        throw std::runtime_error("Missized generalized vector: internal="+std::to_string(NUM_JOINT_DOFS)+" , provided="+std::to_string(generalized_vec.rows()));
+        throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
       _state_mutex.lock();
       std::map<std::string,Ravelin::VectorNd>::iterator it;
@@ -526,7 +527,7 @@ namespace Pacer{
         const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
         Ravelin::VectorNd& dof_val = (*it).second;
         if(dof.size() != dof_val.rows())
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+std::to_string(dof.size())+" , provided="+std::to_string(dof_val.rows()));
+          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
         for(int j=0;j<(*it).second.rows();j++){
           dof_val[j] = generalized_vec[dof[j]]; 
         }

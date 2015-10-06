@@ -47,7 +47,8 @@ std::vector<std::string> split(std::string const &input) {
 
 // Replacing: [](std::string const& val) {return std::stod(val);});
 double string_to_double(std::string const& val){
-  return std::stod(val);
+  char * pEnd;
+  return std::strtod(val.c_str(),&pEnd);
 }
 
 // Replacing: [](std::string const& val) {return std::stod(val);});
@@ -97,7 +98,8 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
                   robot_ptr->set_data<std::vector<double> >(tag+n->name,typed_elements );
               }
               else{
-                  robot_ptr->set_data<double>(tag+n->name,std::stod(elements[0]));
+                  char * pEnd;
+                  robot_ptr->set_data<double>(tag+n->name,std::strtod(elements[0].c_str(),&pEnd));
               }
             }
             else if(data_type.compare("bool") == 0){

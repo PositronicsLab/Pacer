@@ -3,9 +3,9 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
+#include <boost/thread.hpp>
 #include <Pacer/controller.h>
 #include <time.h>
-#include <thread>
 
 #include <boost/assign/list_of.hpp>
 #include <boost/assign/std/vector.hpp>
@@ -24,7 +24,7 @@ unsigned NDOFS;
 
 static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
 
-std::mutex joint_data_mutex_;
+boost::mutex joint_data_mutex_;
 static double FREQ = 500;
 
 static void control_motor(){
@@ -151,7 +151,7 @@ void controller(double t)
     joint_data_mutex_.unlock();
   }
 #endif
-  static std::thread motor_thread(control_motor);
+  static boost::thread motor_thread(control_motor);
 
     last_t = t;
 //#define TIMING

@@ -46,12 +46,12 @@ Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::str
   
   _abrobot->set_generalized_coordinates(Ravelin::DynamicBodyd::eEuler,q);
   
-  boost::shared_ptr<Ravelin::Pose3d> jacobian_frame(
-                                                    new Ravelin::Pose3d(Ravelin::Quatd::identity(),
-                                                                        Ravelin::Origin3d(Ravelin::Pose3d::transform_point(GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
-                                                                        ,GLOBAL)
-                                                    );
-  _abrobot->calc_jacobian(jacobian_frame,_id_link_map[link],J);
+  boost::shared_ptr<Ravelin::Pose3d>
+  jacobian_frame(
+                 new Ravelin::Pose3d(Ravelin::Quatd::identity(),
+                                     Ravelin::Origin3d(Ravelin::Pose3d::transform_point(GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
+                                     ,GLOBAL));
+  _abrobot->calc_jacobian(_root_link->get_mixed_pose(),jacobian_frame,_id_link_map[link],J);
   
   return J;
 }

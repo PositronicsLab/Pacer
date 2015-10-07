@@ -606,8 +606,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 
   std::vector<double>
       duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
-    this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gait"),
-    input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".pose");
+  this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gait");
   double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+".gait-duration");
   double step_height = ctrl_ptr->get_data<double>(plugin_namespace+".step-height");
   
@@ -669,21 +668,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
 
   
-  gait_pose = boost::shared_ptr<Pose3d>(
-      new Pose3d(
-        Ravelin::Quatd::rpy(
-          input_gait_pose[3],
-          input_gait_pose[4],
-          input_gait_pose[5]
-        ),
-        Origin3d(
-          input_gait_pose[0] /*+ command[0]/(4.0*gait_time)*/,
-          input_gait_pose[1] /*+ command[1]/(4.0*gait_time)*/,
-          input_gait_pose[2]
-        ),
-        base_frame
-      )
-    );
+  gait_pose = boost::shared_ptr<Pose3d>( new Pose3d() );
+  
+  if( !ctrl->get_data<Pose3d>("base_stability_frame",*(gait_pose.get())))
+    *(gait_pose.get()) = *(base_frame.get());
+  gait_pose->update_relative_pose(base_frame);
   
   // Assign foot origins (ideal foot placemenet at rest)
   std::vector<Origin3d> origins;
@@ -714,9 +703,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
   
-  gait_pose->update_relative_pose(Pacer::GLOBAL);
-  ctrl->set_data<Pose3d>("base_stability_frame",*(gait_pose.get()));
-  
   for(int i=0;i<NUM_FEET;i++){
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
@@ -743,8 +729,6 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 }
 
 void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  ctrl->remove_data("base_stability_frame");
-
   std::vector<std::string> foot_names
   = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
 

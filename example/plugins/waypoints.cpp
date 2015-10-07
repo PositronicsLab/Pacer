@@ -102,7 +102,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       for(int i=0;i<num_waypoints;i++){
           Ravelin::Vector3d wp(waypoints[i].first,waypoints[i].second,0,environment_frame);
           OUT_LOG(logDEBUG1) << "\twp" << wp;
-      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),1.0)));
+      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),0.1)));
       }
 
       goto_point = next_waypoint;

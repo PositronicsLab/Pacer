@@ -1,5 +1,5 @@
   # Gazebo Interface
-  add_library(PacerMobyPlugin ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
+  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
 # osg
 option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
 IF(USE_OSG_DISPLAY)

@@ -115,7 +115,7 @@ std::vector<Trajectory> calc_jump(){
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   ctrl = ctrl_ptr;
-  double start_jump_time = t;
+  static double start_jump_time = t;
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
 
   static bool first_step = true;

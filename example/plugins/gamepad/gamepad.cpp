@@ -256,7 +256,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   const int JDEADZONE = 2000;
   std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+".type");
 
-  try {
+//  try {
     static Joystick j(0);
 
     j.update();
@@ -371,7 +371,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           }
         }
         
-        static std::vector<double> initial_pose = ctrl->get_data< std::vector<double> >("gait-planner.pose");
+        static std::vector<double> initial_pose = ctrl->get_data< std::vector<double> >("orient-base.pose");
         std::vector<double> new_pose(6);
         for (int i=0;i<6; i++) {
           if(pose_adjustment[i] > pose_adjustment_limit[i]){
@@ -381,7 +381,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           }
           new_pose[i] = initial_pose[i] + pose_adjustment[i];
         }
-        ctrl->set_data< std::vector<double> >("gait-planner.pose",new_pose);
+        ctrl->set_data< std::vector<double> >("orient-base.pose",new_pose);
         
       } else if (j.buttons[7] == 1 || j.buttons[9] == 1) {
         // Gait Adjustment
@@ -507,10 +507,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   //  std::cout << "forward (m/s)     = " << command_SE2[0] << std::endl;
   //  std::cout << "strafe_left (m/s) = " << command_SE2[1] << std::endl;
   //  std::cout << "turn_left (rad/s) = " << command_SE2[2] << std::endl;
-  } catch(std::exception& e){
-    std::cerr << "Could not connect to Controller: " << GAMEPAD_TYPE << std::endl;
-    throw std::runtime_error( "Could not connect to Controller: " + GAMEPAD_TYPE);
-  }
+//  } catch(std::exception& e){
+//    std::cerr << "Could not connect to Controller: " << GAMEPAD_TYPE << std::endl;
+//    throw std::runtime_error( "Could not connect to Controller: " + GAMEPAD_TYPE);
+//  }
 }
 
 /** This is a quick way to register your plugin function of the form:

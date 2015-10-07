@@ -415,12 +415,14 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
   
-  std::cout << "STARTING ROBOT" << std::endl;
+  std::cout << "Building Controller" << std::endl;
   
   robot_ptr = boost::shared_ptr<Controller>(new Controller());
+  std::cout << "Controller built" << std::endl;
+
   robot_ptr->init();
   
-  std::cout << "ROBOT INITED" << std::endl;
+  std::cout << "Controller inited" << std::endl;
   
   // CONTACT CALLBACK
   if (csim){
@@ -439,6 +441,8 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   Ravelin::VectorNd base_x, base_xd;
   robot_ptr->get_generalized_value(Pacer::Robot::position,base_x);
   robot_ptr->get_generalized_value(Pacer::Robot::velocity,base_xd);
+  
+  OUTLOG(base_x,"Initial base coords",logERROR);
   
   abrobot->set_generalized_coordinates_euler(base_x);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,base_xd);

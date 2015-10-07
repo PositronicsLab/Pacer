@@ -38,6 +38,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xd",xd);
     ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".state.xdd",xdd);
     if(new_var){
+      ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x);
+      ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd);
+
       ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".init.x",x);
       ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".init.xd",xd);
     }

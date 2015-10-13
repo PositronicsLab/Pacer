@@ -40,7 +40,9 @@ static void control_motor(){
  
 #ifdef USE_DXL
 //    std::cout << q_motors << std::endl;
-    dxl_->set_state(std::vector<double>(q_motors.begin(),q_motors.end()),std::vector<double>(qd_motors.begin(),qd_motors.end()));
+    std::vector<double> qm = std::vector<double>(q_motors.begin(),q_motors.end());
+    std::vector<double> qdm = std::vector<double>(qd_motors.begin(),qd_motors.end());
+    dxl_->set_state(qm,qdm);
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
 #endif
@@ -190,6 +192,7 @@ int main(int argc, char* argv[])
 //    gettimeofday(&now_t, NULL);
 //    double t = (now_t.tv_sec - start_t.tv_sec) + (now_t.tv_usec - start_t.tv_usec) * 1E-6;
     controller(t);
+    //sleep(1.0/FREQ);
   }
 #endif
 }

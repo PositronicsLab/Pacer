@@ -99,7 +99,8 @@ std::vector<Trajectory> calc_jump(){
   X.push_back(VectorNd::zero(3));
   // Xf
   X.push_back(VectorNd::zero(3));
-  X[1][2] += 0.05;
+  X[1][2] += 0.08;
+  X[1][0] += 0.1;
   std::vector<double> T;
   T.push_back(0);
   T.push_back(duration);
@@ -117,6 +118,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   ctrl = ctrl_ptr;
   static double start_jump_time = t;
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
+  static Vector3d com_x = ctrl->get_data<Vector3d>("center_of_mass.x");
 
   static bool first_step = true;
   
@@ -161,6 +163,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
         }
         return;
       }
+      
+#ifndef NDEBUG
+  com_x.pose = Pacer::GLOBAL;
+  for(double i=start_jump_time;i<start_jump_time+duration;i+=0.01){
+    VectorNd x(3), xd(3), xdd(3);
+    if(eval_Nd_cubic_spline(leap_spline,i,x,xd,xdd)){
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(  Vector3d(x[0],x[1],x[2]) + com_x, Vector3d(x[0],x[1],x[2]) + com_x + Vector3d(xd[0],xd[1],xd[2])*0.01,   Vector3d(1,0,0),0.02)));
+      OUTLOG(x,"x",logERROR);
+    }
+  }
+#endif
     } else {
       return;
     }

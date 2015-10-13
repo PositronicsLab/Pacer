@@ -65,6 +65,7 @@
   </plugins>
   
   <!--
+    plugin-scheduler
    OTHER PLUGINS:
    gait-planner
    
@@ -81,11 +82,18 @@
    
    waypoints
     center-of-mass
+    end-effectors
     output
     end-effectors
     gait-planner
     ik-feet
     joint-PID-controller
+    
+    center-of-mass
+    end-effectors
+   gamepad
+   gait-planner
+    ik-feet
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
@@ -138,8 +146,8 @@
     <priority type="double">5</priority>
     <angle-of-elevation type="double">0.78</angle-of-elevation>
     <heading type="double">0</heading>
-    <range type="double">1</range>
-    <duration type="double">0.25</duration>
+    <range type="double">0.25</range>
+    <duration type="double">1</duration>
   </jump-to>
   
   <center-of-mass>

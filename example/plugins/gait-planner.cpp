@@ -19,8 +19,9 @@ boost::shared_ptr<Pacer::Controller> ctrl_ptr;
 std::map<std::string,bool> active_feet;
 
 Origin3d planar_robot(Origin3d x,Origin3d xd){
-  double dX =xd[0]*cos(x[2])+xd[1]*sin(x[2]),
-  dY =xd[0]*sin(x[2])+xd[1]*cos(x[2]);
+  double
+    dX = xd[0]*cos(x[2])-xd[1]*sin(x[2]),
+    dY = xd[0]*sin(x[2])+xd[1]*cos(x[2]);
   return Origin3d(dX,dY,xd[2]);
 }
 
@@ -237,6 +238,8 @@ void walk_toward(
     }
   }
   
+  base_horizontal_frame->update_relative_pose(Pacer::GLOBAL);
+
   ////////////////// PHASE PLANNING ///////////////////////
   static std::vector<bool> last_phase = std::vector<bool>(NUM_FEET);
   for(int i=0;i<NUM_FEET;i++){

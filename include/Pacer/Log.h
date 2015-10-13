@@ -13,7 +13,17 @@
 
 inline std::string NowTime();
 
-enum TLogLevel { logNONE, logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
+typedef int TLogLevel;
+static TLogLevel 
+  logNONE   = 0, 
+  logERROR  = 1, 
+  logWARNING= 2, 
+  logINFO   = 3, 
+  logDEBUG  = 4, 
+  logDEBUG1 = 5, 
+  logDEBUG2 = 6, 
+  logDEBUG3 = 7, 
+  logDEBUG4 = 8;
 
 
 class Logger

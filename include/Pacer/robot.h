@@ -255,7 +255,8 @@ namespace Pacer{
     }
 
   public:
-    enum unit_e{          //  ang  |  lin
+    typedef const int unit_e;
+    static unit_e          //  ang  |  lin
      // SET OUTSIDE CONTROL LOOP
       position=0,           //  rad  |   m 
       velocity=1,           // rad/s |  m/s
@@ -265,8 +266,7 @@ namespace Pacer{
       position_goal=4,      //  rad  |   m 
       velocity_goal=5,      // rad/s |  m/s
       acceleration_goal=6,  // rad/ss|  m/ss
-      load_goal=7,// TORQUE //  N.m  |   N
-    };
+      load_goal=7;// TORQUE //  N.m  |   N   
 
   private:
 	

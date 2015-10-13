@@ -8,18 +8,15 @@
 
 namespace Pacer{
 
-class Visualizable : public boost::enable_shared_from_this<Visualizable>{
+class Visualizable{
 public:
-  boost::shared_ptr<Visualizable> ptr(){
-    return shared_from_this();
-  }
-
-  enum Type{
+  typedef int viz_Type; 
+  static const viz_Type 
     eUnknown = 0,
     ePoint = 1,
     eRay = 2,
-    ePose = 3
-  } eType;
+    ePose = 3;
+  viz_Type eType;
   double size;
   Ravelin::Vector3d color;
 };

@@ -69,6 +69,7 @@ void Robot::compile(){
     for(it=_id_joint_map.begin();it!=_id_joint_map.end();it++)
       OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
   }
+  _joint_ids = get_map_keys(_id_joint_map);
   
   for(int i=0;i<8;i++)
     _state[i] = std::map<std::string, Ravelin::VectorNd >();

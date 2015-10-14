@@ -7,6 +7,9 @@
 #define CONTROL_H
 
 #include <Pacer/robot.h>
+#include <Moby/XMLTree.h>
+#include <Moby/XMLReader.h>
+
 namespace Pacer{
   
   class Controller;
@@ -43,7 +46,7 @@ namespace Pacer{
 #endif
       // ================= LOAD VARS ==========================
       PARAMS_FILE = std::string("vars.xml");
-      load_variables(PARAMS_FILE,boost::dynamic_pointer_cast<Robot>(ptr()));
+      load_variables(PARAMS_FILE,"");
       // ================= SETUP LOGGING ==========================
       const std::string LOG_TYPE = get_data<std::string>("logging");
       OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
@@ -59,8 +62,13 @@ namespace Pacer{
 #endif
       unlock_state();
     }
+  private:
+    std::string PARAMS_FILE;
+    void load_variables(std::string xml_file, std::string root);
+    void process_tag(std::string tag,boost::shared_ptr<const Moby::XMLTree> node);
     
     // call Pacer at time t
+  public:
     void control(double t);
     
     void add_plugin_update(int priority,const std::string& name,update_t f){

@@ -6,8 +6,6 @@
 #include <Pacer/controller.h>
 
 
-#include <Moby/XMLTree.h>
-#include <Moby/XMLReader.h>
 #include <Ravelin/Origin3d.h>
 #include <Ravelin/VectorNd.h>
 #include <Pacer/controller.h>
@@ -17,8 +15,6 @@ using boost::shared_ptr;
 using Moby::XMLTree;
 using Moby::XMLTreePtr;
 using Moby::XMLAttrib;
-
-boost::shared_ptr<Pacer::Robot> robot_ptr;
 
 static int str2bool(const std::string& str)
 {
@@ -56,8 +52,7 @@ int string_to_int(std::string const& val){
   return (str2bool(val))? 1 : 0;
 }
 
-void load_subtree(std::string fname,std::string root);
-void process_tag(std::string tag,shared_ptr<const XMLTree> node){
+void Pacer::Controller::process_tag(std::string tag,shared_ptr<const XMLTree> node){
   // do something with the current node instead of System.out
   //    OUT_LOG(logDEBUG1) << "processing : " << tag ;
   
@@ -89,10 +84,10 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
         continue;
       if(data_type.compare("string") == 0){
         if(elements.size()>1){
-          robot_ptr->set_data<std::vector<std::string> >(tag+n->name,elements);
+          set_data<std::vector<std::string> >(tag+n->name,elements);
         }
         else{
-          robot_ptr->set_data<std::string>(tag+n->name,elements[0]);
+          set_data<std::string>(tag+n->name,elements[0]);
         }
       }
       else if(data_type.compare("double") == 0){
@@ -102,11 +97,11 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
           typed_elements.reserve(elements.size());
           std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                          string_to_double);
-          robot_ptr->set_data<std::vector<double> >(tag+n->name,typed_elements );
+          set_data<std::vector<double> >(tag+n->name,typed_elements );
         }
         else{
           char * pEnd;
-          robot_ptr->set_data<double>(tag+n->name,std::strtod(elements[0].c_str(),&pEnd));
+          set_data<double>(tag+n->name,std::strtod(elements[0].c_str(),&pEnd));
         }
       }
       else if(data_type.compare("bool") == 0){
@@ -116,32 +111,32 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
           typed_elements.reserve(elements.size());
           std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                          string_to_int);
-          robot_ptr->set_data<std::vector<int> >(tag+n->name,typed_elements);
+          set_data<std::vector<int> >(tag+n->name,typed_elements);
         }
         else{
-          robot_ptr->set_data<int>(tag+n->name,str2bool(elements[0]));
+          set_data<int>(tag+n->name,str2bool(elements[0]));
         }
       }
       else if(data_type.compare("string vector") == 0){
-        robot_ptr->set_data<std::vector<std::string> >(tag+n->name,elements);
+        set_data<std::vector<std::string> >(tag+n->name,elements);
       }
       else if(data_type.compare("double vector") == 0){
         std::vector<double> typed_elements;
         typed_elements.reserve(elements.size());
         std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                        string_to_double);
-        robot_ptr->set_data<std::vector<double> >(tag+n->name,typed_elements );
+        set_data<std::vector<double> >(tag+n->name,typed_elements );
       }
       else if(data_type.compare("bool vector") == 0){
         std::vector<int> typed_elements;
         typed_elements.reserve(elements.size());
         std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
                        string_to_int);
-        robot_ptr->set_data<std::vector<int> >(tag+n->name,typed_elements);
+        set_data<std::vector<int> >(tag+n->name,typed_elements);
       }
       else if(data_type.compare("file") == 0){
         for(int i=0;i<elements.size();i++)
-          load_subtree(elements[i],tag);
+          load_variables(elements[i],tag);
         
       }
       else {
@@ -152,13 +147,7 @@ void process_tag(std::string tag,shared_ptr<const XMLTree> node){
   }
 }
 
-void load_subtree(std::string fname,std::string root){
+void Pacer::Controller::load_variables(std::string fname, std::string root){
   shared_ptr<const XMLTree> root_tree = XMLTree::read_from_xml(fname);
   process_tag(root,root_tree);
-}
-
-void Pacer::Robot::load_variables(std::string fname,boost::shared_ptr<Pacer::Robot> robot_p){
-  shared_ptr<const XMLTree> root_tree = XMLTree::read_from_xml(fname);
-  robot_ptr = robot_p;
-  process_tag("",root_tree);
 }

@@ -651,7 +651,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       
 #ifndef TIMING
       throw std::runtime_error("IDYN forces are NaN or INF");
-#else TIMING
+#else //NOT TIMING
       continue;
 #endif
     }

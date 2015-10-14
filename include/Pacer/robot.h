@@ -40,9 +40,6 @@ namespace Pacer{
 	}
 
   protected:
-    std::string PARAMS_FILE;
-    void load_variables(std::string xml_file,boost::shared_ptr<Robot> robot_ptr);
-
   /// --------------------  Data Storage  -------------------- ///
   private:
     template<typename T>
@@ -369,16 +366,17 @@ namespace Pacer{
     }
     
     void get_joint_value(unit_e u, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
-      std::map<std::string,Ravelin::VectorNd>& m = _state[u];
-      std::map<std::string,Ravelin::VectorNd >::iterator it;
-      for(it=m.begin();it!=m.end();it++){
-        const Ravelin::VectorNd& dof_val_internal = (*it).second;
-        id_dof_val_map[(*it).first] = dof_val_internal;
+      const std::vector<std::string>& keys = _joint_ids;
+      for(int i=0;i<keys.size();i++){
+        const Ravelin::VectorNd& dof_val_internal = _state[u][keys[i]];
+        id_dof_val_map[keys[i]] = dof_val_internal;
       }
     }
+
     void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
       _state_mutex.lock();
       std::map<std::string,std::vector<double> >::const_iterator it;
+
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
         const std::vector<double>& dof_val = (*it).second;
@@ -539,7 +537,7 @@ namespace Pacer{
       
       // TODO: make this more efficient ITERATORS dont work
 //      std::map<std::string,Ravelin::VectorNd>::iterator it;
-      std::vector<std::string> keys = get_map_keys(_state[u]);
+      const std::vector<std::string>& keys = _joint_ids;
 
       for(int i=0;i<keys.size();i++){
         const std::vector<int>& dof = _id_dof_coord_map[keys[i]];
@@ -645,7 +643,7 @@ namespace Pacer{
       //      std::map<std::string,Ravelin::VectorNd>::iterator it;
       
       for(unit_e u=position;u<=load_goal;u+=1){
-        std::vector<std::string> keys = get_map_keys(_state[u]);
+        const std::vector<std::string>& keys = _joint_ids;
         for(int i=0;i<keys.size();i++){
           const int N = get_joint_dofs(keys[i]);
           _state[u][keys[i]].set_zero(N);
@@ -724,6 +722,7 @@ namespace Pacer{
     std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd> > _id_link_map;
     boost::shared_ptr<Ravelin::RigidBodyd> _root_link;
     std::map<std::string,boost::shared_ptr<Ravelin::Jointd> > _id_joint_map;
+    std::vector<std::string> _joint_ids;
 
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;

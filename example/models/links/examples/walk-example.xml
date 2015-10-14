@@ -1,0 +1,385 @@
+<XML>
+  <plugins type="string vector">
+    center-of-mass
+    end-effectors
+    gait-planner
+    eef-PID-controller
+  </plugins>
+  
+  <init>
+    <base>
+      <x type="double">0 0 0.19 0 0 0</x>
+    </base>
+  </init>
+  <!--
+   A.  USEFUL PLUGINS:
+    1. PERCETION:
+      a. center-of-mass
+      b. end-effectors
+    2. CONTROL:
+      a. ik-feet
+      b. joint-PID-controller (needs 'ik-feet' if goals are in eef coords)
+      c. eef-PID-controller
+      d. idyn-controller  (joint acceleration input)
+      e. eef-PID-controller-accel
+      f. joint-PID-controller-accel (needs 'ik-feet')
+    3. BALANCE:
+      a. stabilization
+    4. PATH PLANNING:
+      a. gamepad
+      b. waypoints
+    4. TASK PLANNING:
+      a. gait-planner (outputs eef controls)
+    5. OTHER:
+      a. output
+   -->
+  
+  <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
+  <plugin-scheduler>
+    <file type="string">libplugin-scheduler.so</file>
+    <real-time-factor type="double">10</real-time-factor>
+    <priority type="double">0</priority>
+    <relative-start-time type="bool">true</relative-start-time>
+    <events type="string vector">init jump</events>
+    <!--  PERSISTENT    -->
+    <init>
+      <time type="double">0</time>
+      <open type="string vector">
+        gamepad
+        end-effectors
+        center-of-mass
+        orient-base
+        settle-feet
+        eef-PID-controller
+      </open>
+    </init>
+    <!--   WALK   -->
+    
+    <jump>
+      <time type="double">0.1</time>
+      <open type="string vector">
+        gait-planner
+      </open>
+      <close type="string vector">
+        settle-feet
+      </close>
+    </jump>
+  </plugin-scheduler>
+  
+  <error-check>
+    <file type="string">liberror-check.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </error-check>
+  
+  <exit>
+    <file type="string">libexit.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </exit>
+  
+  <jump-to>
+    <file type="string">libjump-to.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">5</priority>
+    <angle-of-elevation type="double">0.78</angle-of-elevation>
+    <heading type="double">0</heading>
+    <range type="double">0.25</range>
+    <duration type="double">1</duration>
+  </jump-to>
+  
+  <center-of-mass>
+    <file type="string">libcenter-of-mass.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </center-of-mass>
+  
+  <end-effectors>
+    <file type="string">libend-effectors.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </end-effectors>
+  
+  <output>
+    <file type="string">liboutput.so</file>
+    <real-time-factor type="double">10</real-time-factor>
+    <priority type="double">10</priority>
+    <print-data>
+      <vec3 type="string vector">
+        center_of_mass.x
+        center_of_mass.xd
+        center_of_mass.xdd
+        roll_pitch_yaw
+        zero_moment_point
+      </vec3>
+      <pose3 type="string vector">
+        base_link_frame
+        base_horizontal_frame
+        base_stability_frame
+      </pose3>
+      <end-effector>
+        <vec3 type="string vector">
+          state.x state.xd state.xdd
+          goal.x goal.xd goal.xdd
+        </vec3>
+        <bool type="string vector">
+          stance
+        </bool>
+      </end-effector>
+    </print-data>
+    
+  </output>
+  
+  <settle-feet>
+    <file type="string">libsettle-feet.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">4</priority>
+    <des-contact type="bool">false</des-contact>
+    <acceleration type="bool">false</acceleration>
+  </settle-feet>
+  
+  <orient-base>
+    <!-- Updates stability-frame until base-frame is level -->
+    <file type="string">liborient-base.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">1</priority>
+    <pose type="double">0.0 0 0 0 0 0</pose>
+  </orient-base>
+  
+  <momentum-stabilization>
+    <file type="string">libmomentum-stabilization.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">10</priority>
+    <des-contact type="bool">false</des-contact>
+    <min-allowed-friction type="double">0</min-allowed-friction>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the [X Y Z r p y] of base -->
+    <gains>
+      <kp type="double">0   0   0   1e2 1e2   0</kp>
+      <kv type="double">0   0   0   1e1 1e1 0</kv>
+      <ki type="double">0   0   0   0   0   0</ki>
+    </gains>
+    <desired>
+      <x type="double">0 0 0.161853  0 0 0</x>
+      <xd type="double">0 0 0  0 0 0</xd>
+    </desired>
+  </momentum-stabilization>
+  
+  <stabilization>
+    <file type="string">libstabilization.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">10</priority>
+    <des-contact type="bool">false</des-contact>
+    <min-allowed-friction type="double">0</min-allowed-friction>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the [X Y Z r p y] of base -->
+    <gains>
+      <kp type="double">0   0   0   1e2 1e2   0</kp>
+      <kv type="double">0   0   0   1e1 1e1 0</kv>
+      <ki type="double">0   0   0   0   0   0</ki>
+    </gains>
+    <desired>
+      <x type="double">0 0 0.161853  0 0 0</x>
+      <xd type="double">0 0 0  0 0 0</xd>
+    </desired>
+  </stabilization>
+  
+  <gamepad>
+    <file type="string">gamepad/libgamepad.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <max-forward-speed type="double">0.3</max-forward-speed>
+    <max-strafe-speed type="double">0.2</max-strafe-speed>
+    <max-turn-speed type="double">1</max-turn-speed>
+    <priority type="double">2</priority>
+    <type type="string">SABRENT</type>
+    <!--<type type="string">PS</type>-->
+    <!--     <type type="string">XBOX</type>-->
+  </gamepad>
+  
+  <waypoints>
+    <file type="string">libwaypoints.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">2</priority>
+    <max-forward-speed type="double">0.1</max-forward-speed>
+    <max-strafe-speed type="double">0.05</max-strafe-speed>
+    <max-turn-speed type="double">0.5</max-turn-speed>
+    <tolerance type="double">0.1</tolerance>
+    <waypoints type="double vector">
+      0.00000   0.00000
+      0.05878   0.10000
+      0.09511   0.20000
+      0.09511   0.30000
+      0.05878   0.40000
+      0.00000   0.50000
+      -0.05878   0.60000
+      -0.09511   0.70000
+      -0.09511   0.80000
+      -0.05878   0.90000
+      -0.00000   1.00000
+      0.05878   1.10000
+      0.09511   1.20000
+      0.09511   1.30000
+      0.05878   1.40000
+      0.00000   1.50000
+      -0.05878   1.60000
+      -0.09511   1.70000
+      -0.09511   1.80000
+      -0.05878   1.90000
+      -0.00000   2.00000
+      0.05878   2.10000
+      0.09511   2.20000
+      0.09511   2.30000
+      0.05878   2.40000
+      0.00000   2.50000
+      -0.05878   2.60000
+      -0.09511   2.70000
+      -0.09511   2.80000
+      -0.05878   2.90000
+      -0.00000   3.00000
+    </waypoints>
+  </waypoints>
+  
+  <stand-trajectory>
+    <file type="string">libstand-trajectory.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">3</priority>
+    <time-to-pose type="double">0</time-to-pose>
+  </stand-trajectory>
+  
+  <gait-planner>
+    <file type="string">libgait-planner.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">3</priority>
+    <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
+    <stance-on-contact type="bool">false</stance-on-contact>
+    <holonomic type="bool">false</holonomic>
+    <step-height type="double">0.02</step-height>
+    <gait-duration type="double">0.3</gait-duration>
+<!--    <length type="double">0.309926</length>-->
+<!--    <width type="double">0.1344496</width>-->
+<!--    <height type="double">0.161853</height>-->
+    <length type="double">0.369926</length>
+    <width type="double">0.1344496</width>
+    <height type="double">0.161853</height>
+    <!--troting gait-->
+    <!--    <gait type="double">0  0.5  0.5  0</gait>-->
+    <gait type="double">0.25  0.75  0.75  0.25</gait>
+    <!--    <gait type="double">0.25  0.25  0.75  0.75</gait>-->
+    <!--    <gait type="double">0.25  0.75  0.25  0.75</gait>-->
+    <!--walking gait-->
+    <!--<gait type="double">0.25  0.75  0.0  0.5</gait>-->
+    <duty-factor type="double">0.75  0.75 0.75  0.75</duty-factor>
+    <!--    <duty-factor type="double">0.6  0.6 0.6  0.6</duty-factor>-->
+  </gait-planner>
+  
+  <wcpg>
+    <file type="string">libwcpg.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">1</priority>
+    <pose type="double">0 0 0 0 0 0</pose>
+    <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
+    <step-height type="double">0.03</step-height>
+    <gait-duration type="double">0.321</gait-duration>
+    <length type="double">0.34</length>
+    <width type="double">0.1524788</width>
+    <height type="double">0.161853</height>
+    <duty-factor type="double">0.75  0.75 0.75  0.75</duty-factor>
+    <gait type="double">0.25  0.75  0.75  0.25</gait>
+    
+    <Bf type="double">100</Bf>
+    <Bp type="double">100</Bp>
+    <Ztd type="double">-0.01</Ztd>
+    <Dyc type="double">0</Dyc>
+    <convergence>
+      <a type="double">-10</a>
+      <b type="double">-1</b>
+      <c type="double">-10</c>
+    </convergence>
+  </wcpg>
+  
+  <ik-feet>
+    <file type="string">libik-feet.so</file>
+    <priority type="double">8</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <abs-err-tolerance type="double">1e-4</abs-err-tolerance>
+  </ik-feet>
+  
+  <joint-PID-controller>
+    <file type="string">libjoint-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
+      <kp type="double">1e1 1e1 1e1     1e1 1e1 1e1     1e1 1e1 1e1   1e1 1e1 1e1  </kp>
+      <kv type="double">5e-2 5e-2 5e-2  5e-2 5e-2 5e-2  5e-2 5e-2 5e-2  5e-2 5e-2 5e-2   </kv>
+      <ki type="double">0     0     0       0   0   0     0     0     0     0   0   0</ki>
+    </gains>
+  </joint-PID-controller>
+  
+  <joint-PID-controller2>
+    <file type="string">libjoint-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
+      <kp type="double">2e1 2e1 2e1      2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1   </kp>
+      <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
+      <ki type="double">0     0     0       0   0   0     0     0     0     0   0   0</ki>
+    </gains>
+  </joint-PID-controller2>
+  
+  <joint-PID-controller-accel>
+    <file type="string">libjoint-PID-controller.so</file>
+    <priority type="double">9</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">true</acceleration>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
+      <kp type="double">5e4 5e4 5e4      5e4 5e4 5e4      5e4 5e4 5e4     5e4 5e4 5e4</kp>
+      <kv type="double">1e2 1e2 1e2 1e2 1e2 1e2 1e2 1e2 1e2 1e2 1e2 1e2 </kv>
+      <ki type="double">1e-2 1e-2 1e-2      1e-2 1e-2 1e-2      1e-2 1e-2 1e-2     1e-2 1e-2 1e-2</ki>
+    </gains>
+  </joint-PID-controller-accel>
+  
+  <eef-PID-controller>
+    <file type="string">libeef-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
+    <gains>
+      <kp type="double">1e3 1e3 1e3   1e3 1e3 1e3   1e3 1e3 1e3   1e3 1e3 1e3</kp>
+      <kv type="double">3e1 3e1 3e1     3e1 3e1 3e1     3e1 3e1 3e1     3e1 3e1 3e1     </kv>
+      <ki type="double">0 0 0     0 0 0     0 0 0     0 0 0</ki>
+    </gains>
+  </eef-PID-controller>
+  
+  <eef-PID-controller-accel>
+    <file type="string">libeef-PID-controller.so</file>
+    <priority type="double">9</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">true</acceleration>
+    <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
+      <kp type="double">1e7 1e7 1e7   1e7 1e7 1e7   1e7 1e7 1e7   1e7 1e7 1e7   </kp>
+      <kv type="double">5e3 5e3 5e3   5e3 5e3 5e3   5e3 5e3 5e3   5e3 5e3 5e3   </kv>
+      <ki type="double">0 0 0     0 0 0     0 0 0     0 0 0</ki>
+    </gains>
+  </eef-PID-controller-accel>
+  
+  <idyn-controller>
+    <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <dt type="double">0.001</dt>
+    <alpha type="double">0.5</alpha>
+    <last-cfs type="bool">false</last-cfs>
+    <last-cfs-filter type="bool">false</last-cfs-filter>
+    <des-contact type="bool">true</des-contact>
+    <max-contacts-per-foot type="double">1</max-contacts-per-foot>
+    <type type="string vector">CFLCP</type> <!-- SCFQP (simple CFQP), CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <!--CFQP CFLCP NSQP NSLCP-->
+  </idyn-controller>
+</XML>

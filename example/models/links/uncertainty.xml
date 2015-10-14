@@ -1,0 +1,34 @@
+<XML>
+  <noise> <!-- standard normal gaussian distribution bounded by [min,max] -->
+    <!-- with mu and sigma not set, sigma = (max-min)/6 ; mu = (min+max)/2 -->
+    <!--           <variables type="string vector">positon velocity q qd</variables>-->
+    <variables type="string vector"></variables>
+    <positon>
+      <!-- x y x   roll pitch yaw -->
+      <min type="double">-0.01 -0.01 0    -0 -0 -0</min>
+      <max type="double"> 0.01  0.01 0     0  0  0</max>
+    </positon>
+    <velocity>
+      <!-- x y x   dx-axis dy-axis dz-axis-->
+      <min type="double">-0.01 -0.01 -0.01    -0.001 -0.001 -0.001</min>
+      <max type="double"> 0.01  0.01  0.01     0.001  0.001  0.001</max>
+    </velocity>
+    
+    <q>
+      <!-- Optional Parameter:<mu>    -->
+      <!-- Optional Parameter:<sigma> -->
+      <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+      <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+    </q>
+    <qd>
+      <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+      <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+    </qd>
+    <u>
+      <!-- Optional Parameter:<mu>    -->
+      <!-- Optional Parameter:<sigma> -->
+      <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+      <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+    </u>
+  </noise>
+</XML>

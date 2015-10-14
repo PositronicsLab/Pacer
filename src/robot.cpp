@@ -71,7 +71,7 @@ void Robot::compile(){
   }
   
   for(int i=0;i<8;i++)
-    _state[static_cast<unit_e>(i)] = std::map<std::string, Ravelin::VectorNd >();
+    _state[i] = std::map<std::string, Ravelin::VectorNd >();
   
   _disabled_dofs.resize(NDOFS);
   std::fill(_disabled_dofs.begin(),_disabled_dofs.end(),true);

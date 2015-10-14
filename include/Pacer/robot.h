@@ -255,7 +255,8 @@ namespace Pacer{
     }
 
   public:
-    enum unit_e{          //  ang  |  lin
+    typedef int unit_e;
+    static const unit_e          //  ang  |  lin
      // SET OUTSIDE CONTROL LOOP
       position=0,           //  rad  |   m 
       velocity=1,           // rad/s |  m/s
@@ -265,8 +266,7 @@ namespace Pacer{
       position_goal=4,      //  rad  |   m 
       velocity_goal=5,      // rad/s |  m/s
       acceleration_goal=6,  // rad/ss|  m/ss
-      load_goal=7,// TORQUE //  N.m  |   N
-    };
+      load_goal=7;// TORQUE //  N.m  |   N
 
   private:
 	
@@ -376,7 +376,6 @@ namespace Pacer{
         id_dof_val_map[(*it).first] = dof_val_internal;
       }
     }
-
     void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
       _state_mutex.lock();
       std::map<std::string,std::vector<double> >::const_iterator it;
@@ -405,7 +404,6 @@ namespace Pacer{
       }
       _state_mutex.unlock();
     }
-
     /// ------------- GENERALIZED VECTOR CONVERSIONS  ------------- ///
 
     
@@ -454,6 +452,16 @@ namespace Pacer{
       }
     }
     
+    template <typename K, typename V>
+    std::vector<K> get_map_keys(const std::map<K,V>& m){
+      std::vector<K> v;
+      typedef const std::pair<K,V> map_pair;
+      BOOST_FOREACH(map_pair me, m) {
+        v.push_back(me.first);
+      }
+      return v;
+    }
+    
     template <typename T>
     std::map<std::string,std::vector<T> > make_id_value_map(){
       std::map<std::string,std::vector<T> > id_dof_val_map;
@@ -471,13 +479,15 @@ namespace Pacer{
       if(generalized_vec.size() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.size()));
 
-      std::map<std::string,std::vector<int> >::iterator it;
-      for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
-        const std::vector<int>& dof = (*it).second;
-        std::vector<T>& dof_val = id_dof_val_map[(*it).first];
+//      std::map<std::string,std::vector<int> >::iterator it;
+      std::vector<std::string> keys = get_map_keys(_id_dof_coord_map);
+      
+      for(int i=0;i<keys.size();i++){
+        const std::vector<int>& dof = _id_dof_coord_map[keys[i]];
+        std::vector<T>& dof_val = id_dof_val_map[keys[i]];
         dof_val.resize(dof.size());
-        for(int j=0;j<(*it).second.size();j++){
-          dof_val[j] = generalized_vec[dof[j]]; 
+        for(int j=0;j<dof.size();j++){
+          dof_val[j] = generalized_vec[dof[j]];
         }
       }
     }
@@ -486,13 +496,15 @@ namespace Pacer{
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
-      std::map<std::string,std::vector<int> >::iterator it;
-      for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
-        const std::vector<int>& dof = (*it).second;
-        std::vector<double>& dof_val = id_dof_val_map[(*it).first];
+//      std::map<std::string,std::vector<int> >::iterator it;
+      std::vector<std::string> keys = get_map_keys(_id_dof_coord_map);
+      
+      for(int i=0;i<keys.size();i++){
+        const std::vector<int>& dof = _id_dof_coord_map[keys[i]];
+        std::vector<double>& dof_val = id_dof_val_map[keys[i]];
         dof_val.resize(dof.size());
-        for(int j=0;j<(*it).second.size();j++){
-          dof_val[j] = generalized_vec[dof[j]]; 
+        for(int j=0;j<dof.size();j++){
+          dof_val[j] = generalized_vec[dof[j]];
         }
       }
     }
@@ -501,12 +513,14 @@ namespace Pacer{
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
-      std::map<std::string,std::vector<int> >::iterator it;
-      for(it=_id_dof_coord_map.begin();it!=_id_dof_coord_map.end();it++){
-        const std::vector<int>& dof = (*it).second;
-        Ravelin::VectorNd& dof_val = id_dof_val_map[(*it).first];
-        dof_val.set_zero(dof.size());
-        for(int j=0;j<(*it).second.size();j++){
+//      std::map<std::string,std::vector<int> >::iterator it;
+      std::vector<std::string> keys = get_map_keys(_id_dof_coord_map);
+
+      for(int i=0;i<keys.size();i++){
+        const std::vector<int>& dof = _id_dof_coord_map[keys[i]];
+        Ravelin::VectorNd& dof_val = id_dof_val_map[keys[i]];
+        dof_val.resize(dof.size());
+        for(int j=0;j<dof.size();j++){
           dof_val[j] = generalized_vec[dof[j]]; 
         }
       }
@@ -522,13 +536,17 @@ namespace Pacer{
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
       _state_mutex.lock();
-      std::map<std::string,Ravelin::VectorNd>::iterator it;
-      for(it=_state[u].begin();it!=_state[u].end();it++){
-        const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
-        Ravelin::VectorNd& dof_val = (*it).second;
+      
+      // TODO: make this more efficient ITERATORS dont work
+//      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      std::vector<std::string> keys = get_map_keys(_state[u]);
+
+      for(int i=0;i<keys.size();i++){
+        const std::vector<int>& dof = _id_dof_coord_map[keys[i]];
+        Ravelin::VectorNd& dof_val = _state[u][keys[i]];
         if(dof.size() != dof_val.rows())
-          throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
-        for(int j=0;j<(*it).second.rows();j++){
+          throw std::runtime_error("Missized dofs in joint "+keys[i]+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
+        for(int j=0;j<dof.size();j++){
           dof_val[j] = generalized_vec[dof[j]]; 
         }
       }
@@ -623,12 +641,14 @@ namespace Pacer{
 
     void reset_state(){
       reset_contact();
-      std::map<unit_e , std::map<std::string, Ravelin::VectorNd > >::iterator it;
-      std::map<std::string, Ravelin::VectorNd >::iterator jt;
-      for(it=_state.begin();it!=_state.end();it++){
-        for(jt=(*it).second.begin();jt!=(*it).second.end();jt++){
-          int N = _id_dof_coord_map[(*jt).first].size();
-          (*jt).second.set_zero(N);
+      // TODO: make this more efficient ITERATORS dont work
+      //      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      
+      for(unit_e u=position;u<=load_goal;u+=1){
+        std::vector<std::string> keys = get_map_keys(_state[u]);
+        for(int i=0;i<keys.size();i++){
+          const int N = get_joint_dofs(keys[i]);
+          _state[u][keys[i]].set_zero(N);
         }
       }
     }

@@ -267,7 +267,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       
 #ifdef USE_OSG_DISPLAY
       visualize_ray(  e[i].contact_point,
-                      e[i].contact_point + impulse*10.0,
+                      e[i].contact_point + impulse*0.005,
                       Ravelin::Vector3d(1,0.5,0),
                       0.1,
                       sim

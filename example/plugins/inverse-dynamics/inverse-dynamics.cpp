@@ -27,6 +27,7 @@ int N_SYSTEMS = 0;
 std::string plugin_namespace;
 using Ravelin::VectorNd;
 using Ravelin::MatrixNd;
+using namespace Ravelin;
 
 Ravelin::LinAlgd _LA;
 Moby::LCP _lcp;
@@ -402,10 +403,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   std::vector<unsigned> indices;
   std::vector< boost::shared_ptr<Pacer::Robot::contact_t> > contacts;
+  boost::shared_ptr<Pose3d> base_link_frame = boost::shared_ptr<Pose3d>( new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
+
   
   for(int i=0;i<active_feet.size();i++){
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(active_feet[i],c);
+    Vector3d pos;
     if(!c.empty()){
       for(int j=0;j<c.size() && j<MAX_CONTACTS_PER_FOOT;j++){
         OUT_LOG(logERROR) << "compliant: " << c[j]->compliant;
@@ -414,10 +418,21 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         OUT_LOG(logERROR) << "point: " << c[j]->point;
 //        contacts.push_back(c[j]);
         std::string id(c[j]->id);
+        pos = c[j]->point;
 //        for (int k=0; k<num_added[i]; k++) {
-          contacts.push_back(ctrl->create_contact(id,c[j]->point,c[j]->normal,c[j]->tangent,c[j]->impulse,c[j]->mu_coulomb,c[j]->mu_viscous,0,c[j]->compliant));
+          contacts.push_back(ctrl->create_contact(id,pos,c[j]->normal,c[j]->tangent,c[j]->impulse,c[j]->mu_coulomb,c[j]->mu_viscous,0,c[j]->compliant));
           indices.push_back((unsigned) i);
 //        }
+      }
+    } else {
+      Vector3d x = ctrl->get_data<Ravelin::Vector3d>(active_feet[i]+".state.x");
+      x.pose = base_link_frame;
+      Vector3d foot_rad(0,0,0.005);
+      pos = Pose3d::transform_point(Pacer::GLOBAL,x) - foot_rad;
+      OUT_LOG(logERROR) << "contact-point: " << x << " <-- " << pos;
+      if (pos[2] < 0.001){
+        contacts.push_back(ctrl->create_contact(active_feet[i],pos,Vector3d(0,0,1),Vector3d(1,0,0),Vector3d(0,0,0),0,0,0,false));
+        indices.push_back((unsigned) i);
       }
     }
   }
@@ -501,6 +516,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   Ravelin::VectorNd cf_init = Ravelin::VectorNd::zero(NC*5);
   {
     for(unsigned i=0;i< contacts.size();i++){
+      
       Ravelin::Vector3d tan1,tan2;
       Ravelin::Vector3d::determine_orthonormal_basis(contacts[i]->normal,tan1,tan2);
       Ravelin::Matrix3d R_foot( contacts[i]->normal[0], contacts[i]->normal[1], contacts[i]->normal[2],
@@ -511,6 +527,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       OUT_LOG(logERROR) << "Contact " << i << " mu coulomb: " << contacts[i]->mu_coulomb;
 
       OUT_LOG(logERROR) << "compliant: " << contacts[i]->compliant;
+      OUT_LOG(logERROR) << "point: " << contacts[i]->point;
       if( !contacts[i]->compliant ){
         contact_impulse/=dt;
         OUT_LOG(logERROR) << "Contact " << i << " is rigid: " << contact_impulse ;

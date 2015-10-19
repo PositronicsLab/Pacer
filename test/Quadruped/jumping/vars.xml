@@ -1,0 +1,6 @@
+<XML>
+  <logging type="string">NONE</logging>
+  <init-file type="file">init.xml</init-file>
+  <extra-files type="file">uncertainty.xml</extra-files>
+  <task-file type="file">scheduler.xml</task-file>
+</XML>

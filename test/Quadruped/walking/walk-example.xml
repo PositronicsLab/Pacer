@@ -4,13 +4,8 @@
     end-effectors
     gait-planner
     eef-PID-controller
+    gamepad
   </plugins>
-  
-  <init>
-    <base>
-      <x type="double">0 0 0.19 0 0 0</x>
-    </base>
-  </init>
   <!--
    A.  USEFUL PLUGINS:
     1. PERCETION:

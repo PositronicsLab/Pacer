@@ -28,7 +28,7 @@
   <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" penalty-kv="100" penalty-kp="100000"  alpha="100" />
 </TimeSteppingSimulator>
 
-<SDF filename="model.sdf"/>
+<SDF filename="../../../example/models/links/model.sdf"/>
 
 <Box id="step" xlen="0.05" ylen="0.4" zlen="0.02" />
 

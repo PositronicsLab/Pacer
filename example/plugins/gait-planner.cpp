@@ -213,9 +213,9 @@ void walk_toward(
 
 //  Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
 //  turn_origin = Pose3d::transform_point(base_frame, turn_origin);
-  Origin3d turn_origin(0,command[0]/command[5],0);
+  Origin3d turn_origin(-command[1]/command[5],command[0]/command[5],0);
   
-  if (command[5] > Pacer::NEAR_ZERO) {
+  if (std::fabs(command[5]) > Pacer::NEAR_ZERO) {
     boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
 
     turning_frame->update_relative_pose(Pacer::GLOBAL);

@@ -3,6 +3,7 @@
 *.swp
 *.log
 *.mat
+*.dat
 build/**/* 
 debug/**/* 
 release/**/* 

@@ -1,11 +1,12 @@
 <XML>
 <robot-model type="string">links/model.xml</robot-model>
+<real-time-factor type="double">1</real-time-factor>
 
 <init>
   <kinematic type="bool">false</kinematic>
   
   <base>
-    <x type="double"> 0.05 -0.05 0.23 0 0 0</x>
+    <x type="double"> 0.05 -0.05 0.5 0 0 0</x>
     <xd type="double">0 0 0   0 0 0</xd>
   </base>
   

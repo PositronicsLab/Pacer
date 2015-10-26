@@ -13,7 +13,7 @@ set(PROJECT_SRC_DIR ./src)
 
 #find BOOST libraries
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
-find_package(Boost COMPONENTS system REQUIRED)
+find_package(Boost COMPONENTS system thread OPTIONAL)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
@@ -89,10 +89,19 @@ add_library(Pacer ${LIBSOURCES})
 
 # LibXml2
 IF(LIBXML2_FOUND)
-  target_link_libraries (Pacer ${LIBXML2_LIBRARIES})
+  set (REQLIBS ${REQLIBS} ${LIBXML2_LIBRARIES})
 ENDIF(LIBXML2_FOUND)
 
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY})
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES})
+
+IF(${Boost_SYSTEM_LIBRARY})
+  set(REQLIBS ${REQLIBS} ${Boost_SYSTEM_LIBRARY})
+  add_definitions(-DUSE_MUTEX)
+ENDIF()
+IF(${Boost_THREAD_LIBRARY})
+  set(REQLIBS ${REQLIBS} ${Boost_THREAD_LIBRARY})
+  add_definitions(-DUSE_THREAD)
+ENDIF()
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -122,6 +131,7 @@ IF(BUILD_EXAMPLES)
     add_subdirectory( example/interfaces )
   ENDIF(BUILD_INTERFACES)
 ENDIF(BUILD_EXAMPLES)
+
 IF(BUILD_TESTS)
   add_subdirectory( test )
 ENDIF(BUILD_TESTS)

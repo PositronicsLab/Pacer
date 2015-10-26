@@ -16,9 +16,11 @@
 #include <numeric>
 #include <math.h>
 #include <cmath>
-#include <boost/thread/mutex.hpp>
 #include <sys/types.h>
 #include <sys/times.h>
+#ifdef USE_MUTEX
+#include <boost/thread/mutex.hpp>
+#endif
 
 namespace Pacer{
   
@@ -49,7 +51,9 @@ namespace Pacer{
     struct is_pointer<T*> { static const bool value = true; };
     
     std::map<std::string,boost::shared_ptr<void> > _data_map;
+      #ifdef USE_MUTEX
     boost::mutex _data_map_mutex;
+#endif
   public:
     
     // Returns 'true' if new key was created in map
@@ -59,7 +63,9 @@ namespace Pacer{
       if(is_pointer<T>::value){
         throw std::runtime_error("Can't save pointer: " + n);
       }
-      _data_map_mutex.lock();
+      #ifdef USE_MUTEX
+_data_map_mutex.lock();
+#endif
       // TODO: Improve this functionality, shouldn't be copying into new class
       std::map<std::string,boost::shared_ptr<void> >::iterator it
         =_data_map.find(n);
@@ -69,34 +75,46 @@ namespace Pacer{
       }else{
         (*it).second = boost::shared_ptr<T>(new T(v));
       }
-      _data_map_mutex.unlock();
+      #ifdef USE_MUTEX
+_data_map_mutex.unlock();
+#endif
 
       return new_var;
     }
     
     void remove_data(std::string n){
-      _data_map_mutex.lock();
+      #ifdef USE_MUTEX
+_data_map_mutex.lock();
+#endif
       // TODO: Improve this functionality, shouldn't be copying into new class
       std::map<std::string,boost::shared_ptr<void> >::iterator it
       =_data_map.find(n);
       if (it != _data_map.end()){
         _data_map.erase(it);
       }
-      _data_map_mutex.unlock();
+      #ifdef USE_MUTEX
+_data_map_mutex.unlock();
+#endif
     }
   
     template<class T>
     T get_data(std::string n){
       std::map<std::string,boost::shared_ptr<void> >::iterator it;
-      _data_map_mutex.lock();
+      #ifdef USE_MUTEX
+_data_map_mutex.lock();
+#endif
       it = _data_map.find(n);
       if(it != _data_map.end()){
         T* v = (T*) (((*it).second).get());
-        _data_map_mutex.unlock();
+        #ifdef USE_MUTEX
+_data_map_mutex.unlock();
+#endif
         OUT_LOG(logDEBUG) << "Get: " << n << " --> " << *v;
         return *v;
       }
-      _data_map_mutex.unlock();
+      #ifdef USE_MUTEX
+_data_map_mutex.unlock();
+#endif
 
         // else
       throw std::runtime_error("Variable: \"" + n + "\" not found in data!");
@@ -269,7 +287,9 @@ namespace Pacer{
 	
     std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;    
     std::map<unit_e , Ravelin::VectorNd> _base_state;    
+#ifdef USE_MUTEX
     boost::mutex _state_mutex;
+#endif
     bool _lock_state;
 
     // TODO: Populate these value in Robot::compile()
@@ -323,34 +343,46 @@ namespace Pacer{
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       _state[u][id][dof] = val;
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
     
     void set_joint_value(const std::string& id, unit_e u, const Ravelin::VectorNd& dof_val)
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.rows())
         throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
       dof = dof_val;
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
     
     void set_joint_value(const std::string& id, unit_e u, const std::vector<double>& dof_val)
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.size())
         throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
       for(int i=0;i<dof.rows();i++)
         dof[i] = dof_val[i];
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
     
     void get_joint_value(unit_e u, std::map<std::string,std::vector<double> >& id_dof_val_map){
@@ -374,7 +406,9 @@ namespace Pacer{
     }
 
     void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       std::map<std::string,std::vector<double> >::const_iterator it;
 
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
@@ -388,11 +422,15 @@ namespace Pacer{
           dof_val_internal[j] = dof_val[j]; 
         }
       }
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
     
     void set_joint_value(unit_e u,const std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       std::map<std::string,Ravelin::VectorNd >::const_iterator it;
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
@@ -400,7 +438,9 @@ namespace Pacer{
           throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply((*it).second.rows()));
         dof_val_internal = (*it).second;
       }
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
     /// ------------- GENERALIZED VECTOR CONVERSIONS  ------------- ///
 
@@ -533,7 +573,9 @@ namespace Pacer{
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       
       // TODO: make this more efficient ITERATORS dont work
 //      std::map<std::string,Ravelin::VectorNd>::iterator it;
@@ -548,7 +590,9 @@ namespace Pacer{
           dof_val[j] = generalized_vec[dof[j]]; 
         }
       }
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
     
     void get_joint_generalized_value(unit_e u, Ravelin::VectorNd& generalized_vec){
@@ -622,9 +666,13 @@ namespace Pacer{
           break;
       }
        
-      _state_mutex.lock();
+      #ifdef USE_MUTEX
+_state_mutex.lock();
+#endif
       _base_state[u] = vec;  
-      _state_mutex.unlock();
+      #ifdef USE_MUTEX
+_state_mutex.unlock();
+#endif
     }
 
     void get_base_value(unit_e u, Ravelin::VectorNd& vec){

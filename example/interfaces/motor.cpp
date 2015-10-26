@@ -3,7 +3,6 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <boost/thread.hpp>
 #include <Pacer/controller.h>
 #include <time.h>
 
@@ -13,6 +12,13 @@
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
   DXL::Dynamixel * dxl_;
+#endif
+
+#ifdef USE_MUTEX
+# ifdef USE_THREADS
+#   include <boost/thread.hpp>
+    boost::mutex joint_data_mutex_;
+# endif
 #endif
 std::string DEVICE_NAME;
 
@@ -24,18 +30,22 @@ unsigned NDOFS;
 
 static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
 
-boost::mutex joint_data_mutex_;
 static double FREQ = 500;
 
 static void control_motor(){
   while(true){
     static Ravelin::VectorNd q_motors,qd_motors,u_motors;
-    if(joint_data_mutex_.try_lock()){
+#ifdef USE_MUTEX
+    if(joint_data_mutex_.try_lock())
+#endif
+    {
       q_motors = q_motors_data;
       
       qd_motors = qd_motors_data;
       u_motors = u_motors_data;
+#ifdef USE_MUTEX
       joint_data_mutex_.unlock();
+#endif
     }
  
 #ifdef USE_DXL
@@ -138,7 +148,10 @@ void controller(double t)
   robot_ptr->control(t);
 
 #ifdef USE_DXL
-  if(joint_data_mutex_.try_lock()){
+#ifdef USE_MUTEX
+  if(joint_data_mutex_.try_lock())
+#endif
+  {
 //    for(int i=0;i<DXL::N_JOINTS;i++)
 //      qd_motors[i] = robot_ptr->qd_joints[dxl_->JointName(i)];
 
@@ -150,13 +163,18 @@ void controller(double t)
 
     //for(int i=0;i<dxl_->ids.size();i++)
     //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
+#ifdef USE_MUTEX
     joint_data_mutex_.unlock();
+#endif 
   }
 #endif
-  static boost::thread motor_thread(control_motor);
 
+#ifdef defined(USE_MUTEX) && defined(USE_THREADS)
+  static boost::thread motor_thread(control_motor);
+#else 
+  control_motor();
+#endif
     last_t = t;
-//#define TIMING
 #ifdef TIMING
   static double last_time, this_time;
   static bool inited = false;

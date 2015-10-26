@@ -32,14 +32,14 @@ find_package(LibXml2 REQUIRED)
 link_directories(${LIBXML2_LIBRARY_DIR})
 include_directories(${LIBXML2_INCLUDE_DIR})
 
-
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
 # these are the setting for the in-source compiler flow control
 option(LOGGING "Write logs to <working_dir>/out.log" ON)
-option(BUILD_EXAMPLES "Build simulation examples" ON)
+option(BUILD_EXAMPLES "Build simulation examples" OFF)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)
   option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
+option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
 
 
 # fix the C++ linking error on 64-bit Linux
@@ -122,6 +122,9 @@ IF(BUILD_EXAMPLES)
     add_subdirectory( example/interfaces )
   ENDIF(BUILD_INTERFACES)
 ENDIF(BUILD_EXAMPLES)
+IF(BUILD_TESTS)
+  add_subdirectory( test )
+ENDIF(BUILD_TESTS)
 
 # uninstall target
 configure_file(

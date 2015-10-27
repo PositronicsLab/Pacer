@@ -169,7 +169,7 @@ void controller(double t)
   }
 #endif
 
-#ifdef defined(USE_MUTEX) && defined(USE_THREADS)
+#if defined(USE_MUTEX) && defined(USE_THREADS)
   static boost::thread motor_thread(control_motor);
 #else 
   control_motor();

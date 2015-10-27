@@ -17,8 +17,9 @@
 #ifdef USE_MUTEX
 # ifdef USE_THREADS
 #   include <boost/thread.hpp>
-    boost::mutex joint_data_mutex_;
 # endif
+#   include <boost/thread/mutex.hpp>
+    boost::mutex joint_data_mutex_;
 #endif
 std::string DEVICE_NAME;
 
@@ -118,8 +119,10 @@ void init(std::string model_f,std::string vars_f){
     dxl_->relaxed(false);
 
 #endif
-  
+ 
+#ifdef USE_MUTEX
   joint_data_mutex_.unlock();
+#endif
 }
 
 /// Gets the current time (as a floating-point number)

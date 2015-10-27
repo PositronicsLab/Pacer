@@ -14,13 +14,12 @@
   DXL::Dynamixel * dxl_;
 #endif
 
-#ifdef USE_MUTEX
-# ifdef USE_THREADS
-#   include <boost/thread.hpp>
-# endif
-#   include <boost/thread/mutex.hpp>
-    boost::mutex joint_data_mutex_;
+#ifdef USE_THREADS
+#include <pthread.h>
+    pthread_mutex_t joint_data_mutex_;
+    pthread_t thread;
 #endif
+
 std::string DEVICE_NAME;
 
 using Pacer::Controller;
@@ -36,16 +35,16 @@ static double FREQ = 500;
 static void control_motor(){
   while(true){
     static Ravelin::VectorNd q_motors,qd_motors,u_motors;
-#ifdef USE_MUTEX
-    if(joint_data_mutex_.try_lock())
+#ifdef USE_THREADS
+    if(pthread_mutex_trylock(&joint_data_mutex_);)
 #endif
     {
       q_motors = q_motors_data;
       
       qd_motors = qd_motors_data;
       u_motors = u_motors_data;
-#ifdef USE_MUTEX
-      joint_data_mutex_.unlock();
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&joint_data_mutex_);;
 #endif
     }
  
@@ -120,8 +119,8 @@ void init(std::string model_f,std::string vars_f){
 
 #endif
  
-#ifdef USE_MUTEX
-  joint_data_mutex_.unlock();
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&joint_data_mutex_);;
 #endif
 }
 
@@ -151,8 +150,8 @@ void controller(double t)
   robot_ptr->control(t);
 
 #ifdef USE_DXL
-#ifdef USE_MUTEX
-  if(joint_data_mutex_.try_lock())
+#ifdef USE_THREADS
+  if(pthread_mutex_lock(&joint_data_mutex_);)
 #endif
   {
 //    for(int i=0;i<DXL::N_JOINTS;i++)
@@ -166,15 +165,21 @@ void controller(double t)
 
     //for(int i=0;i<dxl_->ids.size();i++)
     //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
-#ifdef USE_MUTEX
-    joint_data_mutex_.unlock();
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&joint_data_mutex_);;
 #endif 
   }
 #endif
 
-#if defined(USE_MUTEX) && defined(USE_THREADS)
-  static boost::thread motor_thread(control_motor);
-#else 
+#ifdef USE_THREADS
+  static int iret = pthread_create( &thread, NULL, control_motor);
+  if(iret)
+  {
+    fprintf(stderr,"Error - pthread_create() return code: %d\n",iret1);
+    exit(1);
+  }
+
+#else
   control_motor();
 #endif
     last_t = t;
@@ -215,6 +220,8 @@ int main(int argc, char* argv[])
     controller(t);
     //sleep(1.0/FREQ);
   }
+  
+  pthread_join( thread, NULL);
 #endif
 }
 

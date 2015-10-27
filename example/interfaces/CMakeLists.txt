@@ -25,10 +25,15 @@ IF(USE_OSG_DISPLAY)
     add_definitions (-DUSE_OSG_DISPLAY)
   ENDIF(OSG_FOUND)
 ENDIF(USE_OSG_DISPLAY)
-target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS} gsl)
 
-add_library(MobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby-simple.cpp)
-target_link_libraries(MobyPlugin ${REQLIBS})
+
+find_package (gsl)
+IF(GSL_FOUND)
+  add_definitions(-DSIMULATE_UNCERTAINTY)
+  include_directories(${GSL_INCLUDE_DIRS})
+  target_link_libraries(PacerMobyPlugin ${GSL_LIBRARIES})
+ENDIF(GSL_FOUND)
+target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS})
 
   # Gazebo Interface
   set(USE_GAZEBO CACHE BOOL false)

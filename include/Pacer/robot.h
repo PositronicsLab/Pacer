@@ -18,8 +18,8 @@
 #include <cmath>
 #include <sys/types.h>
 #include <sys/times.h>
-#ifdef USE_MUTEX
-#include <boost/thread/mutex.hpp>
+#ifdef USE_THREADS
+	#include <pthread.h>
 #endif
 
 namespace Pacer{
@@ -51,8 +51,8 @@ namespace Pacer{
     struct is_pointer<T*> { static const bool value = true; };
     
     std::map<std::string,boost::shared_ptr<void> > _data_map;
-      #ifdef USE_MUTEX
-    boost::mutex _data_map_mutex;
+      #ifdef USE_THREADS
+    pthread_mutex_t _data_map_mutex;
 #endif
   public:
     
@@ -63,8 +63,8 @@ namespace Pacer{
       if(is_pointer<T>::value){
         throw std::runtime_error("Can't save pointer: " + n);
       }
-      #ifdef USE_MUTEX
-_data_map_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_data_map_mutex);
 #endif
       // TODO: Improve this functionality, shouldn't be copying into new class
       std::map<std::string,boost::shared_ptr<void> >::iterator it
@@ -75,16 +75,16 @@ _data_map_mutex.lock();
       }else{
         (*it).second = boost::shared_ptr<T>(new T(v));
       }
-      #ifdef USE_MUTEX
-_data_map_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_data_map_mutex);
 #endif
 
       return new_var;
     }
     
     void remove_data(std::string n){
-      #ifdef USE_MUTEX
-_data_map_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_data_map_mutex);
 #endif
       // TODO: Improve this functionality, shouldn't be copying into new class
       std::map<std::string,boost::shared_ptr<void> >::iterator it
@@ -92,28 +92,28 @@ _data_map_mutex.lock();
       if (it != _data_map.end()){
         _data_map.erase(it);
       }
-      #ifdef USE_MUTEX
-_data_map_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_data_map_mutex);
 #endif
     }
   
     template<class T>
     T get_data(std::string n){
       std::map<std::string,boost::shared_ptr<void> >::iterator it;
-      #ifdef USE_MUTEX
-_data_map_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_data_map_mutex);
 #endif
       it = _data_map.find(n);
       if(it != _data_map.end()){
         T* v = (T*) (((*it).second).get());
-        #ifdef USE_MUTEX
-_data_map_mutex.unlock();
+        #ifdef USE_THREADS
+pthread_mutex_unlock(&_data_map_mutex);
 #endif
         OUT_LOG(logDEBUG) << "Get: " << n << " --> " << *v;
         return *v;
       }
-      #ifdef USE_MUTEX
-_data_map_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_data_map_mutex);
 #endif
 
         // else
@@ -287,8 +287,8 @@ _data_map_mutex.unlock();
 	
     std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;    
     std::map<unit_e , Ravelin::VectorNd> _base_state;    
-#ifdef USE_MUTEX
-    boost::mutex _state_mutex;
+#ifdef USE_THREADS
+    pthread_mutex_t _state_mutex;
 #endif
     bool _lock_state;
 
@@ -343,12 +343,12 @@ _data_map_mutex.unlock();
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       _state[u][id][dof] = val;
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
@@ -356,15 +356,15 @@ _state_mutex.unlock();
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.rows())
         throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
       dof = dof_val;
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
@@ -372,16 +372,16 @@ _state_mutex.unlock();
     {
       if(_lock_state && u <= load)
         throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       Ravelin::VectorNd& dof = _state[u][id];
       if(dof.rows() != dof_val.size())
         throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
       for(int i=0;i<dof.rows();i++)
         dof[i] = dof_val[i];
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
@@ -406,8 +406,8 @@ _state_mutex.unlock();
     }
 
     void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       std::map<std::string,std::vector<double> >::const_iterator it;
 
@@ -422,14 +422,14 @@ _state_mutex.lock();
           dof_val_internal[j] = dof_val[j]; 
         }
       }
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
     void set_joint_value(unit_e u,const std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       std::map<std::string,Ravelin::VectorNd >::const_iterator it;
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
@@ -438,8 +438,8 @@ _state_mutex.lock();
           throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply((*it).second.rows()));
         dof_val_internal = (*it).second;
       }
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     /// ------------- GENERALIZED VECTOR CONVERSIONS  ------------- ///
@@ -573,8 +573,8 @@ _state_mutex.unlock();
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       
       // TODO: make this more efficient ITERATORS dont work
@@ -590,8 +590,8 @@ _state_mutex.lock();
           dof_val[j] = generalized_vec[dof[j]]; 
         }
       }
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
@@ -666,12 +666,12 @@ _state_mutex.unlock();
           break;
       }
        
-      #ifdef USE_MUTEX
-_state_mutex.lock();
+      #ifdef USE_THREADS
+pthread_mutex_lock(&_state_mutex);
 #endif
       _base_state[u] = vec;  
-      #ifdef USE_MUTEX
-_state_mutex.unlock();
+      #ifdef USE_THREADS
+pthread_mutex_unlock(&_state_mutex);
 #endif
     }
 

@@ -13,8 +13,8 @@ set(PROJECT_SRC_DIR ./src)
 
 #find BOOST libraries
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
-find_package(Boost COMPONENTS system thread OPTIONAL)
-link_directories(${BOOST_LIBRARY_DIRS})
+find_package(Boost REQUIRED)
+#link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
 #add ravelin
@@ -40,6 +40,7 @@ option(BUILD_EXAMPLES "Build simulation examples" OFF)
   option(BUILD_PLUGINS "Build Pacer plugins?" ON)
   option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
 option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
+option(USE_THREADS "Build Pacer with multi-threading support?" OFF)
 
 
 # fix the C++ linking error on 64-bit Linux
@@ -62,9 +63,9 @@ IF(SPLITTING_METHOD)
   add_definitions( -DSPLITTING_METHOD )
 ENDIF(SPLITTING_METHOD)
 # end 
-add_definitions(-DBUILD_DOUBLE)
-add_definitions(-DSAFESTATIC=static)
-add_definitions(-DUSE_GLPK)
+IF(USE_THREADS)
+  add_definitions(-DUSE_THREADS)
+ENDIF(USE_THREADS)
 
 IF(LOGGING)
   add_definitions( -DLOG_TO_FILE )
@@ -92,16 +93,7 @@ IF(LIBXML2_FOUND)
   set (REQLIBS ${REQLIBS} ${LIBXML2_LIBRARIES})
 ENDIF(LIBXML2_FOUND)
 
-set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES} ${BOOST_LIBRARIES})
-
-IF(${Boost_SYSTEM_LIBRARY})
-  set(REQLIBS ${REQLIBS} ${Boost_SYSTEM_LIBRARY})
-  add_definitions(-DUSE_MUTEX)
-ENDIF()
-IF(${Boost_THREAD_LIBRARY})
-  set(REQLIBS ${REQLIBS} ${Boost_THREAD_LIBRARY})
-  add_definitions(-DUSE_THREAD)
-ENDIF()
+set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES})
 
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

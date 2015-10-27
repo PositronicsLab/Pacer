@@ -6,7 +6,6 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-#include <boost/thread/mutex.hpp>
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
@@ -21,7 +20,10 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
+
 #include <boost/icl/type_traits/to_string.hpp>
+//template<typename T>
+//using toString = boost::icl::to_string<T>;
 
 static const double _TWO_PI= M_PI*2.0;
 

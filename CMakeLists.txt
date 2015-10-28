@@ -37,8 +37,6 @@ option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 # these are the setting for the in-source compiler flow control
 option(LOGGING "Write logs to <working_dir>/out.log" ON)
 option(BUILD_EXAMPLES "Build simulation examples" OFF)
-  option(BUILD_PLUGINS "Build Pacer plugins?" ON)
-  option(BUILD_INTERFACES "Build Pacer Interfaces?" ON)
 option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
 option(USE_THREADS "Build Pacer with multi-threading support?" OFF)
 
@@ -109,19 +107,18 @@ install (FILES ${CMAKE_BINARY_DIR}/setup.sh DESTINATION share/Pacer)
 
 # install plugins and models
 install (DIRECTORY ${CMAKE_SOURCE_DIR}/example/models DESTINATION ${CMAKE_INSTALL_PREFIX}/share/Pacer)
+if(BUILD_PLUGINS)
 install (DIRECTORY ${CMAKE_BINARY_DIR}/example/plugins DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
+endif(BUILD_PLUGINS)
+if(BUILD_INTERFACES)
 install (DIRECTORY ${CMAKE_BINARY_DIR}/example/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
+endif(BUILD_INTERFACES)
 
 set(REQLIBS ${REQLIBS} Pacer)
 
 # EXAMPLES
 IF(BUILD_EXAMPLES)
-  IF(BUILD_PLUGINS)
-    add_subdirectory( example/plugins )
-  ENDIF(BUILD_PLUGINS)
-  IF(BUILD_INTERFACES)
-    add_subdirectory( example/interfaces )
-  ENDIF(BUILD_INTERFACES)
+  add_subdirectory( example )
 ENDIF(BUILD_EXAMPLES)
 
 IF(BUILD_TESTS)

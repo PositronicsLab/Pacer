@@ -6,6 +6,7 @@
 #include <Pacer/robot.h>
 #include <boost/algorithm/string.hpp>
 #include <Pacer/utilities.h>
+#include <Moby/ArticulatedBody.h>
 
 using namespace Pacer;
 
@@ -272,14 +273,14 @@ void Robot::init_robot(){
   /// The map of objects read from the simulation XML file
   if(model_type.compare("sdf") == 0){
     std::map<std::string, Moby::ControlledBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file);
-    
     for (std::map<std::string, Moby::ControlledBodyPtr>::const_iterator i = READ_MAP.begin();
          i !=READ_MAP.end(); i++)
     {
+      OUT_LOG(logINFO) << "Checking: " << i->first;
       // find the robot reference
       if (!_abrobot)
       {
-        _abrobot = boost::dynamic_pointer_cast<Ravelin::ArticulatedBodyd>(i->second);
+        _abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(i->second);
       }
       
       if (_abrobot)
@@ -290,7 +291,7 @@ void Robot::init_robot(){
     }
     
     if (!_abrobot){
-      throw std::runtime_error("could not find RCArticulatedBody for robot SDF");
+      throw std::runtime_error("could not find RCArticulatedBody for robot SDF: " + robot_model_file);
     }
   } else if(model_type.compare("xml") == 0){
     std::cerr << "look for model: " << robot_model_file << std::endl;
@@ -313,10 +314,10 @@ void Robot::init_robot(){
     }
     
     if (!_abrobot){
-      throw std::runtime_error("could not find RCArticulatedBody for robot XML");
+      throw std::runtime_error("could not find RCArticulatedBody for robot XML: " + robot_model_file);
     }
   } else {
-    throw std::runtime_error("Robot model file has unknown extension : " + model_type);
+    throw std::runtime_error("Robot model file ["+robot_model_file+"] has unknown extension : " + model_type);
   }
   compile();
   

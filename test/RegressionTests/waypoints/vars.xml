@@ -1,5 +1,5 @@
   <XML>
-  <logging type="string">ERROR</logging>
+  <logging type="string">DEBUG1</logging>
   
   <robot-model type="string">links/model.sdf</robot-model>
   <real-time-factor type="double">1</real-time-factor>

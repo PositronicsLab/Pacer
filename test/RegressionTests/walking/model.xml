@@ -25,19 +25,10 @@
   <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
   <DynamicBody dynamic-body-id="LINKS" />
   <DynamicBody dynamic-body-id="GROUND" />
-  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" penalty-kv="100" penalty-kp="100000"  alpha="100" />
+  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
 </TimeSteppingSimulator>
 
-<SDF filename="../../../example/models/links/model.sdf"/>
-
-<Box id="step" xlen="0.05" ylen="0.4" zlen="0.02" />
-
-<RigidBody id="STEP" color="0.6 0.6 0.6 0" enabled="false"
-  position="0.28 0.1 0.01"
-  visualization-id="step"
-  compliant="false">
-  <CollisionGeometry primitive-id="step" />
-</RigidBody>
+<SDF filename="/Users/samzapo/Projects/Experimental/Pacer/example/models/links/model.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
      <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />

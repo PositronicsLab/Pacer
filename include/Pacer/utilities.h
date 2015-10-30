@@ -59,6 +59,20 @@ public:
     p[6] = T.q.w;
     return p;
   }
+  
+  static Ravelin::Pose3d vec_to_pose(const Ravelin::VectorNd& p){
+    Ravelin::Pose3d T;
+    //    Ravelin::Transform3d T = Ravelin::Pose3d::calc_relative_pose(pose,boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d()));
+    T.x[0] = p[0];
+    T.x[1] = p[1];
+    T.x[2] = p[2];
+                 
+    T.q.x  = p[3];
+    T.q.y  = p[4];
+    T.q.z  = p[5];
+    T.q.w  = p[6];
+    return T;
+  }
     // Floating-point modulo
     // The result (the remainder) has same sign as the divisor.
     // Similar to matlab's mod(); Not similar to fmod() -   Mod(-3,4)= 1   fmod(-3,4)= -3

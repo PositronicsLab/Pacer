@@ -46,7 +46,7 @@ static char** param_array_noconst( std::vector< std::string >& params ) {
 #ifdef NO_GTEST
 int main(int argc, char** argv){
 #else
-TEST(RegressionTest,Walking){
+TEST(RegressionTest,Terrain){
 #endif
 
   boost::shared_ptr<Simulator> sim;

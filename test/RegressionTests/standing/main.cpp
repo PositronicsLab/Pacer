@@ -43,6 +43,9 @@ static char** param_array_noconst( std::vector< std::string >& params ) {
 #include <gtest/gtest.h>
 #include <Pacer/utilities.h>
 
+// Check functions
+#include "checks.cpp"
+
 #ifdef NO_GTEST
 int main(int argc, char** argv){
 #else
@@ -129,6 +132,7 @@ TEST(RegressionTest,Walking){
     robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
     std::cout << "qd2 = " << qd << std::endl;
   }
+  check_final_state(robot);
   
   // Clean up Moby
   Moby::close();

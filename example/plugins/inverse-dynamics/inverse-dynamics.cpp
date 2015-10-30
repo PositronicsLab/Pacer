@@ -18,7 +18,7 @@
 
 #include <Moby/LCP.h>
 
-#define TIMING
+//#define TIMING
 
 using namespace Pacer;
 

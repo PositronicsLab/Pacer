@@ -3,14 +3,15 @@
       error-check
       center-of-mass
       end-effectors
+      stand-trajectory
+      ik-feet
       eef-PID-controller
-      gait-planner
+      idyn-controller
   </plugins>
   
   <!--
    OTHER PLUGINS:
    
-   stand-trajectory
    joint-PID-controller
    idyn-controller
    stabilization
@@ -217,8 +218,8 @@
 
 
   <idyn-controller>
-    <file type="string">libinverse-dynamics.so</file>
-    <priority type="double">4</priority>
+    <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
+    <priority type="double">5</priority>
     <real-time-factor type="double">1</real-time-factor>
     <dt type="double">0</dt>
     <alpha type="double">1</alpha>

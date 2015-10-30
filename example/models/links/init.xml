@@ -2,10 +2,8 @@
 <robot-model type="string">links/model.xml</robot-model>
 
 <init>
-  <kinematic type="bool">false</kinematic>
-  
   <base>
-    <x type="double"> 0.0 0.0 0.185 0 0 0</x>
+    <x type="double"> 0.0 0.0 0.18129 0 0 0</x>
     <xd type="double">0 0 0   0 0 0</xd>
   </base>
   

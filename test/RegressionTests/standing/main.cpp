@@ -43,38 +43,10 @@ static char** param_array_noconst( std::vector< std::string >& params ) {
 #include <gtest/gtest.h>
 #include <Pacer/utilities.h>
 
-void check_for_failure(boost::shared_ptr<Ravelin::ArticulatedBodyd>& rb){
-  boost::shared_ptr<RCArticulatedBodyd> robot = 
-    boost::dynamic_pointer_cast<RCArticulatedBodyd>(rb);
-  
-  // Robot Energy checks
-  Ravelin::VectorNd fext;
-  robot->get_generalized_forces(fext);
-
-  // Simulation Exploded
-  ASSERT_GT(1e8,fext.norm_inf());
- 
-
-  // Robot Pose Checks
-  Ravelin::VectorNd q;
-  robot->get_generalized_coordinates_euler(q);
-  Ravelin::Pose3d P = Utility::vec_to_pose(q.segment(q.rows()-7,q.rows()));
-  
-  double roll, pitch, yaw;
-  P.q.to_rpy(roll, pitch, yaw);
-
-  // Robot fell over
-  ASSERT_GT(M_PI_2,std::fabs(roll));
-  ASSERT_GT(M_PI_2,std::fabs(pitch));
-
-  // Robot is not below plane
-  ASSERT_LE(0.0,P.x[2]);
-}
-
 #ifdef NO_GTEST
 int main(int argc, char** argv){
 #else
-TEST(PacerTest,Waypoints){
+TEST(RegressionTest,Walking){
 #endif
 
   boost::shared_ptr<Simulator> sim;
@@ -86,13 +58,12 @@ TEST(PacerTest,Waypoints){
   argvs.push_back("GOOGLE-TEST:PacerTest");
   argvs.push_back("-mt=10");
   argvs.push_back("-s=0.0015");
-  argvs.push_back("-v=67");
+  argvs.push_back("-v=6");
   argvs.push_back("-y=osg");
   // XML output first and last state with viz info
   //  argvs.push_back("-w=0");
   argvs.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
-  //argvs.push_back("model.xml");
-  argvs.push_back("start_state/start.xml");
+  argvs.push_back("model.xml");
   
   
   char** moby_argv = param_array_noconst(argvs);
@@ -144,9 +115,6 @@ TEST(PacerTest,Waypoints){
   while (!stop_sim) {
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc, argv,robot);
-    
-    check_for_failure(robot);
-
     stop_sim = !Moby::step((void*) &sim);
   }
   

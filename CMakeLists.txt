@@ -122,6 +122,9 @@ IF(BUILD_EXAMPLES)
 ENDIF(BUILD_EXAMPLES)
 
 IF(BUILD_TESTS)
+  enable_testing()
+  add_custom_target(unit-test ${CMAKE_CTEST_COMMAND} -V)
+  add_custom_target(regression-test ${CMAKE_CTEST_COMMAND} -V)
   add_subdirectory( test )
 ENDIF(BUILD_TESTS)
 

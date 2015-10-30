@@ -16,4 +16,4 @@ else()
 endif()
 
 add_test(NAME ${TEST_BIN_NAME} COMMAND ${TEST_BIN_NAME} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-add_dependencies(regression-test ${TEST_BIN_NAME})
+add_dependencies(unit-test ${TEST_BIN_NAME})

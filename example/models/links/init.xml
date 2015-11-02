@@ -1,5 +1,5 @@
 <XML>
-<robot-model type="string">links/model.xml</robot-model>
+<robot-model type="string">links/model.sdf</robot-model>
 
 <init>
   <base>

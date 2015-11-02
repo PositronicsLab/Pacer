@@ -114,41 +114,11 @@
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">0</priority>
      <max-forward-speed type="double">0.2</max-forward-speed>
-     <max-strafe-speed type="double">0.05</max-strafe-speed>
+     <max-strafe-speed type="double">0.00</max-strafe-speed>
      <max-turn-speed type="double">0.5</max-turn-speed>
      <tolerance type="double">0.1</tolerance>
      <waypoints type="double vector">
-       0.00000   0.00000
-       0.10000   0.05878
-       0.20000   0.09511
-       0.30000   0.09511
-       0.40000   0.05878
-       0.50000   0.00000
-       0.60000  -0.05878
-       0.70000  -0.09511
-       0.80000  -0.09511
-       0.90000  -0.05878
-       1.00000  -0.00000
-       1.10000   0.05878
-       1.20000   0.09511
-       1.30000   0.09511
-       1.40000   0.05878
-       1.50000   0.00000
-       1.60000  -0.05878
-       1.70000  -0.09511
-       1.80000  -0.09511
-       1.90000  -0.05878
-       2.00000  -0.00000
-       2.10000   0.05878
-       2.20000   0.09511
-       2.30000   0.09511
-       2.40000   0.05878
-       2.50000   0.00000
-       2.60000  -0.05878
-       2.70000  -0.09511
-       2.80000  -0.09511
-       2.90000  -0.05878
-       3.00000  -0.00000
+       1.00000  0.00000
      </waypoints>
   </waypoints>
   
@@ -166,7 +136,7 @@
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.02</step-height>
+    <step-height type="double">0.035</step-height>
     <gait-duration type="double">0.5</gait-duration>
     <length type="double">0.309926</length>
     <width type="double">0.1344496</width>

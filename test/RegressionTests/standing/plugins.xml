@@ -6,7 +6,7 @@
       stand-trajectory
       ik-feet
       eef-PID-controller
-      idyn-controller
+   idyn-controller
   </plugins>
   
   <!--

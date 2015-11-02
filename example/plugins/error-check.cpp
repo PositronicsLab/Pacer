@@ -22,6 +22,12 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   up = Ravelin::Pose3d::transform_vector(Pacer::GLOBAL,up);
   if(up[2] < 0)
     throw std::runtime_error("Robot flipped over!");
+    
+  std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+  ctrl->get_link_contacts("BODY0",c);
+  if(c.size() != 0)
+    throw std::runtime_error("Robot body contacted ground!");
+    
 
 }
 

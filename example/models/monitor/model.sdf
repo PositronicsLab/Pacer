@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version='1.5'>
-  <model name='Monitor'>
+  <model name='LINKS'>
   <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.so"/>
   <pose>0 0 0.19 0 -0 0</pose>
     <link name='BODY0'>

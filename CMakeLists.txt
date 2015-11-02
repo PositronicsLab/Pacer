@@ -40,7 +40,6 @@ option(BUILD_EXAMPLES "Build simulation examples" OFF)
 option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
 option(USE_THREADS "Build Pacer with multi-threading support?" OFF)
 
-
 # fix the C++ linking error on 64-bit Linux
 set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 

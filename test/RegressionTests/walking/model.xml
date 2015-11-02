@@ -28,7 +28,7 @@
   <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
 </TimeSteppingSimulator>
 
-<SDF filename="/Users/samzapo/Projects/Experimental/Pacer/example/models/links/model.sdf"/>
+<SDF filename="../../../example/models/links/model.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
      <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />

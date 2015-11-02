@@ -25,34 +25,39 @@
   <ContactParameters object1-id="LINKS" object2-id="GROUND2" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
 </TimeSteppingSimulator>
 
-<SDF filename="/Users/samzapo/Projects/Experimental/Pacer/example/models/links/model.sdf"/>
-
-<Box id="step" xlen="0.05" ylen="0.4" zlen="0.02" />
-
-<RigidBody id="STEP" color="0.6 0.6 0.6 0" enabled="false"
-  position="0.28 0.1 0.01"
-  visualization-id="step"
-  compliant="false">
-  <CollisionGeometry primitive-id="step" />
-</RigidBody>
+<SDF filename="../../../example/models/links/model.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
 <!--     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />-->
-     <Heightmap id="ground-primitive" filename="heightmap.dat" width="1" depth="1" rpy="1.5708 0 0" />
-<RigidBody id="GROUND1" color="0.6 0.6 0.6 0" enabled="false"
-  position="0 0 -0.02"
-  visualization-id="ground-primitive"
-  compliant="false">
-    <CollisionGeometry primitive-id="ground-primitive" />
-  </RigidBody>
-
      <Heightmap id="ground-primitive1" filename="heightmap2.dat" width="1" depth="1" rpy="1.5708 0 0" />
-<RigidBody id="GROUND2" color="0.6 0.6 0.6 0" enabled="false"
-  position="1.0 0 -0.02"
+<RigidBody id="GROUND1" color="0.6 0.6 0.6 0" enabled="false"
+  position="0 0 -0.04"
   visualization-id="ground-primitive1"
   compliant="false">
     <CollisionGeometry primitive-id="ground-primitive1" />
   </RigidBody>
 
+     <Heightmap id="ground-primitive2" filename="heightmap2.dat" width="1" depth="1" rpy="1.5708 0 0" />
+<RigidBody id="GROUND2" color="0.6 0.6 0.6 0" enabled="false"
+  position="1 0 -0.04"
+  visualization-id="ground-primitive2"
+  compliant="false">
+    <CollisionGeometry primitive-id="ground-primitive2" />
+  </RigidBody>
+
+  <!--
+  <DynamicBody dynamic-body-id="GROUND" />
+  <DisabledPair object1-id="GROUND" object2-id="GROUND2"/>
+  <DisabledPair object1-id="GROUND1" object2-id="GROUND"/>
+  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
+     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />
+     <Plane id="ground-primitive" rpy="1.5708 0 0" />
+<RigidBody id="GROUND" color="0.6 0.6 0.6 0" enabled="false"
+  position="0 0 0.0"
+  visualization-id="ground-primitive-viz"
+  compliant="false">
+    <CollisionGeometry primitive-id="ground-primitive" />
+  </RigidBody>
+-->
   </MOBY>
 </XML>

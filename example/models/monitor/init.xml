@@ -1,9 +1,9 @@
 <XML>
-  <robot-model type="string">monitor/model.xml</robot-model>
+<robot-model type="string">monitor/model.sdf</robot-model>
 
 <init>
   <base>
-    <x type="double"> 0.0 0.0 0.185 0 0 0</x>
+    <x type="double"> 0.0 0.0 0.18129 0 0 0</x>
     <xd type="double">0 0 0   0 0 0</xd>
   </base>
   

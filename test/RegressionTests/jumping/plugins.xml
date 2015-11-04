@@ -1,6 +1,12 @@
 <XML>
   <plugins type="string vector">
     plugin-scheduler
+    end-effectors
+    error-check
+    center-of-mass
+    ik-feet
+    eef-PID-controller
+    idyn-controller
   </plugins>
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
@@ -14,27 +20,27 @@
     <init>
       <time type="double">0</time>
       <open type="string vector">
-        gamepad
-        end-effectors
-        error-check
-        center-of-mass
-        orient-base
-        settle-feet
-        eef-PID-controller
+        stand-trajectory
       </open>
     </init>
     <!--   WALK   -->
     
     <jump>
       <time type="double">0.1</time>
+      <close type="string vector">
+        stand-trajectory
+      </close>
       <open type="string vector">
         jump-to
       </open>
-      <close type="string vector">
-        settle-feet
-      </close>
     </jump>
   </plugin-scheduler>
+  
+  <stand-trajectory>
+    <file type="string">libstand-trajectory.so</file>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">1</priority>
+  </stand-trajectory>
   
   <error-check>
     <file type="string">liberror-check.so</file>

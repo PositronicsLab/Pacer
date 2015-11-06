@@ -32,11 +32,14 @@ static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
 
 static double FREQ = 500;
 
-static void control_motor(){
-  while(true){
+void *control_motor(void* data){
+#ifdef USE_THREADS
+  while(true)
+#endif
+  {
     static Ravelin::VectorNd q_motors,qd_motors,u_motors;
 #ifdef USE_THREADS
-    if(pthread_mutex_trylock(&joint_data_mutex_);)
+    if(pthread_mutex_trylock(&joint_data_mutex_))
 #endif
     {
       q_motors = q_motors_data;
@@ -44,15 +47,27 @@ static void control_motor(){
       qd_motors = qd_motors_data;
       u_motors = u_motors_data;
 #ifdef USE_THREADS
-      pthread_mutex_unlock(&joint_data_mutex_);;
+      pthread_mutex_unlock(&joint_data_mutex_);
 #endif
     }
  
 #ifdef USE_DXL
-//    std::cout << q_motors << std::endl;
+  std::cout <<"q =  " <<  q_motors << std::endl;
+    std::cout << "qd = "  << qd_motors << std::endl;
     std::vector<double> qm = std::vector<double>(q_motors.begin(),q_motors.end());
     std::vector<double> qdm = std::vector<double>(qd_motors.begin(),qd_motors.end());
-    dxl_->set_state(qm,qdm);
+    std::vector<bool> negate_motor = boost::assign::list_of
+      (false)(false)(true)(true)
+      (false)(false)(true)(true)
+      (false)(false)(true)(true);
+      for(int i=0;i<qm.size();i++){
+        if(negate_motor[i]){
+          qm[i] = -qm[i];
+          qdm[i] = -qdm[i];
+        }
+      }
+
+      dxl_->set_state(qm,qdm);
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
 #endif
@@ -93,12 +108,26 @@ void init(std::string model_f,std::string vars_f){
 
   dxl_->names = dxl_name;
   // Set Joint Angles
-  std::vector<int> dxl_tare = boost::assign::list_of
-      (0)(0)(0)(0)
-      (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
-      (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
+  //std::vector<int> dxl_tare = boost::assign::list_of
+  //    (0)(0)(0)(0)
+  //    (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
+  //    (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * MX_64R_RAD2UNIT+40);
+  dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT+250);
+  
+  dxl_->tare.push_back(0);
+  dxl_->tare.push_back(0);
+  dxl_->tare.push_back(0);
+  dxl_->tare.push_back(0);
 
-  dxl_->tare = dxl_tare;
+  //dxl_->tare = dxl_tare;
 
   // Set Dynamixel Type
   std::vector<DXL::Dynamixel::Type> dxl_type = boost::assign::list_of
@@ -107,10 +136,21 @@ void init(std::string model_f,std::string vars_f){
     (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F);
 
   dxl_->stype = dxl_type;
+  dxl_->ids.push_back(1);
+  dxl_->ids.push_back(100);
+  dxl_->ids.push_back(3);
+  dxl_->ids.push_back(4);
+     
+  dxl_->ids.push_back(5);
+  dxl_->ids.push_back(6);
+  dxl_->ids.push_back(7);
+  dxl_->ids.push_back(8);
+    
+  dxl_->ids.push_back(9);
+  dxl_->ids.push_back(10);
+  dxl_->ids.push_back(11);
+  dxl_->ids.push_back(12);
 
-  for(int i=1;i<=dxl_->names.size();i++){
-    dxl_->ids.push_back(i);
-  }
     q_motors_data.set_zero(dxl_->ids.size());
     qd_motors_data.set_zero(dxl_->ids.size());
     u_motors_data.set_zero(dxl_->ids.size());
@@ -135,6 +175,7 @@ double get_current_time()
 
 void controller(double t)
 {
+  //std::cout << "controller()" << std::endl;
   static double last_t = -0.001;
   double dt = t-last_t;
 
@@ -151,12 +192,9 @@ void controller(double t)
 
 #ifdef USE_DXL
 #ifdef USE_THREADS
-  if(pthread_mutex_lock(&joint_data_mutex_);)
+  if(pthread_mutex_lock(&joint_data_mutex_))
 #endif
   {
-//    for(int i=0;i<DXL::N_JOINTS;i++)
-//      qd_motors[i] = robot_ptr->qd_joints[dxl_->JointName(i)];
-
     std::map<std::string,Ravelin::VectorNd> joint_val_map;
     robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_val_map);
 
@@ -166,21 +204,22 @@ void controller(double t)
     //for(int i=0;i<dxl_->ids.size();i++)
     //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
 #ifdef USE_THREADS
-    pthread_mutex_unlock(&joint_data_mutex_);;
+    pthread_mutex_unlock(&joint_data_mutex_);
 #endif 
   }
 #endif
 
 #ifdef USE_THREADS
-  static int iret = pthread_create( &thread, NULL, control_motor);
+  const char *message;
+  static int iret = pthread_create( &thread, NULL,&control_motor,(void*)NULL);
   if(iret)
   {
-    fprintf(stderr,"Error - pthread_create() return code: %d\n",iret1);
+    fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
     exit(1);
   }
 
 #else
-  control_motor();
+  control_motor((void*)NULL);
 #endif
     last_t = t;
 #ifdef TIMING
@@ -221,7 +260,9 @@ int main(int argc, char* argv[])
     //sleep(1.0/FREQ);
   }
   
+#ifdef USE_THREADS
   pthread_join( thread, NULL);
+#endif
 #endif
 }
 

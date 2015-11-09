@@ -1,5 +1,5 @@
 #include <Moby/ControlledBody.h>
-#include <Moby/TimeSteppingSimulator.h>
+#include <Moby/Simulator.h>
 #include <Moby/RCArticulatedBody.h>
 #include <Moby/ArticulatedBody.h>
 #include <stdlib.h>
@@ -25,8 +25,8 @@ using namespace Pacer;
 
 namespace Moby {
   extern void close();
-  extern bool init(int argc, char** argv, void* s);
-  extern bool step(void* s);
+  extern bool init(int argc, char** argv, boost::shared_ptr<Simulator>& s);
+  extern bool step(boost::shared_ptr<Simulator> s);
 }
 
 static char** param_array_noconst( std::vector< std::string >& params ) {
@@ -104,7 +104,7 @@ TEST(PacerTest,Waypoints){
 //#endif
 
   // Ask Moby to init the simulator with options
-  Moby::init(argvs.size(), moby_argv,(void*) &sim);
+  Moby::init(argvs.size(), moby_argv,sim);
 
   if(!sim)
     throw std::runtime_error("Could not start Moby");
@@ -147,7 +147,7 @@ TEST(PacerTest,Waypoints){
     
     check_for_failure(robot);
 
-    stop_sim = !Moby::step((void*) &sim);
+    stop_sim = !Moby::step(sim);
   }
   
   /*

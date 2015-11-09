@@ -26,10 +26,10 @@
   <DynamicBody dynamic-body-id="LINKS" />
   <DynamicBody dynamic-body-id="GROUND" />
   <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
-  <ImplicitConstraint joint-id="planar" />
+<!--  <ImplicitConstraint joint-id="planar" /> -->
 </TimeSteppingSimulator>
 
-<SDF filename="../../../example/models/links/model.sdf"/>
+<!-- <SDF filename="../../../example/models/links/model.sdf"/> -->
 
   <!-- setup a planar joint -->
   <PlanarJoint id="planar" inboard-link-id="GROUND" outboard-link-id="BODY0" normal="0 0 1" location="0 0 0" />

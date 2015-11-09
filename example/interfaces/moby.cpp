@@ -270,17 +270,9 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
     robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
     robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
     
-    if(!abrobot->get_kinematic()){
-      for(int i=0;i<joints.size();i++){
+    for(int i=0;i<joints.size();i++){
         //std::cout << joints[i]->joint_id << " = "  << u[joints[i]->joint_id] << std::endl;
         joints[i]->add_force(u[joints[i]->joint_id]);
-      }
-    } else {
-      for(int i=0;i<joints.size();i++){
-        joints[i]->q = q[joints[i]->joint_id];
-        joints[i]->qd = qd[joints[i]->joint_id];
-      }
-//      abrobot->update_link_poses();
     }
   }
   robot_ptr->reset_state();

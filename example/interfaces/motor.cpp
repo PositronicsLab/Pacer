@@ -30,7 +30,7 @@ unsigned NDOFS;
 
 static Ravelin::VectorNd q_motors_data,qd_motors_data,u_motors_data;
 
-static double FREQ = 500;
+static double FREQ = 1000;
 
 void *control_motor(void* data){
 #ifdef USE_THREADS
@@ -51,26 +51,25 @@ void *control_motor(void* data){
 #endif
     }
  
-#ifdef USE_DXL
-  std::cout <<"q =  " <<  q_motors << std::endl;
-    std::cout << "qd = "  << qd_motors << std::endl;
+    OUT_LOG(logERROR) <<"q =  " <<  q_motors ;
+    OUT_LOG(logERROR) << "qd = "  << qd_motors ;
     std::vector<double> qm = std::vector<double>(q_motors.begin(),q_motors.end());
     std::vector<double> qdm = std::vector<double>(qd_motors.begin(),qd_motors.end());
-    std::vector<bool> negate_motor = boost::assign::list_of
-      (false)(false)(true)(true)
-      (false)(false)(true)(true)
-      (false)(false)(true)(true);
-      for(int i=0;i<qm.size();i++){
-        if(negate_motor[i]){
-          qm[i] = -qm[i];
-          qdm[i] = -qdm[i];
-        }
-      }
-
+//    std::vector<bool> negate_motor = boost::assign::list_of
+//      (false)(false)(true)(true)
+//      (false)(false)(true)(true)
+//      (false)(false)(true)(true);
+//      for(int i=0;i<qm.size();i++){
+//        if(negate_motor[i]){
+//          qm[i] = -qm[i];
+//          qdm[i] = -qdm[i];
+//        }
+//      }
+#ifdef USE_DXL
       dxl_->set_state(qm,qdm);
+#endif
 //    dxl_->set_torque(std::vector<double>(q_motors.begin(),q_motors.end()));
     sleep(1.0/FREQ);
-#endif
   }
 }
 
@@ -114,13 +113,13 @@ void init(std::string model_f,std::string vars_f){
   //    (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
   dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
   dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
   dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
   
   dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
   dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * MX_64R_RAD2UNIT+40);
   dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT+250);
+  dxl_->tare.push_back( M_PI_2 * MX_64R_RAD2UNIT+40);
   
   dxl_->tare.push_back(0);
   dxl_->tare.push_back(0);
@@ -138,18 +137,18 @@ void init(std::string model_f,std::string vars_f){
   dxl_->stype = dxl_type;
   dxl_->ids.push_back(1);
   dxl_->ids.push_back(100);
-  dxl_->ids.push_back(3);
   dxl_->ids.push_back(4);
-     
+  dxl_->ids.push_back(3);
+  
   dxl_->ids.push_back(5);
   dxl_->ids.push_back(6);
-  dxl_->ids.push_back(7);
   dxl_->ids.push_back(8);
-    
+  dxl_->ids.push_back(7);
+  
   dxl_->ids.push_back(9);
   dxl_->ids.push_back(10);
-  dxl_->ids.push_back(11);
   dxl_->ids.push_back(12);
+  dxl_->ids.push_back(11);
 
     q_motors_data.set_zero(dxl_->ids.size());
     qd_motors_data.set_zero(dxl_->ids.size());
@@ -187,10 +186,12 @@ void controller(double t)
   robot_ptr->set_generalized_value(Pacer::Robot::position,robot_ptr->get_generalized_value(Pacer::Robot::position_goal));
   robot_ptr->set_generalized_value(Pacer::Robot::velocity,robot_ptr->get_generalized_value(Pacer::Robot::velocity_goal));
   robot_ptr->set_generalized_value(Pacer::Robot::acceleration,robot_ptr->get_generalized_value(Pacer::Robot::acceleration_goal));
+  
+  robot_ptr->set_joint_generalized_value(Pacer::Robot::position,robot_ptr->get_joint_generalized_value(Pacer::Robot::position) += (robot_ptr->get_joint_generalized_value(Pacer::Robot::velocity_goal)*=dt));
+
 
   robot_ptr->control(t);
 
-#ifdef USE_DXL
 #ifdef USE_THREADS
   if(pthread_mutex_lock(&joint_data_mutex_))
 #endif
@@ -198,16 +199,22 @@ void controller(double t)
     std::map<std::string,Ravelin::VectorNd> joint_val_map;
     robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_val_map);
 
+#ifdef USE_DXL
     for(int i=0;i<dxl_->ids.size();i++)
       q_motors_data[i] = joint_val_map[dxl_->JointName(i)][0];
-
     //for(int i=0;i<dxl_->ids.size();i++)
     //  u_motors_data[i] = robot_ptr->get_joint_value(Pacer::Robot::load_goal,dxl_->JointName(i),0);
+#else
+    std::map<std::string,Ravelin::VectorNd>::iterator it;
+    for (it = joint_val_map.begin(); it!=joint_val_map.end(); it++) {
+      OUT_LOG(logERROR) << it->first << " = " << it->second ;
+    }
+#endif
+
 #ifdef USE_THREADS
     pthread_mutex_unlock(&joint_data_mutex_);
 #endif 
   }
-#endif
 
 #ifdef USE_THREADS
   const char *message;
@@ -217,7 +224,6 @@ void controller(double t)
     fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
     exit(1);
   }
-
 #else
   control_motor((void*)NULL);
 #endif
@@ -248,7 +254,6 @@ int main(int argc, char* argv[])
 
   
 
-#ifdef USE_DXL
   double t=0;
 //  struct timeval start_t, now_t;
 //  gettimeofday(&start_t, NULL);
@@ -262,7 +267,6 @@ int main(int argc, char* argv[])
   
 #ifdef USE_THREADS
   pthread_join( thread, NULL);
-#endif
 #endif
 }
 

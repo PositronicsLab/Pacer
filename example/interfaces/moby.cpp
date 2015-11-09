@@ -4,6 +4,7 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 #include <Moby/ArticulatedBody.h>
+#include <Moby/RCArticulatedBody.h>
 #include <Moby/ConstraintSimulator.h>
 
 #include <Pacer/controller.h>
@@ -16,13 +17,14 @@
 using Pacer::Controller;
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
-// pointer to the simulator
- boost::shared_ptr<Moby::Simulator> sim;
-// pointer to the articulated body in Moby
- boost::shared_ptr<Moby::ArticulatedBody> abrobot;
-
 // pointer to the Pacer controller
  boost::shared_ptr<Controller> robot_ptr;
+
+// Weak pointer to moby objects
+// pointer to the simulator
+boost::weak_ptr<Moby::Simulator> sim_weak_ptr;
+// pointer to the articulated body in Moby
+boost::weak_ptr<Moby::ArticulatedBody> abrobot_weak_ptr;
 
 
 #ifdef USE_OSG_DISPLAY
@@ -33,6 +35,9 @@ void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> s
 void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
   for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
   {
+    // pointer to the simulator
+    boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
+    
     switch((*it)->eType){
       case Pacer::Visualizable::eRay:{
         Pacer::Ray * v = static_cast<Pacer::Ray*>((it)->get());
@@ -65,6 +70,9 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
 // implements a controller callback for Moby
 void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, void*)
 {
+
+  boost::shared_ptr<Moby::RCArticulatedBody>
+    abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(dbp);
 
   int num_joint_dof = 0;
   static std::vector<JointPtr> joints = abrobot->get_joints();
@@ -200,6 +208,9 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
   
   /////////////////////////////////////////////////////////////////////////////
   /////////////////////// Collision Detection: ////////////////////////////////
+  // pointer to the simulator
+  boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
+
   boost::shared_ptr<Moby::ConstraintSimulator> csim;
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
 
@@ -270,6 +281,40 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
     robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
     robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
     
+    // Enforce joint and motor limits
+    std::vector<std::string> joint_names = robot_ptr->get_data<std::vector<std::string> >("init.joint.id");
+    std::vector<double> joint_dofs = robot_ptr->get_data<std::vector<double> >("init.joint.dofs");
+    std::vector<double> torque_limit;
+    bool apply_torque_limit = robot_ptr->get_data<std::vector<double> >("init.joint.limits.u",torque_limit);
+    
+    std::vector<double> velocity_limit;
+    bool apply_velocity_limit = robot_ptr->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
+
+    for (int i=0, ii=0; i<joint_names.size(); i++) {
+      for (int j=0; j<joint_dofs[i]; j++,ii++) {
+        // If motor speed limit met, cancel torque
+        // (if applied in direction of limit)
+        if(apply_velocity_limit){
+          if (qd[joint_names[i]][j] > velocity_limit[ii]) {
+            if(u[joint_names[i]][j] > 0)
+              u[joint_names[i]][j] = 0;
+          } else if  (qd[joint_names[i]][j] < -velocity_limit[ii]) {
+            if(u[joint_names[i]][j] < 0)
+              u[joint_names[i]][j] = 0;
+          }
+        }
+        
+        if(apply_torque_limit){
+          // Limit torque
+          if (u[joint_names[i]][j] > torque_limit[ii]) {
+            u[joint_names[i]][j] = torque_limit[ii];
+          } else if  (u[joint_names[i]][j] < -torque_limit[ii]) {
+            u[joint_names[i]][j] = -torque_limit[ii];
+          }
+        }
+      }
+    }
+    
     if(!abrobot->get_kinematic()){
       for(int i=0;i<joints.size();i++){
         //std::cout << joints[i]->joint_id << " = "  << u[joints[i]->joint_id] << std::endl;
@@ -284,6 +329,10 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
     }
   }
   robot_ptr->reset_state();
+  std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
+  for(int i=0;i<eef_names.size();i++)
+    robot_ptr->remove_data(eef_names[i]+".contact-force");
+
 }
 
 // ============================================================================
@@ -294,6 +343,12 @@ void controller_callback(boost::shared_ptr<Moby::ControlledBody> dbp, double t, 
 void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
+  
+  // pointer to the simulator
+  boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
+  // pointer to the articulated body in Moby
+  boost::shared_ptr<Moby::ArticulatedBody> abrobot = abrobot_weak_ptr.lock();
+
   double t = sim->current_time;
   static double last_time = -0.001;
   double dt = t - last_time;
@@ -334,9 +389,14 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       if(robot_ptr->is_end_effector(sb1->body_id)){
         normal_sum += impulse.dot(normal);
         contacts.push_back(robot_ptr->create_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant));
+        robot_ptr->set_data<Ravelin::Vector3d>(sb1->body_id+".contact-force",
+        Ravelin::Vector3d(impulse.dot(normal),impulse.dot(e[i].contact_tan1),impulse.dot(e[i].contact_tan2))
+                                               );
+
       } else if(robot_ptr->is_end_effector(sb2->body_id)){
         normal_sum -= impulse.dot(normal);
         contacts.push_back(robot_ptr->create_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant));
+        robot_ptr->set_data<Ravelin::Vector3d>(sb2->body_id+".contact-force",Ravelin::Vector3d(impulse.dot(-normal),impulse.dot(e[i].contact_tan1),impulse.dot(-e[i].contact_tan2)));
       } else {
         continue;  // Contact doesn't include an end-effector  
       }
@@ -362,6 +422,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Get State: ///////////////////////////////////
 
+#ifdef COMPARE_SIM_STATE
   int num_joint_dof;
   
   static std::vector<JointPtr> joints = abrobot->get_joints();
@@ -405,10 +466,11 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   
   OUT_LOG(logERROR) << "generalized_q (post-contact) " << generalized_q << normal_sum ;
   OUT_LOG(logERROR) << "generalized_qd (post-contact) " << generalized_qd << normal_sum ;
-
+#endif
 }
 
 boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
+  
 
   boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
 
@@ -458,6 +520,11 @@ extern "C" {
 
 void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
 {
+  // pointer to the simulator
+  boost::shared_ptr<Moby::Simulator> sim;
+  // pointer to the articulated body in Moby
+  boost::shared_ptr<Moby::ArticulatedBody> abrobot;
+
   std::cout << "STARTING MOBY PLUGIN" << std::endl;
   
   // If use robot is active also init dynamixel controllers
@@ -482,9 +549,13 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   if(!sim)
     throw std::runtime_error("Could not find simulator!");
   
+  sim_weak_ptr = boost::weak_ptr<Moby::Simulator>(sim);
+
   if(!abrobot)
     throw std::runtime_error("Could not find robot in simulator!");
   
+  abrobot_weak_ptr = boost::weak_ptr<Moby::ArticulatedBody>(abrobot);
+
   boost::shared_ptr<Moby::ConstraintSimulator>
     csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
   
@@ -514,14 +585,35 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   robot_ptr->get_joint_value(Pacer::Robot::position,q_start);
   robot_ptr->get_joint_value(Pacer::Robot::velocity,qd_start);
   
+  std::vector<boost::shared_ptr<Ravelin::Jointd> > joints = abrobot->get_joints();
+  
+  for(unsigned i=0;i<joints.size();i++){
+    if(joints[i]->num_dof() != 0){
+      assert(joints[i]->num_dof() == q_start[joints[i]->joint_id].rows());
+      joints[i]->q = q_start[joints[i]->joint_id];
+      joints[i]->qd = qd_start[joints[i]->joint_id];
+    }
+  }
+  
+  boost::shared_ptr<Moby::RCArticulatedBody>
+  rcabrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(abrobot);
+  rcabrobot->update_link_poses();
+  
   Ravelin::VectorNd base_x, base_xd;
-  robot_ptr->get_generalized_value(Pacer::Robot::position,base_x);
-  robot_ptr->get_generalized_value(Pacer::Robot::velocity,base_xd);
+  robot_ptr->get_base_value(Pacer::Robot::position,base_x);
+  robot_ptr->get_base_value(Pacer::Robot::velocity,base_xd);
   
-  OUTLOG(base_x,"Initial base coords",logERROR);
+  OUTLOG(base_x,"Initial base Coords",logERROR);
+  OUTLOG(base_xd,"Initial base Vel",logERROR);
   
-  abrobot->set_generalized_coordinates_euler(base_x);
-  abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,base_xd);
+  Ravelin::VectorNd gq, gqd;
+  abrobot->get_generalized_coordinates_euler(gq);
+  gq.set_sub_vec(gq.size()-7,base_x);
+  abrobot->set_generalized_coordinates_euler(gq);
+
+  abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
+  gqd.set_sub_vec(gqd.size()-6,base_xd);
+  abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
 }
 } // end extern C
 

@@ -416,23 +416,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         OUT_LOG(logERROR) << "normal: " << c[j]->normal;
         OUT_LOG(logERROR) << "tangent: " << c[j]->tangent;
         OUT_LOG(logERROR) << "point: " << c[j]->point;
-//        contacts.push_back(c[j]);
         std::string id(c[j]->id);
         pos = c[j]->point;
+        Ravelin::Vector3d cf(0,0,0);
+        ctrl->get_data<Ravelin::Vector3d>(id+".contact-force",cf);
+        // Normal force > tolerance
+        if (cf[0] > 0.5) {
 //        for (int k=0; k<num_added[i]; k++) {
           contacts.push_back(ctrl->create_contact(id,pos,c[j]->normal,c[j]->tangent,c[j]->impulse,c[j]->mu_coulomb,c[j]->mu_viscous,0,c[j]->compliant));
           indices.push_back((unsigned) i);
 //        }
-      }
-    } else {
-      Vector3d x = ctrl->get_data<Ravelin::Vector3d>(active_feet[i]+".state.x");
-      x.pose = base_link_frame;
-      Vector3d foot_rad(0,0,0.005);
-      pos = Pose3d::transform_point(Pacer::GLOBAL,x) - foot_rad;
-      OUT_LOG(logERROR) << "contact-point: " << x << " <-- " << pos;
-      if (pos[2] < 0.001){
-        contacts.push_back(ctrl->create_contact(active_feet[i],pos,Vector3d(0,0,1),Vector3d(1,0,0),Vector3d(0,0,0),0,0,0,false));
-        indices.push_back((unsigned) i);
+        }
       }
     }
   }

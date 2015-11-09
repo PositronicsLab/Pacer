@@ -55,39 +55,9 @@ bool eval_Nd_cubic_spline(std::vector<Trajectory>& trajs, double t, VectorNd& x,
   return RETURN_FLAG;
 }
 
-std::vector<Trajectory> calc_jump(){
-  // Set takeoff angle
-  double angle_of_elevation = ctrl->get_data<double>(plugin_namespace + ".angle-of-elevation");
-  double heading_angle = ctrl->get_data<double>(plugin_namespace + ".heading");
-  //distance to goal
-  double x = ctrl->get_data<double>(plugin_namespace + ".range");
+std::vector<Trajectory> calc_crouch(){
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
-  
-  // 3d velocity
-  double v_spatial = sqrt((grav * x) / sin(2.0 * angle_of_elevation));
-  OUTLOG(v_spatial, "v_spatial", logDEBUG);
-  
-  // 2d (planar) velocity
-  double v_horizontal = v_spatial * std::cos(angle_of_elevation);
-  OUTLOG(v_horizontal, "v_horizontal", logDEBUG);
-  
-  // directional velocities
-  // X
-  double v_forward = v_horizontal * std::cos(heading_angle);
-  OUTLOG(v_forward, "v_forward", logDEBUG);
-  // Y
-  double  v_sideways = v_horizontal * std::sin(heading_angle);
-  OUTLOG(v_sideways, "v_sideways", logDEBUG);
-  // Z
-  double v_vertical = v_spatial * std::sin(angle_of_elevation);
-  OUTLOG(v_vertical, "v_vertical", logDEBUG);
-  
-  Vector3d v_liftoff(v_forward,v_sideways,v_vertical);
-  OUTLOG(v_liftoff.norm(), "||v_liftoff||", logERROR);
-  OUTLOG(fabs(v_spatial), "|v_spatial|", logERROR);
-  
-  // Check that we did this right
-  assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Pacer::NEAR_ZERO);
+  std::vector<double> position = ctrl->get_data<std::vector<double> >(plugin_namespace + ".position");
   
   std::vector<VectorNd> X, Xd;
   std::vector<double> T;
@@ -95,7 +65,7 @@ std::vector<Trajectory> calc_jump(){
   //Xd0
   Xd.push_back(VectorNd::zero(3));
   //Xdf
-  Xd.push_back(VectorNd(3,v_liftoff.data()));
+  Xd.push_back(VectorNd::zero(3));
   
   // n pos values (start, via, and end)
   // X0
@@ -103,17 +73,15 @@ std::vector<Trajectory> calc_jump(){
   T.push_back(0);
   
   // Xf
-  X.push_back(VectorNd::zero(3));
-  X.back()[0] += 0.05;
-  X.back()[2] += 0.08;
+  X.push_back(VectorNd(3,Vector3d(position[0],position[1],position[2]).data()));
   T.push_back(T.back()+duration);
   
-  std::vector<Trajectory> leap_trajectory = init_Nd_cubic_spline(X,Xd,T);
-  if(!calc_Nd_cubic_spline(leap_trajectory)){
-    throw std::runtime_error("Jump calculation failed");
+  std::vector<Trajectory> movement_trajectory = init_Nd_cubic_spline(X,Xd,T);
+  if(!calc_Nd_cubic_spline(movement_trajectory)){
+    throw std::runtime_error("Movement calculation failed");
   }
   
-  return leap_trajectory;
+  return movement_trajectory;
 }
 
 
@@ -136,17 +104,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   
   { // Do spline calculations
-    static std::vector<Trajectory> leap_spline;
+    static std::vector<Trajectory> crouch_spline;
     
     if(t >= start_jump_time){
       
-      if (leap_spline.empty()) {
-        std::cout << "Calculating jump" << std::endl;
-        leap_spline = calc_jump();
+      if (crouch_spline.empty()) {
+        OUT_LOG(logDEBUG) << "Calculating Crouch";
+        crouch_spline = calc_crouch();
       }
       
       // Make sure we're not out of time bounds
-      //      if(leap_spline[0].T[leap_spline[0].T.rows()-1] > t-start_time)
+      //      if(crouch_spline[0].T[crouch_spline[0].T.rows()-1] > t-start_time)
       //        throw std::runtime_error("End of jump!");
       
       // Disable joint Feedback
@@ -158,34 +126,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_current);
       
       // Find base trajectory
-      if(!eval_Nd_cubic_spline(leap_spline,t-start_jump_time,x,xd,xdd)){
-        ctrl->open_plugin("reset-trajectory");
-        ctrl->close_plugin("eef-PID-controller");
-        ctrl->close_plugin(plugin_namespace);
+      if(!eval_Nd_cubic_spline(crouch_spline,t-start_jump_time,x,xd,xdd)){
         return;
       }
-      
-#ifndef USE_OSG_DISPLAY
-      com_x.pose = Pacer::GLOBAL;
-      double heading = ctrl->get_data<double>(plugin_namespace + ".heading");
-      double range = ctrl->get_data<double>(plugin_namespace + ".range");
-      
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1)));
-      
-      for(double i=start_jump_time;i<start_jump_time+duration;i+=0.01){
-        VectorNd x(3), xd(3), xdd(3);
-        if(eval_Nd_cubic_spline(leap_spline,i,x,xd,xdd)){
-          Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(  Vector3d(x[0],x[1],x[2]) + com_x, Vector3d(x[0],x[1],x[2]) + com_x + Vector3d(xd[0],xd[1],xd[2])*0.01,   Vector3d(1,0,0),0.02)));
-          //      OUTLOG(x,"x",logERROR);
-        }
-      }
-#endif
     } else {
       return;
     }
   }
   
-  std::cout << "Jumping" << std::endl;
+  OUT_LOG(logDEBUG) << "Crouching";
   
   static double last_time = -0.001;
   double dt = t - last_time;

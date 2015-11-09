@@ -42,7 +42,7 @@
     <CollisionGeometry primitive-id="ground-primitive" />
   </RigidBody>
   
-  <Box id="sheet" rpy="1.5708 0.0 0"  xlen="0.25" ylen="0.05" zlen="0.25" />
+  <Box id="sheet" rpy="1.5708 0.0 0"  xlen="0.45" ylen="0.05" zlen="0.45" />
 <RigidBody id="TAKEOFF" color="0.6 0.6 0.6 0" enabled="false"
   position="0 0 -0.025"
   visualization-id="sheet"

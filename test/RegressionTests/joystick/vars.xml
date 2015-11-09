@@ -5,6 +5,6 @@
   
   <init-file type="file">../../../example/models/links/init.xml</init-file>
   
-  <task-file type="file">walk-example.xml</task-file>
+  <task-file type="file">plugins.xml</task-file>
 
 </XML>

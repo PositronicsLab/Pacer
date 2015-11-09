@@ -48,6 +48,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
                                         q_goal,qd_goal,qdd_goal,TOL);
 
+  OUT_LOG(logDEBUG1) << "q_goal = " << q_goal; 
+  OUT_LOG(logDEBUG1) << "qd_goal = " << qd_goal; 
+  OUT_LOG(logDEBUG1) << "qdd_goal = " << qdd_goal; 
+
   ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);

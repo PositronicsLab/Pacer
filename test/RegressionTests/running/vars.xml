@@ -1,6 +1,16 @@
 <XML>
+
   <logging type="string">DEBUG1</logging>
+  <real-time-factor type="double">1</real-time-factor>
+  
   <init-file type="file">../../../example/models/links/init.xml</init-file>
-  <extra-files type="file">uncertainty.xml</extra-files>
+
+  <init>
+    <base>
+      <xd type="double"> 0.3 0 0 0 0 0 </xd> 
+    </base>
+  </init>
+
   <task-file type="file">plugins.xml</task-file>
+
 </XML>

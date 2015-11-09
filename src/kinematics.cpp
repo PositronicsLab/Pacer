@@ -54,8 +54,8 @@ Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::str
   
   _abrobot->calc_jacobian(_root_link->get_mixed_pose(),jacobian_frame,_id_link_map[link],J);
   
-  OUTLOG(_root_link->get_mixed_pose(),"base_frame",logERROR);
-  OUTLOG(jacobian_frame,"jacobian_frame",logERROR);
+//  OUTLOG(_root_link->get_mixed_pose(),"base_frame",logERROR);
+//  OUTLOG(jacobian_frame,"jacobian_frame",logERROR);
   
   return J;
 }
@@ -88,7 +88,9 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   link_kinematics(x,foot,base_frame,goal,step,J);
   
   err = step.norm();
-//  OUTLOG(goal,"goal",logDEBUG1);
+  OUT_LOG(logDEBUG1) << "err: " << err;
+  OUT_LOG(logDEBUG1) << "q: " << x;
+  OUTLOG(goal,"goal",logDEBUG1);
   
   while(err > TOL){
     // update error
@@ -120,13 +122,13 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
     OUT_LOG(logDEBUG1) << "alpha: " << alpha;
     
     x += ( (workv_ = qstep)*= alpha );
-//    OUT_LOG(logDEBUG1) << "q: " << x;
+    OUT_LOG(logDEBUG1) << "q: " << x;
     
     // get foot pos
     link_kinematics(x,foot,base_frame,goal,step,J);
     
     err = step.norm();
-//    OUT_LOG(logDEBUG1) << "err: " << err;
+    OUT_LOG(logDEBUG1) << "err: " << err;
     
     // if error increases, backstep then return
     if(err > last_err){
@@ -136,12 +138,14 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   }
   
   // NOTE: WARNING: Only revolute joints
-  if(err < 1e-4)
+  if(err < TOL){
     for(int k=0;k<foot.chain.size();k++)
       q_des[foot.chain[k]] = x[k];
-  else
+  } else {
+//    throw std::runtime_error("Inverse Kinematics failed!");
     for(int k=0;k<foot.chain.size();k++)
       q_des[foot.chain[k]] = q[foot.chain[k]];
+  }
 }
 
 /// Working kinematics function [y] = f(x,foot,pt,y,J)

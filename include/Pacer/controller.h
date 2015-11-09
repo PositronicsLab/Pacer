@@ -96,9 +96,11 @@ namespace Pacer{
     
     
     void close_plugin(const std::string& name){
+      OUT_LOG(logDEBUG1) << "maked plugin '" << name << "' for closure.";
       plugins_to_close.push_back(name);
     }
     void open_plugin(const std::string& name){
+      OUT_LOG(logDEBUG1) << "maked plugin '" << name << "' for open.";
       plugins_to_open.push_back(name);
     }
     
@@ -149,6 +151,7 @@ namespace Pacer{
       // remove the plugins that have been marked for closure
       if(!plugins_to_close.empty()){
         BOOST_FOREACH( const std::string& name, plugins_to_close){
+          OUT_LOG(logDEBUG1) << "CLOSING " << name;
           remove_plugin(name);
         }
         plugins_to_close.clear();
@@ -157,6 +160,7 @@ namespace Pacer{
       // add the plugins that have been marked for addition
       if(!plugins_to_open.empty()){
         BOOST_FOREACH( const std::string& name, plugins_to_open){
+          OUT_LOG(logDEBUG1) << "OPENING " << name;
           init_plugin(name);
         }
         plugins_to_open.clear();

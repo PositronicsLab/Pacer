@@ -371,7 +371,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           }
         }
         
-        static std::vector<double> initial_pose = ctrl->get_data< std::vector<double> >("orient-base.pose");
+        static std::vector<double> initial_pose = ctrl->get_data< std::vector<double> >("gait-planner.pose");
         std::vector<double> new_pose(6);
         for (int i=0;i<6; i++) {
           if(pose_adjustment[i] > pose_adjustment_limit[i]){
@@ -381,7 +381,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           }
           new_pose[i] = initial_pose[i] + pose_adjustment[i];
         }
-        ctrl->set_data< std::vector<double> >("orient-base.pose",new_pose);
+        ctrl->set_data< std::vector<double> >("gait-planner.pose",new_pose);
         
       } else if (j.buttons[7] == 1 || j.buttons[9] == 1) {
         // Gait Adjustment
@@ -423,8 +423,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           ctrl->set_data<double>("gait-planner.step-height",initial_step_height);
           ctrl->set_data<double>("gait-planner.gait-duration",initial_gait_duration+gait_duration);
         }
-      } else // j.buttons[4] == 1
-      {
+      }
+      if(j.buttons[4] == 1){
         static std::vector<double> initial_duty_factor = ctrl->get_data< std::vector<double> >("gait-planner.duty-factor");
         std::vector<double> new_duty_factor = initial_duty_factor;
         static double duty_factor = initial_duty_factor[0];

@@ -1,10 +1,10 @@
   <XML>
   <plugins type="string vector">
-      waypoints
+      gamepad
       center-of-mass
       end-effectors
       gait-planner
-      eef-PID-controller
+      ik-feet
   </plugins>
   
   <!--
@@ -161,9 +161,9 @@
     <pose type="double">0.0 0 0 0 0 0</pose>
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
     <stance-on-contact type="bool">false</stance-on-contact>
-    <redirect-swing-interval type="double">0.75</redirect-swing-interval>
+    <redirect-swing-interval type="double">0.5</redirect-swing-interval>
     <holonomic type="bool">false</holonomic>
-    <step-height type="double">0.03</step-height>
+    <step-height type="double">0.02</step-height>
     <gait-duration type="double">0.3</gait-duration>
     <length type="double">0.309926</length>
     <width type="double">0.1344496</width>
@@ -176,7 +176,7 @@
     <!--walking gait-->
     <!--<gait type="double">0.25  0.75  0.0  0.5</gait>-->
 <!--    <duty-factor type="double">0.2  0.2 0.2  0.2</duty-factor>-->
-    <duty-factor type="double">0.6  0.6 0.6  0.6</duty-factor>
+    <duty-factor type="double">0.75  0.75 0.75  0.75</duty-factor>
   </gait-planner>
   
   <wcpg>

@@ -1,6 +1,8 @@
 #include <Pacer/controller.h>
 std::string plugin_namespace;
 
+
+
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
 }

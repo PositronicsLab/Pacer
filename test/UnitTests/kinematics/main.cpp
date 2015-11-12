@@ -25,8 +25,8 @@ using namespace Pacer;
 
 namespace Moby {
   extern void close();
-  extern bool init(int argc, char** argv, void* s);
-  extern bool step(void* s);
+  extern bool init(int argc, char** argv, boost::shared_ptr<Simulator>& s);
+  extern bool step(boost::shared_ptr<Simulator> s);
 }
 
 static char** param_array_noconst( std::vector< std::string >& params ) {
@@ -75,7 +75,7 @@ TEST(RegressionTest,Walking){
 //#endif
 
   // Ask Moby to init the simulator with options
-  Moby::init(argvs.size(), moby_argv,(void*) &sim);
+  Moby::init(argvs.size(), moby_argv,sim);
 
   if(!sim)
     throw std::runtime_error("Could not start Moby");
@@ -115,7 +115,7 @@ TEST(RegressionTest,Walking){
   while (!stop_sim) {
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc, argv,robot);
-    stop_sim = !Moby::step((void*) &sim);
+    stop_sim = !Moby::step(sim);
   }
   
   /*

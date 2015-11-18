@@ -11,27 +11,52 @@ using namespace Ravelin;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // Alpha calculation
+  static double start_time = t;
+  double duration = ctrl->get_data<double>(plugin_namespace + ".time-to-pose");
   VectorNd q_goal = ctrl->get_data<Ravelin::VectorNd>("init.q"),
   qd_goal = Ravelin::VectorNd::zero(q_goal.rows()),
   qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
   
-  ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
-  ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
-  ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
-  static std::vector<std::string>
-      foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  static VectorNd q_start;
+  if(t == start_time){
+    ctrl->get_joint_generalized_value(Pacer::Controller::position,q_start);
+  }
+  
+  double alpha = ((start_time+duration)-t)/duration;
 
-  boost::shared_ptr<Ravelin::Pose3d> base_frame = boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d(
-        ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
-  for(int i=0;i<foot_names.size();i++){
-    Ravelin::Vector3d x = ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".init.x"),
-      xd(0,0,0,base_frame), 
-      xdd(0,0,0,base_frame);
-    x.pose = base_frame;
-    ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",x);
-    ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",xd);
-    ctrl->set_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",xdd);
-    ctrl->set_data<bool>(foot_names[i]+".stance",true);
+  if (q_start.rows() == 0)
+  
+  OUTLOG(q_start, "q_start", logDEBUG);
+  OUTLOG(q_goal, "q_goal", logDEBUG);
+  OUTLOG(alpha, "alpha", logDEBUG);
+  
+  if(alpha <= 1 && alpha >= 0){
+    VectorNd q_target = q_start;
+    q_target *= 1-alpha;
+    q_goal *= alpha;
+    q_target += q_goal;
+    
+    OUTLOG(q_target, "q_target", logDEBUG);
+    
+    ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_target);
+    ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
+
+    return;
+  } else if (alpha > 1.0){
+    ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_start);
+    ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
+
+    return;
+  } else { // alpha < 0
+    // quit
+    ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
+    ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
+    ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
+
+    ctrl->open_plugin("stand");
+    ctrl->close_plugin("reset-trajectory");
   }
 }
 
@@ -58,14 +83,6 @@ void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
   int NUM_FEET = foot_names.size();
-  
-  for(int i=0;i<NUM_FEET;i++){
-    ctrl->remove_data(foot_names[i]+".goal.x");
-    ctrl->remove_data(foot_names[i]+".goal.xd");
-    ctrl->remove_data(foot_names[i]+".goal.xdd");
-    ctrl->remove_data(foot_names[i]+".stance");
-  }
-  
 }
 
 extern "C" {

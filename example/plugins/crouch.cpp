@@ -91,17 +91,12 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
   static Vector3d com_x = ctrl->get_data<Vector3d>("center_of_mass.x");
   
-  static bool first_step = true;
-  
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
-  static std::vector<Vector3d> x_foot_goal(eef_names_.size());
+  static std::vector<Origin3d> x_foot_goal(eef_names_.size());
   
   VectorNd x(3), xd(3), xdd(3);
-  
-  std::cout << start_jump_time << " : " << t << std::endl;
-  
   
   { // Do spline calculations
     static std::vector<Trajectory> crouch_spline;
@@ -112,19 +107,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         OUT_LOG(logDEBUG) << "Calculating Crouch";
         crouch_spline = calc_crouch();
       }
-      
-      // Make sure we're not out of time bounds
-      //      if(crouch_spline[0].T[crouch_spline[0].T.rows()-1] > t-start_time)
-      //        throw std::runtime_error("End of jump!");
-      
-      // Disable joint Feedback
-      VectorNd q_current, qd_current;
-      ctrl->get_joint_generalized_value(Pacer::Controller::position,q_current);
-      ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_current);
-      
-      ctrl->get_joint_generalized_value(Pacer::Controller::velocity,qd_current);
-      ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_current);
-      
+    
       // Find base trajectory
       if(!eval_Nd_cubic_spline(crouch_spline,t-start_jump_time,x,xd,xdd)){
         return;
@@ -151,29 +134,25 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   for(unsigned i=0;i<eef_names_.size();i++){
     ctrl->set_model_state(local_q);
-    Ravelin::Vector3d xd_foot,xdd_foot;
+    Ravelin::Origin3d xd_foot,xdd_foot;
     
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J = ctrl->calc_link_jacobian(local_q,eef_names_[i]);
     
     // Now that model state is set ffrom jacobian calculation
-    if(first_step){
-      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
-      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
+    if(start_jump_time == t){
+      x_foot_goal[i] = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x");
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xd,xd_foot,-1,0);
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xdd,xdd_foot,-1,0);
     
-    x_foot_goal[i].pose = base_frame;
-    xd_foot.pose = base_frame;
-    xdd_foot.pose = base_frame;
     x_foot_goal[i] += xd_foot*dt;
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
+    ctrl->set_data<bool>(eef_names_[i]+".stance",true);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }
-  first_step = false;
 }
 
 
@@ -202,6 +181,7 @@ void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NUM_FEET = foot_names.size();
   
   for(int i=0;i<NUM_FEET;i++){
+    ctrl->remove_data(foot_names[i]+".stance");
     ctrl->remove_data(foot_names[i]+".goal.x");
     ctrl->remove_data(foot_names[i]+".goal.xd");
     ctrl->remove_data(foot_names[i]+".goal.xdd");

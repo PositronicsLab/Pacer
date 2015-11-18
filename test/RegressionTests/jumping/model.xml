@@ -27,7 +27,7 @@
   <DynamicBody dynamic-body-id="GROUND" />
   <DynamicBody dynamic-body-id="TAKEOFF" />
   <DynamicBody dynamic-body-id="LANDING" />
-  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="1" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
+  <ContactParameters object1-id="LINKS" object2-id="GROUND" mu-coulomb="10" mu-viscous="0" epsilon="0.0" compliant="true" penalty-kv="100" penalty-kp="100000"  alpha="100" />
 </TimeSteppingSimulator>
 
 <SDF filename="../../../example/models/links/model.sdf"/>

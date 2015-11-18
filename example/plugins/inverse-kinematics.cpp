@@ -19,18 +19,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
       
   int NUM_FEET = foot_names.size();
-  std::vector<Ravelin::Vector3d>
+  std::vector<Ravelin::Origin3d>
       foot_pos(NUM_FEET),
       foot_vel(NUM_FEET),
       foot_acc(NUM_FEET);
       
   for(int i=0;i<NUM_FEET;i++){     
     //NOTE: Change so some eefs can be non-feet 
-    if(!ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.x",foot_pos[i]))
+    if(!ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.x",foot_pos[i]))
       return;
-    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
-    ctrl->get_data<Ravelin::Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
-    foot_pos[i].pose = Pacer::GLOBAL;
+    ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.xd",foot_vel[i]);
+    ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
   }
   
   ctrl->get_generalized_value(Pacer::Controller::position,q);

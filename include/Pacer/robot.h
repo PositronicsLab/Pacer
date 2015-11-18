@@ -59,7 +59,7 @@ namespace Pacer{
     // Returns 'true' if new key was created in map
     template<class T>
     bool set_data(std::string n, const T& v){
-      OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
+      OUT_LOG(logINFO) << "Set: " << n << " <-- " << v;
       if(is_pointer<T>::value){
         throw std::runtime_error("Can't save pointer: " + n);
       }
@@ -109,7 +109,7 @@ pthread_mutex_lock(&_data_map_mutex);
         #ifdef USE_THREADS
 pthread_mutex_unlock(&_data_map_mutex);
 #endif
-        OUT_LOG(logDEBUG) << "Get: " << n << " --> " << *v;
+        OUT_LOG(logINFO) << "Get: " << n << " --> " << *v;
         return *v;
       }
       #ifdef USE_THREADS
@@ -731,26 +731,29 @@ pthread_mutex_unlock(&_state_mutex);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 3d (linear) goal
-    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Vector3d& goal,Ravelin::VectorNd& q_des, double TOL = 1e-4);
+    void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::Origin3d& goal,Ravelin::VectorNd& q_des, double TOL = 1e-4);
 
     /// @brief Resolved Motion Rate control (iterative inverse kinematics)
     /// iterative inverse kinematics for a 6d (linear and angular) goal
     void RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des, double TOL = 1e-4);
 
     /// @brief N x 3d kinematics
-    Ravelin::VectorNd& link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Vector3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    Ravelin::VectorNd& link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Origin3d& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
 
     /// @brief N x 6d Jacobian
     Ravelin::MatrixNd& link_jacobian(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk);
 
     /// @brief N x 6d kinematics
     Ravelin::VectorNd& link_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::VectorNd& goal, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
+    
+    Ravelin::VectorNd& dist_to_goal(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, const Ravelin::Origin3d& goal, Ravelin::VectorNd& dist);
+    
 
     void end_effector_inverse_kinematics(
       const std::vector<std::string>& foot_id,
-      const std::vector<Ravelin::Vector3d>& foot_pos,
-      const std::vector<Ravelin::Vector3d>& foot_vel,
-      const std::vector<Ravelin::Vector3d>& foot_acc,
+      const std::vector<Ravelin::Origin3d>& foot_pos,
+      const std::vector<Ravelin::Origin3d>& foot_vel,
+      const std::vector<Ravelin::Origin3d>& foot_acc,
       const Ravelin::VectorNd& q,
       Ravelin::VectorNd& q_des,
       Ravelin::VectorNd& qd_des,

@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">DEBUG1</logging>
+  <logging type="string">NONE</logging>
   <init-file type="file">../../../example/models/links/init.xml</init-file>
   <extra-files type="file">uncertainty.xml</extra-files>
   <task-file type="file">plugins.xml</task-file>

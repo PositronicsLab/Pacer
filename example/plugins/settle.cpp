@@ -22,11 +22,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
     
     OUT_LOG(logERROR) << "Foot " << eef_names_[i] << " has " << c.size() << " contacts";
 
-    Vector3d x_foot,xd_foot,xdd_foot;
-    xd_foot = Vector3d(0,0,0,x_foot.pose);
+    Origin3d x_foot,xd_foot,xdd_foot;
+    xd_foot = Vector3d(0,0,0);
 
     if (c.size() != 0) {
-      ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
+      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
 
       continue;
     }
@@ -34,18 +34,18 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
     // ELSE: move down to contact
     
     
-    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot);
-//    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-//    ctrl->get_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
+    ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_foot);
+//    ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
+//    ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd_foot);
     
     double speed = 0.2; // m/s
     
-    xd_foot = -Vector3d(0,0,speed,x_foot.pose);
+    xd_foot = -Origin3d(0,0,speed);
     x_foot += dt*xd_foot;
 
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot);
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-//    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_foot);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
+//    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }
 }
 
@@ -75,6 +75,7 @@ void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NUM_FEET = foot_names.size();
   
   for(int i=0;i<NUM_FEET;i++){
+    ctrl->remove_data(foot_names[i]+".stance");
     ctrl->remove_data(foot_names[i]+".goal.x");
     ctrl->remove_data(foot_names[i]+".goal.xd");
     ctrl->remove_data(foot_names[i]+".goal.xdd");

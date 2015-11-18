@@ -6,6 +6,31 @@ using namespace Ravelin;
 
 const double grav     = 9.81; // m / s*s
 
+template <typename T> T sqr(T val) {
+  return val*val;
+}
+
+double sigmoid(double x){
+  return (1.0 / (1.0 + exp(-x)));
+}
+
+double dsigmoid(double x){
+  return (exp(x) / sqr(1.0 + exp(x)));
+}
+
+double sigmoid_interp(double v0, double vF, double alpha){
+  // sigmoid curve interpolates wrt to alpha \in {0..1}
+  double diff = vF - v0;
+  return v0 + diff*sigmoid(alpha*10.0 - 5.0);
+}
+
+double sigmoid_interp2(double v0, double vF, double alpha, double& deriv){
+  // sigmoid curve interpolates wrt to alpha \in {0..1}
+  double diff = vF - v0;
+  deriv = dsigmoid(alpha*10.0 - 5.0);
+  return v0 + diff*sigmoid(alpha*10.0 - 5.0);
+}
+
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static double start_jump_time = t;
   
@@ -13,63 +38,96 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   double dt = t - last_time;
   last_time = t;
   
-  static Vector3d com_x = ctrl->get_data<Vector3d>("center_of_mass.x");
-  
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
-  static std::vector<Vector3d> x_foot_goal(eef_names_.size());
+  static std::vector<Origin3d> x_foot_goal(eef_names_.size());
   
-  
-  // Set takeoff angle
-  double angle_of_elevation = ctrl->get_data<double>(plugin_namespace + ".angle-of-elevation");
-  double heading = ctrl->get_data<double>(plugin_namespace + ".heading");
-  //distance to goal
-  double range = ctrl->get_data<double>(plugin_namespace + ".range");
+  // check the timing of the jump
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
-  
-  double jump_progress = (t - start_jump_time)/duration;
+  // alpha = 0 .. 1
+  double alpha = sigmoid_interp(0,1,(t - start_jump_time)/duration);
 
-  // 3d velocity
-  double v_spatial = sqrt((grav * range) / sin(2.0 * angle_of_elevation));
-  OUTLOG(v_spatial, "v_spatial", logDEBUG);
+  // check reach (find smallest distance to reach maximum)
+  // min reach proportion
+  // beta = 0 .. 1
+  double beta = 0;
+  if(start_jump_time != t){
+    for (int i=0; i<eef_names_.size(); i++) {
+      double ratio = 0;
+      
+      Origin3d pos_des = x_foot_goal[i];
+      Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".base");
+      double max_reach = ctrl->get_data<double>(eef_names_[i]+".reach");
+      
+      Ravelin::Origin3d goal_from_base_joint = pos_des - base_joint;
+      double goal_reach = goal_from_base_joint.norm();
+      OUT_LOG(logDEBUG1) << eef_names_[i] << " - goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
+      ratio = goal_reach/max_reach;
+      OUT_LOG(logDEBUG1) << eef_names_[i] << " - ratio : " << ratio ;
+      
+      beta = std::max(beta,ratio);
+    }
+    OUT_LOG(logDEBUG1) << " beta : " << beta ;
+    OUT_LOG(logDEBUG1) << " alpha : " << alpha ;
+  }
   
-  // 2d (planar) velocity
-  double v_horizontal = v_spatial * std::cos(angle_of_elevation);
-  OUTLOG(v_horizontal, "v_horizontal", logDEBUG);
-  
-  // directional velocities
-  // X
-  double v_forward = v_horizontal * std::cos(heading);
-  OUTLOG(v_forward, "v_forward", logDEBUG);
-  // Y
-  double  v_sideways = v_horizontal * std::sin(heading);
-  OUTLOG(v_sideways, "v_sideways", logDEBUG);
-  // Z
-  double v_vertical = v_spatial * std::sin(angle_of_elevation);
-  OUTLOG(v_vertical, "v_vertical", logDEBUG);
-  
-  Vector3d v_liftoff(v_forward,v_sideways,v_vertical);
-  OUTLOG(v_liftoff.norm(), "||v_liftoff||", logERROR);
-  OUTLOG(fabs(v_spatial), "|v_spatial|", logERROR);
-  
-  // Check that we did this right
-  assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Pacer::NEAR_ZERO);
-  
-  if(t < start_jump_time)
-    return;
-  
+  // jump_progress = 0 .. 1
+  double jump_progress = std::max(alpha,beta);
+  OUT_LOG(logDEBUG1) << " jump_progress : " << jump_progress ;
+
+  // if finished jumping reset to stand with joint PID
+  // turn off eef controllers and self
   if(jump_progress > 1.0){
     ctrl->open_plugin("reset-trajectory");
+    ctrl->open_plugin("joint-PID-controller");
+
     ctrl->close_plugin("eef-PID-controller");
     ctrl->close_plugin(plugin_namespace);
     return;
   }
   
+  static Vector3d com_x = ctrl->get_data<Vector3d>("center_of_mass.x");
+  // Set takeoff angle
+  static double angle_of_elevation = ctrl->get_data<double>(plugin_namespace + ".angle-of-elevation");
+  static double heading = ctrl->get_data<double>(plugin_namespace + ".heading");
+  //distance to goal
+  static double range = ctrl->get_data<double>(plugin_namespace + ".range");
+
 #ifndef USE_OSG_DISPLAY
   com_x.pose = Pacer::GLOBAL;
   Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1)));
 #endif
+  
+  static Vector3d v_liftoff;
+  if(start_jump_time == t){
+    
+    // 3d velocity
+    double v_spatial = sqrt((grav * range) / sin(2.0 * angle_of_elevation));
+    OUTLOG(v_spatial, "v_spatial", logDEBUG);
+    
+    // 2d (planar) velocity
+    double v_horizontal = v_spatial * std::cos(angle_of_elevation);
+    OUTLOG(v_horizontal, "v_horizontal", logDEBUG);
+    
+    // directional velocities
+    // X
+    double v_forward = v_horizontal * std::cos(heading);
+    OUTLOG(v_forward, "v_forward", logDEBUG);
+    // Y
+    double  v_sideways = v_horizontal * std::sin(heading);
+    OUTLOG(v_sideways, "v_sideways", logDEBUG);
+    // Z
+    double v_vertical = v_spatial * std::sin(angle_of_elevation);
+    OUTLOG(v_vertical, "v_vertical", logDEBUG);
+    
+    v_liftoff = Origin3d(v_forward,v_sideways,v_vertical);
+    OUTLOG(v_liftoff.norm(), "||v_liftoff||", logERROR);
+    OUTLOG(fabs(v_spatial), "|v_spatial|", logERROR);
+    
+    // Check that we did this right
+    assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Pacer::NEAR_ZERO);
+  }
   
   OUT_LOG(logDEBUG) << "Jumping";
   
@@ -83,7 +141,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   static Ravelin::VectorNd start_vel = ctrl->get_base_value(Pacer::Controller::velocity);
 
-  Ravelin::VectorNd goal_vel = VectorNd::zero(6);
+  static Ravelin::VectorNd goal_vel = VectorNd::zero(6);
   goal_vel.set_sub_vec(0,v_liftoff);
   
   VectorNd acc,vel;
@@ -91,12 +149,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   // Velocity
   // v = vf * (t*t)
   (vel = goal_vel) -= start_vel;
-  vel *= (jump_progress*jump_progress);
+  (acc = vel) *= dsigmoid(jump_progress*10.0 - 5.0);
+  vel *= sigmoid(jump_progress*10.0 - 5.0);
+  vel += start_vel;
   
   // Acceleration
-  // v' = 2 vf * (t)
-  (acc = goal_vel) -= start_vel;
-  acc *= 2*(jump_progress);
   // error correction term
   Ravelin::VectorNd base_vel = ctrl->get_base_value(Pacer::Controller::velocity);
   double Ka = 10;
@@ -117,27 +174,24 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   for(unsigned i=0;i<eef_names_.size();i++){
     ctrl->set_model_state(local_q);
-    Ravelin::Vector3d xd_foot,xdd_foot;
+    Ravelin::Origin3d xd_foot,xdd_foot;
     
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J = ctrl->calc_link_jacobian(local_q,eef_names_[i]);
     
     // Now that model state is set ffrom jacobian calculation
     if(start_jump_time == t){
-      const boost::shared_ptr<Ravelin::RigidBodyd> link = ctrl->get_link(eef_names_[i]);
-      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
+      x_foot_goal[i] = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x");
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(vel,xd_foot,-1,0);
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(acc,xdd_foot,-1,0);
     
-    x_foot_goal[i].pose = base_frame;
-    xd_foot.pose = base_frame;
-    xdd_foot.pose = base_frame;
     x_foot_goal[i] += xd_foot*dt;
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
+    ctrl->set_data<bool>(eef_names_[i]+".stance",true);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }
 }
 
@@ -167,9 +221,11 @@ void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NUM_FEET = foot_names.size();
   
   for(int i=0;i<NUM_FEET;i++){
+    ctrl->remove_data(foot_names[i]+".stance");
     ctrl->remove_data(foot_names[i]+".goal.x");
     ctrl->remove_data(foot_names[i]+".goal.xd");
     ctrl->remove_data(foot_names[i]+".goal.xdd");
+
   }
 }
 

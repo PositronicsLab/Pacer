@@ -361,7 +361,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   double dt = t - last_time;
   last_time = t;
   
-  OUT_LOG(logERROR) << "simulator_time = " << t;
+  OUT_LOG(logDEBUG) << "simulator_time = " << t;
   
   
   double dt_idyn = ctrl->get_data<double>(plugin_namespace+".dt");
@@ -412,10 +412,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     Vector3d pos;
     if(!c.empty()){
       for(int j=0;j<c.size() && j<MAX_CONTACTS_PER_FOOT;j++){
-        OUT_LOG(logERROR) << "compliant: " << c[j]->compliant;
-        OUT_LOG(logERROR) << "normal: " << c[j]->normal;
-        OUT_LOG(logERROR) << "tangent: " << c[j]->tangent;
-        OUT_LOG(logERROR) << "point: " << c[j]->point;
+        OUT_LOG(logDEBUG) << "compliant: " << c[j]->compliant;
+        OUT_LOG(logDEBUG) << "normal: " << c[j]->normal;
+        OUT_LOG(logDEBUG) << "tangent: " << c[j]->tangent;
+        OUT_LOG(logDEBUG) << "point: " << c[j]->point;
         std::string id(c[j]->id);
         pos = c[j]->point;
         Ravelin::Vector3d cf(0,0,0);
@@ -439,26 +439,26 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   Ravelin::VectorNd outputv;
   
   ctrl->get_generalized_value(Pacer::Robot::position,q);
-  OUTLOG(q,"generalized_q",logERROR);
+  OUTLOG(q,"generalized_q",logDEBUG);
   
   ctrl->get_generalized_value(Pacer::Robot::velocity,generalized_qd);
-  OUTLOG(generalized_qd,"generalized_qd",logERROR);
+  OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
   
   ctrl->get_generalized_value(Pacer::Robot::load,generalized_fext);
-  OUTLOG(generalized_fext,"generalized_fext",logERROR);
+  OUTLOG(generalized_fext,"generalized_fext",logDEBUG);
   
   ctrl->get_generalized_value(Pacer::Robot::acceleration,outputv);
-  OUTLOG(outputv,"generalized_qdd",logERROR);
+  OUTLOG(outputv,"generalized_qdd",logDEBUG);
   
   // OUTPUT
   ctrl->get_joint_generalized_value(Pacer::Robot::position_goal,outputv);
-  OUTLOG(outputv,"q_des",logERROR);
+  OUTLOG(outputv,"q_des",logDEBUG);
   
   ctrl->get_joint_generalized_value(Pacer::Robot::velocity_goal,outputv);
-  OUTLOG(outputv,"qd_des",logERROR);
+  OUTLOG(outputv,"qd_des",logDEBUG);
   
   ctrl->get_joint_generalized_value(Pacer::Robot::acceleration_goal,qdd_des);
-  OUTLOG(qdd_des,"qdd_des",logERROR);
+  OUTLOG(qdd_des,"qdd_des",logDEBUG);
   
   int NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
   int NDOFS = NUM_JOINT_DOFS + Pacer::NSPATIAL;
@@ -518,15 +518,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
                                tan2[0],                tan2[1],                tan2[2]);
       
       Ravelin::Origin3d contact_impulse = Ravelin::Origin3d(R_foot.mult(contacts[i]->impulse,workv3_));
-      OUT_LOG(logERROR) << "Contact " << i << " mu coulomb: " << contacts[i]->mu_coulomb;
+      OUT_LOG(logDEBUG) << "Contact " << i << " mu coulomb: " << contacts[i]->mu_coulomb;
 
-      OUT_LOG(logERROR) << "compliant: " << contacts[i]->compliant;
-      OUT_LOG(logERROR) << "point: " << contacts[i]->point;
+      OUT_LOG(logDEBUG) << "compliant: " << contacts[i]->compliant;
+      OUT_LOG(logDEBUG) << "point: " << contacts[i]->point;
       if( !contacts[i]->compliant ){
         contact_impulse/=dt;
-        OUT_LOG(logERROR) << "Contact " << i << " is rigid: " << contact_impulse ;
+        OUT_LOG(logDEBUG) << "Contact " << i << " is rigid: " << contact_impulse ;
       } else {
-        OUT_LOG(logERROR) << "Contact " << i << " is compliant: " << contact_impulse ;
+        OUT_LOG(logDEBUG) << "Contact " << i << " is compliant: " << contact_impulse ;
       }
       cf_init[i] = contact_impulse[0];
       if(contact_impulse[1] >= 0)
@@ -540,11 +540,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
     Utility::check_finite(cf_init);
     
-    //    OUTLOG(cf_init,"cf_0",logERROR);
+    //    OUTLOG(cf_init,"cf_0",logDEBUG);
     
     Ravelin::SharedConstVectorNd cf_normal = cf_init.segment(0,NC);
     double sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
-//    OUT_LOG(logERROR) << "0, Sum normal force: " << sum ;
+//    OUT_LOG(logDEBUG) << "0, Sum normal force: " << sum ;
     
     if(USE_LAST_CFS){
       static std::queue<Ravelin::VectorNd>
@@ -580,14 +580,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
   
-  OUTLOG(MU,"MU",logERROR);
+  OUTLOG(MU,"MU",logDEBUG);
   
   // IDYN MAXIMAL DISSIPATION MODEL
   std::vector<std::string> controller_name = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".type");
   
   std::map<std::string,Ravelin::VectorNd> cf_map,uff_map;
   
-  OUTLOG(NC,"idyn_NC",logERROR);
+  OUTLOG(NC,"idyn_NC",logDEBUG);
   
   ////////////////////////// simulator DT IDYN //////////////////////////////
   for (std::vector<std::string>::iterator it=controller_name.begin();
@@ -601,8 +601,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
     std::string& name = (*it);
     
-    OUT_LOG(logERROR) << "CONTROLLER: " << name;
-    OUT_LOG(logERROR) << "USE_LAST_CFS: " << USE_LAST_CFS;
+    OUT_LOG(logDEBUG) << "CONTROLLER: " << name;
+    OUT_LOG(logDEBUG) << "USE_LAST_CFS: " << USE_LAST_CFS;
     //
     if (NC == 0) {
       solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf,false,indices,active_feet.size(),SAME_INDICES);
@@ -610,10 +610,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     else if(USE_LAST_CFS){
       cf = cf_init;
       cf *= dt;
-      OUT_LOG(logERROR) << "USING LAST CFS: " << cf;
+      OUT_LOG(logDEBUG) << "USING LAST CFS: " << cf;
       //      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
       solve_flag = inverse_dynamics_one_stage(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf,indices,active_feet.size(),SAME_INDICES);
-      OUT_LOG(logERROR) << "SAME: " << cf;
+      OUT_LOG(logDEBUG) << "SAME: " << cf;
     } else {
 #ifdef TIMING
           struct timeval start_t;
@@ -639,9 +639,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       }
   
     if(!std::isfinite(cf.norm()) || !std::isfinite(id.norm())){
-      OUTLOG(DT,"DT",logERROR);
-      OUTLOG(cf,"IDYN_CF",logERROR);
-      OUTLOG(id,"IDYN_U",logERROR);
+      OUTLOG(DT,"DT",logDEBUG);
+      OUTLOG(cf,"IDYN_CF",logDEBUG);
+      OUTLOG(id,"IDYN_U",logDEBUG);
       
 #ifndef TIMING
       throw std::runtime_error("IDYN forces are NaN or INF");
@@ -665,7 +665,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           Ravelin::VectorNd diff_cf  = (*it).second;
           diff_cf -= cf.segment(0,NC);
           if(diff_cf.norm() > 0.01)
-            OUT_LOG(logERROR) << "-- Torque chatter detected " << t;
+            OUT_LOG(logDEBUG) << "-- Torque chatter detected " << t;
         }
       } else {
         last_cf[name] = cf.segment(0,NC);
@@ -680,8 +680,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       for (int j=0;j<NC;j++){
         Ravelin::Vector3d impulse(cf[j],cf[j+NC]-cf[j+NC*3],cf[j+NC*2]-cf[j+NC*4]);
         normal_sum += cf[j];
-        OUT_LOG(logERROR) << "IDYN CONTACT FORCE : " << name;
-        OUT_LOG(logERROR) << "t: " << t << " " << contacts[j]->id;
+        OUT_LOG(logDEBUG) << "IDYN CONTACT FORCE : " << name;
+        OUT_LOG(logDEBUG) << "t: " << t << " " << contacts[j]->id;
         
         Ravelin::Vector3d tan2 = Ravelin::Vector3d::cross(contacts[j]->normal,contacts[j]->tangent);
         Ravelin::Matrix3d R_foot( contacts[j]->normal[0],  contacts[j]->normal[1], contacts[j]->normal[2],
@@ -691,13 +691,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         Ravelin::Vector3d contact_impulse = R_foot.transpose_mult(impulse,workv3_);
         if( !contacts[j]->compliant ){
           //        contact_impulse/=dt;
-          OUT_LOG(logERROR) << "force: " << contact_impulse/DT ;
+          OUT_LOG(logDEBUG) << "force: " << contact_impulse/DT ;
         } else {
-          OUT_LOG(logERROR) << "force: " << contact_impulse/DT ;
+          OUT_LOG(logDEBUG) << "force: " << contact_impulse/DT ;
         }
       }
     }
-    OUT_LOG(logERROR) << name << ", Sum normal force: " << normal_sum/DT;
+    OUT_LOG(logDEBUG) << name << ", Sum normal force: " << normal_sum/DT;
 
     log_idyn_matrices(generalized_qd,M,N,D,generalized_fext,DT);
     
@@ -727,38 +727,38 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       qdd_idyn *= DT;
       Ravelin::VectorNd v_minus = qdd_idyn;
       v_minus += generalized_qd;
-      OUTLOG(v_minus,"v-",logERROR);
+      OUTLOG(v_minus,"v-",logDEBUG);
       
       double ke_minus = M.mult(v_minus,workv1).dot(v_minus)*0.5;
-      OUTLOG(ke_minus,"KE (pre-contact)",logERROR);
+      OUTLOG(ke_minus,"KE (pre-contact)",logDEBUG);
       
-      OUT_LOG(logERROR) << "-- Checking optimization post contact velocity ";
+      OUT_LOG(logDEBUG) << "-- Checking optimization post contact velocity ";
 
       // Is N (v- + iM R' z1) >= 0 ?
       {
         Ravelin::VectorNd v_plus;
         iM.mult(R.mult(cf,workv1),v_plus = v_minus,1,1);
         double ke_plus = M.mult(v_plus,workv1).dot(v_plus)*0.5;
-        OUTLOG(ke_plus,"KE (post-contact)",logERROR);
+        OUTLOG(ke_plus,"KE (post-contact)",logDEBUG);
         
-        OUTLOG(ke_plus-ke_minus,"KE difference",logERROR);
+        OUTLOG(ke_plus-ke_minus,"KE difference",logDEBUG);
         
-        OUTLOG(v_plus,"v+",logERROR);
-        OUTLOG(N.transpose_mult(v_plus,workv1),"N*v+",logERROR);
+        OUTLOG(v_plus,"v+",logDEBUG);
+        OUTLOG(N.transpose_mult(v_plus,workv1),"N*v+",logDEBUG);
       }
       qdd_idyn = forward_dynamics(M,N,D,generalized_fext,DT,id,cf).segment(0,n-6);
-      OUTLOG(qdd_des,"IDYN_QDD_DES",logERROR);
-      OUTLOG(qdd_idyn,"IDYN_QDD_RESULT",logERROR);
+      OUTLOG(qdd_des,"IDYN_QDD_DES",logDEBUG);
+      OUTLOG(qdd_idyn,"IDYN_QDD_RESULT",logDEBUG);
       qdd_idyn -= qdd_des;
-      OUTLOG(qdd_idyn,"IDYN_QDD_ERR",logERROR);
+      OUTLOG(qdd_idyn,"IDYN_QDD_ERR",logDEBUG);
       if (qdd_idyn.norm() > 1e-4 || !solve_flag) {
-        OUT_LOG(logERROR) << "IDYN failed to follow qdd_des : " << name;
+        OUT_LOG(logDEBUG) << "IDYN failed to follow qdd_des : " << name;
         std::cerr << "IDYN failed to follow qdd_des : " << name << std::endl;
         //        throw std::runtime_error("IDYN failed to follow qdd_des");
       }
       
       {
-        OUT_LOG(logERROR) << "-- Attempting separate contact solve ";
+        OUT_LOG(logDEBUG) << "-- Attempting separate contact solve ";
         
         // Jacobian Calculation
         
@@ -776,8 +776,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           contacts[i]->tangent = (tan1*s[i] + tan2*t[i]);
           contacts[i]->tangent.normalize();
           
-          OUTLOG(contacts[i]->tangent,"tan1 (v-)",logERROR);
-          OUTLOG(contacts[i]->normal,"normal (v-)",logERROR);
+          OUTLOG(contacts[i]->tangent,"tan1 (v-)",logDEBUG);
+          OUTLOG(contacts[i]->normal,"normal (v-)",logDEBUG);
 
 
         }
@@ -800,12 +800,12 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         } else {
           Ravelin::VectorNd v_plus;
           iM.mult(R.mult(z,workv1),v_plus = v_minus,1,1);
-          OUTLOG(v_plus,"v+ (2 step)",logERROR);
-          OUTLOG(z,"z",logERROR);
-          OUTLOG(cf,"cf",logERROR);
+          OUTLOG(v_plus,"v+ (2 step)",logDEBUG);
+          OUTLOG(z,"z",logDEBUG);
+          OUTLOG(cf,"cf",logDEBUG);
           double ke_plus = M.mult(v_plus,workv1).dot(v_plus)*0.5;
-          OUTLOG(ke_plus,"KE (post-constraint)",logERROR);
-          OUTLOG(ke_plus-ke_minus,"KE difference",logERROR);
+          OUTLOG(ke_plus,"KE (post-constraint)",logDEBUG);
+          OUTLOG(ke_plus-ke_minus,"KE difference",logDEBUG);
         }
       }
     }
@@ -816,15 +816,15 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     uff_map[name] = id;
   }
   
-  OUTLOG(controller_name,"controller_name",logERROR);
+  OUTLOG(controller_name,"controller_name",logDEBUG);
   //std::vector<std::string>::iterator it=controller_name.begin();
   //for (;it!=controller_name.end(); it++) {
   //;it!=controller_name.end(); it++) {
   for (int i=0;i<controller_name.size();i++){
     std::string& name = controller_name[i];//(*it);
     Ravelin::VectorNd& cf = cf_map[name];
-    OUTLOG(uff_map[name],"uff_"+boost::icl::to_string<double>::apply(i+1),logERROR);
-    OUTLOG(cf,"cf_"+boost::icl::to_string<double>::apply(i+1),logERROR);
+    OUTLOG(uff_map[name],"uff_"+boost::icl::to_string<double>::apply(i+1),logDEBUG);
+    OUTLOG(cf,"cf_"+boost::icl::to_string<double>::apply(i+1),logDEBUG);
   }
   
   Ravelin::VectorNd uff = uff_map[controller_name.front()];

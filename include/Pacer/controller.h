@@ -96,11 +96,11 @@ namespace Pacer{
     
     
     void close_plugin(const std::string& name){
-      OUT_LOG(logDEBUG1) << "maked plugin '" << name << "' for closure.";
+      OUT_LOG(logINFO) << "maked plugin '" << name << "' for closure.";
       plugins_to_close.push_back(name);
     }
     void open_plugin(const std::string& name){
-      OUT_LOG(logDEBUG1) << "maked plugin '" << name << "' for open.";
+      OUT_LOG(logINFO) << "maked plugin '" << name << "' for open.";
       plugins_to_open.push_back(name);
     }
     
@@ -136,7 +136,7 @@ namespace Pacer{
     bool init_all_plugins();
     
     bool update_plugins(double t){
-      OUT_LOG(logDEBUG1) << ">> update_plugins()";
+      OUT_LOG(logINFO) << ">> update_plugins()";
       //name_update_t& non_realtime_map = _update_priority_map[NON_REALTIME];
       //if(!_update_priority_map[i].empty())
       //BOOST_FOREACH( const name_update_t::value_type& update, non_realtime_map)
@@ -151,7 +151,7 @@ namespace Pacer{
       // remove the plugins that have been marked for closure
       if(!plugins_to_close.empty()){
         BOOST_FOREACH( const std::string& name, plugins_to_close){
-          OUT_LOG(logDEBUG1) << "CLOSING " << name;
+          OUT_LOG(logINFO) << "CLOSING " << name;
           remove_plugin(name);
         }
         plugins_to_close.clear();
@@ -160,7 +160,7 @@ namespace Pacer{
       // add the plugins that have been marked for addition
       if(!plugins_to_open.empty()){
         BOOST_FOREACH( const std::string& name, plugins_to_open){
-          OUT_LOG(logDEBUG1) << "OPENING " << name;
+          OUT_LOG(logINFO) << "OPENING " << name;
           init_plugin(name);
         }
         plugins_to_open.clear();
@@ -170,14 +170,14 @@ namespace Pacer{
       for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++){
         if(!_update_priority_map[i].empty()){ // SRZ: do I need this line?
           BOOST_FOREACH( const name_update_t::value_type& update, _update_priority_map[i]){
-            OUT_LOG(logDEBUG1) << ">> " << update.first;
+            OUT_LOG(logINFO) << ">> " << update.first;
             (*(update.second))(this->ptr(),t);
-            OUT_LOG(logDEBUG1) << "<< " << update.first;
+            OUT_LOG(logINFO) << "<< " << update.first;
           }
         }
       }
       
-      OUT_LOG(logDEBUG1) << "<< update_plugins()";
+      OUT_LOG(logINFO) << "<< update_plugins()";
       return true;
     }
   };

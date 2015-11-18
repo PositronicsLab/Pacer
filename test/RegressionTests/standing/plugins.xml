@@ -6,7 +6,7 @@
       stand-trajectory
       ik-feet
       eef-PID-controller
-   idyn-controller
+      idyn-controller
   </plugins>
   
   <!--
@@ -41,7 +41,7 @@
   </end-effectors>
   
   <output>
-    <file type="string">liboutput.so</file>
+    <file type="string">output/liboutput.so</file>
     <real-time-factor type="double">10</real-time-factor>
     <priority type="double">10</priority>
     <print-data>
@@ -103,7 +103,7 @@
  </gamepad>
 
   <stand-trajectory>
-    <file type="string">libstand-trajectory.so</file>
+    <file type="string">libstand.so</file>
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">1</priority>
   </stand-trajectory>
@@ -158,7 +158,7 @@
   </wcpg>
   
   <ik-feet>
-    <file type="string">libik-feet.so</file>
+    <file type="string">libinverse-kinematics.so</file>
     <priority type="double">2</priority>
     <real-time-factor type="double">1</real-time-factor>
     <abs-err-tolerance type="double">1.5e-3</abs-err-tolerance>

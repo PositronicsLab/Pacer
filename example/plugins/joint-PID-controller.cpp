@@ -24,7 +24,7 @@ public:
     double kv;
     double ki;
   };
-    
+
   std::vector<Gains> _gains;
   
   Ravelin::VectorNd q_des,

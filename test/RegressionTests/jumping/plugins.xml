@@ -4,8 +4,8 @@
     end-effectors
     error-check
     center-of-mass
-    ik-feet
-    eef-PID-controller
+        ik-feet
+        eef-PID-controller
   </plugins>
   <!-- Other Control Modules
     -->
@@ -30,7 +30,6 @@
       </close>
       <open type="string vector">
         crouch
-        idyn-controller
       </open>
     </init>
     <!--   WALK   -->
@@ -48,17 +47,17 @@
   </plugin-scheduler>
 
   <viz-jump>
-    <priority type="double">10</priority>
+    <priority type="double">0</priority>
     <real-time-factor type="double">1</real-time-factor>
     <file type="string">libvisualize-ballistic-moton.so</file>
   </viz-jump>
 
 
   <ik-feet>
-    <file type="string">libik-feet.so</file>
+    <file type="string">libinverse-kinematics.so</file>
     <priority type="double">8</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <abs-err-tolerance type="double">1.5e-3</abs-err-tolerance>
+    <abs-err-tolerance type="double">1e-3</abs-err-tolerance>
   </ik-feet>
   
   <stand>
@@ -68,10 +67,10 @@
   </stand>
 
   <reset-trajectory>
-    <file type="string">libreset-stand.so</file>
+    <file type="string">libgoto-stand.so</file>
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">1</priority>
-     <time-to-pose type="double">1</time-to-pose>
+     <time-to-pose type="double">0.2</time-to-pose>
   </reset-trajectory>
   
   <error-check>
@@ -98,10 +97,10 @@
     <file type="string">libjump.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">5</priority>
-    <angle-of-elevation type="double">0.9</angle-of-elevation>
+    <angle-of-elevation type="double">1.1</angle-of-elevation>
     <heading type="double">0</heading>
     <range type="double">0.50</range>
-    <duration type="double">0.2</duration>
+    <duration type="double">0.3</duration>
   </jump>
   
   <center-of-mass>
@@ -117,7 +116,7 @@
   </end-effectors>
   
   <output>
-    <file type="string">liboutput.so</file>
+    <file type="string">output/liboutput.so</file>
     <real-time-factor type="double">10</real-time-factor>
     <priority type="double">10</priority>
     <print-data>
@@ -146,7 +145,7 @@
   </output>
   
   <settle-feet>
-    <file type="string">libsettle-feet.so</file>
+    <file type="string">libsettle.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">4</priority>
     <des-contact type="bool">false</des-contact>
@@ -195,7 +194,7 @@
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">CFLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">CFQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
 <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

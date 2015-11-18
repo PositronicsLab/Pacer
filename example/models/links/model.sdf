@@ -147,8 +147,8 @@
       <axis>
         <xyz>1 0 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -156,7 +156,7 @@
     
     
     <link name='LF_LEG_1'>
-      <pose>0.115 0.05 0 0 0 0</pose>
+      <pose>0.115 0.05 0 0 0. 0</pose>
       <inertial>
         <pose>0.020 0 0 0 0 0</pose>
         <mass>0.10</mass>
@@ -194,8 +194,8 @@
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -240,8 +240,8 @@
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -328,8 +328,8 @@
       <axis>
         <xyz>1 0 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -374,8 +374,8 @@
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -419,8 +419,8 @@
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -500,8 +500,8 @@
       <axis>
         <xyz>-1 0 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -546,8 +546,8 @@
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -593,8 +593,8 @@
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -675,8 +675,8 @@
       <axis>
         <xyz>-1 0 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -721,8 +721,8 @@
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>
@@ -768,8 +768,8 @@
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
-          <lower>-1e+16</lower>
-          <upper>1e+16</upper>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
         </limit>
         <dynamics/>
       </axis>

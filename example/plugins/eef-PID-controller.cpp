@@ -72,29 +72,39 @@ public:
     
     for (int i=0; i< num_eefs; i++)
     {
-      Ravelin::Vector3d
-      pos = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.x"),
-      vel = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".state.xd");
-      pos.pose = base_link_frame;
-      vel.pose = base_link_frame;
+      Ravelin::Origin3d
+      pos =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".state.x"),
+      vel =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".state.xd");
       
-      Ravelin::Vector3d
-      pos_des = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".goal.x"),
-      vel_des = ctrl_ptr->get_data<Ravelin::Vector3d>(eef_names[i]+".goal.xd");
-      pos_des.pose = base_link_frame;
-      vel_des.pose = base_link_frame;
+      Ravelin::Origin3d
+      pos_des =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".goal.x"),
+      vel_des =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".goal.xd");
       
+      Ravelin::Origin3d base_joint = ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".base");
+      double max_reach = ctrl_ptr->get_data<double>(eef_names[i]+".reach");
+      
+      Ravelin::Origin3d goal_from_base_joint = pos_des - base_joint;
+      double goal_reach = goal_from_base_joint.norm();
+      OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
+      
+      if(goal_reach > max_reach){
+        pos_des = base_joint + goal_from_base_joint * (max_reach/goal_reach);
+        vel_des.set_zero();
+      }
+      
+#ifdef USE_OSG_DISPLAY
       {
-        Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,pos_des);
-        Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,pos);
+        Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(pos_des,base_link_frame));
+        Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(pos,base_link_frame));
         //      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p1,   Vector3d(0,1,0),0.01)));
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  p2,   p1,   Vector3d(1,0,0),0.01)));
         Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,vel_des)/10;
         Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p1,   p1,   Vector3d(0,1,0),0.01)));
       }
+#endif
       
-      Ravelin::Vector3d 
+      Ravelin::Origin3d
         perr = pos_des-pos,
         derr = vel_des-vel;
       for(int j=0;j<3;j++){
@@ -107,7 +117,6 @@ public:
         
         eef_u[i][j] = (perr[j]*KP + derr[j]*KV + ierr*KI);
       }
-      eef_u[i].pose = base_link_frame;
       
       OUTLOG(perr,eef_names[i]+"_perr",logDEBUG1);
       OUTLOG(derr,eef_names[i]+"_derr",logDEBUG1);

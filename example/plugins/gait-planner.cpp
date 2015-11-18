@@ -31,6 +31,7 @@ double sigmoid(double x){
 }
 
 double sigmoid_interp(double v0, double vF, double alpha){
+  // sigmoid curve interpolates wrt to alpha \in {0..1}
   double diff = vF - v0;
   return v0 + diff*sigmoid(alpha*10.0 - 5.0);
 }
@@ -593,9 +594,6 @@ void walk_toward(
       if(replan_path){
         OUT_LOG(logDEBUG1) << "NEW SPLINE";
         start_of_step_foothold[i] = Pose3d::transform_point(base_horizontal_frame,x_start);
-        //boost::shared_ptr<Pose3d> state_ptr(new Pose3d(*base_horizontal_frame.get()));
-        //state_ptr->update_relative_pose(Pacer::GLOBAL);
-        //start_of_step_foothold[i].pose = state_ptr;
       }
       if(redirect_path)
         OUT_LOG(logDEBUG1) << "REDIRECT SPLINE Mid-Step";
@@ -621,6 +619,8 @@ void walk_toward(
         // transform location of step start to current pose
         OUT_LOG(logDEBUG1) << "x_start old: " << start_of_step_foothold[i];
         x_start = Pose3d::transform_point(base_horizontal_frame,start_of_step_foothold[i]);
+        // do not factor robot height change into swing foot
+        x_start[2] = start_of_step_foothold[i][2];
 //        x_start = start_of_step_foothold[i];
 //        x_start.pose = base_horizontal_frame;
         OUT_LOG(logDEBUG1) << "x_start local: " << x_start;
@@ -888,11 +888,14 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   
   //  ctrl->set_model_state(q);
   for(int i=0;i<NUM_FEET;i++){
-    foot_init[i] = ctrl->get_data<Vector3d>(foot_names[i]+".init.x");
+    foot_init[i] = Vector3d(ctrl->get_data<Origin3d>(foot_names[i]+".init.x"),base_frame);
     foot_pos[i] = foot_init[i];
-    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    Origin3d workv;
+    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.x",workv))
+      foot_pos[i] = Vector3d(workv,base_frame);
     foot_vel[i] = Vector3d(0,0,0,base_frame);
-    ctrl->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
+    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.xd",workv))
+      foot_vel[i] = Vector3d(workv,base_frame);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
   }
   
@@ -934,9 +937,9 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
   
   for(int i=0;i<NUM_FEET;i++){
-    ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-    ctrl->set_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
-    ctrl->set_data<Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.x",Origin3d(foot_pos[i]));
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xd",Origin3d(foot_vel[i]));
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xdd",Origin3d(foot_acc[i]));
   }
 }
 
@@ -965,10 +968,10 @@ void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   int NUM_FEET = foot_names.size();
   
   for(int i=0;i<NUM_FEET;i++){
-    ctrl->remove_data(foot_names[i]+".goal.x");
-    ctrl->remove_data(foot_names[i]+".goal.xd");
-    ctrl->remove_data(foot_names[i]+".goal.xdd");
-    ctrl->remove_data(foot_names[i]+".stance");
+//    ctrl->remove_data(foot_names[i]+".goal.x");
+//    ctrl->remove_data(foot_names[i]+".goal.xd");
+//    ctrl->remove_data(foot_names[i]+".goal.xdd");
+//    ctrl->remove_data(foot_names[i]+".stance");
   }
 }
 

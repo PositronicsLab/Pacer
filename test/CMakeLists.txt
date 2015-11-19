@@ -8,3 +8,8 @@ option(BUILD_UNIT_TESTS "Build Pacer Unit tests for debugging?" ON)
 IF(BUILD_UNIT_TESTS)
   add_subdirectory( UnitTests )
 ENDIF(BUILD_UNIT_TESTS)
+
+option(BUILD_DEMOS "Build Pacer Demos for demonstration/debugging?" ON)
+IF(BUILD_DEMOS)
+  add_subdirectory( Demos )
+ENDIF(BUILD_DEMOS)

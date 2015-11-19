@@ -13,6 +13,7 @@
 #include <dxl/Dynamixel.h>
 DXL::Dynamixel * dxl_;
 #endif
+std::vector<std::string> joint_name;
 
 #ifdef USE_THREADS
 #include <pthread.h>
@@ -123,16 +124,16 @@ void init(std::string model_f,std::string vars_f){
   robot_ptr->set_generalized_value(Pacer::Robot::position_goal,robot_ptr->get_generalized_value(Pacer::Robot::position));
   robot_ptr->set_generalized_value(Pacer::Robot::velocity_goal,robot_ptr->get_generalized_value(Pacer::Robot::velocity));
   robot_ptr->set_generalized_value(Pacer::Robot::acceleration_goal,robot_ptr->get_generalized_value(Pacer::Robot::acceleration));
-#ifdef USE_DXL
-  // LINKS robot
   
   // Set Dynamixel Names
-  std::vector<std::string> dxl_name = boost::assign::list_of
+  joint_name = boost::assign::list_of
   ("LF_X_1")("RF_X_1")("LH_X_1")("RH_X_1")
   ("LF_Y_2")("RF_Y_2")("LH_Y_2")("RH_Y_2")
   ("LF_Y_3")("RF_Y_3")("LH_Y_3")("RH_Y_3");
+#ifdef USE_DXL
+  // LINKS robot
   
-  dxl_->names = dxl_name;
+  dxl_->names = joint_name;
   // Set Joint Angles
   //std::vector<int> dxl_tare = boost::assign::list_of
   //    (0)(0)(0)(0)
@@ -247,19 +248,19 @@ void controller(double t)
   if(pthread_mutex_lock(&joint_data_mutex_))
 #endif
   {
-    for(int i=0;i<dxl_->ids.size();i++){
-      q[dxl_->JointName(i)][0] = q_sensor[i];
-      qd[dxl_->JointName(i)][0] = qd_sensor[i];
-      u[dxl_->JointName(i)][0] = u_sensor[i];
+    for(int i=0;i<joint_name.size();i++){
+      q[joint_name[i]][0] = q_sensor[i];
+      qd[joint_name[i]][0] = qd_sensor[i];
+      u[joint_name[i]][0] = u_sensor[i];
     }
     
 #ifdef USE_THREADS
     pthread_mutex_unlock(&joint_data_mutex_);
 #endif
-    for(int i=0;i<dxl_->ids.size();i++){
-      qdd[dxl_->JointName(i)] = qd[dxl_->JointName(i)];
-      qdd[dxl_->JointName(i)] -= qd_last[dxl_->JointName(i)];
-      qdd[dxl_->JointName(i)] /= dt;
+    for(int i=0;i<joint_name.size();i++){
+      qdd[joint_name[i]] = qd[joint_name[i]];
+      qdd[joint_name[i]] -= qd_last[joint_name[i]];
+      qdd[joint_name[i]] /= dt;
     }
   }
   qd_last = qd;
@@ -291,15 +292,15 @@ void controller(double t)
       robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
       std::map<std::string,Ravelin::VectorNd> joint_vel_map;
       robot_ptr->get_joint_value(Pacer::Robot::velocity_goal,joint_vel_map);
-      for(int i=0;i<dxl_->ids.size();i++){
-        q_motors[i] = joint_pos_map[dxl_->JointName(i)][0];
-        qd_motors[i] = joint_vel_map[dxl_->JointName(i)][0];
+      for(int i=0;i<joint_name.size();i++){
+        q_motors[i] = joint_pos_map[joint_name[i]][0];
+        qd_motors[i] = joint_vel_map[joint_name[i]][0];
       }
     } else {
       std::map<std::string,Ravelin::VectorNd> joint_load_map;
       robot_ptr->get_joint_value(Pacer::Robot::load_goal,joint_load_map);
-      for(int i=0;i<dxl_->ids.size();i++){
-        u_motors[i] = joint_load_map[dxl_->JointName(i)][0];
+      for(int i=0;i<joint_name.size();i++){
+        u_motors[i] = joint_load_map[joint_name[i]][0];
       }
     }
     

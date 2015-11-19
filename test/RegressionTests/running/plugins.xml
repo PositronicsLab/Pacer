@@ -129,7 +129,7 @@
     <priority type="double">1</priority>
     <pose type="double">0.0 0 0 0 0 0</pose>
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
-    <stance-on-contact type="bool">true</stance-on-contact>
+    <stance-on-contact type="bool">false</stance-on-contact>
     <redirect-swing-interval type="double">0.75</redirect-swing-interval>
     <holonomic type="bool">false</holonomic>
     <step-height type="double">0.03</step-height>

@@ -210,22 +210,23 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
       
       
-//      OUT_LOG(logERROR) << "compliant: " << compliant;
-//      OUT_LOG(logERROR) << "normal: " << normal;
-//      OUT_LOG(logERROR) << "tangent: " << tangent;
-//      OUT_LOG(logERROR) << "point: " << e[i].contact_point;
+      OUT_LOG(logERROR) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
+      OUT_LOG(logERROR) << "MOBY: compliant: " << compliant;
+      OUT_LOG(logERROR) << "MOBY: normal: " << normal;
+      OUT_LOG(logERROR) << "MOBY: tangent: " << tangent;
+      OUT_LOG(logERROR) << "MOBY: point: " << e[i].contact_point;
       if(robot_ptr->is_end_effector(sb1->body_id)){
         robot_ptr->add_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
-        robot_ptr->set_data<Ravelin::Vector3d>
-        (sb1->body_id+".contact-force",
-         Ravelin::Vector3d
-         (impulse.dot(normal),impulse.dot(e[i].contact_tan1),impulse.dot(e[i].contact_tan2)));
+        //robot_ptr->set_data<Ravelin::Vector3d>
+        //(sb1->body_id+".contact-force",
+        // Ravelin::Vector3d
+        // (impulse.dot(normal),impulse.dot(e[i].contact_tan1),impulse.dot(e[i].contact_tan2)));
       } else if(robot_ptr->is_end_effector(sb2->body_id)){
         robot_ptr->add_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
-        robot_ptr->set_data<Ravelin::Vector3d>
-        (sb2->body_id+".contact-force",
-         Ravelin::Vector3d
-         (impulse.dot(-normal),impulse.dot(e[i].contact_tan1),impulse.dot(-e[i].contact_tan2)));
+        //robot_ptr->set_data<Ravelin::Vector3d>
+        //(sb2->body_id+".contact-force",
+        // Ravelin::Vector3d
+        // (impulse.dot(-normal),impulse.dot(e[i].contact_tan1),impulse.dot(-e[i].contact_tan2)));
       } else {
         continue;  // Contact doesn't include an end-effector
       }
@@ -541,11 +542,11 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   std::cout << "Controller inited" << std::endl;
   
   // CONTACT CALLBACK
-//  boost::shared_ptr<Moby::ConstraintSimulator>
-//  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
-//  if (csim){
-//    csim->constraint_post_callback_fn        = &post_event_callback_fn;
-//  }
+  boost::shared_ptr<Moby::ConstraintSimulator>
+  csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
+  if (csim){
+    csim->constraint_post_callback_fn        = &post_event_callback_fn;
+  }
 
   // CONTROLLER CALLBACK
   controlled_body->controller                     = &controller_callback;

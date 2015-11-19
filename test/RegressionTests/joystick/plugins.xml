@@ -1,10 +1,11 @@
   <XML>
   <plugins type="string vector">
+      error-check
       gamepad
       center-of-mass
       end-effectors
       gait-planner
-      ik-feet
+      eef-PID-controller
   </plugins>
   
   <!--
@@ -13,7 +14,6 @@
    joint-PID-controller
       eef-PID-controller
    
-      error-check
    stand-trajectory
    joint-PID-controller
    idyn-controller

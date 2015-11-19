@@ -27,7 +27,7 @@ IF(USE_OSG_DISPLAY)
 ENDIF(USE_OSG_DISPLAY)
 
 
-find_package (gsl)
+find_package (gsl QUIET)
 IF(GSL_FOUND)
   add_definitions(-DSIMULATE_UNCERTAINTY)
   include_directories(${GSL_INCLUDE_DIRS})

@@ -50,26 +50,16 @@ IF(GAZEBO_FOUND)
 ENDIF(GAZEBO_FOUND)
 ENDIF(USE_GAZEBO)
 
+add_executable(PacerMotorDriver ${CMAKE_SOURCE_DIR}/example/interfaces/motor.cpp)
+target_link_libraries(PacerMotorDriver ${REQLIBS})
+
 option(USE_DXL "use dynamixel motor driver for motor control?" OFF)
 # look for DXL
 IF(USE_DXL)
 find_package(DXL)
 IF(DXL_FOUND)
   add_definitions(-DUSE_DXL)
-ENDIF(DXL_FOUND)
-ENDIF(USE_DXL)
-
-add_executable(PacerMotorDriver ${CMAKE_SOURCE_DIR}/example/interfaces/motor.cpp)
-target_link_libraries(PacerMotorDriver ${REQLIBS})
-
-IF(USE_DXL)
-IF(DXL_FOUND)
   target_link_libraries(PacerMotorDriver dxl)
   target_link_libraries(PacerMobyPlugin dxl)
 ENDIF(DXL_FOUND)
 ENDIF(USE_DXL)
-
-find_package(Boost COMPONENTS thread OPTIONAL)
-if(${BOOST_THREAD_LIBRARY})
-  target_link_libraries(PacerMotorDriver ${BOOST_THREAD_LIBRARY})
-endif()

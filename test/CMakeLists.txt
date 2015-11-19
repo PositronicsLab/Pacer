@@ -1,3 +1,4 @@
+option(USE_GTEST "Build Pacer with gtest enabled?" OFF)
 option(BUILD_REGRESSION_TESTS "Build Pacer Regression Tests for debugging?" ON)
 IF(BUILD_REGRESSION_TESTS)
   add_subdirectory( RegressionTests )

@@ -97,6 +97,7 @@ void *control_motor(void* data){
 #endif
   }
   OUT_LOG(logDEBUG2) << "<< control_motor()" << std::endl;
+  return data;
 }
 
 // ============================================================================

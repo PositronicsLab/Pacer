@@ -1,4 +1,4 @@
-#ifndef NO_GTEST
+#ifdef USE_GTEST
 #include <gtest/gtest.h>
 #endif
 void check_final_state(boost::shared_ptr<Ravelin::ArticulatedBodyd>& rb){
@@ -15,7 +15,9 @@ void check_final_state(boost::shared_ptr<Ravelin::ArticulatedBodyd>& rb){
   // Progress from first version:
   double last_x_progress = 1.01395;
   
+#ifdef USE_GTEST
   ASSERT_LE(last_x_progress,x_progress);
+#endif
 }
 
 void check_current_state(boost::shared_ptr<Ravelin::ArticulatedBodyd>& rb){

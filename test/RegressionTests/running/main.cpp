@@ -28,7 +28,7 @@ Ravelin::VectorNd q_0,qd_0;
 #include "checks.cpp"
 
 #define TEST_TYPE RegressionTest
-#define TEST_NAME Walking
+#define TEST_NAME Running
 
 #include "../main.cpp"
 

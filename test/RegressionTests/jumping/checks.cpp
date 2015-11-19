@@ -1,4 +1,4 @@
-#ifndef NO_GTEST
+#ifdef USE_GTEST
 #include <gtest/gtest.h>
 #endif
 void check_final_state(boost::shared_ptr<Ravelin::ArticulatedBodyd>& rb){

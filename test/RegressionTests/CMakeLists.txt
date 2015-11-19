@@ -1,7 +1,7 @@
 file(GLOB sub-dir "*")
 foreach(dir ${sub-dir})
   if(IS_DIRECTORY ${dir})
-    get_filename_component(dir_name ${dir} NAME [cached])
+    get_filename_component(dir_name ${dir} NAME)
     if(${dir_name} STREQUAL "CMakeFiles")
     #do nothing
     else ()

@@ -1,5 +1,4 @@
-find_package(curses)
-
+find_package(curses QUIET)
 IF(CURSES_FOUND AND USE_CURSES)
 add_definitions( -DUSE_CURSES )
 ENDIF()

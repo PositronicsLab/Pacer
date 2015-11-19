@@ -16,29 +16,28 @@ static char** param_array_noconst( std::vector< std::string >& params ) {
   return (char**) pa;
 }
 
-#ifdef NO_GTEST
-int main(int argc, char** argv){
-#else
+#ifdef USE_GTEST
 #include <gtest/gtest.h>
 TEST(TEST_TYPE,TEST_NAME){
+#else
+int main(int argc, char** argv){
 #endif
-
   boost::shared_ptr<Simulator> sim;
   std::string pacer_model_path(getenv ("PACER_MODEL_PATH"));
   std::string pacer_interface_path(getenv ("PACER_INTERFACE_PATH"));
   // run sample
   std::vector<std::string> argvs;
   // OSG output first and last viewer frame
-#ifdef NO_GTEST
-  argvs.push_back("TEST:PacerTest");
-  for(int i=1;i<argc;i++)
-    argvs.push_back(argv[i]);
-#else
+#ifdef USE_GTEST
   argvs.push_back("GOOGLE-TEST:PacerTest");
   argvs.push_back("-mt=10");
   argvs.push_back("-v=6");
   argvs.push_back("-s=0.0015");
   argvs.push_back("-y=osg");
+#else
+  argvs.push_back("TEST:PacerTest");
+  for(int i=1;i<argc;i++)
+    argvs.push_back(argv[i]);
 #endif
   // XML output first and last state with viz info
   //  argvs.push_back("-w=0");
@@ -110,7 +109,7 @@ TEST(TEST_TYPE,TEST_NAME){
   // Clean up Moby
   Moby::close();
   
-#ifdef NO_GTEST
+#ifndef USE_GTEST
   return 0;
 #endif
 }

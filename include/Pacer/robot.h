@@ -169,7 +169,6 @@ pthread_mutex_unlock(&_data_map_mutex);
       // For locomotion, this informs us if this link should be used to calculate a jocobian
       bool                   active;
       bool                   stance;
-
     };
     
 		std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > > _id_contacts_map;
@@ -282,13 +281,18 @@ pthread_mutex_unlock(&_data_map_mutex);
       velocity_goal=5,      // rad/s |  m/s
       acceleration_goal=6,  // rad/ss|  m/ss
       load_goal=7;// TORQUE //  N.m  |   N
-
   private:
-	
-    std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;    
-    std::map<unit_e , Ravelin::VectorNd> _base_state;    
+//    std::deque<std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > > _state_history;
+//    std::deque<std::map<unit_e , Ravelin::VectorNd> > _base_state_history;
+
+    std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;
+    std::map<unit_e , Ravelin::VectorNd> _base_state;
+    std::map<unit_e , std::map<std::string, Ravelin::Origin3d > > _foot_state;
+
 #ifdef USE_THREADS
     pthread_mutex_t _state_mutex;
+    pthread_mutex_t _base_state_mutex;
+    pthread_mutex_t _foot_state_mutex;
 #endif
     bool _lock_state;
 
@@ -314,6 +318,7 @@ pthread_mutex_unlock(&_data_map_mutex);
       return _id_dof_coord_map[id].size();
     }
 
+    //////////////////////////////////////////////////////
     /// ------------ GET/SET JOINT value  ------------ ///
 
     double get_joint_value(const std::string& id, unit_e u, int dof)
@@ -685,12 +690,79 @@ pthread_mutex_unlock(&_state_mutex);
       return vec;
     }
 
+    void set_foot_value(const std::string& id, unit_e u, const Ravelin::Origin3d& val)
+    {
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+#ifdef USE_THREADS
+      pthread_mutex_lock(&_foot_state_mutex);
+#endif
+      _foot_state[u][id] = val;
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&_foot_state_mutex);
+#endif
+    }
+    
+    Ravelin::Origin3d& get_foot_value(const std::string& id, unit_e u, Ravelin::Origin3d& val)
+    {
+#ifdef USE_THREADS
+      pthread_mutex_lock(&_foot_state_mutex);
+#endif
+      val = _foot_state[u][id];
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&_foot_state_mutex);
+#endif
+      return val;
+    }
+    /*
+    void set_foot_value(unit_e u, const std::map<std::string,Ravelin::Origin3d>& val)
+    {
+      if(_lock_state && u <= load)
+        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+#ifdef USE_THREADS
+      pthread_mutex_lock(&_foot_state_mutex);
+#endif
+      std::map<std::string, Ravelin::Origin3d >::const_iterator it;
+      for (it=val.begin(); it != val.end(); it++) {
+        std::map<std::string, Ravelin::Origin3d >::iterator jt = _foot_state[u].find((*it).first);
+        if(jt != _foot_state[u].end())
+          (*jt).second = (*it).second;
+      }
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&_foot_state_mutex);
+#endif
+    }
+    
+    std::map<std::string,Ravelin::Origin3d>& get_foot_value(unit_e u, std::map<std::string,Ravelin::Origin3d>& val)
+    {
+#ifdef USE_THREADS
+      pthread_mutex_lock(&_foot_state_mutex);
+#endif
+      std::map<std::string, Ravelin::Origin3d >::iterator it;
+      for (it=_foot_state[u].begin(); it != _foot_state[u].end(); it++) {
+        val[(*it).first] = (*it).second;
+      }
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&_foot_state_mutex);
+#endif
+      return val;
+    }
+    
+    const std::vector<std::string>& get_foot_ids(){
+      return _foot_ids;
+    }
+    */
     void reset_state(){
       reset_contact();
       // TODO: make this more efficient ITERATORS dont work
       //      std::map<std::string,Ravelin::VectorNd>::iterator it;
       
-      for(unit_e u=position;u<=load_goal;u+=1){
+      for(unit_e u=position_goal;u<=load_goal;u+=1){
+//        const std::vector<std::string>& foot_keys = _foot_ids;
+//        for(int i=0;i<foot_keys.size();i++){
+//          _foot_state[u].erase(foot_keys[i]);
+//        }
+
         const std::vector<std::string>& keys = _joint_ids;
         for(int i=0;i<keys.size();i++){
           const int N = get_joint_dofs(keys[i]);
@@ -774,6 +846,7 @@ pthread_mutex_unlock(&_state_mutex);
     boost::shared_ptr<Ravelin::RigidBodyd> _root_link;
     std::map<std::string,boost::shared_ptr<Ravelin::Jointd> > _id_joint_map;
     std::vector<std::string> _joint_ids;
+    std::vector<std::string> _foot_ids;
 
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;

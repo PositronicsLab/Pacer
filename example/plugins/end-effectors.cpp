@@ -68,7 +68,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       Ravelin::Origin3d x_reaching(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
       
       // write in maximum reach from limb base
-      ctrl->set_data<double>(eef_names_[i]+".reach",(x_reaching-base_x).norm());
+      double reach = (x_reaching-base_x).norm()*0.75;
+      ctrl->set_data<double>(eef_names_[i]+".reach",reach);
     }
   }
 }

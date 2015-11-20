@@ -30,6 +30,21 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
       return;
     ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
+    
+    ////// enforce maximum reach on legs ////////////
+    Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".base");
+    double max_reach = ctrl->get_data<double>(foot_names[i]+".reach");
+    
+    Ravelin::Origin3d goal_from_base_joint = foot_pos[i] - base_joint;
+    double goal_reach = goal_from_base_joint.norm();
+    OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
+    
+    if(goal_reach > max_reach){
+      OUT_LOG(logDEBUG1) << " foot goal reduced from: " << foot_pos[i] ;
+      foot_pos[i] = base_joint + goal_from_base_joint * (max_reach/goal_reach);
+      OUT_LOG(logDEBUG1) << " to: " << foot_pos[i] ;
+    }
+
   }
   
   ctrl->get_generalized_value(Pacer::Controller::position,q);

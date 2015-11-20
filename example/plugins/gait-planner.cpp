@@ -351,6 +351,7 @@ void walk_toward(
   // Figure out the phase of each foot
   std::vector<FOOT_PHASE> phase_vector(NUM_FEET);
   std::vector<double> left_in_phase_v(NUM_FEET);
+  std::vector<bool> early_stance(NUM_FEET);
   std::vector<double> liftoff(NUM_FEET);
   std::vector<Pose3d> end_of_step_state(NUM_FEET);
   std::vector<Pose3d> mid_of_next_step_state(NUM_FEET);
@@ -361,10 +362,38 @@ void walk_toward(
     liftoff[i] = decimal_part(touchdown[i] + duty_factor[i]);
     if(liftoff[i] >= 1.0) liftoff[i] = 0;
     
-    
     FOOT_PHASE this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
     phase_vector[i] = this_phase;
+    
+    bool active_foot = active_feet[foot_names[i]];
+    // Make sure Early Contact is valid
+    bool early_contact = STANCE_ON_CONTACT && ((this_phase == SWING) && active_foot);
+    if(early_contact){
+      if (// If in latter part of swing phase
+          in_interval(gait_progress,liftoff[i],decimal_part(liftoff[i]+(1.0-duty_factor[i])/2.0))
+          // AND robot is not tilted toward new contact
+          // avoid Positive pitch (forward) and X positive contact (forward)
+          && (sgn(roll_pitch_yaw[1]) != sgn(origins[i][0]) || sgn(roll_pitch_yaw[1]) == 0)
+          // avoid negative roll (left) and Y positive contact (left)
+          && (sgn(roll_pitch_yaw[0]) == sgn(origins[i][1]) || sgn(roll_pitch_yaw[0]) == 0)
+          )
+      {
+        // Switch foot to stance phase early
+        this_phase = STANCE;
+        early_stance[i] = true;
+      }
+    }
+    
+    if(this_phase == STANCE)
+      early_stance[i] = false;
+    
     double left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,this_phase);
+    
+    if(early_stance[i]){
+      this_phase = STANCE;
+      left_in_phase = left_in_phase + duty_factor[i];
+    }
+
     left_in_phase_v[i] = left_in_phase;
     OUT_LOG(logDEBUG) << "\t Stance Phase? : " << ((this_phase == STANCE)? "STANCE" : "SWING");
     OUT_LOG(logDEBUG) << "\t left in phase (%) : " << left_in_phase * 100.0;
@@ -386,7 +415,7 @@ void walk_toward(
     mid_of_next_step_state[i]
     = end_state(end_of_step_state[i],
                 Origin3d(command[0],command[1],command[5]),
-                fabs( (((this_phase == STANCE)? duty_factor[i] : 1.0-duty_factor[i] )/2.0) *gait_duration));
+                fabs( (((this_phase == STANCE)? 1.0-duty_factor[i] : duty_factor[i])/2.0) *gait_duration));
     
     mid_of_next_step_state[i].update_relative_pose(Pacer::GLOBAL);
     
@@ -437,31 +466,11 @@ void walk_toward(
     
     Origin3d xt(x);
     
-    // Check if Spline must be re-evaluated
-    bool replan_path = (last_phase[i] != this_phase);
-    bool active_foot = active_feet[foot_names[i]];
-    // Make sure Early Contact is valid
-    bool early_contact = STANCE_ON_CONTACT && ((this_phase == SWING) && active_foot);
-    if(early_contact){
-      if (// If in latter part of swing phase
-          (gait_progress > (touchdown[i] + duty_factor[i]/2.0))
-          // AND robot is not tilted toward new contact
-          // avoid Positive pitch (forward) and X positive contact (forward)
-          && (sgn(roll_pitch_yaw[1]) != sgn(origins[i][0]) || sgn(roll_pitch_yaw[1]) == 0)
-          // avoid negative roll (left) and Y positive contact (left)
-          && (sgn(roll_pitch_yaw[0]) == sgn(origins[i][1]) || sgn(roll_pitch_yaw[0]) == 0)
-          )
-      {
-        // Switch foot to stance phase early
-        this_phase = STANCE;
-      }
-    }
-    
     // If stance foot OR foot is contacting ground
     if(this_phase != STANCE){
       continue;
     }
-    replan_path = false;
+
     VectorNd zero_base_generalized_q;
     zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
     zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
@@ -528,8 +537,9 @@ void walk_toward(
     OUT_LOG(logDEBUG) << "xdd " << xdd;
   }
   
-  
+  ///////////////////////////////////////////////////////////////////////
   //////////////////////// PLANNING SWING PHASE /////////////////////////
+  ///////////////////////////////////////////////////////////////////////
   for(int i=0;i<NUM_FEET;i++){
     FOOT_PHASE &this_phase = phase_vector[i];
     
@@ -551,9 +561,6 @@ void walk_toward(
     
     // Check if Spline must be re-evaluated
     bool replan_path = (last_phase[i] != this_phase);
-    ///////////////////////////////////////////////////////////////////////
-    //////////////////////// PLANNING SWING PHASE /////////////////////////
-    ///////////////////////////////////////////////////////////////////////
     
     double redirect_path_interval = 0;
     ctrl->get_data<double>(plugin_namespace+".redirect-swing-interval",redirect_path_interval);
@@ -589,7 +596,7 @@ void walk_toward(
     } else {
       OUT_LOG(logDEBUG1) << "Creating new spline: " << i;
       
-      Vector3d x_start = x,xd_start,xdd_;
+      Vector3d x_start = x,xd_start(0,0,0),xdd_;
       
       if(replan_path){
         OUT_LOG(logDEBUG1) << "NEW SPLINE";
@@ -602,12 +609,21 @@ void walk_toward(
       double t0 = t - ( swing_phase_duration-left_in_phase ) * gait_duration;
       
       /// SWING FEET ARE IN HORIZONTAL POSE
-      Vector3d foot_goal;
-      {
-        boost::shared_ptr<Pose3d> state_ptr(new Pose3d(mid_of_next_step_state[i]));
-        foot_goal = Vector3d(origins[i].data(),state_ptr);
-        foot_goal = Pose3d::transform_point(base_horizontal_frame,foot_goal);
-      }
+      // set down foot where the origin will be in the middle of the next stance phase
+      // (with respect to the start of the next stance phase)
+      boost::shared_ptr<Pose3d> mid_of_next_step_state_ptr(new Pose3d(mid_of_next_step_state[i]));
+      boost::shared_ptr<Pose3d> end_of_step_state_ptr(new Pose3d(end_of_step_state[i]));
+      Vector3d foot_goal(origins[i],mid_of_next_step_state_ptr);
+      foot_goal = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
+      
+#ifdef DISPLAY
+      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,start_of_step_foothold[i]);
+      p1[2] = 0;
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p1,   Vector3d(1,0,0),0.075)));
+      Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,foot_goal);
+      p2[2] = 0;
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p2,   Vector3d(0,1,0),0.075)));
+#endif
       
       // Generate control points for swing foot spline
       std::vector<Origin3d> control_points;
@@ -617,22 +633,11 @@ void walk_toward(
       
       if(redirect_path){
         // transform location of step start to current pose
-        OUT_LOG(logDEBUG1) << "x_start old: " << start_of_step_foothold[i];
-        x_start = Pose3d::transform_point(base_horizontal_frame,start_of_step_foothold[i]);
-        // do not factor robot height change into swing foot
-        x_start[2] = start_of_step_foothold[i][2];
-//        x_start = start_of_step_foothold[i];
-//        x_start.pose = base_horizontal_frame;
+        x_start = start_of_step_foothold[i];
+        x_start.pose = base_horizontal_frame;
         OUT_LOG(logDEBUG1) << "x_start local: " << x_start;
-        
       }
       control_points.push_back(Origin3d(x_start));
-      
-#ifdef DISPLAY
-      Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x_start);
-      Vector3d v = Pose3d::transform_point(Pacer::GLOBAL,foot_goal) - p;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.05)));
-#endif
       
       OUT_LOG(logDEBUG) << "Calculating step [" << i << "] : " << control_points[0] << " --> " << foot_goal;
       
@@ -646,7 +651,7 @@ void walk_toward(
       spline_robustness[0] = fabs(spline_robustness[0]) * sgn(foot_destination[0]);
       spline_robustness.normalize();
       spline_robustness = spline_robustness * 1e-3;
-      
+      spline_robustness[2] = 1e-3;
       control_points.push_back(control_points[0] + up_step - spline_robustness);
       
       if(footholds.empty()){
@@ -726,6 +731,9 @@ void walk_toward(
         }
       }
       
+      OUTLOG(xd_start,"xd1",logDEBUG);
+      OUTLOG(xd,"xd2",logDEBUG);
+
       n = control_points.size();
       
       OUT_LOG(logDEBUG1) << "Calc Spline AND Eval first step: " << i << " @ time: " << t;
@@ -745,7 +753,7 @@ void walk_toward(
         
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
-        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t+NEAR_ZERO,x[d],xd[d],xdd[d]);
       }
     }
     

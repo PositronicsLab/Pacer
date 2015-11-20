@@ -98,18 +98,6 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   base_frame(new Ravelin::Pose3d);
   base_frame->rpose = Pacer::GLOBAL;
   
-  ////// enforce maximum reach on legs ////////////
-  Ravelin::Origin3d base_joint = get_data<Ravelin::Origin3d>(foot.id+".base");
-  double max_reach = get_data<double>(foot.id+".reach");
-  
-  Ravelin::Origin3d goal_from_base_joint = goal - base_joint;
-  double goal_reach = goal_from_base_joint.norm();
-  OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
-
-  if(goal_reach > max_reach){
-    goal = base_joint + goal_from_base_joint * (max_reach/goal_reach);
-  }
-  
   double alpha = 1, err = 1, last_err = 2;
   for(int k=0;k<foot.chain.size();k++)                // actuated joints
     x[k] = q[foot.chain[k]];

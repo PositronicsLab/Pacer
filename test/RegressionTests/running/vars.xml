@@ -7,7 +7,7 @@
 
   <init>
     <base>
-      <xd type="double"> 0.3 0 0 0 0 0 </xd> 
+      <xd type="double"> 1 0 0.1 0 0 0 </xd> 
     </base>
   </init>
 

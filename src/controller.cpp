@@ -134,35 +134,13 @@ void Controller::control(double t){
   
   OUTLOG(t,"virtual_time",logINFO);
   OUTLOG(dt,"virtual_time_step",logINFO);
-  
+  increment_phase(INITIALIZATION);
   update();
-  lock_state();
+  increment_phase(PERCEPTION);
 #ifdef USE_PLUGINS
   update_plugins(t);
 #endif
-  unlock_state();
- 
-  {
-    // Enforce limits
-    // Note: homogeneous limits
-    static std::vector<double> load_max = get_data<std::vector<double> >("init.joint.limits.u");
-
-    Ravelin::VectorNd u = get_joint_generalized_value(Pacer::Controller::load_goal);
-    OUTLOG(u,"U_NO_LIMIT",logINFO);
-
-    for (int i=0;i<u.rows(); i++) {
-      if (!std::isfinite(u[i])) {
-        throw std::runtime_error("Joint command is not finite!");
-      }
-      
-      // Limit clamp values
-      if(u[i] > load_max[0]) u[i] = load_max[0];
-      else if(u[i] < -load_max[0]) u[i] = -load_max[0];
-    }
-    OUTLOG(u,"U_WITH_LIMIT",logINFO);
-    set_joint_generalized_value(Pacer::Controller::load_goal,u);
-  }
-  
+  increment_phase(WAITING);
   reset_contact();
   last_time = t;
   OUT_LOG(logINFO) << "<< Controller::control(.)";

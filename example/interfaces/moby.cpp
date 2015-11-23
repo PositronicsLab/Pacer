@@ -304,7 +304,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   }
   }
 
-  robot_ptr->reset_state();
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
   for(int i=0;i<eef_names.size();i++)
     robot_ptr->remove_data(eef_names[i]+".contact-force");

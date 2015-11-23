@@ -53,14 +53,12 @@ namespace Pacer{
       FILELog::ReportingLevel() =
       FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "ERROR");
       // ================= INIT ROBOT ==========================
-      unlock_state();
       init_robot();
       // After Robot loads, load plugins
 #ifdef USE_PLUGINS
       if(!init_all_plugins())
         throw std::runtime_error("One of the plugins failed to load");
 #endif
-      unlock_state();
     }
   private:
     std::string PARAMS_FILE;

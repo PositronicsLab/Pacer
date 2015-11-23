@@ -10,28 +10,6 @@
 
 using namespace Pacer;
 
-// TEMPLATE SPECIALIZATIONS
-//
-//template<>
-//bool Robot::set_data<Ravelin::Pose3d>(std::string n,const Ravelin::Pose3d& _v){
-//  Ravelin::Pose3d v(Ravelin::Quatd(_v.q.x,_v.q.y,_v.q.z,_v.q.w),Ravelin::Origin3d(_v.x[0],_v.x[1],_v.x[2]),GLOBAL);
-//  _data_map_mutex.lock();
-//  // TODO: Improve this functionality, shouldn't be copying into new class
-//  std::map<std::string,boost::shared_ptr<void> >::iterator it
-//  =_data_map.find(n);
-//  bool new_var = (it == _data_map.end());
-//  if(new_var){
-//    _data_map[n] = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(v));
-//  }else{
-//    (*it).second = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(v));
-//  }
-//  _data_map_mutex.unlock();
-//  
-//  OUT_LOG(logDEBUG) << "Set: " << n << " <-- " << v;
-//  return new_var;
-//}
-
-
 void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd){
   Ravelin::VectorNd set_q,set_qd;
   if(get_data<Ravelin::VectorNd>("generalized_q", set_q)){
@@ -52,9 +30,11 @@ void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::Matrix
 }
 
 void Robot::compile(){
+  check_phase(initialization);
   NDOFS = _abrobot->num_generalized_coordinates(Ravelin::DynamicBodyd::eSpatial);
   NUM_JOINT_DOFS = NDOFS - NSPATIAL;
   
+  // Find Joint Names
   std::vector<boost::shared_ptr<Ravelin::Jointd> > joints = _abrobot->get_joints();
   
   for(unsigned i=0;i<joints.size();i++){
@@ -72,9 +52,40 @@ void Robot::compile(){
   }
   _joint_ids = get_map_keys(_id_joint_map);
   
-  for(int i=0;i<8;i++)
-    _state[i] = std::map<std::string, Ravelin::VectorNd >();
+  // Find link (and eef) names
+  // Set up link references
+  std::vector<boost::shared_ptr<Ravelin::RigidBodyd> > links = _abrobot->get_links();
+  {
+    OUT_LOG(logDEBUG1) << "Link vector";
+    std::vector<boost::shared_ptr<Ravelin::RigidBodyd> >::iterator it;
+    for(it=links.begin();it!=links.end();it++)
+      OUT_LOG(logDEBUG1) << (*it)->body_id;
+  }
   
+  _foot_ids.clear();
+  _root_link = links[0];
+  for(unsigned i=0;i<links.size();i++){
+    _id_link_map[links[i]->body_id] = links[i];
+    if (links[i]->is_end_effector()) {
+      _id_foot_map[links[i]->body_id] = links[i];
+      _foot_ids.push_back(links[i]->body_id);
+    }
+  }
+  
+  {
+    OUT_LOG(logDEBUG1) << "Link Map";
+    std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >::iterator it;
+    for(it=_id_link_map.begin();it!=_id_link_map.end();it++)
+      OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
+  }
+  
+  // NOTE: This data comes from the robot model now
+//  _foot_ids = get_data<std::vector<std::string> >("init.end-effector.id");
+  
+  // initialize state data with name data
+  init_state();
+  
+  // set up other joint data
   _disabled_dofs.resize(NDOFS);
   std::fill(_disabled_dofs.begin(),_disabled_dofs.end(),true);
   
@@ -101,38 +112,14 @@ void Robot::compile(){
     }
   }
   
-  reset_state();
-  
-  // Set up link references
-  std::vector<boost::shared_ptr<Ravelin::RigidBodyd> > links = _abrobot->get_links();
-  {
-    OUT_LOG(logDEBUG1) << "Link vector";
-    std::vector<boost::shared_ptr<Ravelin::RigidBodyd> >::iterator it;
-    for(it=links.begin();it!=links.end();it++)
-      OUT_LOG(logDEBUG1) << (*it)->body_id;
-  }
-  
-  _root_link = links[0];
-  for(unsigned i=0;i<links.size();i++){
-    _id_link_map[links[i]->body_id] = links[i];
-  }
-  
-  {
-    OUT_LOG(logDEBUG1) << "Link Map";
-    std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >::iterator it;
-    for(it=_id_link_map.begin();it!=_id_link_map.end();it++)
-      OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
-  }
-  
-  const std::vector<std::string>
-    &eef_names_ = get_data<std::vector<std::string> >("init.end-effector.id");
-  
+  // set up enbd effectors
+  // TODO: (Depricated?)
   // Initialize end effectors
-  for(unsigned i=0;i<eef_names_.size();i++){
+  for(unsigned i=0;i<_foot_ids.size();i++){
     boost::shared_ptr<end_effector_t> eef
     = boost::shared_ptr<end_effector_t>(new end_effector_t);
-    eef->link = _id_link_map[eef_names_[i]];
-    OUT_LOG(logDEBUG1) << "eef link id = " << eef_names_[i] << ", " << eef->link;
+    eef->link = _id_link_map[_foot_ids[i]];
+    OUT_LOG(logDEBUG1) << "eef link id = " << _foot_ids[i] << ", " << eef->link;
     
     eef->id = eef->link->body_id;
     
@@ -155,23 +142,26 @@ void Robot::compile(){
     }
     while (rb_ptr != _abrobot->get_base_link());
     
-    _id_end_effector_map[eef_names_[i]] = eef;
+    _id_end_effector_map[_foot_ids[i]] = eef;
+    
   }
 }
 
 void Robot::update(){
-  
+  check_phase(misc_sensor);
+
   // Propagate data set in _state into robot model
   Ravelin::VectorNd generalized_q = get_generalized_value(position);
   Ravelin::VectorNd generalized_qd = get_generalized_value(velocity);
   Ravelin::VectorNd generalized_qdd = get_generalized_value(acceleration);
   Ravelin::VectorNd generalized_fext = get_generalized_value(load);
-  
+
   set_data<Ravelin::VectorNd>("generalized_q", generalized_q);
   set_data<Ravelin::VectorNd>("generalized_qd", generalized_qd);
   set_data<Ravelin::VectorNd>("generalized_qdd", generalized_qdd);
   set_data<Ravelin::VectorNd>("generalized_fext", generalized_fext);
-  
+  set_generalized_value(load_goal,Ravelin::VectorNd::zero(generalized_fext.rows()));
+
   Ravelin::Vector3d workv;
   workv = Ravelin::Vector3d(generalized_q.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose());
   set_data<Ravelin::Vector3d>("base.state.x",workv);
@@ -201,6 +191,8 @@ void Robot::update(){
 }
 
 void Robot::update_poses(){
+  check_phase(misc_sensor);
+
   Ravelin::Pose3d base_link_frame(*(_root_link->get_pose().get()));
   
   const std::vector<double>
@@ -241,6 +233,7 @@ void Robot::update_poses(){
 #include <Moby/XMLReader.h>
 #include <Moby/ArticulatedBody.h>
 void Robot::init_robot(){
+  check_phase(initialization);
   OUT_LOG(logDEBUG) << "> > Robot::init_robot(.)";
   // ================= LOAD SCRIPT DATA ==========================
   
@@ -322,20 +315,25 @@ void Robot::init_robot(){
   compile();
   
   // Initialized Joints
-  const std::vector<std::string>
+  std::vector<std::string>
   joint_names = get_data<std::vector<std::string> >("init.joint.id");
-  const std::vector<double>
+  std::vector<double>
   joint_dofs = get_data<std::vector<double> >("init.joint.dofs");
-  const std::vector<double>
-  joints_start = get_data<std::vector<double> >("init.joint.q");
+  std::vector<double>
+  joints_start = get_data<std::vector<double> >("init.joint.q"),
+  joints_vel_start;
+  bool init_vel = get_data<std::vector<double> >("init.joint.qd",joints_vel_start);
   
-  std::map<std::string, std::vector<double> > init_q;
+  std::map<std::string, std::vector<double> > init_q, init_qd;
   for(int i=0,ii=0;i<joint_names.size();i++){
     init_q[joint_names[i]] = std::vector<double>(joint_dofs[i]);
+    init_qd[joint_names[i]] = std::vector<double>(joint_dofs[i]);
     for(int j=0;j<joint_dofs[i];j++,ii++){
       init_q[joint_names[i]][j] = joints_start[ii];
+      init_qd[joint_names[i]][j] = (init_vel)? joints_vel_start[ii] : 0.0;
     }
-    OUTLOG(init_q[joint_names[i]],joint_names[i]+"_zero",logINFO);
+    OUTLOG(init_q[joint_names[i]],joint_names[i]+"_q (start)",logINFO);
+    OUTLOG(init_qd[joint_names[i]],joint_names[i]+"_qd (start)",logINFO);
   }
   
   
@@ -359,15 +357,10 @@ void Robot::init_robot(){
   get_data<std::vector<double> >("init.base.xd",base_startv);
   Ravelin::VectorNd init_basev(6,&base_startv[0]);
   
-  unlock_state();
   set_joint_value(position,init_q);
   set_base_value(position,init_base);
   
+  set_joint_value(velocity,init_qd);
   set_base_value(velocity,init_basev);
-  lock_state();
-  
-  Ravelin::VectorNd init_q_vec;
-  convert_to_generalized(init_q,init_q_vec);
   OUT_LOG(logDEBUG) << "<< Robot::init_robot(.)";
-  
 }

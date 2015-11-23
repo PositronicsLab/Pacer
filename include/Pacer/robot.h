@@ -39,6 +39,7 @@ namespace Pacer{
   public:
 
 	Robot(){
+    controller_phase = INITIALIZATION;
 	}
 
   protected:
@@ -213,8 +214,7 @@ pthread_mutex_unlock(&_data_map_mutex);
         Ravelin::Vector3d impulse = Ravelin::Vector3d(),
         double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false)
     {
-      if(_lock_state)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(misc_sensor);
       _id_contacts_map[id].push_back(create_contact(id,point,normal, tangent, impulse,mu_coulomb,mu_viscous,restitution,compliant));
     }
     
@@ -241,8 +241,7 @@ pthread_mutex_unlock(&_data_map_mutex);
     
     void add_contact(boost::shared_ptr<const contact_t>& c)
     {
-      if(_lock_state)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(misc_sensor);
       _id_contacts_map[c->id].push_back(c);
     }
     
@@ -263,24 +262,27 @@ pthread_mutex_unlock(&_data_map_mutex);
     }
     
     void reset_contact(){
-      if(_lock_state)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(clean_up);
       _id_contacts_map.clear();
     }
 
   public:
-    typedef int unit_e;
-    static const unit_e          //  ang  |  lin
+    enum unit_e  {       //  ang  |  lin
      // SET OUTSIDE CONTROL LOOP
-      position=0,           //  rad  |   m 
-      velocity=1,           // rad/s |  m/s
-      acceleration=2,       // rad/ss|  m/ss
-      load=3,               //  N.m  |   N
+      misc_sensor=0,           //  SENSORS
+      position=1,           //  rad  |   m
+      velocity=2,           // rad/s |  m/s
+      acceleration=3,       // rad/ss|  m/ss
+      load=4,               //  N.m  |   N
      // SET IN CONROLLER
-      position_goal=4,      //  rad  |   m 
-      velocity_goal=5,      // rad/s |  m/s
-      acceleration_goal=6,  // rad/ss|  m/ss
-      load_goal=7;// TORQUE //  N.m  |   N
+      misc_planner=5,
+      position_goal=6,      //  rad  |   m
+      velocity_goal=7,      // rad/s |  m/s
+      acceleration_goal=8,  // rad/ss|  m/ss
+      misc_controller=9,
+      load_goal=10,// TORQUE//  N.m  |   N
+      initialization=11,
+    clean_up=12};
   private:
 //    std::deque<std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > > _state_history;
 //    std::deque<std::map<unit_e , Ravelin::VectorNd> > _base_state_history;
@@ -288,14 +290,13 @@ pthread_mutex_unlock(&_data_map_mutex);
     std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > _state;
     std::map<unit_e , Ravelin::VectorNd> _base_state;
     std::map<unit_e , std::map<std::string, Ravelin::Origin3d > > _foot_state;
-
+    std::map<std::string, bool > _foot_is_set;
+    
 #ifdef USE_THREADS
     pthread_mutex_t _state_mutex;
     pthread_mutex_t _base_state_mutex;
     pthread_mutex_t _foot_state_mutex;
 #endif
-    bool _lock_state;
-
     // TODO: Populate these value in Robot::compile()
     
     // JOINT_NAME --> {gcoord_dof1,...}
@@ -303,12 +304,130 @@ pthread_mutex_unlock(&_data_map_mutex);
     
     // gcoord --> (JOINT_NAME,dof)
     std::map<int,std::pair<std::string, int> > _coord_id_map;
-
   protected:
-
-    void lock_state(){_lock_state = true;};
-    void unlock_state(){_lock_state = false;};
-
+    enum ControllerPhase{
+      INITIALIZATION = 0,
+      PERCEPTION = 1,
+      PLANNING = 2,
+      CONTROL = 3,
+      WAITING = 4,
+      INCREMENT=10
+    };
+  private:
+    ControllerPhase controller_phase;
+  protected:
+ 
+    // Enforce that values are only being assigned during the correct phase
+    void check_phase(const unit_e& u){
+      switch (u) {
+        case initialization:
+          if (controller_phase != INITIALIZATION && controller_phase != WAITING){
+            throw std::runtime_error("controller must be in INITIALIZATION phase to set Pacer internal parameters.");
+          }
+          break;
+        case misc_sensor:
+        case position:
+        case velocity:
+        case acceleration:
+        case load:
+          if (controller_phase != PERCEPTION && controller_phase != INITIALIZATION  && controller_phase != WAITING ){
+            throw std::runtime_error("controller must be in PERCEPTION, INITIALIZATION or WAITING phase to set state information: {misc_sensor,position,velocity,acceleration,load}");
+          }
+          break;
+        case misc_planner:
+        case position_goal:
+        case velocity_goal:
+        case acceleration_goal:
+          if (controller_phase != PLANNING && controller_phase != INITIALIZATION && controller_phase != WAITING){
+            // NOTE: if this is the first PLANNING call and we were in PERCEPTION phase, increment to PLANNING phase
+            if(controller_phase == PERCEPTION){
+              increment_phase(PLANNING);
+              break;
+            }
+            throw std::runtime_error("controller must be in PLANNING phase to set goal state information: {misc_planner,position_goal,velocity_goal,acceleration_goal}");
+          }
+          break;
+        case misc_controller:
+        case load_goal:
+          if (controller_phase != CONTROL && controller_phase != INITIALIZATION && controller_phase != WAITING){
+            // NOTE: if this is the first CONTROL call and we were in PLANNING phase, increment to CONTROL phase
+            if(controller_phase == PLANNING){
+              increment_phase(CONTROL);
+              break;
+            }
+            
+            if(controller_phase == PERCEPTION){
+              increment_phase(CONTROL);
+              break;
+            }
+            throw std::runtime_error("controller must be in CONTROL phase to set commands: {misc_controller,load_goal}");
+          }
+          break;
+        case clean_up:
+          if (controller_phase != WAITING && controller_phase != INITIALIZATION )
+            throw std::runtime_error("controller must be in WAITING or INITIALIZATION phase to perform clean-up duties.");
+          break;
+        default:
+          throw std::runtime_error("unknown unit being set in state data");
+          break;
+      }
+    }
+    
+    void reset_phase(){
+      controller_phase = PERCEPTION;
+      OUT_LOG(logINFO) << "Controller Phase reset: ==> PLANNING";
+    }
+    
+    void increment_phase(ControllerPhase phase){
+      if (phase == INCREMENT) {
+        switch (controller_phase) {
+          case INITIALIZATION:
+            controller_phase = PERCEPTION;
+            OUT_LOG(logINFO) << "Controller Phase change: *INITIALIZATION* ==> PERCEPTION";
+            break;
+          case WAITING:
+            throw std::runtime_error("Cannot increment waiting controller. call reset_phase()");
+            break;
+          case PERCEPTION:
+            controller_phase = PLANNING;
+            OUT_LOG(logINFO) << "Controller Phase change: PERCEPTION ==> PLANNING";
+            break;
+          case PLANNING:
+            controller_phase = CONTROL;
+            OUT_LOG(logINFO) << "Controller Phase change: PLANNING ==> CONTROL";
+            break;
+          case CONTROL:
+            controller_phase = WAITING;
+            OUT_LOG(logINFO) << "Controller Phase change: CONTROL ==> *WAITING*";
+            break;
+          default:
+            throw std::runtime_error("controller state dropped off list of valid states");
+            break;
+        }
+      } else {
+        switch (phase) {
+          controller_phase =phase;
+          case INITIALIZATION:
+            OUT_LOG(logINFO) << "Controller Phase change: ==> INITIALIZATION";
+            break;
+          case WAITING:
+            OUT_LOG(logINFO) << "Controller Phase change: ==> WAITING";
+            break;
+          case PERCEPTION:
+            OUT_LOG(logINFO) << "Controller Phase change: ==> PERCEPTION";
+            break;
+          case PLANNING:
+            OUT_LOG(logINFO) << "Controller Phase change: ==> PLANNING";
+            break;
+          case CONTROL:
+            OUT_LOG(logINFO) << "Controller Phase change: ==> CONTROL";
+            break;
+          default:
+            throw std::runtime_error("controller state dropped off list of valid states");
+            break;
+        }
+      }
+    }
   public:
     //void get_foot_value(const std::string& id,unit_e u, Ravelin::Vector3d val){
     //  val = Ravelin::Vector3d(_foot_state[u].segment(0,3).data(),_id_end_effector_map[id]->link->get_pose());
@@ -346,8 +465,7 @@ pthread_mutex_unlock(&_data_map_mutex);
     
     void set_joint_value(const std::string& id, unit_e u, int dof, double val)
     {
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
       #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
 #endif
@@ -359,8 +477,7 @@ pthread_mutex_unlock(&_state_mutex);
     
     void set_joint_value(const std::string& id, unit_e u, const Ravelin::VectorNd& dof_val)
     {
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
       #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
 #endif
@@ -375,8 +492,7 @@ pthread_mutex_unlock(&_state_mutex);
     
     void set_joint_value(const std::string& id, unit_e u, const std::vector<double>& dof_val)
     {
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
       #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
 #endif
@@ -573,8 +689,7 @@ pthread_mutex_unlock(&_state_mutex);
 
     void set_joint_generalized_value(unit_e u, const Ravelin::VectorNd& generalized_vec)
     {
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
       if(generalized_vec.rows() != NUM_JOINT_DOFS)
         throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
 
@@ -620,8 +735,7 @@ pthread_mutex_unlock(&_state_mutex);
    
     /// With Base
     void set_generalized_value(unit_e u,const Ravelin::VectorNd& generalized_vec){
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
       switch(u){
         case(position_goal):
         case(position):
@@ -657,8 +771,7 @@ pthread_mutex_unlock(&_state_mutex);
     }
 
     void set_base_value(unit_e u,const Ravelin::VectorNd& vec){
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
       switch(u){
         case(position_goal):
         case(position):
@@ -667,7 +780,7 @@ pthread_mutex_unlock(&_state_mutex);
           break;
         default:
           if(vec.rows() != NSPATIAL)
-            throw std::runtime_error("position vector should have 7 rows [lin(x y z), ang(x y z)]");
+            throw std::runtime_error("spatial vector should have 6 rows [lin(x y z), ang(x y z)]");
           break;
       }
        
@@ -692,12 +805,13 @@ pthread_mutex_unlock(&_state_mutex);
 
     void set_foot_value(const std::string& id, unit_e u, const Ravelin::Origin3d& val)
     {
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
 #ifdef USE_THREADS
       pthread_mutex_lock(&_foot_state_mutex);
 #endif
       _foot_state[u][id] = val;
+      _foot_is_set[id] = true;
+
 #ifdef USE_THREADS
       pthread_mutex_unlock(&_foot_state_mutex);
 #endif
@@ -714,19 +828,20 @@ pthread_mutex_unlock(&_state_mutex);
 #endif
       return val;
     }
-    /*
+
     void set_foot_value(unit_e u, const std::map<std::string,Ravelin::Origin3d>& val)
     {
-      if(_lock_state && u <= load)
-        throw std::runtime_error("Robot state has been locked after PERCEPTION plugins are called and internal model is updated");
+      check_phase(u);
 #ifdef USE_THREADS
       pthread_mutex_lock(&_foot_state_mutex);
 #endif
       std::map<std::string, Ravelin::Origin3d >::const_iterator it;
       for (it=val.begin(); it != val.end(); it++) {
         std::map<std::string, Ravelin::Origin3d >::iterator jt = _foot_state[u].find((*it).first);
-        if(jt != _foot_state[u].end())
+        if(jt != _foot_state[u].end()){
           (*jt).second = (*it).second;
+          _foot_is_set[(*it).first] = true;
+        }
       }
 #ifdef USE_THREADS
       pthread_mutex_unlock(&_foot_state_mutex);
@@ -751,17 +866,48 @@ pthread_mutex_unlock(&_state_mutex);
     const std::vector<std::string>& get_foot_ids(){
       return _foot_ids;
     }
-    */
-    void reset_state(){
+
+    void init_state(){
+      check_phase(initialization);
       reset_contact();
       // TODO: make this more efficient ITERATORS dont work
       //      std::map<std::string,Ravelin::VectorNd>::iterator it;
       
-      for(unit_e u=position_goal;u<=load_goal;u+=1){
-//        const std::vector<std::string>& foot_keys = _foot_ids;
-//        for(int i=0;i<foot_keys.size();i++){
-//          _foot_state[u].erase(foot_keys[i]);
-//        }
+      const int num_state_units = 8;
+      unit_e state_units[num_state_units] = {position,position_goal,velocity,velocity_goal,acceleration,acceleration_goal,load, load_goal};
+      for(int j=0; j<num_state_units;j++){
+        unit_e& u = state_units[j];
+        _foot_state[u] = std::map<std::string, Ravelin::Origin3d >();
+        const std::vector<std::string>& foot_keys = _foot_ids;
+        for(int i=0;i<foot_keys.size();i++){
+          _foot_state[u][foot_keys[i]].set_zero();
+          _foot_is_set[foot_keys[i]] = false;
+        }
+        
+        _state[u] = std::map<std::string, Ravelin::VectorNd >();
+        const std::vector<std::string>& keys = _joint_ids;
+        for(int i=0;i<keys.size();i++){
+          const int N = get_joint_dofs(keys[i]);
+          _state[u][keys[i]].set_zero(N);
+        }
+      }
+    }
+    
+     void reset_state(){
+      check_phase(clean_up);
+      reset_contact();
+      // TODO: make this more efficient ITERATORS dont work
+      //      std::map<std::string,Ravelin::VectorNd>::iterator it;
+      
+       const int num_state_units = 8;
+       unit_e state_units[num_state_units] = {position,position_goal,velocity,velocity_goal,acceleration,acceleration_goal,load, load_goal};
+       for(int j=0; j<num_state_units;j++){
+        unit_e& u = state_units[j];
+        const std::vector<std::string>& foot_keys = _foot_ids;
+        for(int i=0;i<foot_keys.size();i++){
+          _foot_state[u][foot_keys[i]].set_zero();
+          _foot_is_set[foot_keys[i]] = false;
+        }
 
         const std::vector<std::string>& keys = _joint_ids;
         for(int i=0;i<keys.size();i++){
@@ -843,6 +989,7 @@ pthread_mutex_unlock(&_state_mutex);
     boost::shared_ptr<Ravelin::ArticulatedBodyd>        _abrobot;
     
     std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd> > _id_link_map;
+    std::map<std::string,boost::shared_ptr<Ravelin::RigidBodyd> > _id_foot_map;
     boost::shared_ptr<Ravelin::RigidBodyd> _root_link;
     std::map<std::string,boost::shared_ptr<Ravelin::Jointd> > _id_joint_map;
     std::vector<std::string> _joint_ids;

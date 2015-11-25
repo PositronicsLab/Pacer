@@ -4,15 +4,15 @@
       center-of-mass
       end-effectors
       gait-planner
-      eef-PID-controller
+      limits
       ik-feet
+   joint-PID-controller
    idyn-controller
   </plugins>
   
   <!--
    OTHER PLUGINS:
       ik-feet
-   joint-PID-controller
       eef-PID-controller
    
       error-check
@@ -32,6 +32,11 @@
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">0</priority>
   </error-check>
+  <limits>
+    <file type="string">liblimits.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">10</priority>
+  </limits>
   
   <center-of-mass>
     <file type="string">libcenter-of-mass.so</file>
@@ -210,12 +215,12 @@
     <file type="string">libinverse-kinematics.so</file>
     <priority type="double">2</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <abs-err-tolerance type="double">1e-4</abs-err-tolerance>
+    <abs-err-tolerance type="double">1e-3</abs-err-tolerance>
   </ik-feet>
   
   <joint-PID-controller>
     <file type="string">libjoint-PID-controller.so</file>
-    <priority type="double">4</priority>
+    <priority type="double">9</priority>
     <real-time-factor type="double">1</real-time-factor>
     <acceleration type="bool">false</acceleration>
     <!-- Gains are for the q of joint ids respectively -->

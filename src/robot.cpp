@@ -6,7 +6,6 @@
 #include <Pacer/robot.h>
 #include <boost/algorithm/string.hpp>
 #include <Pacer/utilities.h>
-#include <Moby/ArticulatedBody.h>
 
 using namespace Pacer;
 
@@ -17,6 +16,7 @@ void Robot::set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& 
     _abrobot->set_generalized_coordinates_euler(set_q);
   }
 
+  if(qd.rows() > 0)
   if(get_data<Ravelin::VectorNd>("generalized_qd", set_qd)){
     set_qd.set_sub_vec(0,qd);
     _abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,set_qd);
@@ -125,14 +125,18 @@ void Robot::compile(){
     
     boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = eef->link;
     OUT_LOG(logDEBUG) << eef->id ;
-    eef->chain_bool.resize(NUM_JOINT_DOFS);
+    eef->chain_bool.resize(NUM_JOINT_DOFS+6);
+    std:fill(eef->chain_bool.begin(),eef->chain_bool.end(),false);
     do {
       OUT_LOG(logDEBUG) << "  " << rb_ptr->body_id;
+      eef->chain_links.push_back(rb_ptr);
+
       boost::shared_ptr<Ravelin::Jointd> joint_ptr = rb_ptr->get_inner_joint_explicit();
       OUT_LOG(logDEBUG) << "  " << joint_ptr->joint_id;
       
       const std::vector<int>& dof = _id_dof_coord_map[joint_ptr->joint_id];
       OUT_LOG(logDEBUG) << "  dofs = " << dof.size() ;
+      eef->chain_joints.push_back(joint_ptr);
       for(int i=0;i<dof.size();i++){
         OUT_LOG(logDEBUG) << "  " << dof[i] <<  " "<< joint_ptr->joint_id;
         eef->chain.push_back(dof[i]);
@@ -186,7 +190,7 @@ void Robot::update(){
   set_data<Ravelin::VectorNd>("qd",qd);
   set_data<Ravelin::VectorNd>("qdd",qdd);
   
-  set_model_state(generalized_q,generalized_qd);
+  set_model_state(generalized_q);
   update_poses();
 }
 

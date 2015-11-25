@@ -9,24 +9,71 @@
 std::string plugin_namespace;
 
 void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  // Enforce limits
-  // Note: homogeneous limits
-  static std::vector<double> load_max = get_data<std::vector<double> >("init.joint.limits.u");
+
+  std::map<std::string, Ravelin::VectorNd > q, qd, u;
+  ctrl->get_joint_value(Pacer::Robot::position_goal, q);
+  ctrl->get_joint_value(Pacer::Robot::velocity_goal, qd);
+  ctrl->get_joint_value(Pacer::Robot::load_goal, u);
   
-  Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
-  OUTLOG(u,"U_NO_LIMIT",logINFO);
+#ifndef NDEBUG
+  OUT_LOG(logINFO) << "Before Limits: ";
+  std::vector<std::string> keys1 = ctrl->get_map_keys(u);
+  for(int i=0;i<keys1.size();i++){
+    OUT_LOG(logINFO) << keys1[i] << " : " << u[keys1[i]];
+  }
+#endif
   
-  for (int i=0;i<u.rows(); i++) {
-    if (!std::isfinite(u[i])) {
-      throw std::runtime_error("Joint command is not finite!");
-    }
-    
-    // Limit clamp values
-    if(u[i] > load_max[0]) u[i] = load_max[0];
-      else if(u[i] < -load_max[0]) u[i] = -load_max[0];
+  // Enforce joint and motor limits
+  std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
+  std::vector<double> joint_dofs = ctrl->get_data<std::vector<double> >("init.joint.dofs");
+  std::vector<double> torque_limit;
+  bool apply_torque_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.u",torque_limit);
+  
+  std::vector<double> velocity_limit;
+  bool apply_velocity_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
+  
+  for (int i=0, ii=0; i<joint_names.size(); i++) {
+    for (int j=0; j<joint_dofs[i]; j++,ii++) {
+      // If motor speed limit met, cancel torque
+      // (if applied in direction of limit)
+      if(apply_velocity_limit){
+        if (qd[joint_names[i]][j] > velocity_limit[ii]) {
+          OUT_LOG(logDEBUG) << joint_names[i] << ": qd["<<j<<"]= " << qd[joint_names[i]][j] << " exceeds velocity limit: " << velocity_limit[ii];
+          if(u[joint_names[i]][j] > 0){
+            OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " is moving towards exceeded velocity limit, setting to 0";
+            u[joint_names[i]][j] = 0;
+          }
+        } else if  (qd[joint_names[i]][j] < -velocity_limit[ii]) {
+          OUT_LOG(logDEBUG) << joint_names[i] << ": qd["<<j<<"]= " << qd[joint_names[i]][j] << " exceeds negative velocity limit: " << -velocity_limit[ii];
+          if(u[joint_names[i]][j] < 0){
+            OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " is moving towards exceeded velocity limit, setting to 0";
+            u[joint_names[i]][j] = 0;
+          }
         }
-  OUTLOG(u,"U_WITH_LIMIT",logINFO);
-  ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
+      }
+      
+      if(apply_torque_limit){
+        // Limit torque
+        if (u[joint_names[i]][j] > torque_limit[ii]) {
+          OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " exceeds torque limit: " << torque_limit[ii] << ", setting to " << torque_limit[ii];
+          u[joint_names[i]][j] = torque_limit[ii];
+        } else if  (u[joint_names[i]][j] < -torque_limit[ii]) {
+          OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " exceeds torque limit: " << -torque_limit[ii] << ", setting to " << -torque_limit[ii];
+          u[joint_names[i]][j] = -torque_limit[ii];
+        }
+      }
+    }
+  }
+  
+#ifndef NDEBUG
+  OUT_LOG(logINFO) << "After Limits: ";
+  std::vector<std::string> keys = ctrl->get_map_keys(u);
+  for(int i=0;i<keys.size();i++){
+    OUT_LOG(logINFO) << keys[i] << " : " << u[keys[i]];
+  }
+#endif
+  ctrl->set_joint_value(Pacer::Robot::load_goal, u);
+
 }
 
 /** This is a quick way to register your plugin function of the form:

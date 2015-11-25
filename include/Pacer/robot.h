@@ -6,6 +6,8 @@
 #ifndef ROBOT_H
 #define ROBOT_H
 
+#include <Pacer/Log.h>
+
 #include <Ravelin/RCArticulatedBodyd.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -51,6 +53,7 @@ namespace Pacer{
     template<typename T>
     struct is_pointer<T*> { static const bool value = true; };
     
+    // Map for storing arbitrary data
     std::map<std::string,boost::shared_ptr<void> > _data_map;
       #ifdef USE_THREADS
     pthread_mutex_t _data_map_mutex;
@@ -60,7 +63,9 @@ namespace Pacer{
     // Returns 'true' if new key was created in map
     template<class T>
     bool set_data(std::string n, const T& v){
+#ifdef LOG_TO_FILE
       OUT_LOG(logINFO) << "Set: " << n << " <-- " << v;
+#endif
       if(is_pointer<T>::value){
         throw std::runtime_error("Can't save pointer: " + n);
       }
@@ -110,7 +115,9 @@ pthread_mutex_lock(&_data_map_mutex);
         #ifdef USE_THREADS
 pthread_mutex_unlock(&_data_map_mutex);
 #endif
+#ifdef LOG_TO_FILE
         OUT_LOG(logINFO) << "Get: " << n << " --> " << *v;
+#endif
         return *v;
       }
       #ifdef USE_THREADS
@@ -160,13 +167,12 @@ pthread_mutex_unlock(&_data_map_mutex);
       std::string            id;
       // Foot link pointer
       boost::shared_ptr<Ravelin::RigidBodyd>     link;
+      std::vector<boost::shared_ptr<Ravelin::Jointd> >        chain_joints;
+      std::vector<boost::shared_ptr<Ravelin::RigidBodyd> >    chain_links;
       // kinematic chain indexing generalized coordinates
       std::vector<unsigned> chain;
-      std::vector<bool>      chain_bool;
+      std::vector<bool>     chain_bool;
       
-      std::vector<std::string>      supporting_joints;
-      std::vector<std::string>      supporting_links;
-
       // For locomotion, this informs us if this link should be used to calculate a jocobian
       bool                   active;
       bool                   stance;
@@ -284,6 +290,25 @@ pthread_mutex_unlock(&_data_map_mutex);
       initialization=11,
     clean_up=12};
   private:
+   const char * enum_string(const unit_e& e){
+     int i = static_cast<int>(e);
+     return (const char *[]) {
+       "misc_sensor",
+       "position",
+       "velocity",
+       "acceleration",
+       "load",
+       "misc_planner",
+       "position_goal",
+       "velocity_goal",
+       "acceleration_goal",
+       "misc_controller",
+       "load_goal",
+       "initialization",
+       "clean_up"
+     }[i];
+   }
+
 //    std::deque<std::map<unit_e , std::map<std::string, Ravelin::VectorNd > > > _state_history;
 //    std::deque<std::map<unit_e , Ravelin::VectorNd> > _base_state_history;
 
@@ -311,14 +336,26 @@ pthread_mutex_unlock(&_data_map_mutex);
       PLANNING = 2,
       CONTROL = 3,
       WAITING = 4,
-      INCREMENT=10
+      INCREMENT=5
     };
   private:
     ControllerPhase controller_phase;
+   const char * enum_string(const ControllerPhase& e){
+     int i = static_cast<int>(e);
+     return (const char *[]) {
+       "INITIALIZATION",
+       "PERCEPTION",
+       "PLANNING",
+       "CONTROL",
+       "WAITING",
+       "INCREMENT"
+     }[i];
+   }
   protected:
  
     // Enforce that values are only being assigned during the correct phase
     void check_phase(const unit_e& u){
+      OUT_LOG(logDEBUG) << "-- SCHEDULER -- " << "check unit: " << enum_string(u) << " against phase: " << enum_string(controller_phase);
       switch (u) {
         case initialization:
           if (controller_phase != INITIALIZATION && controller_phase != WAITING){
@@ -375,7 +412,7 @@ pthread_mutex_unlock(&_data_map_mutex);
     
     void reset_phase(){
       controller_phase = PERCEPTION;
-      OUT_LOG(logINFO) << "Controller Phase reset: ==> PLANNING";
+      OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase reset: ==> PLANNING";
     }
     
     void increment_phase(ControllerPhase phase){
@@ -383,49 +420,30 @@ pthread_mutex_unlock(&_data_map_mutex);
         switch (controller_phase) {
           case INITIALIZATION:
             controller_phase = PERCEPTION;
-            OUT_LOG(logINFO) << "Controller Phase change: *INITIALIZATION* ==> PERCEPTION";
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: *INITIALIZATION* ==> PERCEPTION";
             break;
           case WAITING:
             throw std::runtime_error("Cannot increment waiting controller. call reset_phase()");
             break;
           case PERCEPTION:
             controller_phase = PLANNING;
-            OUT_LOG(logINFO) << "Controller Phase change: PERCEPTION ==> PLANNING";
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: PERCEPTION ==> PLANNING";
             break;
           case PLANNING:
             controller_phase = CONTROL;
-            OUT_LOG(logINFO) << "Controller Phase change: PLANNING ==> CONTROL";
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: PLANNING ==> CONTROL";
             break;
           case CONTROL:
             controller_phase = WAITING;
-            OUT_LOG(logINFO) << "Controller Phase change: CONTROL ==> *WAITING*";
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: CONTROL ==> *WAITING*";
             break;
           default:
             throw std::runtime_error("controller state dropped off list of valid states");
             break;
         }
       } else {
-        switch (phase) {
-          controller_phase =phase;
-          case INITIALIZATION:
-            OUT_LOG(logINFO) << "Controller Phase change: ==> INITIALIZATION";
-            break;
-          case WAITING:
-            OUT_LOG(logINFO) << "Controller Phase change: ==> WAITING";
-            break;
-          case PERCEPTION:
-            OUT_LOG(logINFO) << "Controller Phase change: ==> PERCEPTION";
-            break;
-          case PLANNING:
-            OUT_LOG(logINFO) << "Controller Phase change: ==> PLANNING";
-            break;
-          case CONTROL:
-            OUT_LOG(logINFO) << "Controller Phase change: ==> CONTROL";
-            break;
-          default:
-            throw std::runtime_error("controller state dropped off list of valid states");
-            break;
-        }
+        OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: " << enum_string(controller_phase) << " ==> " << enum_string(phase);
+        controller_phase =phase;
       }
     }
   public:

@@ -47,16 +47,16 @@ inline std::ostringstream& Logger::Get(TLogLevel level)
 
 inline Logger::~Logger()
 {
-    os << std::endl;
 #ifdef LOG_TO_FILE
+    os << std::endl;
     FILE * pFile;
     pFile = fopen ("out.log","a");
     fprintf(pFile, "%s", os.str().c_str());
     fflush(pFile);
     fclose (pFile);
-#else
-    fprintf(stdout, "%s", os.str().c_str());
-    fflush(stdout);
+//#else
+//    fprintf(stdout, "%s", os.str().c_str());
+//    fflush(stdout);
 #endif
 }
 
@@ -97,11 +97,15 @@ inline TLogLevel Logger::FromString(const std::string& level)
 }
 
 typedef Logger FILELog;
-
+#ifdef LOG_TO_FILE
 #define OUT_LOG(level) \
     if (level > FILELog::ReportingLevel()) ; \
     else FILELog().Get(level)
-
+#else
+#define OUT_LOG(level) \
+  if (1) ; \
+  else FILELog().Get(level)
+#endif
 #define LOG(level) (level > FILELog::ReportingLevel())
 
 #include <sys/time.h>
@@ -121,5 +125,6 @@ inline std::string NowTime()
 }
 
 extern std::string LOG_TYPE;
+
 
 #endif // LOG_H

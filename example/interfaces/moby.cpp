@@ -210,11 +210,11 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
       
       
-      OUT_LOG(logERROR) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
-      OUT_LOG(logERROR) << "MOBY: compliant: " << compliant;
-      OUT_LOG(logERROR) << "MOBY: normal: " << normal;
-      OUT_LOG(logERROR) << "MOBY: tangent: " << tangent;
-      OUT_LOG(logERROR) << "MOBY: point: " << e[i].contact_point;
+      OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
+      OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
+      OUT_LOG(logDEBUG) << "MOBY: normal: " << normal;
+      OUT_LOG(logDEBUG) << "MOBY: tangent: " << tangent;
+      OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
       if(robot_ptr->is_end_effector(sb1->body_id)){
         robot_ptr->add_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
         //robot_ptr->set_data<Ravelin::Vector3d>
@@ -257,40 +257,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
     robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
     robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
-    
-    // Enforce joint and motor limits
-    std::vector<std::string> joint_names = robot_ptr->get_data<std::vector<std::string> >("init.joint.id");
-    std::vector<double> joint_dofs = robot_ptr->get_data<std::vector<double> >("init.joint.dofs");
-    std::vector<double> torque_limit;
-    bool apply_torque_limit = robot_ptr->get_data<std::vector<double> >("init.joint.limits.u",torque_limit);
-    
-    std::vector<double> velocity_limit;
-    bool apply_velocity_limit = robot_ptr->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
-
-    for (int i=0, ii=0; i<joint_names.size(); i++) {
-      for (int j=0; j<joint_dofs[i]; j++,ii++) {
-        // If motor speed limit met, cancel torque
-        // (if applied in direction of limit)
-        if(apply_velocity_limit){
-          if (qd[joint_names[i]][j] > velocity_limit[ii]) {
-            if(u[joint_names[i]][j] > 0)
-              u[joint_names[i]][j] = 0;
-          } else if  (qd[joint_names[i]][j] < -velocity_limit[ii]) {
-            if(u[joint_names[i]][j] < 0)
-              u[joint_names[i]][j] = 0;
-          }
-        }
         
-        if(apply_torque_limit){
-          // Limit torque
-          if (u[joint_names[i]][j] > torque_limit[ii]) {
-            u[joint_names[i]][j] = torque_limit[ii];
-          } else if  (u[joint_names[i]][j] < -torque_limit[ii]) {
-            u[joint_names[i]][j] = -torque_limit[ii];
-          }
-        }
-      }
-    }
     control_force.set_zero(num_joint_dof+6);
     for(int i=0;i<joints.size();i++){
 //      joints[i]->add_force(u[joints[i]->joint_id]);
@@ -299,15 +266,18 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       std::string& joint_id = joints[i]->joint_id;
       for(int joint_dof=0;joint_dof<num_joint_dofs;joint_dof++){
         control_force[joint_index+joint_dof] = u[joint_id][joint_dof];
+        OUT_LOG(logDEBUG) << joint_index << " " << joint_id << " " << joint_dof<< "/"<< num_joint_dofs<< "=" << u[joint_id][joint_dof];
       }
     }
+    OUT_LOG(logINFO) << "MOBY: control: " << control_force;
   }
   }
 
+  robot_ptr->reset_state();
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
   for(int i=0;i<eef_names.size();i++)
     robot_ptr->remove_data(eef_names[i]+".contact-force");
-
+  return control_force;
 }
 
 // ============================================================================

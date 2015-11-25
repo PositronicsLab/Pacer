@@ -37,6 +37,10 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xd",xd);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xdd",xdd);
+    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::position,x);
+    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::velocity,xd);
+    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::acceleration,xdd);
+    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::load,Ravelin::Origin3d(0,0,0));
 
     if(new_var){
       ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".init.x",x);

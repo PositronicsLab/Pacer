@@ -37,7 +37,7 @@ namespace Pacer{
     void init(){
       // ================= INIT LOGGING ==========================
       FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
-#ifdef LOGGING
+#ifdef LOG_TO_FILE
       FILE * pFile;
       pFile = fopen ("out.log","w");
       fprintf(pFile, "INITED LOGGER\n");

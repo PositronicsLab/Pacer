@@ -22,6 +22,7 @@
 #include <Ravelin/SVector6d.h>
 #include <Ravelin/Vector3d.h>
 
+#ifdef LOG_TO_FILE
 template < class T >
 std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
 {
@@ -244,5 +245,8 @@ static void OUTLOG(double x, std::string name,TLogLevel LL){
     OUT_LOG(LL) << name << " = " << x << ";" << std::endl;
 
 }
+#else
+#define OUTLOG(value,name,stream)
+#endif
 
 #endif

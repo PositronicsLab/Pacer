@@ -7,7 +7,7 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
 
@@ -96,7 +96,8 @@ public:
   }
 };
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   ctrl_ptr = ctrl;
   // --------------------------- JOINT FEEDBACK ------------------------------
@@ -129,8 +130,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
   }  
 }
-
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "register-plugin"
+void setup(){
+}

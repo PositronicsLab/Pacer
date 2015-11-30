@@ -23,9 +23,10 @@
 
 
 #include <Pacer/controller.h>
-std::string plugin_namespace;
+#include "plugin.h"
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   Ravelin::Vector3d center_of_mass_x;
   center_of_mass_x.pose = Pacer::GLOBAL;
   double total_mass=0;
@@ -93,8 +94,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 //  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(CoM_2D+Ravelin::Vector3d(zero_moment_point[0],zero_moment_point[1],0,GLOBAL)*0.1,CoM_2D,Ravelin::Vector3d(0,1,0))));
 }
 
-
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "register-plugin"
+void setup(){
+}

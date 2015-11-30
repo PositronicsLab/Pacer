@@ -1,10 +1,10 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   static double start_time = t;
   
   const  std::vector<std::string>
@@ -48,14 +48,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
 
     ctrl->set_data<bool>(eef_names_[i]+".stance",false);
-
-    // if no goal, set goal to current position
-   if(!ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x)){
-      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x);
-      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd);
-      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd);
-    }
-    
   }
   
   if(start_time == t){
@@ -77,9 +69,19 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
 }
+void setup(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
-
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "register-plugin"
+  const  std::vector<std::string>
+  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  for(unsigned i=0;i<eef_names_.size();i++){
+   variable_names.push_back(eef_names_[i]+".stance");
+   variable_names.push_back(eef_names_[i]+".state.x");
+   variable_names.push_back(eef_names_[i]+".state.xd");
+   variable_names.push_back(eef_names_[i]+".state.xdd");
+   variable_names.push_back(eef_names_[i]+".init.x");
+   variable_names.push_back(eef_names_[i]+".init.xd");
+   variable_names.push_back(eef_names_[i]+".base");
+   variable_names.push_back(eef_names_[i]+".reach");
+  }
+}

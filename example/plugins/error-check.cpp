@@ -1,8 +1,9 @@
 
 #include <Pacer/controller.h>
-std::string plugin_namespace;
+#include "plugin.h"
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   Ravelin::VectorNd generalized_fext = ctrl->get_generalized_value(Pacer::Robot::load);
 
@@ -30,8 +31,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     
 
 }
-
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "register-plugin"
+void setup(){
+}

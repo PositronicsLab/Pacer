@@ -5,6 +5,8 @@
  ****************************************************************************/
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
+#include "plugin.h"
+
 using namespace Pacer;
 using namespace Ravelin;
 
@@ -12,9 +14,7 @@ static Vector3d workv3_;
 static VectorNd q,qd_base;
 static VectorNd workv_;
 
-boost::shared_ptr<Pacer::Controller> ctrl_ptr;
 boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
-std::string plugin_namespace;
 std::vector<std::string> foot_names;
 std::map<std::string,bool> active_feet;
 
@@ -28,6 +28,8 @@ std::vector<Ravelin::Vector3d>& foot_oscilator(
     double Vf,
     double bp,
     std::vector<Ravelin::Vector3d>& xd){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+
   int NUM_EEFS = xd.size();
 
   /* Tunable parameters
@@ -39,18 +41,18 @@ std::vector<Ravelin::Vector3d>& foot_oscilator(
    * bf    : the transition rate between phases
    */
   // a/b/c : affect the convergence rate of the limit cycle
-  double a = ctrl_ptr->get_data<double>(plugin_namespace+".convergence.a");
-  double b = ctrl_ptr->get_data<double>(plugin_namespace+".convergence.b");
-  double c = ctrl_ptr->get_data<double>(plugin_namespace+".convergence.c");
+  double a = ctrl->get_data<double>(plugin_namespace+".convergence.a");
+  double b = ctrl->get_data<double>(plugin_namespace+".convergence.b");
+  double c = ctrl->get_data<double>(plugin_namespace+".convergence.c");
   
 //  // B is negative
 //  b*=-1.0;
 
   // Stepping Filter params
   // depth of step phase where touchdown occurs (fraction of Hs)
-  double ztd = ctrl_ptr->get_data<double>(plugin_namespace+".Ztd"); //0
+  double ztd = ctrl->get_data<double>(plugin_namespace+".Ztd"); //0
   // speed at which behavior changes (arbitrary scale)
-  double bf = ctrl_ptr->get_data<double>(plugin_namespace+".Bf"); //1000
+  double bf = ctrl->get_data<double>(plugin_namespace+".Bf"); //1000
 
   std::vector<Ravelin::Vector3d> xb(NUM_EEFS);
   for(int i=0;i<NUM_EEFS;i++)
@@ -70,7 +72,7 @@ std::vector<Ravelin::Vector3d>& foot_oscilator(
     double ws  = M_PI * (Vf/Ls) * ((Df[i]*Sp1)/(1.0-Df[i]) + Sp2);
 
     // realtively thin gait [shoulder width]
-    double dyc = ctrl_ptr->get_data<double>(plugin_namespace+".Dyc"); //0;
+    double dyc = ctrl->get_data<double>(plugin_namespace+".Dyc"); //0;
 
     // \dot{x}
     // Eqn: 1, 2, 3
@@ -95,7 +97,7 @@ std::vector<Ravelin::Vector3d>& foot_oscilator(
     double Sf1 = 1.0/(exp(-bf*(xbar[2] - ztd)) + 1.0);
     double Sf2 = 1.0/(exp( bf*(xbar[2] - ztd)) + 1.0);
     
-      ctrl_ptr->set_data<bool>(foot_names[i]+".stance",(xbar[2]<=ztd));
+      ctrl->set_data<bool>(foot_names[i]+".stance",(xbar[2]<=ztd));
 
 //      xd[i] = (xd[i])*Sf1 - Ravelin::Vector3d(Vf,0,0,base_frame)*Sf2;
 //    }
@@ -117,6 +119,8 @@ void cpg_trot(
     std::vector<Ravelin::Vector3d>& foot_pos,
     std::vector<Ravelin::Vector3d>& foot_vel,
     std::vector<Ravelin::Vector3d>& foot_acc){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+
   static double last_t = 0;
   int NUM_EEFS = foot_origin.size();
   static std::vector<Ravelin::Vector3d> last_foot_vel(NUM_EEFS);
@@ -161,7 +165,7 @@ void cpg_trot(
   }
 
   // Additional parameters for CPG
-  double bp = ctrl_ptr->get_data<double>(plugin_namespace+".Bp"); //1000
+  double bp = ctrl->get_data<double>(plugin_namespace+".Bp"); //1000
 
 
   for(int i=0;i<NUM_EEFS;i++){
@@ -182,7 +186,7 @@ void cpg_trot(
     foot_pos[i] = foot_pos[i] + foot_vel[i]*dt;
     foot_acc[i] = (foot_vel[i] - last_foot_vel[i])/dt;
     if(foot_acc[i][2] > 0.0)
-      ctrl_ptr->set_data<bool>(foot_names[i]+".stance",false);
+      ctrl->set_data<bool>(foot_names[i]+".stance",false);
   }
 
 
@@ -190,8 +194,8 @@ void cpg_trot(
   last_t = t;
 }
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  ctrl_ptr = ctrl;
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // Find time since last call
   static double last_time = t;
   double dt = t - last_time;
@@ -231,17 +235,17 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   go_to[5] = command[2];
   
   static std::vector<double>
-  duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
-  this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gait"),
-  input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".pose");
-  static double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+".gait-duration");
-  static double step_height = ctrl_ptr->get_data<double>(plugin_namespace+".step-height");
+  duty_factor = ctrl->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
+  this_gait = ctrl->get_data<std::vector<double> >(plugin_namespace+".gait"),
+  input_gait_pose = ctrl->get_data<std::vector<double> >(plugin_namespace+".pose");
+  static double gait_time = ctrl->get_data<double>(plugin_namespace+".gait-duration");
+  static double step_height = ctrl->get_data<double>(plugin_namespace+".step-height");
   static std::vector<Vector3d> footholds(0);
-  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
+  foot_names = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".feet");
   
-  static double width = ctrl_ptr->get_data<double>(plugin_namespace+".width");
-  static double length = ctrl_ptr->get_data<double>(plugin_namespace+".length");
-  static double height = ctrl_ptr->get_data<double>(plugin_namespace+".height");
+  static double width = ctrl->get_data<double>(plugin_namespace+".width");
+  static double length = ctrl->get_data<double>(plugin_namespace+".length");
+  static double height = ctrl->get_data<double>(plugin_namespace+".height");
   
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
                                                      ctrl->get_data<Pose3d>("base_link_frame")));
@@ -270,13 +274,13 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   q = ctrl->get_generalized_value(Pacer::Robot::position);
   qd_base = ctrl->get_base_value(Pacer::Robot::velocity);
   
-  //  ctrl_ptr->set_model_state(q);
+  //  ctrl->set_model_state(q);
   for(int i=0;i<NUM_FEET;i++){
-    foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
+    foot_init[i] = ctrl->get_data<Vector3d>(foot_names[i]+".init.x");
     foot_pos[i] = foot_init[i];
-    ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    ctrl->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
     foot_vel[i] = Vector3d(0,0,0,base_frame);
-    ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
+    ctrl->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
   }
   
@@ -335,8 +339,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     ctrl->set_data<Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
   }
 }
-
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "register-plugin"
+void setup(){
+}

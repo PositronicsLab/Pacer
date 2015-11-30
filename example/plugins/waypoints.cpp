@@ -9,11 +9,12 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 
 typedef std::pair<double,double> Point;
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   const unsigned X=0,Y=1,Z=2,THETA=5;
     // World frame
@@ -146,8 +147,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double time){
       ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
     }
 }
-
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "register-plugin"
+void setup(){
+}

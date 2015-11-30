@@ -1,17 +1,9 @@
   <XML>
-  <plugins type="string vector">
-      waypoints
-      center-of-mass
-      end-effectors
-      gait-planner
-      limits
-      eef-PID-controller
-  </plugins>
+    <plugins type="string vector">
+      plugin-scheduler
+    </plugins>
   
   <!--
-      ik-feet
-   joint-PID-controller
-   idyn-controller
    OTHER PLUGINS:
       ik-feet
       eef-PID-controller
@@ -28,6 +20,127 @@
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
+  <plugin-scheduler>
+    <file type="string">libplugin-scheduler.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+    <relative-start-time type="bool">true</relative-start-time>
+    <events type="string vector">init walk1 joint-control stop1 walk2 eef-pid stop2 walk3 end close</events>
+    <!--  PERSISTENT    -->
+    <init>
+      <time type="double">0</time>
+      <open type="string vector">
+        center-of-mass
+        end-effectors
+        error-check
+        joint-PID-controller
+        stand-trajectory
+      </open>
+    </init>
+    <!--   WALK   -->
+    
+    <walk1>
+      <time type="double">0.1</time>
+      <open type="string vector">
+        gait-planner
+        eef-PID-controller
+      </open>
+      <close type="string vector">
+        stand-trajectory
+        joint-PID-controller
+      </close>
+    </walk1>
+
+    <joint-control>
+      <time type="double">0.6</time>
+      <open type="string vector">
+        ik-feet
+        joint-PID-controller
+        idyn-controller
+      </open>
+      <close type="string vector">
+        eef-PID-controller
+      </close>
+    </joint-control>
+    <stop1>
+      <time type="double">0.7</time>
+      <open type="string vector">
+        freeze
+      </open>
+      <close type="string vector">
+        gait-planner
+      </close>
+    </stop1>
+    <walk2>
+      <time type="double">0.8</time>
+      <open type="string vector">
+        gait-planner
+      </open>
+      <close type="string vector">
+        freeze
+      </close>
+    </walk2>
+    
+    <eef-pid>
+      <time type="double">0.9</time>
+      <open type="string vector">
+        eef-PID-controller
+      </open>
+      <close type="string vector">
+        ik-feet
+        joint-PID-controller
+        idyn-controller
+      </close>
+    </eef-pid>
+    
+    <stop2>
+      <time type="double">1.0</time>
+      <open type="string vector">
+        freeze
+      </open>
+      <close type="string vector">
+        gait-planner
+      </close>
+    </stop2>
+    <walk3>
+      <time type="double">1.1</time>
+      <open type="string vector">
+        gait-planner
+      </open>
+      <close type="string vector">
+        freeze
+      </close>
+    </walk3>
+    <end>
+      <time type="double">1.2</time>
+      <open type="string vector">
+      </open>
+      <close type="string vector">
+        joint-PID-controller
+        ik-feet
+        gait-planner
+        center-of-mass
+        end-effectors
+        eef-PID-controller
+        error-check
+      </close>
+  </end>
+    <close>
+      <time type="double">1.5</time>
+      <open type="string vector">
+        exit
+      </open>
+      <close type="string vector">
+      </close>
+  </close>
+
+  </plugin-scheduler>
+  
+  <exit>
+    <file type="string">libexit.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </exit>
   <error-check>
     <file type="string">liberror-check.so</file>
     <real-time-factor type="double">1</real-time-factor>
@@ -161,6 +274,11 @@
      <real-time-factor type="double">1</real-time-factor>
      <priority type="double">1</priority>
   </stand-trajectory>
+  <freeze>
+    <file type="string">libstay.so</file>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">1</priority>
+  </freeze>
   
   <gait-planner>
     <file type="string">libgait-planner.so</file>

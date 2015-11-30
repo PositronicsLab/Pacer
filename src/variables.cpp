@@ -151,3 +151,21 @@ void Pacer::Controller::load_variables(std::string fname, std::string root){
   shared_ptr<const XMLTree> root_tree = XMLTree::read_from_xml(fname);
   process_tag(root,root_tree);
 }
+
+bool Pacer::Robot::set_data_internal(std::string n, boost::any to_append){
+  bool new_var = true;
+#ifdef LOG_TO_FILE
+  OUT_LOG(logINFO) << "\t" << n << " has type '" << to_append.type().name() << "'";
+#endif
+  
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_data_map_mutex);
+#endif
+  int map_size = _data_map.size();
+  _data_map[n] = to_append;
+  new_var = (map_size != _data_map.size());
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_data_map_mutex);
+#endif
+  return new_var;
+}

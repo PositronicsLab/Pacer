@@ -34,7 +34,7 @@
 /* EOF */
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
-std::string plugin_namespace;
+#include "../plugin.h"
 
 #ifdef USE_CURSES
 void print_bar(int pos, int len)
@@ -249,7 +249,8 @@ class Joystick
 
 #include <boost/assign/list_of.hpp>
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   // SDL2 will only report events when the window has focus, so set
   // this hint as we don't have a window
@@ -513,7 +514,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
 //  }
 }
 
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "../register-plugin"
+void setup(){
+  
+}

@@ -5,7 +5,7 @@
  ****************************************************************************/
 #include <Pacer/utilities.h>
 #include <Pacer/controller.h>
-std::string plugin_namespace;
+#include "plugin.h"
 
 using namespace Pacer;
 using namespace Ravelin;
@@ -52,7 +52,8 @@ void contact_jacobian_stabilizer(Ravelin::SharedConstMatrixNd& Jb,Ravelin::Share
   OUTLOG(js_correct,"js_correct",logDEBUG);
 }
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+".des-contact");
   
    std::vector<std::string>
@@ -168,8 +169,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
 }
 
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "register-plugin"
-
+void setup(){
+}

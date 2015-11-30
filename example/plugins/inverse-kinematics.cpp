@@ -6,47 +6,49 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  Ravelin::VectorNd 
-    q_goal = ctrl->get_data<Ravelin::VectorNd>("init.q"),q;
-  Ravelin::VectorNd
-    qd_goal = Ravelin::VectorNd::zero(q_goal.rows()),
-    qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  std::vector<std::string> foot_names,
+      foot_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
-  std::vector<std::string>
-      foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-      
+  
   int NUM_FEET = foot_names.size();
   std::vector<Ravelin::Origin3d>
-      foot_pos(NUM_FEET),
-      foot_vel(NUM_FEET),
-      foot_acc(NUM_FEET);
+      foot_pos,
+      foot_vel,
+      foot_acc;
       
-  for(int i=0;i<NUM_FEET;i++){     
-    //NOTE: Change so some eefs can be non-feet 
-    if(!ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.x",foot_pos[i]))
-      return;
-    ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.xd",foot_vel[i]);
-    ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
-    
+  for(int i=0;i<NUM_FEET;i++){
+    std::string& foot_name = foot_names_[i];
+    Ravelin::Origin3d x,xd,xdd;
+    ctrl->get_foot_value(foot_name,Pacer::Controller::position_goal,x);
+    if(x.norm() == 0)
+      continue;
+    ctrl->get_foot_value(foot_name,Pacer::Controller::velocity_goal,xd);
+    ctrl->get_foot_value(foot_name,Pacer::Controller::acceleration_goal,xdd);
+
     ////// enforce maximum reach on legs ////////////
-    Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".base");
-    double max_reach = ctrl->get_data<double>(foot_names[i]+".reach");
+    Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(foot_name+".base");
+    double max_reach = ctrl->get_data<double>(foot_name+".reach");
     
-    Ravelin::Origin3d goal_from_base_joint = foot_pos[i] - base_joint;
+    Ravelin::Origin3d goal_from_base_joint = x - base_joint;
     double goal_reach = goal_from_base_joint.norm();
     OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
     
     if(goal_reach > max_reach){
-      OUT_LOG(logDEBUG1) << " foot goal reduced from: " << foot_pos[i] ;
-      foot_pos[i] = base_joint + goal_from_base_joint * (max_reach/goal_reach);
-      OUT_LOG(logDEBUG1) << " to: " << foot_pos[i] ;
+      OUT_LOG(logDEBUG1) << foot_name << " goal reduced from: " << x ;
+      x = base_joint + goal_from_base_joint * (max_reach/goal_reach);
+      OUT_LOG(logDEBUG1) << " to: " << x ;
     }
 
+    foot_pos.push_back(x);
+    foot_vel.push_back(xd);
+    foot_acc.push_back(xdd);
+    foot_names.push_back(foot_name);
   }
-  
+  Ravelin::VectorNd q;
   ctrl->get_generalized_value(Pacer::Controller::position,q);
   int N = q.size() - Pacer::NEULER;
   q[N] = 0;
@@ -57,6 +59,11 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   q[N+5] = 0;
   q[N+6] = 1;
   
+  Ravelin::VectorNd q_goal, qd_goal, qdd_goal;
+  ctrl->get_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
+  ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
+  ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
+
   double TOL = ctrl->get_data<double>(plugin_namespace+".abs-err-tolerance");
   // This is calculated in global frame always (assume base_link is at origin)
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
@@ -70,8 +77,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
 }
-
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "register-plugin"
+void setup(){
+}

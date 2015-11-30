@@ -20,6 +20,7 @@
 #include <cmath>
 #include <sys/types.h>
 #include <sys/times.h>
+#include <boost/any.hpp>
 #ifdef USE_THREADS
 	#include <pthread.h>
 #endif
@@ -54,7 +55,7 @@ namespace Pacer{
     struct is_pointer<T*> { static const bool value = true; };
     
     // Map for storing arbitrary data
-    std::map<std::string,boost::shared_ptr<void> > _data_map;
+    std::map< std::string , boost::any > _data_map;
       #ifdef USE_THREADS
     pthread_mutex_t _data_map_mutex;
 #endif
@@ -67,33 +68,22 @@ namespace Pacer{
       OUT_LOG(logINFO) << "Set: " << n << " <-- " << v;
 #endif
       if(is_pointer<T>::value){
-        throw std::runtime_error("Can't save pointer: " + n);
+        throw std::runtime_error("Can't save pointers! : " + n);
       }
-      #ifdef USE_THREADS
-pthread_mutex_lock(&_data_map_mutex);
-#endif
-      // TODO: Improve this functionality, shouldn't be copying into new class
-      std::map<std::string,boost::shared_ptr<void> >::iterator it
-        =_data_map.find(n);
-      bool new_var = (it == _data_map.end());
-      if(new_var){
-        _data_map[n] = boost::shared_ptr<T>(new T(v));
-      }else{
-        (*it).second = boost::shared_ptr<T>(new T(v));
-      }
-      #ifdef USE_THREADS
-pthread_mutex_unlock(&_data_map_mutex);
-#endif
-
-      return new_var;
+      return set_data_internal(n,v);
     }
+    
+    // Returns 'true' if new key was created in map
+    bool set_data_internal(std::string n, boost::any to_append);
     
     void remove_data(std::string n){
       #ifdef USE_THREADS
 pthread_mutex_lock(&_data_map_mutex);
 #endif
-      // TODO: Improve this functionality, shouldn't be copying into new class
-      std::map<std::string,boost::shared_ptr<void> >::iterator it
+#ifdef LOG_TO_FILE
+      OUT_LOG(logINFO) << "Remove: " << n;
+#endif
+      std::map<std::string,boost::any >::iterator it
       =_data_map.find(n);
       if (it != _data_map.end()){
         _data_map.erase(it);
@@ -105,20 +95,33 @@ pthread_mutex_unlock(&_data_map_mutex);
   
     template<class T>
     T get_data(std::string n){
-      std::map<std::string,boost::shared_ptr<void> >::iterator it;
+      using boost::any_cast;
+
+      std::map<std::string,boost::any >::iterator it;
       #ifdef USE_THREADS
 pthread_mutex_lock(&_data_map_mutex);
 #endif
       it = _data_map.find(n);
       if(it != _data_map.end()){
-        T* v = (T*) (((*it).second).get());
-        #ifdef USE_THREADS
+        T v;
+//        T* v = (T*) (((*it).second).get());
+        boost::any& operand = (*it).second;
+        try
+        {
+          v = any_cast<T>(operand);
+        }
+        catch(const boost::bad_any_cast &)
+        {
+          throw std::runtime_error("Variable: \"" + n + "\" was requested as '" + typeid(T).name() + "' but is actually '" + operand.type().name() + "'");
+;
+        }
+#ifdef USE_THREADS
 pthread_mutex_unlock(&_data_map_mutex);
 #endif
 #ifdef LOG_TO_FILE
-        OUT_LOG(logINFO) << "Get: " << n << " --> " << *v;
+        OUT_LOG(logINFO) << "Get: " << n << " ("<< operand.type().name() <<") --> " << v;
 #endif
-        return *v;
+        return v;
       }
       #ifdef USE_THREADS
 pthread_mutex_unlock(&_data_map_mutex);
@@ -846,6 +849,14 @@ pthread_mutex_unlock(&_state_mutex);
 #endif
       return val;
     }
+    
+    Ravelin::Origin3d get_foot_value(const std::string& id, unit_e u)
+    {
+
+      Ravelin::Origin3d val;
+      get_foot_value(id,u,val);
+      return val;
+    }
 
     void set_foot_value(unit_e u, const std::map<std::string,Ravelin::Origin3d>& val)
     {
@@ -878,6 +889,13 @@ pthread_mutex_unlock(&_state_mutex);
 #ifdef USE_THREADS
       pthread_mutex_unlock(&_foot_state_mutex);
 #endif
+      return val;
+    }
+    
+    std::map<std::string,Ravelin::Origin3d> get_foot_value(unit_e u)
+    {
+      std::map<std::string,Ravelin::Origin3d> val;
+      get_foot_value(u,val);
       return val;
     }
     

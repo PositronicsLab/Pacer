@@ -1,7 +1,8 @@
 #include <Pacer/controller.h>
-std::string plugin_namespace;
+#include "plugin.h"
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   std::vector<std::string> events
   = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".events");
   
@@ -44,8 +45,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
   last_time = t;
 }
-
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "register-plugin"
+void setup(){
+}

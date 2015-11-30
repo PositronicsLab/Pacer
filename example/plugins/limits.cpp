@@ -6,9 +6,10 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   std::map<std::string, Ravelin::VectorNd > q, qd, u;
   ctrl->get_joint_value(Pacer::Robot::position_goal, q);
@@ -75,8 +76,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ctrl->set_joint_value(Pacer::Robot::load_goal, u);
 
 }
-
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "register-plugin"
+void setup(){
+}

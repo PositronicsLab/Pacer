@@ -15,6 +15,7 @@
 
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
+#include "../plugin.h"
 
 #include <Moby/LCP.h>
 
@@ -24,7 +25,6 @@ using namespace Pacer;
 
 int N_SYSTEMS = 0;
 
-std::string plugin_namespace;
 using Ravelin::VectorNd;
 using Ravelin::MatrixNd;
 using namespace Ravelin;
@@ -356,7 +356,8 @@ Ravelin::VectorNd forward_dynamics(const Ravelin::MatrixNd& iM_chol,const  Ravel
   return qdd;
 }
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   static double last_time = -0.001;
   double dt = t - last_time;
   last_time = t;
@@ -839,7 +840,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
 }
 
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- */
-#include "../register-plugin"
+
+void setup(){
+  
+}

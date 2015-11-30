@@ -1,7 +1,7 @@
 #include <Pacer/utilities.h>
 #include <Pacer/controller.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 
 boost::shared_ptr<Pacer::Controller> ctrl_ptr;
 using namespace Pacer;
@@ -73,12 +73,12 @@ public:
     for (int i=0; i< num_eefs; i++)
     {
       Ravelin::Origin3d
-      pos =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".state.x"),
-      vel =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".state.xd");
+      pos =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::position),
+      vel =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::velocity);
       
       Ravelin::Origin3d
-      pos_des =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".goal.x"),
-      vel_des =  ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".goal.xd");
+      pos_des =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::position_goal),
+      vel_des =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::velocity_goal);
       
       Ravelin::Origin3d base_joint = ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".base");
       double max_reach = ctrl_ptr->get_data<double>(eef_names[i]+".reach");
@@ -136,7 +136,8 @@ public:
   }
 };
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){  
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);  
   ctrl_ptr = ctrl;
   static eefPID pid;
       
@@ -158,7 +159,6 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   }
 }
 
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "register-plugin"
+
+void setup(){
+}

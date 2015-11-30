@@ -5,6 +5,8 @@
  ****************************************************************************/
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
+#include "plugin.h"
+
 using namespace Pacer;
 using namespace Ravelin;
 
@@ -36,12 +38,9 @@ double sigmoid_interp(double v0, double vF, double alpha){
   return v0 + diff*sigmoid(alpha*10.0 - 5.0);
 }
 
-boost::weak_ptr<Pacer::Controller> ctrl_weak_ptr;
-
 boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
 Ravelin::Origin3d roll_pitch_yaw;
 
-std::string plugin_namespace;
 std::vector<std::string> foot_names;
 
 std::map<std::string,bool> active_feet;
@@ -809,8 +808,8 @@ void walk_toward(
   OUT_LOG(logDEBUG) << " -- walk_toward() exited";
 }
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  ctrl_weak_ptr = boost::weak_ptr<Pacer::Controller>(ctrl);
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // Find time since last call
   static double last_time = t;
   double dt = t - last_time;
@@ -945,52 +944,18 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
   
   for(int i=0;i<NUM_FEET;i++){
-    ctrl->set_data<Origin3d>(foot_names[i]+".goal.x",Origin3d(foot_pos[i]));
-    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xd",Origin3d(foot_vel[i]));
-    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xdd",Origin3d(foot_acc[i]));
+    ctrl->set_foot_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
+    ctrl->set_foot_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
+    ctrl->set_foot_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));
   }
 }
 
-/****************************************************************************
- * Copyright 2014 Samuel Zapolsky
- * This library is distributed under the terms of the Apache V2.0
- * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
- ****************************************************************************/
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- * void Deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl)
- */
+void setup(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
-void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  static int ITER = 0;
-  int RTF = (int) ctrl->get_data<double>(plugin_namespace+".real-time-factor");
-  if(ITER%RTF == 0)
-    Update(ctrl,t);
-  ITER+=1;
-}
-
-void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  std::vector<std::string> foot_names
-  = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".feet");
-  
-  int NUM_FEET = foot_names.size();
-  
-  for(int i=0;i<NUM_FEET;i++){
-//    ctrl->remove_data(foot_names[i]+".goal.x");
-//    ctrl->remove_data(foot_names[i]+".goal.xd");
-//    ctrl->remove_data(foot_names[i]+".goal.xdd");
-//    ctrl->remove_data(foot_names[i]+".stance");
+  const  std::vector<std::string>
+  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  for(unsigned i=0;i<eef_names_.size();i++){
+    variable_names.push_back(eef_names_[i]+".stance");
   }
 }
-
-extern "C" {
-  void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
-    plugin_namespace = std::string(std::string(name));
-    
-    int priority = ctrl->get_data<double>(plugin_namespace+".priority");
-    
-    ctrl->add_plugin_update(priority,name,&update);
-    ctrl->add_plugin_deconstructor(name,&deconstruct);
-  }
-}
-

@@ -35,6 +35,7 @@
         center-of-mass
         end-effectors
         error-check
+        idyn-controller
         joint-PID-controller
         stand-trajectory
       </open>
@@ -45,6 +46,7 @@
       <time type="double">1.0</time>
       <close type="string vector">
         stand-trajectory
+        idyn-controller
         joint-PID-controller
       </close>
       <open type="string vector">
@@ -61,7 +63,6 @@
       <open type="string vector">
         ik-feet
         joint-PID-controller
-        idyn-controller
       </open>
     </joint-control>
     <stop1>
@@ -88,7 +89,6 @@
       <close type="string vector">
         ik-feet
         joint-PID-controller
-        idyn-controller
       </close>
       <open type="string vector">
         eef-PID-controller

@@ -164,6 +164,15 @@ namespace Pacer{
         plugins_to_open.clear();
       }
       
+#ifdef LOG_TO_FILE
+      for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++){
+        if(!_update_priority_map[i].empty()){
+          OUT_LOG(logINFO) << "PRIORITY: " << i ;
+          OUT_LOG(logINFO) << "\t" << get_map_keys(_update_priority_map[i]);
+        }
+      }
+#endif
+      
       // Update plugins in priority queue
       for(int i = HIGHEST_PRIORITY;i<=LOWEST_PRIORITY;i++){
         if(!_update_priority_map[i].empty()){ // SRZ: do I need this line?

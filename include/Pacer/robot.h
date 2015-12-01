@@ -450,9 +450,6 @@ pthread_mutex_unlock(&_data_map_mutex);
       }
     }
   public:
-    //void get_foot_value(const std::string& id,unit_e u, Ravelin::Vector3d val){
-    //  val = Ravelin::Vector3d(_foot_state[u].segment(0,3).data(),_id_end_effector_map[id]->link->get_pose());
-    //}
     int get_joint_dofs(const std::string& id)
     {
       return _id_dof_coord_map[id].size();
@@ -860,7 +857,7 @@ pthread_mutex_unlock(&_state_mutex);
 
     void set_foot_value(const std::string& id, unit_e u, const Ravelin::Origin3d& val)
     {
-      OUT_LOG(logDEBUG) << "Set: "<< id <<"_" << enum_string(u) << " <-- " << val;
+      OUT_LOG(logDEBUG) << "Set: foot "<< id <<"_" << enum_string(u) << " <-- " << val;
       check_phase(u);
 #ifdef USE_THREADS
       pthread_mutex_lock(&_foot_state_mutex);
@@ -882,7 +879,7 @@ pthread_mutex_unlock(&_state_mutex);
 #ifdef USE_THREADS
       pthread_mutex_unlock(&_foot_state_mutex);
 #endif
-      OUT_LOG(logDEBUG) << "Get: "<< id <<"_" << enum_string(u) << " --> " << val;
+      OUT_LOG(logDEBUG) << "Get: foot "<< id <<"_" << enum_string(u) << " --> " << val;
       return val;
     }
     
@@ -904,7 +901,7 @@ pthread_mutex_unlock(&_state_mutex);
       for (it=val.begin(); it != val.end(); it++) {
         std::map<std::string, Ravelin::Origin3d >::iterator jt = _foot_state[u].find((*it).first);
         if(jt != _foot_state[u].end()){
-          OUT_LOG(logDEBUG) << "Set: "<< (*it).first << "_" << enum_string(u) << " <-- " << (*it).second;
+          OUT_LOG(logDEBUG) << "Set: foot "<< (*it).first << "_" << enum_string(u) << " <-- " << (*it).second;
           (*jt).second = (*it).second;
           _foot_is_set[(*it).first] = true;
         }
@@ -921,7 +918,7 @@ pthread_mutex_unlock(&_state_mutex);
 #endif
       std::map<std::string, Ravelin::Origin3d >::iterator it;
       for (it=_foot_state[u].begin(); it != _foot_state[u].end(); it++) {
-        OUT_LOG(logDEBUG) << "Get: "<< (*it).first << "_" << enum_string(u) << " --> " << (*it).second;
+        OUT_LOG(logDEBUG) << "Get: foot "<< (*it).first << "_" << enum_string(u) << " --> " << (*it).second;
         val[(*it).first] = (*it).second;
       }
 #ifdef USE_THREADS

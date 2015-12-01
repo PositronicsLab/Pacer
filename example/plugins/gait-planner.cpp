@@ -944,6 +944,10 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
   
   for(int i=0;i<NUM_FEET;i++){
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.x",Origin3d(foot_pos[i]));
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xd",Origin3d(foot_vel[i]));
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xdd",Origin3d(foot_acc[i]));
+
     ctrl->set_foot_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
     ctrl->set_foot_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
     ctrl->set_foot_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));

@@ -20,3 +20,8 @@ foreach(dir ${sub-dir})
     endif()
   endif()
 endforeach()
+
+option(USE_CURSES "Build Pacer with ncurses display support?" OFF)
+if(USE_CURSES)
+  add_definitions(-DUSE_CURSES)
+endif(USE_CURSES)

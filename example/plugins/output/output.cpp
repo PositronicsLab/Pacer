@@ -1,7 +1,6 @@
 #include <Pacer/controller.h>
 #include "../plugin.h"
 
-#define USE_CURSES
 #ifdef USE_CURSES
 #include <curses.h>
 #endif

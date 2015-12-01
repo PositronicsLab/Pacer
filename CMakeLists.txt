@@ -24,6 +24,9 @@ include_directories(${RAVELIN_INCLUDE_DIR})
 
 #add moby
 find_package(Moby REQUIRED)
+if (NOT MOBY_LIBRARY_DIR)
+  get_filename_component(MOBY_LIBRARY_DIR ${MOBY_LIBRARY} PATH)
+endif()
 link_directories(${MOBY_LIBRARY_DIR})
 include_directories(${MOBY_INCLUDE_DIR})
 

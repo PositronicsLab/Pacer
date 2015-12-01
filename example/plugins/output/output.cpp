@@ -105,8 +105,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   int ndofs = q.rows();
   
 //  std::cout << t << " JOINT:gc\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err" << std::endl;
-  printw("JOINT:gc\t|    U   :  des   :  err   ||    Q   :  des   :  err   ||   Qd   :  des   :   err  ||  Qdd   :  des   :  err   \n");
 #ifdef USE_CURSES
+  printw("JOINT:gc\t|    U   :  des   :  err   ||    Q   :  des   :  err   ||   Qd   :  des   :   err  ||  Qdd   :  des   :  err   \n");
   for(unsigned i=0;i< ndofs;i++){
     printw("%s:%d\t", generalized_names[i].c_str(),i);
     printw("|%8.3f:%8.3f:%8.3f|", u_des[i],fext[i],(fext[i] - u_des[i]));

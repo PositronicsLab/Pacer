@@ -405,7 +405,7 @@ pthread_mutex_unlock(&_data_map_mutex);
           break;
         case clean_up:
           if (controller_phase != WAITING && controller_phase != INITIALIZATION )
-            throw std::runtime_error("controller must be in WAITING or INITIALIZATION phase to perform clean-up duties.");
+            throw std::runtime_error("controller must be in WAITING or INITIALIZATION phase to perform clean_up duties.");
           break;
         default:
           throw std::runtime_error("unknown unit being set in state data");
@@ -463,17 +463,22 @@ pthread_mutex_unlock(&_data_map_mutex);
 
     double get_joint_value(const std::string& id, unit_e u, int dof)
     {
+      OUT_LOG(logDEBUG) << "Get: "<< id << "_" << enum_string(u) << "["<< dof << "] --> " << _state[u][id][dof];
       return _state[u][id][dof];
     }
     
     Ravelin::VectorNd get_joint_value(const std::string& id, unit_e u)
     {
+      OUT_LOG(logDEBUG) << "Get: "<< id << "_" << enum_string(u) << " --> " << _state[u][id];
       return _state[u][id];
     }
     
     void get_joint_value(const std::string& id, unit_e u, Ravelin::VectorNd& dof_val)
     {
       dof_val = _state[u][id];
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Get: "<< id << "_" << enum_string(u) << " --> " << dof_val;
+#endif
     }
     
     void get_joint_value(const std::string& id, unit_e u,std::vector<double>& dof_val)
@@ -482,10 +487,15 @@ pthread_mutex_unlock(&_data_map_mutex);
       dof_val.resize(dof.rows());
       for(int i=0;i<dof.rows();i++)
         dof_val[i] = dof[i];
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Get: "<< id << "_" << enum_string(u) << " --> " << dof_val;
+#endif
     }
     
     void set_joint_value(const std::string& id, unit_e u, int dof, double val)
     {
+      OUT_LOG(logDEBUG) << "Set: "<< id << "_" << enum_string(u) << "["<< dof <<"] <-- " << val;
+
       check_phase(u);
       #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
@@ -498,6 +508,9 @@ pthread_mutex_unlock(&_state_mutex);
     
     void set_joint_value(const std::string& id, unit_e u, const Ravelin::VectorNd& dof_val)
     {
+#ifdef LOG_TO_FILE
+ OUT_LOG(logDEBUG) << "Set: "<< id << "_" << enum_string(u) << " <-- " << dof_val;
+#endif
       check_phase(u);
       #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
@@ -513,6 +526,10 @@ pthread_mutex_unlock(&_state_mutex);
     
     void set_joint_value(const std::string& id, unit_e u, const std::vector<double>& dof_val)
     {
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Set: "<< id << "_" << enum_string(u) << " <-- " << dof_val;
+#endif
+
       check_phase(u);
       #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
@@ -536,6 +553,9 @@ pthread_mutex_unlock(&_state_mutex);
         for(int j=0;j<(*it).second.rows();j++){
           dof_val[j] = dof_val_internal[j]; 
         }
+#ifdef LOG_TO_FILE
+    OUT_LOG(logDEBUG) << "Get: "<< (*it).first << "_" << enum_string(u) << " --> " << dof_val;
+#endif
       }
     }
     
@@ -544,11 +564,14 @@ pthread_mutex_unlock(&_state_mutex);
       for(int i=0;i<keys.size();i++){
         const Ravelin::VectorNd& dof_val_internal = _state[u][keys[i]];
         id_dof_val_map[keys[i]] = dof_val_internal;
+#ifdef LOG_TO_FILE
+    OUT_LOG(logDEBUG) << "Get: "<< keys[i] << "_" << enum_string(u) << " --> " << dof_val_internal;
+#endif
       }
     }
 
     void set_joint_value(unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
-      #ifdef USE_THREADS
+ #ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
 #endif
       std::map<std::string,std::vector<double> >::const_iterator it;
@@ -556,6 +579,9 @@ pthread_mutex_lock(&_state_mutex);
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
         const std::vector<double>& dof_val = (*it).second;
+#ifdef LOG_TO_FILE
+    OUT_LOG(logDEBUG) << "Set: "<< (*it).first << "_" << enum_string(u) << " <-- " << dof_val;
+#endif
         if(dof_val_internal.rows() != dof_val.size()){
           std::cerr << "Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()) << std::endl;
           throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
@@ -570,12 +596,13 @@ pthread_mutex_unlock(&_state_mutex);
     }
     
     void set_joint_value(unit_e u,const std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
-      #ifdef USE_THREADS
+#ifdef USE_THREADS
 pthread_mutex_lock(&_state_mutex);
 #endif
       std::map<std::string,Ravelin::VectorNd >::const_iterator it;
       for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
         Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
+        OUT_LOG(logDEBUG) << "Set: "<< (*it).first << "_" << enum_string(u) << " <-- " << (*it).second;
         if(dof_val_internal.rows() != (*it).second.rows())
           throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply((*it).second.rows()));
         dof_val_internal = (*it).second;
@@ -734,6 +761,7 @@ pthread_mutex_lock(&_state_mutex);
       #ifdef USE_THREADS
 pthread_mutex_unlock(&_state_mutex);
 #endif
+      OUT_LOG(logDEBUG) << "Set: joint_generalized_" << enum_string(u) << " <-- " << generalized_vec;
     }
     
     void get_joint_generalized_value(unit_e u, Ravelin::VectorNd& generalized_vec){
@@ -746,6 +774,7 @@ pthread_mutex_unlock(&_state_mutex);
           generalized_vec[dof[j]] = dof_val[j];
         }
       }
+      OUT_LOG(logDEBUG) << "Get: joint_generalized_" << enum_string(u) << " --> " << generalized_vec;
     }
     
     Ravelin::VectorNd get_joint_generalized_value(unit_e u){
@@ -767,6 +796,7 @@ pthread_mutex_unlock(&_state_mutex);
           break;
       }
       set_joint_generalized_value(u,generalized_vec.segment(0,NUM_JOINT_DOFS));
+      OUT_LOG(logDEBUG) << "Set: generalized_" << enum_string(u) << " <-- " << generalized_vec;
     }
 
     /// With Base
@@ -782,6 +812,7 @@ pthread_mutex_unlock(&_state_mutex);
       }
       generalized_vec.set_sub_vec(0,get_joint_generalized_value(u));
       generalized_vec.set_sub_vec(NUM_JOINT_DOFS,get_base_value(u));
+      OUT_LOG(logDEBUG) << "Get: generalized_" << enum_string(u) << " --> " << generalized_vec;
     }
     
     /// With Base
@@ -792,6 +823,7 @@ pthread_mutex_unlock(&_state_mutex);
     }
 
     void set_base_value(unit_e u,const Ravelin::VectorNd& vec){
+      OUT_LOG(logDEBUG) << "Set: base_" << enum_string(u) << " <-- " << vec;
       check_phase(u);
       switch(u){
         case(position_goal):
@@ -812,10 +844,12 @@ pthread_mutex_lock(&_state_mutex);
       #ifdef USE_THREADS
 pthread_mutex_unlock(&_state_mutex);
 #endif
+
     }
 
     void get_base_value(unit_e u, Ravelin::VectorNd& vec){
-      vec = _base_state[u];  
+      vec = _base_state[u];
+      OUT_LOG(logDEBUG) << "Get: base_" << enum_string(u) << " --> " << vec;
     }
 
     Ravelin::VectorNd get_base_value(unit_e u){
@@ -826,6 +860,7 @@ pthread_mutex_unlock(&_state_mutex);
 
     void set_foot_value(const std::string& id, unit_e u, const Ravelin::Origin3d& val)
     {
+      OUT_LOG(logDEBUG) << "Set: "<< id <<"_" << enum_string(u) << " <-- " << val;
       check_phase(u);
 #ifdef USE_THREADS
       pthread_mutex_lock(&_foot_state_mutex);
@@ -847,6 +882,7 @@ pthread_mutex_unlock(&_state_mutex);
 #ifdef USE_THREADS
       pthread_mutex_unlock(&_foot_state_mutex);
 #endif
+      OUT_LOG(logDEBUG) << "Get: "<< id <<"_" << enum_string(u) << " --> " << val;
       return val;
     }
     
@@ -868,6 +904,7 @@ pthread_mutex_unlock(&_state_mutex);
       for (it=val.begin(); it != val.end(); it++) {
         std::map<std::string, Ravelin::Origin3d >::iterator jt = _foot_state[u].find((*it).first);
         if(jt != _foot_state[u].end()){
+          OUT_LOG(logDEBUG) << "Set: "<< (*it).first << "_" << enum_string(u) << " <-- " << (*it).second;
           (*jt).second = (*it).second;
           _foot_is_set[(*it).first] = true;
         }
@@ -884,6 +921,7 @@ pthread_mutex_unlock(&_state_mutex);
 #endif
       std::map<std::string, Ravelin::Origin3d >::iterator it;
       for (it=_foot_state[u].begin(); it != _foot_state[u].end(); it++) {
+        OUT_LOG(logDEBUG) << "Get: "<< (*it).first << "_" << enum_string(u) << " --> " << (*it).second;
         val[(*it).first] = (*it).second;
       }
 #ifdef USE_THREADS

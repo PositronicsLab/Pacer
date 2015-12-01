@@ -5,7 +5,6 @@
  ****************************************************************************/
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
-
 #include "plugin.h"
 
 void loop(){
@@ -24,7 +23,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     std::string& foot_name = foot_names_[i];
     Ravelin::Origin3d x,xd,xdd;
     ctrl->get_foot_value(foot_name,Pacer::Controller::position_goal,x);
-    if(x.norm() == 0)
+    if(x.norm() < 0)
       continue;
     ctrl->get_foot_value(foot_name,Pacer::Controller::velocity_goal,xd);
     ctrl->get_foot_value(foot_name,Pacer::Controller::acceleration_goal,xdd);
@@ -48,6 +47,11 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     foot_acc.push_back(xdd);
     foot_names.push_back(foot_name);
   }
+
+  // if no feet to do IK for return
+  if(foot_names.size() == 0)
+    return;
+  
   Ravelin::VectorNd q;
   ctrl->get_generalized_value(Pacer::Controller::position,q);
   int N = q.size() - Pacer::NEULER;
@@ -68,7 +72,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // This is calculated in global frame always (assume base_link is at origin)
   ctrl->end_effector_inverse_kinematics(foot_names,foot_pos,foot_vel,foot_acc,q,
                                         q_goal,qd_goal,qdd_goal,TOL);
-
+  // TODO: set q_goal dofs that dont have a foot that needs IK to joint_generalized_value(Pacer::Controller::position_goal
   OUT_LOG(logDEBUG1) << "q_goal = " << q_goal; 
   OUT_LOG(logDEBUG1) << "qd_goal = " << qd_goal; 
   OUT_LOG(logDEBUG1) << "qdd_goal = " << qdd_goal; 

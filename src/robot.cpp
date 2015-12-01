@@ -159,6 +159,9 @@ void Robot::update(){
   Ravelin::VectorNd generalized_qd = get_generalized_value(velocity);
   Ravelin::VectorNd generalized_qdd = get_generalized_value(acceleration);
   Ravelin::VectorNd generalized_fext = get_generalized_value(load);
+  set_joint_generalized_value(position_goal,generalized_q.segment(0,NUM_JOINT_DOFS));
+  set_joint_generalized_value(velocity_goal,generalized_qd.segment(0,NUM_JOINT_DOFS));
+  set_joint_generalized_value(acceleration_goal,Ravelin::VectorNd::zero(NUM_JOINT_DOFS));
 
   set_data<Ravelin::VectorNd>("generalized_q", generalized_q);
   set_data<Ravelin::VectorNd>("generalized_qd", generalized_qd);

@@ -234,4 +234,16 @@ public:
 	static bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
   static bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
 };
+
+//template<typename T>
+//std::ostream& operator<<(std::ostream& os, const std::vector<T>& data_vec){
+//  int N = data_vec.size();
+//  os << "("<<N<<")[ " ;
+//  for (int i=0; i<N; i++) {
+//    os << data_vec << ( (i<N-1)? ", " : " " );
+//  }
+//  os << "]" << std::endl;
+//}
+
+
 #endif // UTILITIES_H

@@ -25,6 +25,7 @@ if( MOBY_INCLUDE_DIR )
     # Set uncached variables as per standard.
     set(MOBY_FOUND ON)
     set(MOBY_INCLUDE_DIRS ${MOBY_INCLUDE_DIR})
+    set(MOBY_LIBRARY_DIR ${MOBY_LIBRARY_DIRS})
     set(MOBY_LIBRARIES ${MOBY_LIBRARY})
   endif(MOBY_LIBRARY)
 else(MOBY_INCLUDE_DIR)

@@ -7,19 +7,8 @@
 
 void loop(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  static bool inited = false;
 #ifdef USE_CURSES
-  if(!inited){
-    initscr();
-    //cbreak();
-    //noecho();
-    //nonl();
-    curs_set(0);
-    inited = true;
-    resize_term(100,200);
-  } else {
     move(0,0);
-  }
 #endif
   
   // init a key-value mapping to each joint dof of the robot
@@ -117,6 +106,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
 //  std::cout << t << " JOINT:gc\t: U\t| Q\t: des\t: err\t|Qd\t: des\t: err\t|Qdd\t: des\t: err" << std::endl;
   printw("JOINT:gc\t|    U   :  des   :  err   ||    Q   :  des   :  err   ||   Qd   :  des   :   err  ||  Qdd   :  des   :  err   \n");
+#ifdef USE_CURSES
   for(unsigned i=0;i< ndofs;i++){
     printw("%s:%d\t", generalized_names[i].c_str(),i);
     printw("|%8.3f:%8.3f:%8.3f|", u_des[i],fext[i],(fext[i] - u_des[i]));
@@ -205,10 +195,20 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   OUT_LOG(logINFO) << "==============================================" << std::endl;
   */
   refresh();
-
+#endif
 }
 
 
 void setup(){
+#ifdef USE_CURSES
+    initscr();
+    //cbreak();
+    //noecho();
+    //nonl();
+    curs_set(0);
+    inited = true;
+    resize_term(100,200);
+    move(0,0);
+#endif
   
 }

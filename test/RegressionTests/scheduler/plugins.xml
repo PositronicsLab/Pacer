@@ -29,6 +29,8 @@
     <!--  PERSISTENT    -->
     <init>
       <time type="double">0</time>
+      <close type="string vector">
+      </close>
       <open type="string vector">
         center-of-mass
         end-effectors
@@ -40,81 +42,79 @@
     <!--   WALK   -->
     
     <walk1>
-      <time type="double">0.1</time>
-      <open type="string vector">
-        gait-planner
-        eef-PID-controller
-      </open>
+      <time type="double">1.0</time>
       <close type="string vector">
         stand-trajectory
         joint-PID-controller
       </close>
+      <open type="string vector">
+        gait-planner
+        eef-PID-controller
+      </open>
     </walk1>
 
     <joint-control>
-      <time type="double">0.6</time>
+      <time type="double">2.0</time>
+      <close type="string vector">
+        eef-PID-controller
+      </close>
       <open type="string vector">
         ik-feet
         joint-PID-controller
         idyn-controller
       </open>
-      <close type="string vector">
-        eef-PID-controller
-      </close>
     </joint-control>
     <stop1>
-      <time type="double">0.7</time>
-      <open type="string vector">
-        freeze
-      </open>
+      <time type="double">3.0</time>
       <close type="string vector">
         gait-planner
       </close>
+      <open type="string vector">
+        freeze
+      </open>
     </stop1>
     <walk2>
-      <time type="double">0.8</time>
-      <open type="string vector">
-        gait-planner
-      </open>
+      <time type="double">4.0</time>
       <close type="string vector">
         freeze
       </close>
+      <open type="string vector">
+        gait-planner
+      </open>
     </walk2>
     
     <eef-pid>
-      <time type="double">0.9</time>
-      <open type="string vector">
-        eef-PID-controller
-      </open>
+      <time type="double">5.0</time>
       <close type="string vector">
         ik-feet
         joint-PID-controller
         idyn-controller
       </close>
+      <open type="string vector">
+        eef-PID-controller
+      </open>
     </eef-pid>
     
     <stop2>
-      <time type="double">1.0</time>
-      <open type="string vector">
-        freeze
-      </open>
+      <time type="double">6.0</time>
       <close type="string vector">
         gait-planner
       </close>
+      <open type="string vector">
+        freeze
+      </open>
     </stop2>
     <walk3>
-      <time type="double">1.1</time>
-      <open type="string vector">
-        gait-planner
-      </open>
+      <time type="double">7.0</time>
       <close type="string vector">
         freeze
       </close>
+      <open type="string vector">
+        gait-planner
+      </open>
     </walk3>
     <end>
-      <time type="double">1.2</time>
-      <open type="string vector">
-      </open>
+      <time type="double">8.0</time>
       <close type="string vector">
         joint-PID-controller
         ik-feet
@@ -124,9 +124,11 @@
         eef-PID-controller
         error-check
       </close>
+      <open type="string vector">
+      </open>
   </end>
     <close>
-      <time type="double">1.5</time>
+      <time type="double">9.0</time>
       <open type="string vector">
         exit
       </open>

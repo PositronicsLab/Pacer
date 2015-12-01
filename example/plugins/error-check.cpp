@@ -9,7 +9,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   // Unstable simulation.
   if(generalized_fext.norm() > 1e8)
-    throw std::runtime_error("Robot flipped over!");
+    throw std::runtime_error("Robot exploded!");
 
   // Fell off edge
   Ravelin::Vector3d x;

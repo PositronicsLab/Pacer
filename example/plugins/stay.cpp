@@ -10,7 +10,8 @@ using namespace Ravelin;
 
 void loop(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  // Alpha calculation
+  
+  // Joints
   static VectorNd
   q_goal = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal),
   qd_goal = Ravelin::VectorNd::zero(q_goal.rows()),
@@ -20,18 +21,12 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
   
-  
-  // Alpha calculation
+  // End Effectors
   static std::map<std::string,Origin3d>
   x_goal = ctrl->get_foot_value(Pacer::Controller::position_goal);
   
   ctrl->set_foot_value(Pacer::Controller::position_goal,x_goal);
 }
+
 void setup(){
-  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  const  std::vector<std::string>
-  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-  for(unsigned i=0;i<eef_names_.size();i++){
-    variable_names.push_back(eef_names_[i]+".stance");
-  }
 }

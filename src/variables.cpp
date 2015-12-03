@@ -16,7 +16,7 @@ using Moby::XMLTree;
 using Moby::XMLTreePtr;
 using Moby::XMLAttrib;
 
-static int str2bool(const std::string& str)
+static bool str2bool(const std::string& str)
 {
   if(str.compare(std::string("true")) == 0)
     return 1;
@@ -26,20 +26,17 @@ static int str2bool(const std::string& str)
   assert(false);
 }
 
+static int str2int(const std::string& str)
+{
+  return std::stoi(str);;
+}
+
 std::vector<std::string> split(std::string const &input) {
   std::istringstream buffer(input);
   std::vector<std::string> ret((std::istream_iterator<std::string>(buffer)),
                                std::istream_iterator<std::string>());
   return ret;
 }
-
-//template <class X>
-//X& var(std::string tag){
-//  if(CVarUtils::CVarExists(tag))
-//    return Utility::get_variable<X>(tag);
-//  assert(CVarUtils::CVarExists(tag));
-//  return X();
-//}
 
 // Replacing: [](std::string const& val) {return std::stod(val);});
 double string_to_double(std::string const& val){
@@ -48,8 +45,13 @@ double string_to_double(std::string const& val){
 }
 
 // Replacing: [](std::string const& val) {return std::stod(val);});
+bool string_to_bool(std::string const& val){
+  return str2bool(val);
+}
+
+// Replacing: [](std::string const& val) {return std::stod(val);});
 int string_to_int(std::string const& val){
-  return (str2bool(val))? 1 : 0;
+  return str2int(val);
 }
 
 void Pacer::Controller::process_tag(std::string tag,shared_ptr<const XMLTree> node){
@@ -107,6 +109,19 @@ void Pacer::Controller::process_tag(std::string tag,shared_ptr<const XMLTree> no
       else if(data_type.compare("bool") == 0){
         if(elements.size()>1)
         {
+          std::vector<bool> typed_elements;
+          typed_elements.reserve(elements.size());
+          std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
+                         string_to_bool);
+          set_data<std::vector<bool> >(tag+n->name,typed_elements);
+        }
+        else{
+          set_data<bool>(tag+n->name,str2bool(elements[0]));
+        }
+      }
+      else if(data_type.compare("int") == 0){
+        if(elements.size()>1)
+        {
           std::vector<int> typed_elements;
           typed_elements.reserve(elements.size());
           std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
@@ -114,7 +129,7 @@ void Pacer::Controller::process_tag(std::string tag,shared_ptr<const XMLTree> no
           set_data<std::vector<int> >(tag+n->name,typed_elements);
         }
         else{
-          set_data<int>(tag+n->name,str2bool(elements[0]));
+          set_data<int>(tag+n->name,str2int(elements[0]));
         }
       }
       else if(data_type.compare("string vector") == 0){
@@ -128,6 +143,13 @@ void Pacer::Controller::process_tag(std::string tag,shared_ptr<const XMLTree> no
         set_data<std::vector<double> >(tag+n->name,typed_elements );
       }
       else if(data_type.compare("bool vector") == 0){
+        std::vector<bool> typed_elements;
+        typed_elements.reserve(elements.size());
+        std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),
+                       string_to_bool);
+        set_data<std::vector<bool> >(tag+n->name,typed_elements);
+      }
+      else if(data_type.compare("int vector") == 0){
         std::vector<int> typed_elements;
         typed_elements.reserve(elements.size());
         std::transform(elements.begin(), elements.end(), std::back_inserter(typed_elements),

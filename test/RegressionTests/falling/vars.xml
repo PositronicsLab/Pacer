@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">NONE</logging>
+  <logging type="string">DEBUG2</logging>
   <real-time-factor type="double">1</real-time-factor>
   
   <init-file type="file">../../../example/models/links/init.xml</init-file>
@@ -12,5 +12,6 @@
   </init>
   
   <task-file type="file">plugins.xml</task-file>
+  <uncertainty-file type="file">../../../example/models/links/uncertainty.xml</uncertainty-file>
 
 </XML>

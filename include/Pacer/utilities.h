@@ -235,15 +235,29 @@ public:
   static bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
 };
 
-//template<typename T>
-//std::ostream& operator<<(std::ostream& os, const std::vector<T>& data_vec){
-//  int N = data_vec.size();
-//  os << "("<<N<<")[ " ;
-//  for (int i=0; i<N; i++) {
-//    os << data_vec << ( (i<N-1)? ", " : " " );
-//  }
-//  os << "]" << std::endl;
-//}
+static double sigmoid(double x){
+  return (1.0 / (1.0 + exp(-x)));
+}
 
+static double sigmoid_interp(double v0, double vF, double alpha){
+  // sigmoid curve interpolates wrt to alpha \in {0..1}
+  double diff = vF - v0;
+  return v0 + diff*sigmoid(alpha*10.0 - 5.0);
+}
+
+template <typename T>
+static int sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+template <typename T>
+static T sqr(T val) {
+  return val*val;
+}
+
+static double decimal_part(double val){
+  return val - (double) ((int) val);
+  
+}
 
 #endif // UTILITIES_H

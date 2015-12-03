@@ -28,35 +28,12 @@ enum GAIT_PHASE {
   FLIGHT
 };
 
-double sigmoid(double x){
-  return (1.0 / (1.0 + exp(-x)));
-}
-
-double sigmoid_interp(double v0, double vF, double alpha){
-  // sigmoid curve interpolates wrt to alpha \in {0..1}
-  double diff = vF - v0;
-  return v0 + diff*sigmoid(alpha*10.0 - 5.0);
-}
-
 boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
 Ravelin::Origin3d roll_pitch_yaw;
 
 std::vector<std::string> foot_names;
 
 std::map<std::string,bool> active_feet;
-
-template <typename T> int sgn(T val) {
-  return (T(0) < val) - (val < T(0));
-}
-
-template <typename T> T sqr(T val) {
-  return val*val;
-}
-
-double decimal_part(double val){
-  return val - (double) ((int) val);
-
-}
 
 Origin3d planar_robot(Origin3d x,Origin3d xd){
   double

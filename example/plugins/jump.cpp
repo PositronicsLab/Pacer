@@ -6,23 +6,10 @@ using namespace Ravelin;
 
 const double grav     = 9.81; // m / s*s
 
-template <typename T> T sqr(T val) {
-  return val*val;
-}
-
-double sigmoid(double x){
-  return (1.0 / (1.0 + exp(-x)));
-}
-
 double dsigmoid(double x){
   return (exp(x) / sqr(1.0 + exp(x)));
 }
 
-double sigmoid_interp(double v0, double vF, double alpha){
-  // sigmoid curve interpolates wrt to alpha \in {0..1}
-  double diff = vF - v0;
-  return v0 + diff*sigmoid(alpha*10.0 - 5.0);
-}
 
 double sigmoid_interp2(double v0, double vF, double alpha, double& deriv){
   // sigmoid curve interpolates wrt to alpha \in {0..1}

@@ -367,8 +367,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   double dt_idyn = ctrl->get_data<double>(plugin_namespace+".dt");
   double alpha = ctrl->get_data<double>(plugin_namespace+".alpha");
-  int USE_DES_CONTACT = ctrl->get_data<int>(plugin_namespace+".des-contact");
-  int USE_LAST_CFS = ctrl->get_data<int>(plugin_namespace+".last-cfs");
+  bool USE_DES_CONTACT = ctrl->get_data<bool>(plugin_namespace+".des-contact");
+  bool USE_LAST_CFS = ctrl->get_data<bool>(plugin_namespace+".last-cfs");
   
   double DT = (dt_idyn == 0)? dt : dt_idyn;
   if(DT == 0) DT = 0.001;
@@ -554,7 +554,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       N_delay_queue,
       D_delay_queue,
       MU_delay_queue;
-      static int FILTER_CFS = ctrl->get_data<int>(plugin_namespace+".last-cfs-filter");
+      static bool FILTER_CFS = ctrl->get_data<bool>(plugin_namespace+".last-cfs-filter");
       
       if(FILTER_CFS && NC>0){
         

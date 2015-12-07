@@ -7,6 +7,4 @@ make -j 18;
 # Regression Test
 export GTEST_OUTPUT="xml:./";
 source setup.sh;
-#convert @@EXPORTED_VALUE@@ tokens to value: $(echo ${EXPORTED_VALUE})
-${DIR}/test/RegressionTests/setup-tests.sh ${DIR}/test/RegressionTests/*/*.in
-( make regression-test ; exit 0);
+${DIR}/run-test.sh

@@ -30,7 +30,7 @@ int main(int argc, char** argv){
   // OSG output first and last viewer frame
 #ifdef USE_GTEST
   argvs.push_back("GOOGLE-TEST:PacerTest");
-  argvs.push_back("-mt=10");
+  argvs.push_back("-mt=5");
   argvs.push_back("-v=6");
   argvs.push_back("-s=0.0015");
   argvs.push_back("-y=osg");
@@ -105,11 +105,11 @@ int main(int argc, char** argv){
     std::cout << "qdf = " << qd_f << std::endl;
   }
   check_final_state(robot);
-  
-  // Clean up Moby
-  Moby::close();
-  
+   
 #ifndef USE_GTEST
   return 0;
 #endif
+  exit(0);
+  // Clean up Moby
+  Moby::close();
 }

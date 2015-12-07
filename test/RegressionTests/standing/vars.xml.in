@@ -1,5 +1,5 @@
 <XML>
-  <logging type="string">DEBUG2</logging>
+  <logging type="string">NONE</logging>
   <real-time-factor type="double">1</real-time-factor>
   
   <init-file type="file">@@PACER_MODEL_PATH@@/@@TESTING_ROBOT@@/init.xml</init-file>

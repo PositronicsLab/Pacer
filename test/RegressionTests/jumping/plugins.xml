@@ -39,7 +39,29 @@
         viz-jump
       </open>
     </jump>
+    
+    <land>
+      <time type="double">0.6</time>
+      <close type="string vector">
+        jump
+      </close>
+      <open type="string vector">
+        freeze
+      </open>
+    </land>
   </plugin-scheduler>
+
+  <freeze>
+    <file type="string">libstay.so</file>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">1</priority>
+  </freeze>
+  
+  <exit-on-contact>
+    <file type="string">libexit-contact.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </exit-on-contact>
 
   <viz-jump>
     <priority type="double">0</priority>

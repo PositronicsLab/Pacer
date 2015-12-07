@@ -31,12 +31,13 @@
   <ImplicitConstraint joint-id="planar" /> 
 -->
 </TimeSteppingSimulator>
+
+ <SDF filename="@@PACER_MODEL_PATH@@/@@TESTING_ROBOT@@/model.sdf"/> 
+
   <!-- setup a planar joint -->
 <!--
   <PlanarJoint id="planar" inboard-link-id="GROUND" outboard-link-id="BODY0" normal="1 0 0" location="0 0 0" />
 -->
-
-<SDF filename="../../../example/models/links/model.sdf"/>
 
   <!-- setup the platform rigid body; it is not active -->
      <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />

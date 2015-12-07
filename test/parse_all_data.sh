@@ -4,6 +4,7 @@ for var in "$@"
 do
   pushd .
   cd "$var"
-  $DIR/parse_data.sh
+  $DIR/parse_data.sh 
+  $DIR/clean-file.sh *.mat
   popd
 done

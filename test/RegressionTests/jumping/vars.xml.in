@@ -1,0 +1,6 @@
+<XML>
+  <logging type="string">DEBUG1</logging>
+  <init-file type="file">@@PACER_MODEL_PATH@@/@@TESTING_ROBOT@@/init.xml</init-file>
+  <extra-files type="file">@@PACER_MODEL_PATH@@/@@TESTING_ROBOT@@/control-uncertainty.xml</extra-files>
+  <task-file type="file">plugins.xml</task-file>
+</XML>

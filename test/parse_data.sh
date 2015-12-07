@@ -23,48 +23,4 @@ grep "num_contacts = " out.log > nc.mat
 grep "cf_moby = " out.log > cf_moby.mat
 grep "cf_id = " out.log > cf_id.mat
 
-rpl -q "qdd = [" "" qdd.mat
-rpl -q "generalized_qd = [" "" qd.mat
-rpl -q "q = [" "" q.mat
-rpl -q "qdd_des = [" "" qdd_des.mat
-rpl -q "qd_des = [" "" qd_des.mat
-rpl -q "q_des = [" "" q_des.mat
-rpl -q "CoM_x = [" "" com.mat
-rpl -q "CoM_xd = [" "" comxd.mat
-rpl -q "LF_FOOT_x = [" "" x.mat
-rpl -q "LF_FOOT_x_des = [" "" x_des.mat
-rpl -q "LF_FOOT_x_err = [" "" x_err.mat
-rpl -q "LF_FOOT_xd = [" "" xd.mat
-rpl -q "LF_FOOT_xd_des = [" "" xd_des.mat
-rpl -q "LF_FOOT_xd_err = [" "" xd_err.mat
-rpl -q "RF_FOOT_x = [" "" x.mat
-rpl -q "RF_FOOT_x_des = [" "" x_des.mat
-rpl -q "RF_FOOT_x_err = [" "" x_err.mat
-rpl -q "RF_FOOT_xd = [" "" xd.mat
-rpl -q "RF_FOOT_xd_des = [" "" xd_des.mat
-rpl -q "RF_FOOT_xd_err = [" "" xd_err.mat
-rpl -q "LH_FOOT_x = [" "" x.mat
-rpl -q "LH_FOOT_x_des = [" "" x_des.mat
-rpl -q "LH_FOOT_x_err = [" "" x_err.mat
-rpl -q "LH_FOOT_xd = [" "" xd.mat
-rpl -q "LH_FOOT_xd_des = [" "" xd_des.mat
-rpl -q "LH_FOOT_xd_err = [" "" xd_err.mat
-rpl -q "RH_FOOT_x = [" "" x.mat
-rpl -q "RH_FOOT_x_des = [" "" x_des.mat
-rpl -q "RH_FOOT_x_err = [" "" x_err.mat
-rpl -q "RH_FOOT_xd = [" "" xd.mat
-rpl -q "RH_FOOT_xd_des = [" "" xd_des.mat
-rpl -q "RH_FOOT_xd_err = [" "" xd_err.mat
-rpl -q "ufb = [" "" ufb.mat
-rpl -q "uff = [" "" uff.mat
-rpl -q "u = [" "" u.mat
-rpl -q "roll_pitch_yaw = [" "" rpy.mat
-rpl -q "idyn_timing = " "" t_idyn.mat
-rpl -q "num_contacts = " "" nc.mat
-rpl -q "cf_moby = [" "" cf_moby.mat
-rpl -q "cf_id = [" "" cf_id.mat
 
-rpl -q " ]';" "" *.mat
-rpl -q " ]';" "" *.mat
-rpl -q "]';" "" *.mat
-rpl -q ";" "" *.mat

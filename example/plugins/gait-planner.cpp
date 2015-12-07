@@ -907,7 +907,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
   
-  int STANCE_ON_CONTACT = ctrl->get_data<int>(plugin_namespace+".stance-on-contact");
+  bool STANCE_ON_CONTACT = ctrl->get_data<bool>(plugin_namespace+".stance-on-contact");
   
   for(int i=0;i<foot_names.size();i++){
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;

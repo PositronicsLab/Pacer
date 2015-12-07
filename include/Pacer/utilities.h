@@ -31,6 +31,13 @@ static const double _TWO_PI= M_PI*2.0;
 #include <Pacer/output.h>
 
 #include <Ravelin/LinAlgd.h>
+
+#ifdef __GNUC__
+# define Y_Warning(x) message x
+#else
+# define Y_Warning(x) message(x)
+#endif
+
 static Ravelin::LinAlgd LA_;
 
 class Utility{

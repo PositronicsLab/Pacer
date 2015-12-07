@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "random.h"
+#include <boost/algorithm/string.hpp>
 
 #define SSTR( x ) dynamic_cast< std::ostringstream & >( \
 ( std::ostringstream() << std::dec << x ) ).str()
@@ -22,22 +23,22 @@ void parse_distribution(const std::string& parameters,std::vector<boost::shared_
   std::string distribution_type;
   if(!ctrl->get_data<std::string>(parameters+".distribution", distribution_type))
     throw std::runtime_error("there is no default value OR distribution params for this!");
-    
+  
   OUT_LOG(logDEBUG) << parameters << " has a distribution of type: " << distribution_type;
   
-  if (has_min = ctrl->get_data<std::vector<double> >(parameters+".min", min)){
+  if ((has_min = ctrl->get_data<std::vector<double> >(parameters+".min", min))){
     OUT_LOG(logDEBUG) << "min = " << min;
     N = min.size();
   }
-  if (has_max = ctrl->get_data<std::vector<double> >(parameters+".max", max)){
+  if ((has_max = ctrl->get_data<std::vector<double> >(parameters+".max", max))){
     OUT_LOG(logDEBUG) << "max = " << max;
     N = max.size();
   }
-  if (has_mu = ctrl->get_data<std::vector<double> >(parameters+".mu", mu)){
+  if ((has_mu = ctrl->get_data<std::vector<double> >(parameters+".mu", mu))){
     OUT_LOG(logDEBUG) << "mu = " << mu;
     N = mu.size();
   }
-  if (has_sigma = ctrl->get_data<std::vector<double> >(parameters+".sigma", sigma)){
+  if ((has_sigma = ctrl->get_data<std::vector<double> >(parameters+".sigma", sigma))){
     OUT_LOG(logDEBUG) << "sigma = " << sigma;
     N = sigma.size();
   }
@@ -115,11 +116,11 @@ void create_distributions(){
                     OUT_LOG(logDEBUG) << "\t default: " << default_value;
                   }
                   
-                  
                   // error check
                   if( (generator.empty() && default_value.empty()) || (!generator.empty() && !default_value.empty()))
                     throw std::runtime_error("there are default values AND distribution params for this value!");
                   
+                  OUT_LOG(logDEBUG) << "parameter: "<< object_name << "." << value_name << " pushed to map.";
                   parameter_generator[object_name+"."+value_name] = ParamDefaultPair(generator,default_value);
                 }
               }
@@ -135,43 +136,87 @@ void create_distributions(){
 #include <unistd.h>
 #include <map>
 #include <time.h>
-std::map<int, unsigned> sample_processes;
-//  boost::mutex sample_processes_mutex;
+#ifdef USE_THREADS
+pthread_mutex_t _sample_processes_mutex;
+#else
+#pragma Y_Warning("This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.")
+#endif
+std::map<int, double> sample_processes;
 //-----------------------------------------------------------------------------
 // Signal Handling : Simulation process exit detection and
 //-----------------------------------------------------------------------------
-//void gazebo_c::exit_sighandler( int signum ) { // for action.sa_handler
 void exit_sighandler( int signum, siginfo_t* info, void* context ) {
-  // for action.sa_sigaction
+  // returns time in mu_seconds
+//  double time_elapsed = ( (double) info->si_status ) *  (double) 1.0e-6;
   
-//      sample_processes_mutex.lock();
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_sample_processes_mutex);
+#endif
+  std::map<int, double>::iterator it = sample_processes.find(info->si_pid);
+//  double sim_start_time = it->second;
+//  double expected_quit_time = sim_start_time + time_elapsed;
   // update exit condition variable
-  sample_processes[info->si_pid] = 0;
-//      sample_processes_mutex.unlock();
+  sample_processes.erase(it);
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_sample_processes_mutex);
+#endif
   
-  //  assert( signum );  // to suppress compiler warning of unused variable
+//  std::cout << "Sim ("<< info->si_pid <<") timeline: " << sim_start_time << "  |======" << time_elapsed << "======>  " << expected_quit_time << std::endl;
 }
 
 
 std::vector<std::string> SAMPLE_ARGV;
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
-std::string SAMPLE_BIN = "sample.bin";
+std::string SAMPLE_BIN = "sample.bin",TASK_PATH = "./";
 
 struct sigaction action;
 long long unsigned int sample_idx=0;
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  sample_idx++;
   if(sample_idx<=NUM_SAMPLES){
-    OUT_LOG(logDEBUG) << "Sample: " << sample_idx;
-
-    if ( sample_processes.size() >= NUM_THREADS ){
-      OUT_LOG(logDEBUG) << "Active Threads: " << sample_processes.size();
-
+    OUT_LOG(logINFO) << "Active processes: " << sample_processes.size() << " out of " << NUM_THREADS << " allowed simultaneous processes.";
+//    int started = 0;
+#ifdef USE_THREADS
+    pthread_mutex_lock(&_sample_processes_mutex);
+#endif
+    int sample_processes_size = sample_processes.size();
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&_sample_processes_mutex);
+#endif
+    if ( sample_processes_size < NUM_THREADS ){
+//      started += 1;
+//      if(started > NUM_THREADS)
+//        return;
+      // CREATE A NEW SAMPLE
+      sample_idx++;
+      OUT_LOG(logINFO) << "New Sample: " << sample_idx;
+      
+      // Get current state
+      std::map<std::string,Ravelin::VectorNd> joint_position, joint_velocity;
+      ctrl->get_joint_value(Pacer::Robot::position,joint_position);
+      ctrl->get_joint_value(Pacer::Robot::velocity,joint_velocity);
+      
+      Ravelin::VectorNd base_position, base_velocity;
+      ctrl->get_base_value(Pacer::Robot::position,base_position);
+      ctrl->get_base_value(Pacer::Robot::velocity,base_velocity);
+      
+      Ravelin::VectorNd base_position_spatial(6);
+      base_position_spatial.segment(0,3) = base_position.segment(0,3);
+      Ravelin::Origin3d rpy;
+      Ravelin::Quatd(base_position[3],base_position[4],base_position[5],base_position[6]).to_rpy(rpy);
+      base_position_spatial.segment(3,6) = rpy;
+      
+      joint_position["BODY0"] = base_position_spatial;
+      joint_velocity["BODY0"] = base_velocity;
+      OUT_LOG(logINFO) << "Positions: \n" << joint_position;
+      OUT_LOG(logINFO) << "Velocities: \n" << joint_velocity;
+      
       std::vector<std::string> PARAMETER_ARGV;
       // NOTE: parallelize this loop
       for(ParamMap::iterator it = parameter_generator.begin(); it != parameter_generator.end();
           it++){
+        std::vector<std::string> params;
+        boost::split(params, it->first, boost::is_any_of("."));
         OUT_LOG(logDEBUG) << "--"<< it->first;
         PARAMETER_ARGV.push_back("--" + it->first);
         if (it->second.first.empty()) {
@@ -183,6 +228,13 @@ void loop(){
         } else { // Generators created for variable
           for (int i=0;i<it->second.first.size(); i++) {
             double value = it->second.first[i]->generate();
+            
+            if (params.back().compare("x") == 0) {
+              value += joint_position[params.front()][i];
+            } else if (params.back().compare("xd") == 0) {
+              value = joint_velocity[params.front()][i] * (value+1.0);
+            }
+            
             OUT_LOG(logDEBUG) << " " << value;
             // Convert to command line argument
             PARAMETER_ARGV.push_back(SSTR(value));
@@ -191,11 +243,13 @@ void loop(){
       }
       
       OUT_LOG(logDEBUG) << "Forking Process!";
-
+      
       // Run each sample as its own process
       pid_t pid = fork();
       if( pid < 0 ) {
         // fork failed
+        OUT_LOG(logERROR) << "Forking Process!";
+        
         throw std::runtime_error("Fork failed!");
       }
       
@@ -205,16 +259,22 @@ void loop(){
         pid = getpid();
         
         OUT_LOG(logDEBUG) << "Started Sample ("<< sample_idx <<") with PID ("<< pid <<")";
-                
+        
         SAMPLE_ARGV.push_back("--sample");
         SAMPLE_ARGV.push_back(SSTR(sample_idx));
         // Add PARAMETER_ARGV to SAMPLE_ARGV
         SAMPLE_ARGV.insert(SAMPLE_ARGV.end(), PARAMETER_ARGV.begin(), PARAMETER_ARGV.end());
         
         char* const* exec_argv = param_array(SAMPLE_ARGV);
+        OUT_LOG(logINFO) << "Executing " << SAMPLE_BIN << " with arguments:\n\t" << SAMPLE_ARGV << std::endl;
+        OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
         
-        //    execve( GZSERVER_BIN, exec_argv, exec_envars );
-        execve( SAMPLE_BIN.c_str() , exec_argv, NULL );
+        chdir(TASK_PATH.c_str());
+        
+        execv( SAMPLE_BIN.c_str() , exec_argv );
+        ///////////////////////////////////////////////////
+        /// ---------- EXIT CHILD PROCESS ------------- ///
+        ///////////////////////////////////////////////////
         
         // NOTE: unreachable code (memory leak)
         // TODO: clean up argv
@@ -223,7 +283,7 @@ void loop(){
         
         // This code should be unreachable unless exec failed
         perror( "execve" );
-        exit( EXIT_FAILURE );
+        throw std::runtime_error("This code should be unreachable unless execve failed!");
         /// ---------- END CHILD PROCESS ------------- ///
         //////////////////////////////////////////////////
       }
@@ -231,36 +291,28 @@ void loop(){
       /// ---------- CONTINUE PARENT PROCESS ------------- ///
       
       // Before anything else, register child process in signal map
-      sample_processes[pid] = sample_idx;
+#ifdef USE_THREADS
+      pthread_mutex_lock(&_sample_processes_mutex);
+#endif
+      sample_processes[pid] = t;
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&_sample_processes_mutex);
+#endif
       
-      OUT_LOG(logDEBUG) << "Plugin sleeping to permit Sample (" << sample_idx << ") with PID ("<< pid <<") to start";
-      
-      // yield for a short while to let the system start the process
-      struct timespec nanosleep_req;
-      struct timespec nanosleep_rem;
-      nanosleep_req.tv_sec = 0;
-      nanosleep_req.tv_nsec = 1;
-      nanosleep(&nanosleep_req,&nanosleep_rem);
+//      OUT_LOG(logINFO) << "Plugin sleeping to permit Sample (" << sample_idx << ") with PID ("<< pid <<") to start";
+//      
+//      // yield for a short while to let the system start the process
+//      struct timespec nanosleep_req;
+//      struct timespec nanosleep_rem;
+//      nanosleep_req.tv_sec = 0;
+//      nanosleep_req.tv_nsec = 1;
+//      nanosleep(&nanosleep_req,&nanosleep_rem);
 
     }
-
     
-    // Make room for new simulations once one has completed
-    typedef std::map<int, unsigned> pid_completed_map;
-    
-    // NOTE: Do not parallelize this
-    //          sample_processes_mutex.lock();
-    for(pid_completed_map::iterator it = sample_processes.begin(); it != sample_processes.end();it++){
-      if( it->second == 0 ) {
-        OUT_LOG(logDEBUG) << "Detected Sample ("<< it->first << ") Exit";
-        sample_processes.erase(it);
-        break;
-      }
-    }
-    //          sample_processes_mutex.unlock();
     return;
   } else {
-    OUT_LOG(logDEBUG) << "Experiment Complete";
+    OUT_LOG(logINFO) << "Experiment Complete";
     // uninstall sighandler
     //    action.sa_handler = SIG_DFL;
     action.sa_sigaction = NULL;  // might not be SIG_DFL
@@ -273,9 +325,9 @@ void loop(){
 
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-
+  
   OUT_LOG(logDEBUG) << "Installing signal handler";
- //-----------------------------------------------------------------------------
+  //-----------------------------------------------------------------------------
   // Multi-core execution : Simulation process spawner
   //-----------------------------------------------------------------------------
   // install sighandler to detect when gazebo finishes
@@ -286,20 +338,22 @@ void setup(){
   sigaction( SIGCHLD, &action, NULL );
   
   OUT_LOG(logDEBUG) << "Importing sources of uncertainty";
+  
   create_distributions();
   
   ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
   ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
   ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BIN);
+  ctrl->get_data<std::string>(plugin_namespace+".task-directory", TASK_PATH);
   
   if (!getenv("PACER_PLUGIN_PATH"))
     throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
   
   std::string pPath(getenv("PACER_PLUGIN_PATH"));
-  SAMPLE_BIN = SAMPLE_BIN + "/" + pPath;
+  SAMPLE_BIN = pPath + "/" + SAMPLE_BIN ;
   
   OUT_LOG(logDEBUG) << "MC-Simulation executable: " << SAMPLE_BIN;
-
+  
   SAMPLE_ARGV.push_back(SAMPLE_BIN);
   SAMPLE_ARGV.push_back("--duration");
   

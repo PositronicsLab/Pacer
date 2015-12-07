@@ -1,16 +1,10 @@
   <XML>
   <plugins type="string vector">
-      error-check
-      center-of-mass
-      end-effectors
-      stand-trajectory
-      eef-PID-controller
-      plugin-scheduler
-      viz-jump
-      exit-on-contact
+    imu-reader
   </plugins>
   
   <!--
+    exit-on-contact
    OTHER PLUGINS:
    
    joint-PID-controller
@@ -23,50 +17,30 @@
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
+  <imu-reader>
+    <priority type="double">0</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <baud-rate type="int">115200</baud-rate>
+    <rate type="double">10</rate>
+    <file type="string">imu/libimu-reader.so</file>
+    <port type="string">/dev/tty.usbmodemfd121</port>
+  </imu-reader>
   <viz-jump>
     <priority type="double">0</priority>
     <real-time-factor type="double">1</real-time-factor>
     <file type="string">libvisualize-ballistic-moton.so</file>
   </viz-jump>
-  <exit-on-contact>
-    <file type="string">libexit-contact.so</file>
-    <real-time-factor type="double">1</real-time-factor>
-    <priority type="double">0</priority>
-  </exit-on-contact>
-  <plugin-scheduler>
-    <file type="string">libplugin-scheduler.so</file>
-    <real-time-factor type="double">1</real-time-factor>
-    <priority type="double">0</priority>
-    <relative-start-time type="bool">true</relative-start-time>
-    <events type="string vector">init</events>
-    <!--  PERSISTENT    -->
-    <init>
-      <time type="double">0.02</time>
-      <close type="string vector">
-      </close>
-      <open type="string vector">
-        monte-carlo-simulation
-      </open>
-    </init>
-  </plugin-scheduler>
   <error-check>
     <file type="string">liberror-check.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">0</priority>
   </error-check>
   
-  <monte-carlo-simulation>
-    <file type="string">monte-carlo-simulation/libmonte-carlo-simulation.so</file>
+  <exit-on-contact>
+    <file type="string">libexit-contact.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">0</priority>
-    <duration type="double">2</duration>
-    <dt type="double">0.002</dt>
-    <display type="bool">false</display>
-    <max-samples type="int">0</max-samples>
-    <max-threads type="int">4</max-threads>
-    <executable type="string">monte-carlo-simulation/sample.bin</executable>
-    <task-directory type="string">../landing</task-directory>
-  </monte-carlo-simulation>
+  </exit-on-contact>
   
   <center-of-mass>
     <file type="string">libcenter-of-mass.so</file>

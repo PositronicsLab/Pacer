@@ -17,6 +17,15 @@
 
 #include <Pacer/utilities.h>
 
+//#ifdef NDEBUG
+//#define logging \
+//if (0) ; \
+//else std::cout
+//#else
+#define logging \
+if (1) ; \
+else std::cout
+//#endif
 
 #define SSTR( x ) dynamic_cast< std::ostringstream & >( \
 ( std::ostringstream() << std::dec << x ) ).str()
@@ -57,63 +66,84 @@ void apply_transform(Ravelin::Transform3d& T,const std::set<shared_ptr<Jointd> >
 namespace po = boost::program_options;
 
 void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd>& robot){
+  logging << ">> apply_state_uncertainty" << std::endl;
+
   po::options_description desc("Monte Carlo Method state (applied at simulator start) uncertainty options");
   desc.add_options()
   ("help", "produce help message")
-  ("x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position error [m] applied to Robot base")
-  ("xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Relative Velocity error [%] applied to Robot base");
+  ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
+  ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
   
   BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
     std::string name,help;
     name = std::string(jp->joint_id+".x");
-    help = std::string("Absolute Position error of Joint: "+jp->joint_id);
+    help = std::string("Absolute Position [m OR rad] of Joint: "+jp->joint_id);
     
     desc.add_options()
     (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
     
     name = std::string(jp->joint_id+".xd");
-    help = std::string("Relative Velocity error of Joint: "+jp->joint_id);
+    help = std::string("Absolute Velocity [m/s OR rad/s] of Joint: "+jp->joint_id);
     
     desc.add_options()
     (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
   }
   
   po::variables_map vm;
+  
   po::parsed_options parsed
-  = po::command_line_parser(argc, argv).options(desc).allow_unregistered().run();
+  = po::command_line_parser(argc, argv).options(desc).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).allow_unregistered().run();
   po::store(parsed, vm);
   
   if ( vm.count("help")  )
   {
-    std::cout << "Available options: " << std::endl
+    logging << "Available options: " << std::endl
     << desc << std::endl;
   }
   
   /*
    *  Parameter Application
    */
-  
-  if(vm.count("x")){
+  if(vm.count("BODY0.x")){
+    std::vector<double> position = vm["BODY0.x"].as<std::vector<double> >();
+    logging << "applying state uncertainty to base (position): "<< position << std::endl;
+
+    // Get robot velocity
+    Ravelin::VectorNd q;
+    robot->get_generalized_coordinates_euler(q);
+    int N_JOINT_DOFS = q.rows()-7;
+    // update base velocity
+    for (int i=0;i<3; i++) {
+      q[N_JOINT_DOFS+i] = position[i];
+    }
+    Ravelin::Quatd quat=Ravelin::Quatd::rpy(position[3],position[4],position[5]);
+    for (int i=0;i<4; i++) {
+      q[N_JOINT_DOFS+3+i] = quat[i];
+    }
+
+    // apply changes
+    robot->set_generalized_coordinates_euler(q);
+    logging << "Set coords to : " << q << std::endl;
+
+  }
+   /*
+  if(vm.count("BODY0.x")){
     // Get base Pose
     Pose3d P_base(*(robot->get_base_link()->get_pose().get()));
     // update to relative to global frame
     P_base.update_relative_pose(Moby::GLOBAL);
+
+    std::vector<double> position = vm["BODY0.x"].as<std::vector<double> >();
     // update linear
-    std::vector<double> position = vm["x"].as<std::vector<double> >();
     P_base.x = Ravelin::Origin3d(position[0],position[1],position[2]);
-    // get angular
-    double roll,pitch,yaw;
-    P_base.q.to_rpy(roll,pitch,yaw);
-    // update angular
-    roll  += position[3];
-    pitch += position[4];
-    yaw   += position[5];
     // set angular
-    P_base.q = Ravelin::Quatd::rpy(roll,pitch,yaw);
+    P_base.q = Ravelin::Quatd::rpy(position[3],position[4],position[5]);
     // apply changes
     robot->get_base_link()->set_pose(P_base);
   }
-  
+  // Update robot state
+*/
+  robot->update_link_poses();
   // Joints
   BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
     if(vm.count(jp->joint_id+".x")){
@@ -127,15 +157,17 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   // Update robot state
   robot->update_link_poses();
   
-  if(vm.count("xd")){
-    std::vector<double> velocity = vm["xd"].as<std::vector<double> >();
+  if(vm.count("BODY0.xd")){
+    logging << "applying state uncertainty to base (velocity)" << std::endl;
+
+    std::vector<double> velocity = vm["BODY0.xd"].as<std::vector<double> >();
     // Get robot velocity
     Ravelin::VectorNd qd;
     robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
     int N_JOINT_DOFS = qd.rows()-6;
     // update base velocity
     for (int i=0;i<6; i++) {
-      qd[N_JOINT_DOFS+i] += qd[N_JOINT_DOFS+i]*velocity[i];
+      qd[N_JOINT_DOFS+i] = velocity[i];
     }
     // apply changes
     robot->set_generalized_velocity(DynamicBodyd::eSpatial,qd);
@@ -169,6 +201,9 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     desc.add_options()
     (name.c_str(), po::value<double>()->default_value(0),help.c_str());
     
+    if(rb->is_base())
+      continue;
+    
     name = std::string(rb->body_id+".length");
     help = std::string("Percent LENGTH error [%] applied to link LENGTH dimension: "+rb->body_id);
     desc.add_options()
@@ -191,12 +226,12 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   
   po::variables_map vm;
   po::parsed_options parsed
-  = po::command_line_parser(argc, argv).options(desc).allow_unregistered().run();
+  = po::command_line_parser(argc, argv).options(desc).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).allow_unregistered().run();
   po::store(parsed, vm);
   
   if ( vm.count("help")  )
   {
-    std::cout << "Available options: " << std::endl
+    logging << "Available options: " << std::endl
     << desc << std::endl;
   }
   
@@ -210,9 +245,9 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     double length;
     
     if( vm.count(rb->body_id+".length") ){
-      double scale_length = 1.0 + vm[rb->body_id+"length"].as<double>();
+      double scale_length = 1.0 + vm[rb->body_id+".length"].as<double>();
 #ifndef NDEBUG
-      printf("Sample %u : Link %s length += %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),scale_length);
+      fprintf(stdout,"Sample %u : Link %s length += %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),scale_length);
 #endif
       
       shared_ptr<Jointd> jp = rb->get_inner_joint_explicit();
@@ -220,12 +255,12 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       rb_original_pose.update_relative_pose(rb->get_pose()->rpose);
       
 #ifndef NDEBUG
-      std::cout << "Before: " << rb_original_pose << std::endl;
+      logging << "Before: " << rb_original_pose << std::endl;
 #endif
       // Update transform in link forward direction
       rb_original_pose.x *= scale_length;
 #ifndef NDEBUG
-      std::cout << "After: " <<  rb_original_pose << std::endl;
+      logging << "After: " <<  rb_original_pose << std::endl;
 #endif
       length = rb_original_pose.x.norm();
       rb->set_pose(rb_original_pose);
@@ -255,7 +290,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       double J[3] = {(mass*sqr(radius)*0.5),(mass/12.0)*(3.0*sqr(radius) + sqr(length)),(mass/12.0)*(3.0*sqr(radius) + sqr(length))};
       
 #ifndef NDEBUG
-      printf("Sample %u : Link %s mass = %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),mass);
+      fprintf(stdout,"Sample %u : Link %s mass = %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),mass);
 #endif
       Ravelin::SpatialRBInertiad Jm(rb->get_inertia());
       Jm.m = mass;
@@ -288,7 +323,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
          double J[3] = {inertia,inertia,inertia};
          
          #ifndef NDEBUG
-         printf("Sample %u : Link (foot) %s mass = %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),mass);
+         fprintf(stdout,"Sample %u : Link (foot) %s mass = %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),mass);
          #endif
          Ravelin::SpatialRBInertiad Jm(rb->get_inertia());
          Jm.m = mass;
@@ -313,44 +348,46 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   // INPUT BY USER
   ("duration", po::value<std::string>()->default_value("1"), "set duration (virtual time) of each sample")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
-  ("display,r","visualize in moby")
-  //  ("options", po::value<std::string>()->default_value(""), "other, space-delimited options")
-  ;
+  ("display,r","visualize in moby");
   
+  logging << "Parsing Variable Map from command line" << std::endl;
+
   po::variables_map vm;
   //  po::store(po::parse_command_line(argc, argv, desc), vm);
   po::parsed_options parsed
-  = po::command_line_parser(argc, argv).options(desc).allow_unregistered().run();
+  = po::command_line_parser(argc, argv).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).options(desc).allow_unregistered().run();
   po::store(parsed, vm);
+//  po::notify(vm);
   
-  po::notify(vm);
-  
+  logging << "Parsed Variable Map from command line" << std::endl;
+
   // Get sample number for output
   if (vm.count("sample")) {
     SAMPLE_NUMBER = vm["sample"].as<unsigned>();
   } else {
-    printf("Sample with PID: %d did not get a sample number", pid);
+    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
     exit(1);
   }
-  printf("Sample with PID: %d has sample number %u", pid,SAMPLE_NUMBER);
   
+  logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
   
   if ( vm.count("help")  )
   {
-    std::cout << "Available options: " << std::endl
+    logging << "Available options: " << std::endl
     << desc << std::endl;
   }
   
   std::string pacer_interface_path(getenv ("PACER_INTERFACE_PATH"));
-  
+  logging << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
+
   std::string
   step_size = vm["stepsize"].as<std::string>(),
   duration = vm["duration"].as<std::string>();
   
-  //  exit(0);
   /*
    *  Moby Initialization
    */
+  logging << " -- Populating command line options -- " << std::endl;
   
   // run sample
   std::vector<std::string> argvs;
@@ -363,34 +400,50 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   if (vm.count("display")) {
     argvs.push_back("-r");
   } else {
-    argvs.push_back("-y=osg");
-    int rate = 0.01 / atof(step_size.c_str());
-    rate = std::max(1,rate);
-    argvs.push_back("-v="+SSTR(rate));
+//    argvs.push_back("-y=osg");
+//    double capture_step = 0.01;
+//    int rate = capture_step / atof(step_size.c_str());
+//    rate = std::max(1,rate);
+//    argvs.push_back("-v="+SSTR(rate));
+//    argvs.push_back("-v=0");
   }
   argvs.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
   argvs.push_back("model.xml");
   //  argvs.push_back("start.xml");
   
+  logging << "Converting command line options: " << argvs << std::endl;
+
   char** moby_argv = param_array_noconst(argvs);
+  
+  logging << "Moby Starting: " << std::endl;
+  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
+    logging << argvs[i] << " ";
+  }
+  logging << std::endl;
   
   // Ask Moby to init the simulator with options
   Moby::init(argvs.size(), moby_argv,sim);
   
+  logging << "Moby Started: " << std::endl;
+
+  return;
   // clean up argv
   for ( size_t i = 0 ; i < argvs.size() ; i++ ){
-    //    delete [] moby_argv[i];
-    std::cout << argvs[i] << " ";
+        delete [] moby_argv[i];
   }
-  std::cout << std::endl;
 }
 
 int main(int argc, char* argv[]){
+  logging << " -- Sample Started -- " << std::endl;
+
   // Cet this process's PID for debugging
   pid = getpid();
   
   shared_ptr<Simulator> sim;
+  logging << " -- Applying Simulator Options -- " << std::endl;
   apply_simulator_options(argc,argv,sim);
+  logging << " -- Applied Simulator Options -- " << std::endl;
+  
   /*
    *  Option Parsing
    */
@@ -398,6 +451,8 @@ int main(int argc, char* argv[]){
   if(!sim)
     throw std::runtime_error("Could not start Moby");
   
+  logging << " -- Created Simulator -- " << std::endl;
+
   // get event driven simulation and dynamics bodies
   shared_ptr<RCArticulatedBodyd> robot;
   shared_ptr<RigidBodyd> environment;
@@ -412,51 +467,63 @@ int main(int argc, char* argv[]){
   // Fail if moby was inited wrong
   if(!robot)
     throw std::runtime_error("Could not find robot");
+  
+  logging << " -- Found Robot -- " << std::endl;
+
   if(!environment)
     throw std::runtime_error("Could not find environment");
   
+  logging << " -- Found Environment -- " << std::endl;
+  
   // Apply uncertainty to robot model
-  apply_manufacturing_uncertainty(argc, argv,robot);
+//  apply_manufacturing_uncertainty(argc, argv,robot);
   
   // Apply uncertainty to robot initial conditions
+  logging << " -- Applying State Uncertainty -- " << std::endl;
   apply_state_uncertainty(argc, argv,robot);
-  
+  logging << " -- Applied State Uncertainty -- " << std::endl;
+
   /*
    *  Collecting Initial data
    */
-  {
-    Ravelin::VectorNd q,qd;
-    robot->get_generalized_coordinates_euler(q);
-    std::cout << "q1 = " << q << std::endl;
-    
-    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
-    std::cout << "qd1 = " << qd << std::endl;
-  }
+//  {
+//    Ravelin::VectorNd q,qd;
+//    robot->get_generalized_coordinates_euler(q);
+//    logging << "q1 = " << q << std::endl;
+//    
+//    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
+//    logging << "qd1 = " << qd << std::endl;
+//  }
   
   /*
    *  Running experiment
    */
+  logging << " -- Starting simulation -- " << std::endl;
   bool stop_sim = false;
   while (!stop_sim) {
+    logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc, argv,robot);
     stop_sim = !Moby::step(sim);
+    logging << "Simulation at time: t = " << sim->current_time <<  std::endl;
   }
   
   /*
    *  Collecting final data
    */
-  {
-    Ravelin::VectorNd q,qd;
-    robot->get_generalized_coordinates_euler(q);
-    std::cout << "q2 = " << q << std::endl;
-    
-    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
-    std::cout << "qd2 = " << qd << std::endl;
-  }
+//  {
+//    Ravelin::VectorNd q,qd;
+//    robot->get_generalized_coordinates_euler(q);
+//    logging << "q2 = " << q << std::endl;
+//    
+//    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
+//    logging << "qd2 = " << qd << std::endl;
+//  }
   
   // Clean up Moby
   Moby::close();
   
-  return 0;
+  int sim_elapsed_time = sim->current_time * 1.0e6;
+  
+  return sim_elapsed_time;
 }

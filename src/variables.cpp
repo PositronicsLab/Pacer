@@ -28,7 +28,7 @@ static bool str2bool(const std::string& str)
 
 static int str2int(const std::string& str)
 {
-  return std::stoi(str);;
+  return std::atoi(str.c_str());
 }
 
 std::vector<std::string> split(std::string const &input) {

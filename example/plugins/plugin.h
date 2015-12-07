@@ -17,6 +17,7 @@ std::string plugin_namespace;
 boost::weak_ptr<Pacer::Controller> ctrl_weak_ptr;
 double t;
 
+
 // Implemented by specific plugin
 void loop();
 

@@ -51,7 +51,6 @@ void Robot::compile(){
       OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
   }
   _joint_ids = get_map_keys(_id_joint_map);
-  
   // Find link (and eef) names
   // Set up link references
   std::vector<boost::shared_ptr<Ravelin::RigidBodyd> > links = _abrobot->get_links();
@@ -78,6 +77,7 @@ void Robot::compile(){
     for(it=_id_link_map.begin();it!=_id_link_map.end();it++)
       OUT_LOG(logDEBUG1) << (*it).first << ", " << (*it).second;
   }
+  _link_ids = get_map_keys(_id_link_map);
   
   // NOTE: This data comes from the robot model now
 //  _foot_ids = get_data<std::vector<std::string> >("init.end-effector.id");

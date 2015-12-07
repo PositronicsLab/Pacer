@@ -22,7 +22,6 @@
 #include <Ravelin/SVector6d.h>
 #include <Ravelin/Vector3d.h>
 
-#ifdef LOG_TO_FILE
 template < class T >
 std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
 {
@@ -34,6 +33,20 @@ std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
   os << "]";
   return os;
 }
+
+template < class T >
+std::ostream& operator << (std::ostream& os, const std::map<std::string, T >& v)
+{
+  os << "("<< v.size() <<")[" << std::endl;
+  for (typename std::map<std::string, T >::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+  {
+    os << " " << ii->first << " = " << ii->second << std::endl;
+  }
+  os << "]";
+  return os;
+}
+
+#ifdef LOG_TO_FILE
 
 static void OUTLOG(const std::map<std::string,Ravelin::VectorNd>& z, std::string name,TLogLevel LL){
   OUT_LOG(LL) << name << " = [\n";

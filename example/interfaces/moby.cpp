@@ -448,7 +448,7 @@ void post_step_callback_fn(Moby::Simulator* s){}
 /// Event callback function for setting friction vars pre-event
 void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
   for(int i=0;i< e.size();i++){
-    OUT_LOG(logDEBUG1) << e[i] << std::endl;
+    OUT_LOG(logDEBUG1) << e[i] ;
   }
 }
 
@@ -466,7 +466,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   // pointer to the articulated body in Moby
   boost::shared_ptr<Moby::ControlledBody> controlled_body;
 
-  std::cout << "STARTING MOBY PLUGIN" << std::endl;
+  OUT_LOG(logINFO) << "STARTING MOBY PLUGIN" ;
   
   // If use robot is active also init dynamixel controllers
   // get a reference to the Simulator instance
@@ -501,14 +501,14 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
   
-  std::cout << "Building Controller" << std::endl;
+  OUT_LOG(logINFO) << "Building Controller" ;
   
   robot_ptr = boost::shared_ptr<Controller>(new Controller());
-  std::cout << "Controller built" << std::endl;
+  OUT_LOG(logINFO) << "Controller built" ;
 
   robot_ptr->init();
   
-  std::cout << "Controller inited" << std::endl;
+  OUT_LOG(logINFO) << "Controller inited" ;
   
   // CONTACT CALLBACK
   boost::shared_ptr<Moby::ConstraintSimulator>
@@ -589,7 +589,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
         draw_pose(v->pose,sim,v->shade,v->size);
         break;
       }
-      default:   std::cout << "UNKNOWN VISUAL: " << (*it)->eType << std::endl; break;
+      default:   OUT_LOG(logINFO) << "UNKNOWN VISUAL: " << (*it)->eType ; break;
     }
   }
   viz_vect.clear();

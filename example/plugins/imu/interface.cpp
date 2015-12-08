@@ -238,6 +238,8 @@ void imuInterface::update() {
     
     fprintf(stdout,"Publishing IMU data.");
     
+    tahrs q = imu_->getAHRS();
+    
     imu.time = q.time;
     
     imu.linear_acceleration[0] = -q.ax;

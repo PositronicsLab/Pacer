@@ -299,8 +299,6 @@ namespace microstrain_3dm_gx3_35 {
       void crc(tbyte_array& arr);
       bool crcCheck(tbyte_array& arr);
 
-      int comm_mode;
-
       char sync1;
       char sync2;
 

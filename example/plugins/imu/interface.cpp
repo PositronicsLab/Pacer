@@ -5,6 +5,8 @@ using namespace microstrain_3dm_gx3_35;
 using namespace std;
 using namespace boost;
 
+#define MODEL microstrain_3dm_gx3_35::IMU::GX3_35
+
 /*
  * TODOs
  * add some services etc.
@@ -15,18 +17,28 @@ using namespace boost;
 imuInterface::imuInterface(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
-  std::string port_ = ctrl->get_data<std::string>(plugin_namespace+".port");
-  int baud_rate_ = ctrl->get_data<int>(plugin_namespace+".baud-rate");
-  float declination_ = 3.8; // http://www.ngdc.noaa.gov/geomag-web/#declination
-  float rate_  = ctrl->get_data<double>(plugin_namespace+".rate");;
+  port_ = ctrl->get_data<std::string>(plugin_namespace+".port");
+  baud_rate_ = ctrl->get_data<int>(plugin_namespace+".baud-rate");
+  declination_ = 3.8; // http://www.ngdc.noaa.gov/geomag-web/#declination
+  rate_  = ctrl->get_data<double>(plugin_namespace+".rate");;
   
-  bool zero_height_ = true;
+  zero_height_ = true;
   
-  float linear_acceleration_stdev_ = 0.098;
-  float orientation_stdev_ = 0.035;
-  float angular_velocity_stdev_ = 0.012;
-  
-  imu_.reset(new IMU((int)floor(rate_),microstrain_3dm_gx3_35::IMU::GX3_35));
+  linear_acceleration_stdev_ = 0.098;
+  orientation_stdev_ = 0.035;
+  angular_velocity_stdev_ = 0.012;
+
+
+  // for the 3D, we do not publish NAV
+  if (MODEL == microstrain_3dm_gx3_35::IMU::GX3_35)
+  {
+     publish_nav_odom_ = false;
+     publish_nav_pose_ = false;
+     publish_nav_fix_ = false;
+  }
+
+  // reset the IMU 
+  imu_.reset(new IMU((int)floor(rate_),MODEL));
   
   started_ = false;
   inited_ = false;
@@ -192,8 +204,7 @@ void imuInterface::update() {
       
       fprintf(stderr,"NAV");
       
-    }
-    
+    }  
     // TODO check nav filter status
   }
   
@@ -202,7 +213,6 @@ void imuInterface::update() {
     if (!imu_->pollAHRS()) {
       
       fprintf(stderr,"AHRS");
-      
     }
     
   }
@@ -227,8 +237,6 @@ void imuInterface::update() {
   if (publish_imu_) {
     
     fprintf(stdout,"Publishing IMU data.");
-    
-    tahrs q = imu_->getAHRS();
     
     imu.time = q.time;
     

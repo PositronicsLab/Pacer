@@ -63,3 +63,7 @@ IF(DXL_FOUND)
   target_link_libraries(PacerMobyPlugin dxl)
 ENDIF(DXL_FOUND)
 ENDIF(USE_DXL)
+
+# simple example
+add_executable(pacer-driver ${CMAKE_SOURCE_DIR}/example/interfaces/simple.cpp)
+target_link_libraries(pacer-driver Pacer Moby Ravelin MobyDriver boost_program_options )

@@ -21,3 +21,6 @@ include_directories(${BOOST_INCLUDE_DIR})
   add_executable(sample.bin Sample.cpp)
   target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
 endif(BUILD_MONTECARLO)
+
+add_executable(example.bin pipe.c)
+#target_link_libraries(example.bin)

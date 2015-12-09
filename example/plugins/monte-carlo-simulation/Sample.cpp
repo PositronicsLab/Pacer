@@ -23,7 +23,7 @@
 //else std::cout
 //#else
 #define logging \
-if (1) ; \
+if (0) ; \
 else std::cout
 //#endif
 
@@ -39,6 +39,7 @@ using Ravelin::Pose3d;
 using Ravelin::DynamicBodyd;
 using boost::shared_ptr;
 unsigned SAMPLE_NUMBER = 0;
+int fd1 = 0;
 int pid = 0;
 
 
@@ -345,6 +346,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   ("help", "produce help message")
   // INPUT BY EXPERIMENT
   ("sample", po::value<unsigned>(),"Sample Number")
+  ("pipe", po::value<int>()->default_value(0),"Pipe fd (output side only 'fd1')")
   // INPUT BY USER
   ("duration", po::value<std::string>()->default_value("1"), "set duration (virtual time) of each sample")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
@@ -361,6 +363,19 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   
   logging << "Parsed Variable Map from command line" << std::endl;
 
+  
+  if (vm.count("pipe")) {
+    fd1 = vm["pipe"].as<int>();
+    logging << "Sample output FD: " << fd1 << std::endl;
+    char * buf = "abcdefghij";
+    write(fd1, buf, 10);
+    logging << "EXITING: " << std::endl;
+    exit(0);
+    logging << "EXITED: " << std::endl;
+  } else {
+    fprintf(stderr,"Sample with PID: %d did not get a port fd", pid);
+  }
+  
   // Get sample number for output
   if (vm.count("sample")) {
     SAMPLE_NUMBER = vm["sample"].as<unsigned>();
@@ -433,8 +448,23 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   }
 }
 
+
+/////////////////////////////////////////////////////////////////
+/// -------------------- MAIN FUNCTION -----------------------///
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+
 int main(int argc, char* argv[]){
   logging << " -- Sample Started -- " << std::endl;
+  
+  for (int i=0; i<argc; i++) {
+    std::cout << argv[i] << " ";
+  }
+  std::cout << std::endl;
+  
 
   // Cet this process's PID for debugging
   pid = getpid();
@@ -525,5 +555,8 @@ int main(int argc, char* argv[]){
   
   int sim_elapsed_time = sim->current_time * 1.0e6;
   
+  close(fd1);
+
+  _exit(sim_elapsed_time);
   return sim_elapsed_time;
 }

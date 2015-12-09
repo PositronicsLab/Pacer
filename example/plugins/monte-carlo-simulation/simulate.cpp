@@ -6,8 +6,7 @@
 #include "random.h"
 #include <boost/algorithm/string.hpp>
 
-#define SSTR( x ) dynamic_cast< std::ostringstream & >( \
-( std::ostringstream() << std::dec << x ) ).str()
+#define SSTR( x ) ( ( std::ostringstream() << std::dec << x ) ).str()
 
 //                NAME                  DOF                 RANDOM VALUE        DEFAULT
 typedef std::pair<std::vector<boost::shared_ptr<Generator> >, std::vector<double> > ParamDefaultPair;
@@ -141,27 +140,40 @@ pthread_mutex_t _sample_processes_mutex;
 #else
 #pragma Y_Warning("This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.")
 #endif
-std::map<int, double> sample_processes;
+
+struct SampleConditions{
+  pid_t   pid;
+  double  start_time;
+  int     pipe_fd[2];
+};
+
+std::map<pid_t, SampleConditions> sample_processes;
 //-----------------------------------------------------------------------------
 // Signal Handling : Simulation process exit detection and
 //-----------------------------------------------------------------------------
 void exit_sighandler( int signum, siginfo_t* info, void* context ) {
   // returns time in mu_seconds
 //  double time_elapsed = ( (double) info->si_status ) *  (double) 1.0e-6;
-  
+
 #ifdef USE_THREADS
   pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-  std::map<int, double>::iterator it = sample_processes.find(info->si_pid);
-//  double sim_start_time = it->second;
-//  double expected_quit_time = sim_start_time + time_elapsed;
-  // update exit condition variable
+  std::map<pid_t, SampleConditions>::iterator it = sample_processes.find(info->si_pid);
+  {
+    SampleConditions& sc = it->second;
+    char buf[256];
+    read(sc.pipe_fd[0], buf, 256);
+    close(sc.pipe_fd[0]);
+    std::string message(buf);
+    std::cout << "Process " << info->si_pid << " output message: " << message << std::endl;
+    double start_time = sc.start_time;
+  }
   sample_processes.erase(it);
 #ifdef USE_THREADS
   pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
-  
 //  std::cout << "Sim ("<< info->si_pid <<") timeline: " << sim_start_time << "  |======" << time_elapsed << "======>  " << expected_quit_time << std::endl;
+  std::cout << "Sim ("<< info->si_pid <<") exited!" << std::endl;
 }
 
 
@@ -184,9 +196,6 @@ void loop(){
     pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
     if ( sample_processes_size < NUM_THREADS ){
-//      started += 1;
-//      if(started > NUM_THREADS)
-//        return;
       // CREATE A NEW SAMPLE
       sample_idx++;
       OUT_LOG(logINFO) << "New Sample: " << sample_idx;
@@ -242,6 +251,12 @@ void loop(){
         }
       }
       
+      
+      // Before forking, set up the pipe;
+      SampleConditions sc;
+      sc.start_time = t;
+      pipe(sc.pipe_fd);
+      std::cout << "Sample output FDs: " << sc.pipe_fd[1] << " --> " << sc.pipe_fd[0] << std::endl;
       OUT_LOG(logDEBUG) << "Forking Process!";
       
       // Run each sample as its own process
@@ -256,10 +271,16 @@ void loop(){
       if( pid == 0 ) {
         ////////////////////////////////////////////////////
         /// ---------- START CHILD PROCESS ------------- ///
+        // Child process is write-only, closes receiving end of pipe
+        close(sc.pipe_fd[0]);
+
         pid = getpid();
         
         OUT_LOG(logDEBUG) << "Started Sample ("<< sample_idx <<") with PID ("<< pid <<")";
         
+        SAMPLE_ARGV.push_back("--pipe");
+        SAMPLE_ARGV.push_back(SSTR(sc.pipe_fd[1]));
+
         SAMPLE_ARGV.push_back("--sample");
         SAMPLE_ARGV.push_back(SSTR(sample_idx));
         // Add PARAMETER_ARGV to SAMPLE_ARGV
@@ -270,7 +291,6 @@ void loop(){
         OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
         
         chdir(TASK_PATH.c_str());
-        
         execv( SAMPLE_BIN.c_str() , exec_argv );
         ///////////////////////////////////////////////////
         /// ---------- EXIT CHILD PROCESS ------------- ///
@@ -289,12 +309,16 @@ void loop(){
       }
       ////////////////////////////////////////////////////////
       /// ---------- CONTINUE PARENT PROCESS ------------- ///
+      // Parent is read-only, closing sending end of pipe
+      close(sc.pipe_fd[1]);
       
+      sc.pid = pid;
+
       // Before anything else, register child process in signal map
 #ifdef USE_THREADS
       pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-      sample_processes[pid] = t;
+      sample_processes[sc.pid] = sc;
 #ifdef USE_THREADS
       pthread_mutex_unlock(&_sample_processes_mutex);
 #endif

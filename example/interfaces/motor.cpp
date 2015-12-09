@@ -126,13 +126,13 @@ void init(std::string model_f,std::string vars_f){
   robot_ptr->set_generalized_value(Pacer::Robot::acceleration_goal,robot_ptr->get_generalized_value(Pacer::Robot::acceleration));
   
   // Set Dynamixel Names
-  joint_name = boost::assign::list_of
+  std::vector<std::string> joint_name = boost::assign::list_of<std::string>
   ("LF_X_1")("RF_X_1")("LH_X_1")("RH_X_1")
   ("LF_Y_2")("RF_Y_2")("LH_Y_2")("RH_Y_2")
   ("LF_Y_3")("RF_Y_3")("LH_Y_3")("RH_Y_3");
 #ifdef USE_DXL
   // LINKS robot
-  
+  ::joint_name = joint_name;
   dxl_->names = joint_name;
   // Set Joint Angles
   //std::vector<int> dxl_tare = boost::assign::list_of

@@ -36,7 +36,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   for(it=_id_link_map.begin();it!=_id_link_map.end();it++){
     double m = (*it).second->get_mass();
     total_mass += m;
-    center_of_mass_x += (Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,(*it).second->get_inertial_pose())) *= m);
+    center_of_mass_x += (Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,(*it).second->get_pose())) *= m);
   }
   ctrl->set_data<double>("mass",total_mass);
   center_of_mass_x /= total_mass;

@@ -1,6 +1,7 @@
 #ifndef MS_3DMGX3_35_HH
 #define MS_3DMGX3_35_HH
 
+#include <queue>
 #include <iostream>
 #include <boost/asio/serial_port.hpp> 
 #include <boost/asio.hpp>
@@ -11,7 +12,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <Ravelin/Origin3d.h>
+#include <Ravelin/Quatd.h>
 
 /*
  *
@@ -26,27 +28,35 @@
 
 namespace microstrain_3dm_gx3_35 {
 
-	typedef std::vector<char> tbyte_array;
+	struct tahrs {
 
-	typedef struct {
-
+                // linear acceleration vector
 		float ax;
 		float ay;
 		float az;
 
+                // gravity vector
 		float gx;
 		float gy;
 		float gz;
 
+                // delta velocity vector
+                float vx, vy, vz;
+
+                // roll, pitch, and yaw
 		float r;
 		float p;
 		float y;
 
+                // four quaternion values
+                float q0, q1, q2, q3;
+
+                // time at which the sample was taken
 		uint64_t time;
 
-	} tahrs;
+	};
 
-	typedef struct {
+	struct tgps {
 
 		double latitude;
 		double longtitude;
@@ -60,83 +70,9 @@ namespace microstrain_3dm_gx3_35 {
 		bool hor_acc_valid;
 		//bool height_valid;
 
-
 		uint64_t time;
 
-	} tgps;
-
-	typedef struct {
-
-		enum filter_states {
-
-			FILTER_STARTUP = 0x00,
-			FILTER_INITIALIZATION = 0x01,
-			FILTER_RUNNING_VALID = 0x02,
-			FILTER_RUNNING_ERROR = 0x03
-
-		};
-
-		enum filter_flags {
-
-			FILTER_ATT_NOT_INITIALIZED = 0x1000,
-			FILTER_POS_VEL_NOT_INITIALIZED = 0x2000,
-			FILTER_IMU_UNAVAILABLE = 0x0001,
-			FILTER_GPS_UNAVAILABLE = 0x0002,
-			FILTER_MATRIX_SINGULARITY = 0x0008,
-			FILTER_POS_COV_HI = 0x0010,
-			FILTER_VEL_COV_HI = 0x0020,
-			FILTER_ATT_COV_HI = 0x0040,
-			FILTER_NAN_IN_SOLUTION = 0x0080
-
-		};
-
-		uint16_t filter_state; // Filter Status (0x82, 0x10) -> 8 B
-		uint16_t filter_status_flags;
-
-		double est_latitude; // Estimated LLH Position (0x82, 0x01) -> 28 B
-		double est_longtitude;
-		double est_height;
-		bool est_llh_valid;
-
-		float est_vel_north; // Estimated NED Velocity (0x82, 0x02) -> 16 B
-		float est_vel_east;
-		float est_vel_down;
-		bool est_ned_valid;
-
-		float est_r; // Estimated Orientation, Euler Angles (0x82, 0x05) -> 16 B
-		float est_p;
-		float est_y;
-		bool est_rpy_valid;
-
-		float est_north_pos_unc; // Estimated LLH Position Uncertainty (0x82, 0x08) -> 16 B
-		float est_east_pos_unc;
-		float est_down_pos_unc;
-		bool est_pos_unc_valid;
-
-		float est_north_vel_unc; // Estimated NED Velocity Uncertainty (0x82, 0x09) -> 16 B
-		float est_east_vel_unc;
-		float est_down_vel_unc;
-		bool est_vel_unc_valid;
-
-		float est_r_unc; // Estimated Attitude Uncertainty, Euler Angles (0x82, 0x0A) -> 16 B
-		float est_p_unc;
-		float est_y_unc;
-		bool est_rpy_unc_valid;
-
-		float est_acc_lin_x; // Estimated Linear Acceleration (0x82, 0x0D) -> 16 B
-		float est_acc_lin_y;
-		float est_acc_lin_z;
-		bool est_acc_lin_valid;
-
-		float est_acc_rot_x; // Estimated Angular Rate (0x82, 0x0E) -> 16 B
-		float est_acc_rot_y;
-		float est_acc_rot_z;
-		bool est_acc_rot_valid;
-
-		uint64_t time;
-
-	} tnav;
-
+	};
 
 	class timeout_exception: public std::runtime_error
 	{
@@ -154,9 +90,7 @@ namespace microstrain_3dm_gx3_35 {
 
 		  CMD_SET_BASIC = 0x01,
 		  CMD_SET_3DM = 0x0C,
-		  CMD_SET_NAVFILTER = 0x0D,
 		  CMD_SET_SYSTEM = 0x7F
-
 	  };
 
 	  enum cmd_set_basic {
@@ -168,7 +102,6 @@ namespace microstrain_3dm_gx3_35 {
 		  CMD_BASIC_DEV_BUILTIN_TEST = 0x05,
 		  CMD_BASIC_RESUME = 0x06,
 		  CMD_BASIC_RESET = 0x7E
-
 	  };
 
 	  enum cmd_set_3dm {
@@ -181,19 +114,11 @@ namespace microstrain_3dm_gx3_35 {
 		  CMD_3DM_AHRS_MSG_FORMAT = 0x08,
 		  CMD_3DM_GPS_MSG_FORMAT = 0x09,
 		  CMD_3DM_NAV_MSG_FORMAT = 0x0A
-
-	  };
-
-	  enum cmd_set_nav {
-
-		  CMD_NAV_SET_INIT_FROM_AHRS = 0x04
-
 	  };
 
 	  enum glob_descs {
 
 		  DESC_ACK = 0xF1
-
 	  };
 
 	  enum comm_modes {
@@ -224,14 +149,16 @@ namespace microstrain_3dm_gx3_35 {
 		  FUN_SAVE_CURR_AS_STARTUP = 0x03,
 		  FUN_LOAD_SAVE_STARTUP = 0x04,
 		  FUN_RESET_TO_FACTORY_DEF = 0x05
-
 	  };
 
-    models model_;
+    models _model;
     
       IMU(int rate, models model=microstrain_3dm_gx3_35::IMU::GX3_35);
 
-      bool openPort(std::string port, unsigned int baud_rate, boost::asio::serial_port_base::parity opt_parity=
+      const Ravelin::Origin3d& get_position() const { return _x; }
+      const Ravelin::Quatd& get_orientation() const { return _quat; }
+
+      bool openPort(const std::string& port, unsigned int baud_rate, boost::asio::serial_port_base::parity opt_parity=
               boost::asio::serial_port_base::parity(
                   boost::asio::serial_port_base::parity::none),
           boost::asio::serial_port_base::character_size opt_csize=
@@ -259,77 +186,74 @@ namespace microstrain_3dm_gx3_35 {
       bool devStatus();
 
       bool disAllStreams();
+      bool enableAHRSStream();
+      bool isAHRSBufferEmpty() { return _ahrs_buffer.empty(); }
+      tahrs getAHRSItem();
 
       std::string getLastError();
 
       bool setAHRSMsgFormat();
+      bool setAHRSSignalCond();
+      bool setDynamicsMode();
 
       bool setGPSMsgFormat();
-
-      bool setNAVMsgFormat();
 
       bool setToIdle();
 
       bool resume();
 
-      bool initKalmanFilter(float decl);
-
       bool pollAHRS();
 
       bool pollGPS();
 
-      bool pollNAV();
-
       bool setStream(uint8_t stream, bool state);
 
-      tahrs getAHRS();
-      tgps getGPS();
-      tnav getNAV();
-    
-    private:
-
+      tahrs& getAHRS();
+      tgps& getGPS();
+      static void calcFletcher(std::vector<unsigned char>& arr);
+      static bool checkFletcher(const std::vector<unsigned char>& arr);
+ 
     protected:
-    
-      int rate_;
+      static void* ahrs_thread(void* data); 
+      void readFromAHRSStream();
+      int _rate;
+      bool _thread_running;
+      pthread_mutex_t _mutex;
+      tahrs _ahrs_data;
+      tgps _gps_data;
 
-      tahrs ahrs_data_;
-      tgps gps_data_;
-      tnav nav_data_;
+      std::queue<tahrs> _ahrs_buffer;
+      static unsigned char sync1;
+      static unsigned char sync2;
 
-      void crc(tbyte_array& arr);
-      bool crcCheck(tbyte_array& arr);
-
-      char sync1;
-      char sync2;
-
-      bool checkACK(tbyte_array& arr, uint8_t cmd_set, uint8_t cmd);
+      bool checkACK(const std::vector<unsigned char>& arr, uint8_t cmd_set, uint8_t cmd);
 
       bool sendNoDataCmd(uint8_t cmd_set, uint8_t cmd);
 
       std::vector<std::string> error_desc;
 
-      void errMsg(std::string msg);
+      void errMsg(const std::string& msg);
 
-      class ReadSetupParameters
-          {
-          public:
-              ReadSetupParameters(): fixedSize(false), delim(""), data(0), size(0) {}
+      class ParameterReader
+      {
+        public:
+          ParameterReader(): fixedSize(false), delim(""), data(0), size(0) {}
 
-              explicit ReadSetupParameters(const std::string& delim):
-                      fixedSize(false), delim(delim), data(0), size(0) { }
+          explicit ParameterReader(const std::string& delim):
+                  fixedSize(false), delim(delim), data(0), size(0) { }
 
-              ReadSetupParameters(char *data, size_t size): fixedSize(true),
-                      delim(""), data(data), size(size) { }
+          ParameterReader(unsigned char *data, size_t size): fixedSize(true),
+                  delim(""), data(data), size(size) { }
 
-              //Using default copy constructor, operator=
+          //Using default copy constructor, operator=
 
-              bool fixedSize; ///< True if need to read a fixed number of parameters
-              std::string delim; ///< String end delimiter (valid if fixedSize=false)
-              char *data; ///< Pointer to data array (valid if fixedSize=true)
-              size_t size; ///< Array size (valid if fixedSize=true)
-          };
+          bool fixedSize; ///< True if need to read a fixed number of parameters
+          std::string delim; ///< String end delimiter (valid if fixedSize=false)
+          unsigned char *data; ///< Pointer to data array (valid if fixedSize=true)
+          size_t size; ///< Array size (valid if fixedSize=true)
+      };
 
-      void performReadSetup(const ReadSetupParameters& param);
+      void performReadSetup(const ParameterReader& param);
 
       boost::asio::io_service io;
       boost::asio::serial_port serial;
@@ -338,16 +262,16 @@ namespace microstrain_3dm_gx3_35 {
       boost::asio::streambuf readData;
 
       size_t bytesTransferred;
-      ReadSetupParameters setupParameters;
+      ParameterReader setupParameters;
 
       void read(char *data, size_t size);
       std::string readStringUntil(const std::string& delim="ue");
 
       void waitForMsg();
 
-      void write(const tbyte_array& data);
+      void write(const std::vector<unsigned char>& data);
 
-      tbyte_array read(size_t size);
+      void read(size_t size, std::vector<unsigned char>& output);
 
       void timeoutExpired(const boost::system::error_code& error);
 
@@ -357,10 +281,13 @@ namespace microstrain_3dm_gx3_35 {
 
       enum ReadResult result;
 
-      float extractFloat(char* addr);
-      double extractDouble(char* addr);
-      void encodeFloat(tbyte_array& arr, float in);
+      float extractFloat(unsigned char* addr);
+      unsigned extractUInt(unsigned char* addr);
+      double extractDouble(unsigned char* addr);
+      void encodeFloat(float in, std::vector<unsigned char>& arr);
 
+      Ravelin::Origin3d _x, _xd, _xdd, _omega;
+      Ravelin::Quatd _quat;
   };
 
 } // namespace

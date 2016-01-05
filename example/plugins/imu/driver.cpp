@@ -1,12 +1,23 @@
 #include "driver.h"
-
 #include <algorithm>
 #include <iostream>
 #include <boost/bind.hpp>
 
-using namespace microstrain_3dm_gx3_35;
-using namespace std;
+//using boost::asio;
+//using boost::posix_time;
 using namespace boost;
+using namespace microstrain_3dm_gx3_35;
+
+// setup static variables
+unsigned char IMU::sync1 = 0x75;
+unsigned char IMU::sync2 = 0x65;
+
+/// Converts an unsigned value to two characters
+static void to_two(unsigned value, unsigned char& c1, unsigned char& c2)
+{
+  c1 = value / 256;
+  c2 = value %  256;
+}
 
 /// Gets the current time (as a floating-point number)
 static unsigned long get_current_time()
@@ -18,30 +29,35 @@ static unsigned long get_current_time()
 
 IMU::IMU(int rate, models model) : 
   io(), serial(io), timer(io), timeout(posix_time::seconds(0)) ,
-  model_(model)
+  _model(model)
 {
+  // check whether the value is reasonable
+  _rate = rate; 
+  assert(_rate > 0 && _rate <= 1000);
 
-  // bytes to communicate with the IMU?
-  sync1 = 0x75;
-  sync2 = 0x65;
-  
-  rate_ = rate; // TODO do some check if the value is reasonable
-  assert(rate_ > 0 && rate_ <= 1000);
+  // clear position and velocity
+  _x.set_zero();
+  _xd.set_zero();
+
+  // initialize the mutex
+  pthread_mutex_init(&_mutex, NULL);
 }
 
 IMU::~IMU() {
 }
 
 /// Opens the IMU as a serial port for asynchronous communication
-bool IMU::openPort(string port, unsigned int baud_rate, boost::asio::serial_port_base::parity opt_parity,
+bool IMU::openPort(const std::string& port, unsigned int baud_rate, boost::asio::serial_port_base::parity opt_parity,
     boost::asio::serial_port_base::character_size opt_csize,
     boost::asio::serial_port_base::flow_control opt_flow,
     boost::asio::serial_port_base::stop_bits opt_stop) {
 
+  // if the port is already open, close it
   if(isOpen()) closePort();
 
   try {
 
+    // open port and set desired parameters
     serial.open(port);
     serial.set_option(asio::serial_port_base::baud_rate(baud_rate));
     serial.set_option(opt_parity);
@@ -51,7 +67,7 @@ bool IMU::openPort(string port, unsigned int baud_rate, boost::asio::serial_port
 
   } catch(boost::system::system_error& e) {
 
-      std::cerr<<"Error: " << e.what() <<endl;
+      std::cerr<<"Error: " << e.what() <<std::endl;
       return false;
   }
 
@@ -60,12 +76,14 @@ bool IMU::openPort(string port, unsigned int baud_rate, boost::asio::serial_port
 
 }
 
+/// Opens the serial port
 bool IMU::isOpen() const {
 
   return serial.is_open();
 
 }
 
+/// Closes the serial port
 void IMU::closePort() {
 
   if(isOpen()==false) return;
@@ -73,21 +91,25 @@ void IMU::closePort() {
 
 }
 
+/// Sets the serial port timeout
 void IMU::setTimeout(const posix_time::time_duration& t)
 {
     timeout=t;
 }
 
-void IMU::write(const tbyte_array& data)
+/// Writes data to the serial port
+void IMU::write(const std::vector<unsigned char>& data)
 {
     asio::write(serial,asio::buffer(&data[0],data.size()));
 }
 
+/// Callback function for I/O communication
 void IMU::timeoutExpired(const boost::system::error_code& error)
 {
      if(!error && result==resultInProgress) result=resultTimeoutExpired;
 }
 
+/// Callback function for I/O communication
 void IMU::readCompleted(const boost::system::error_code& error,
         const size_t bytesTransferred)
 {
@@ -103,55 +125,52 @@ void IMU::readCompleted(const boost::system::error_code& error,
     result=resultError;
 }
 
-tbyte_array IMU::read(size_t size)
+/// Reads the specified number of bytes from the serial device
+void IMU::read(size_t size, std::vector<unsigned char>& output)
 {
-    tbyte_array result(size,'\0');//Allocate a vector with the desired size
-    read(&result[0],size);//Fill it with values
-    return result;
+  output.resize(0);
+  output.resize(size,'\0');//Allocate a vector with the desired size
+  read((char*) &output[0],size);//Fill it with values
 }
 
+/// Keeps polling the IMU until a specified message is read 
 void IMU::waitForMsg() {
 
-/* try {
+  static std::vector<unsigned char> data, recv;
 
-    readStringUntil();
+  // clear recv
+  recv.clear();
 
-  } catch(boost::system::system_error& e) {
-
-    return;
-
-      }*/
-
-  tbyte_array recv; // TODO just for testing!!!!! rewrite it
-
-  char prev = ' ';
+  unsigned char prev = ' ';
 
   do {
 
-    if (recv.size() > 0) prev = recv[0];
-    else prev = ' ';
+    if (recv.size() > 0) 
+      prev = recv[0];
+    else 
+      prev = ' ';
 
     recv.clear();
-    recv = read(1);
+    read(1, recv);
 
-  } while (!(prev=='u' && recv[0]=='e'));
-
-
+  } while (!(prev==sync1 && recv[0]==sync2));
 }
 
+/// Reads the specified amount of data
 void IMU::read(char *data, size_t size)
 {
-    if(readData.size()>0)//If there is some data from a previous read
+    // if there is some data in the buffer from a previous read, read it
+    if (readData.size() > 0)
     {
-      basic_istream<char> is(&readData);
-        size_t toRead=min(readData.size(),size);//How many bytes to read?
-        is.read(data,toRead);
-        data+=toRead;
-        size-=toRead;
-        if(size==0) return;//If read data was enough, just return
+      std::basic_istream<char> is(&readData);
+      size_t toRead=std::min(readData.size(),size);//How many bytes to read?
+      is.read(data,toRead);
+      data+=toRead;
+      size-=toRead;
+      if(size==0) return;//If read data was enough, just return
     }
 
-    setupParameters=ReadSetupParameters(data,size);
+    setupParameters=ParameterReader((unsigned char*) data,size);
     performReadSetup(setupParameters);
 
     //For this code to work, there should always be a timeout, so the
@@ -159,9 +178,11 @@ void IMU::read(char *data, size_t size)
     if(timeout!=posix_time::seconds(0)) timer.expires_from_now(timeout);
     else timer.expires_from_now(posix_time::hours(100000));
 
+    // setup the callback function for timer expiration
     timer.async_wait(boost::bind(&IMU::timeoutExpired,this,
                 asio::placeholders::error));
 
+    // read until all bytes are transferred
     result=resultInProgress;
     bytesTransferred=0;
     for(;;)
@@ -189,7 +210,8 @@ void IMU::read(char *data, size_t size)
     }
 }
 
-void IMU::performReadSetup(const ReadSetupParameters& param)
+/// Sets up the parameters for reading from the serial port
+void IMU::performReadSetup(const ParameterReader& param)
 {
     if(param.fixedSize)
     {
@@ -203,62 +225,23 @@ void IMU::performReadSetup(const ReadSetupParameters& param)
     }
 }
 
-/*string IMU::readStringUntil(const string& delim)
-{
-    // Note: if readData contains some previously read data, the call to
-    // async_read_until (which is done in performReadSetup) correctly handles
-    // it. If the data is enough it will also immediately call readCompleted()
-    setupParameters=ReadSetupParameters(delim);
-    performReadSetup(setupParameters);
-
-    //For this code to work, there should always be a timeout, so the
-    //request for no timeout is translated into a very long timeout
-    if(timeout!=posix_time::seconds(0)) timer.expires_from_now(timeout);
-    else timer.expires_from_now(posix_time::hours(100000));
-
-    timer.async_wait(boost::bind(&IMU::timeoutExpired,this,
-                asio::placeholders::error));
-
-    result=resultInProgress;
-    bytesTransferred=0;
-    for(;;)
-    {
-        io.run_one();
-        switch(result)
-        {
-            case resultSuccess:
-                {
-                    timer.cancel();
-                    bytesTransferred-=delim.size();//Don't count delim
-                    istream is(&readData);
-                    string result(bytesTransferred,'\0');//Alloc string
-                    is.read(&result[0],bytesTransferred);//Fill values
-                    is.ignore(delim.size());//Remove delimiter from stream
-                    return result;
-                }
-            case resultTimeoutExpired:
-                serial.cancel();
-                throw(timeout_exception("Timeout expired"));
-            case resultError:
-                timer.cancel();
-                serial.cancel();
-                throw(boost::system::system_error(boost::system::error_code(),
-                        "Error while reading"));
-            //if resultInProgress remain in the loop
-        }
-    }
-}*/
-
+/// Verifies the IMU's existence
 bool IMU::ping() {
 
   return sendNoDataCmd(CMD_SET_BASIC, CMD_BASIC_PING);
 
 }
 
+/// Polls the GPS
 bool IMU::pollGPS() {
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear vectors
+  data.clear();
+  recv.clear();
+
+  // get ready to write the data
   data.push_back(sync1);
   data.push_back(sync2);
   data.push_back(CMD_SET_3DM); // desc set
@@ -268,216 +251,45 @@ bool IMU::pollGPS() {
   data.push_back(0x1); // suppress ACK
   data.push_back(0x0);
 
-  crc(data);
+  calcFletcher(data);
   write(data);
   waitForMsg();
 
-  tbyte_array recv;
+  size_t PACKET_SZ = 48; // 44+6, TODO this is really stupid... there must be some parsing etc....
 
-  size_t n = 48; // 44+6, TODO this is really stupid... there must be some parsing etc....
+  unsigned long current_time = get_current_time();
+  read(PACKET_SZ, recv);
 
-//  struct timespec curtime;
-//  clock_gettime(CLOCK_REALTIME, &curtime);
-        unsigned long current_time = get_current_time();
-  recv = read(n);
-
-  if (!crcCheck(recv)) return false;
+  if (!checkFletcher(recv)) return false;
 
   if (recv[2] != 0x2C || recv[3] != 0x03) {
-
-    errMsg("GPS: Wrong msg format.");
-    return false;
-
+    throw std::runtime_error("GPS: Wrong msg format");
   }
 
-//  gps_data_.time =  (uint64_t)(curtime.tv_sec) * 1000000000 + (uint64_t)(curtime.tv_nsec);
+//  _gps_data.time =  (uint64_t)(curtime.tv_sec) * 1000000000 + (uint64_t)(curtime.tv_nsec);
 
-  gps_data_.time = current_time;
-  gps_data_.latitude = extractDouble(&recv[4]);
-  gps_data_.longtitude = extractDouble(&recv[4+8]);
-  gps_data_.horizontal_accuracy = extractFloat(&recv[4+32]);
+  _gps_data.time = current_time;
+  _gps_data.latitude = extractDouble(&recv[4]);
+  _gps_data.longtitude = extractDouble(&recv[4+8]);
+  _gps_data.horizontal_accuracy = extractFloat(&recv[4+32]);
 
   uint16_t flags = /*((uint16_t)recv[6+40])<<2 | */(uint16_t)recv[4+41];
 
-  gps_data_.lat_lon_valid = (flags & 0x1);
-  gps_data_.hor_acc_valid = (flags & (0x1<<5));
+  _gps_data.lat_lon_valid = (flags & 0x1);
+  _gps_data.hor_acc_valid = (flags & (0x1<<5));
 
   return true;
 }
 
-bool IMU::pollNAV() {
-
-  tbyte_array data;
-
-  data.push_back(sync1);
-  data.push_back(sync2);
-  data.push_back(CMD_SET_3DM); // desc set
-  data.push_back(0x04); // length
-  data.push_back(0x04);
-  data.push_back(CMD_3DM_POLL_NAV);
-  data.push_back(0x1); // suppress ACK
-  data.push_back(0x0);
-
-  crc(data);
-  write(data);
-  waitForMsg();
-
-  tbyte_array recv;
-
-  size_t n = 148+4; // TODO this is really (?) stupid... there must be some parsing etc....
-
-  //  struct timespec curtime;
-  //  clock_gettime(CLOCK_REALTIME, &curtime);
-  unsigned long current_time = get_current_time();
-
-  recv = read(n);
-
-  //cout << (0xff & unsigned(recv[1])) << endl;
-
-  if (!crcCheck(recv)) return false;
-
-//  nav_data_.time =  (uint64_t)(curtime.tv_sec) * 1000000000 + (uint64_t)(curtime.tv_nsec);
-  nav_data_.time = current_time;
-
-  if (recv[2] != 0x08 || recv[3] != 0x10) { // check length of each field and its descriptor
-
-    errMsg("Wrong msg format (0x10).");
-    return false;
-
-  }
-
-  // filter state
-  nav_data_.filter_state = ((uint16_t)recv[4]<<8) | (uint16_t)recv[5];
-  nav_data_.filter_status_flags = ((uint16_t)recv[8]<<8) | (uint16_t)recv[9];
-
-
-  if (recv[10] != 28 || recv[11] != 0x01) {
-
-      errMsg("Wrong msg format (0x01).");
-      return false;
-
-    }
-
-  nav_data_.est_latitude = extractDouble(&recv[12]);
-  nav_data_.est_longtitude = extractDouble(&recv[12+8]);
-  nav_data_.est_height = extractDouble(&recv[12+16]);
-
-  if (recv[12+24+1]) nav_data_.est_llh_valid = true;
-  else nav_data_.est_llh_valid = false;
-
-
-  if (recv[38] != 16 || recv[39] != 0x02) {
-
-    errMsg("Wrong msg format (0x02).");
-    return false;
-
-  }
-
-  nav_data_.est_vel_north = extractFloat(&recv[40]);
-  nav_data_.est_vel_east = extractFloat(&recv[40+4]);
-  nav_data_.est_vel_down = extractFloat(&recv[40+8]);
-
-  if (recv[40+12+1]) nav_data_.est_ned_valid = true;
-  else nav_data_.est_ned_valid = false;
-
-  if (recv[54] != 16 || recv[55] != 0x05) {
-
-    errMsg("Wrong msg format (0x05).");
-    return false;
-
-  }
-
-  nav_data_.est_r = extractFloat(&recv[56]);
-  nav_data_.est_p = extractFloat(&recv[56+4]);
-  nav_data_.est_y = extractFloat(&recv[56+8]);
-
-  if (recv[56+12+1]) nav_data_.est_rpy_valid = true;
-  else nav_data_.est_rpy_valid = false;
-
-
-  if (recv[70] != 16 || recv[71] != 0x08) {
-
-    errMsg("Wrong msg format (0x08).");
-    return false;
-
-  }
-
-  nav_data_.est_north_pos_unc = extractFloat(&recv[72]);
-  nav_data_.est_east_pos_unc = extractFloat(&recv[72+4]);
-  nav_data_.est_down_pos_unc = extractFloat(&recv[72+8]);
-
-  if (recv[72+12+1]) nav_data_.est_pos_unc_valid = true;
-  else nav_data_. est_pos_unc_valid = false;
-
-  if (recv[86] != 16 || recv[87] != 0x09) {
-
-    errMsg("Wrong msg format (0x09).");
-    return false;
-
-  }
-
-  nav_data_.est_north_vel_unc = extractFloat(&recv[88]);
-  nav_data_.est_east_vel_unc = extractFloat(&recv[88+4]);
-  nav_data_.est_down_vel_unc = extractFloat(&recv[88+8]);
-
-  if (recv[88+12+1]) nav_data_.est_vel_unc_valid = true;
-  else nav_data_. est_vel_unc_valid = false;
-
-  if (recv[102] != 16 || recv[103] != 0x0A) {
-
-    errMsg("Wrong msg format (0x0A).");
-    return false;
-
-  }
-
-  nav_data_.est_r_unc = extractFloat(&recv[104]);
-  nav_data_.est_p_unc = extractFloat(&recv[104+4]);
-  nav_data_.est_y_unc = extractFloat(&recv[104+8]);
-
-  if (recv[104+12+1]) nav_data_.est_rpy_unc_valid = true;
-  else nav_data_. est_rpy_unc_valid = false;
-
-  if (recv[118] != 16 || recv[119] != 0x0D) {
-
-    errMsg("Wrong msg format (0x0D).");
-    return false;
-
-  }
-
-  nav_data_.est_acc_lin_x = extractFloat(&recv[120]);
-  nav_data_.est_acc_lin_y = extractFloat(&recv[120+4]);
-  nav_data_.est_acc_lin_z = extractFloat(&recv[120+8]);
-
-  if (recv[120+12+1]) nav_data_.est_acc_lin_valid = true;
-  else nav_data_.est_acc_lin_valid = false;
-
-  if (recv[134] != 16 || recv[135] != 0x0E) {
-
-    errMsg("Wrong msg format (0x0E).");
-    return false;
-
-  }
-
-  nav_data_.est_acc_rot_x = extractFloat(&recv[136]);
-  nav_data_.est_acc_rot_y = extractFloat(&recv[136+4]);
-  nav_data_.est_acc_rot_z = extractFloat(&recv[136+8]);
-
-  if (recv[136+12+1]) nav_data_.est_acc_rot_valid = true;
-  else nav_data_.est_acc_rot_valid = false;
-
-  return true;
-
-}
-
-tnav IMU::getNAV() {
-
-  return nav_data_;
-
-}
-
+/// Get acceleration data, Euler angles, etc.
 bool IMU::pollAHRS() {
 
-  tbyte_array data;
+  const float G = 9.80655;
+  static std::vector<unsigned char> data, recv;
+
+  // clear vectors
+  data.clear();
+  recv.clear();
 
   data.push_back(sync1);
   data.push_back(sync2);
@@ -488,23 +300,26 @@ bool IMU::pollAHRS() {
   data.push_back(0x1); // suppress ACK
   data.push_back(0x0);
 
-  crc(data);
+  // calculate Fletcher values
+  calcFletcher(data);
+
+  // write the data
   write(data);
+
+  // wait for ACK
   waitForMsg();
 
-  tbyte_array recv;
+  // (last packet data + 2 byte checksum) 
+  size_t PACKET_SZ = 78; 
 
-  size_t n = 46; // TODO this is really stupid... there must be some parsing etc....
-
-  //  struct timespec curtime;
-  //  clock_gettime(CLOCK_REALTIME, &curtime);
   unsigned long current_time = get_current_time();
 
-  recv = read(n);
+  // read the data
+  read(PACKET_SZ, recv);
 
-  if (!crcCheck(recv)) return false;
-
-  //if (!checkACK(recv,CMD_SET_3DM,CMD_3DM_POLL_AHRS)) return false;
+  // check Fletcher
+  if (!checkFletcher(recv)) return false;
+//  if (!checkACK(recv,CMD_SET_3DM,CMD_3DM_POLL_AHRS)) return false;
 
   // quaternion 0x0A, field length 18, MSB first
 
@@ -517,59 +332,99 @@ bool IMU::pollAHRS() {
 
   }
 
-//  ahrs_data_.time =  (uint64_t)(curtime.tv_sec) * 1000000000 + (uint64_t)(curtime.tv_nsec);
-  ahrs_data_.time = current_time;
+  // get acceleration vector
+  unsigned ST = 4;
+  _ahrs_data.ax = extractFloat(&recv[ST])*G;  ST+= 4; // 0x04
+  _ahrs_data.ay = extractFloat(&recv[ST])*G;  ST+= 4;
+  _ahrs_data.az = extractFloat(&recv[ST])*G;  ST+= 4;
 
-  ahrs_data_.ax = extractFloat(&recv[4]); // 0x04
-  ahrs_data_.ay = extractFloat(&recv[4+4]);
-  ahrs_data_.az = extractFloat(&recv[4+8]);
-
-  if (recv[16] != 0x0E || recv[17] != 0x05) {
+  if (recv[ST] != 0x0E || recv[ST+1] != 0x05) {
 
     errMsg("AHRS: Wrong msg format (0x05).");
     return false;
 
   }
 
-  ahrs_data_.gx = extractFloat(&recv[18]); // 0x05
-  ahrs_data_.gy = extractFloat(&recv[18+4]);
-  ahrs_data_.gz = extractFloat(&recv[18+8]);
+  // get gravity vector
+  ST += 2;
+  _ahrs_data.gx = extractFloat(&recv[ST]);   ST+= 4; // 0x05
+  _ahrs_data.gy = extractFloat(&recv[ST]);   ST+= 4;
+  _ahrs_data.gz = extractFloat(&recv[ST]);   ST+= 4;
 
-  if (recv[30] != 0x0E || recv[31] != 0x0C) {
+  // get delta velocity vector
+  if (recv[ST] != 0x0E || recv[ST+1] != 0x08) {
 
-    errMsg("AHRS: Wrong msg format (0x0C).");
+    errMsg("AHRS: Wrong msg format (0x08).");
+    return false;
+  }
+  ST += 2;
+  _ahrs_data.vx = extractFloat(&recv[ST])*G;   ST+= 4; // 0x08
+  _ahrs_data.vy = extractFloat(&recv[ST])*G;   ST+= 4;
+  _ahrs_data.vz = extractFloat(&recv[ST])*G;   ST+= 4;
+
+  // get quaternion orientation
+  if (recv[ST] != 0x12 || recv[ST+1] != 0x0A) {
+
+    errMsg("AHRS: Wrong msg format (0x0A).");
     return false;
 
   }
 
-  ahrs_data_.r = extractFloat(&recv[32]); // 0x0C
-  ahrs_data_.p = extractFloat(&recv[32+4]);
-  ahrs_data_.y = extractFloat(&recv[32+8]);
+  ST += 2;
+  _ahrs_data.q0 = extractFloat(&recv[ST]);  ST += 4;
+  _ahrs_data.q1 = extractFloat(&recv[ST]);  ST += 4;
+  _ahrs_data.q2 = extractFloat(&recv[ST]);  ST += 4;
+  _ahrs_data.q3 = extractFloat(&recv[ST]);  ST += 4;
 
-  /*quat.q0 = extractFloat(&recv[6]);
-  quat.q1 = extractFloat(&recv[6+4]);
-  quat.q2 = extractFloat(&recv[6+8]);
-  quat.q3 = extractFloat(&recv[6+12]);*/
+  // get roll-pitch-yaw
+  if (recv[ST] != 0x0E || recv[ST+1] != 0x0C) {
+    errMsg("AHRS: Wrong msg format (0x0C).");
+    return false;
+  }
 
-  //cout << quat.q0 << " " << quat.q1 << " " << quat.q2 << " " << quat.q3 << endl;
+  ST += 2;
+  _ahrs_data.r = extractFloat(&recv[ST]); ST += 4; // 0x0C
+  _ahrs_data.p = extractFloat(&recv[ST]); ST += 4;
+  _ahrs_data.y = extractFloat(&recv[ST]); ST += 4;
+
+  // get time 
+  if (recv[ST] != 0x06 || recv[ST+1] != 0x0E) {
+    errMsg("AHRS: Wrong msg format (0x0E).");
+    return false;
+  }
+
+  ST += 2;
+  _ahrs_data.time = (uint64_t) (extractUInt(&recv[ST]) / 62.5);
 
   return true;
-
 }
 
-tahrs IMU::getAHRS() {
-
-  return ahrs_data_;
-
+/// Gets AHRS data
+tahrs& IMU::getAHRS() {
+  return _ahrs_data;
 }
 
-tgps IMU::getGPS() {
-
-  return gps_data_;
-
+/// Gets GPS data
+tgps& IMU::getGPS() {
+  return _gps_data;
 }
 
-float IMU::extractFloat(char* addr) {
+/// Extracts an unsigned int from four bytes
+unsigned IMU::extractUInt(unsigned char* addr) {
+
+  assert(sizeof(unsigned) == 4);
+  unsigned tmp;
+
+  *((unsigned char*)(&tmp) + 3) = *(addr);
+  *((unsigned char*)(&tmp) + 2) = *(addr+1);
+  *((unsigned char*)(&tmp) + 1) = *(addr+2);
+  *((unsigned char*)(&tmp)) = *(addr+3);
+
+  return tmp;
+}
+
+/// Extracts a single precision floating point value from four bytes
+float IMU::extractFloat(unsigned char* addr) {
 
   float tmp;
 
@@ -581,7 +436,8 @@ float IMU::extractFloat(char* addr) {
   return tmp;
 }
 
-void IMU::encodeFloat(tbyte_array& arr, float in) {
+/// Encodes a single precision floating point value as four bytes
+void IMU::encodeFloat(float in, std::vector<unsigned char>& arr) {
 
   arr.push_back(*((unsigned char*)(&in) + 3));
   arr.push_back(*((unsigned char*)(&in) + 2));
@@ -590,7 +446,7 @@ void IMU::encodeFloat(tbyte_array& arr, float in) {
 
 }
 
-double IMU::extractDouble(char* addr) {
+double IMU::extractDouble(unsigned char* addr) {
 
   double tmp;
 
@@ -608,76 +464,15 @@ double IMU::extractDouble(char* addr) {
 }
 
 
-bool IMU::setNAVMsgFormat() {
-
-  tbyte_array data;
-
-  data.push_back(sync1);
-  data.push_back(sync2);
-  data.push_back(CMD_SET_3DM); // desc set
-  data.push_back(0x1F); // length
-  data.push_back(0x1F);
-  data.push_back(CMD_3DM_NAV_MSG_FORMAT);
-
-  data.push_back(FUN_USE_NEW);
-  data.push_back(0x09); // desc count
-
-  data.push_back(0x10); // Filter Status (0x82, 0x10) -> 8 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x01); // Estimated LLH Position (0x82, 0x01) -> 28 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x02); // Estimated NED Velocity (0x82, 0x02) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x05); // Estimated Orientation, Euler Angles (0x82, 0x05) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x08);  // Estimated LLH Position Uncertainty (0x82, 0x08) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x09); // Estimated NED Velocity Uncertainty (0x82, 0x09) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x0A); // Estimated Attitude Uncertainty, Euler Angles (0x82, 0x0A) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x0D); // Estimated Linear Acceleration (0x82, 0x0D) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  data.push_back(0x0E); // Estimated Angular Rate (0x82, 0x0E) -> 16 B
-  data.push_back(0x0);
-  data.push_back(100/rate_);
-
-  crc(data);
-  write(data);
-  waitForMsg();
-
-  tbyte_array recv;
-  size_t n = 8;
-
-  recv = read(n);
-
-  if (!crcCheck(recv)) return false;
-  if (!checkACK(recv,CMD_SET_3DM,CMD_3DM_NAV_MSG_FORMAT)) return false;
-
-  return true;
-
-}
-
 bool IMU::setGPSMsgFormat() {
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear data and recv vector 
+  data.clear();
+  recv.clear();
+
+  // prepare message
   data.push_back(sync1);
   data.push_back(sync2);
   data.push_back(CMD_SET_3DM); // desc set
@@ -692,118 +487,211 @@ bool IMU::setGPSMsgFormat() {
   data.push_back(0x0);
   data.push_back(0x1); // 4 Hz / TODO check this!!!
 
-  crc(data);
+  // compute the Fletcher value and write the packet 
+  calcFletcher(data);
   write(data);
   waitForMsg();
 
-  tbyte_array recv;
+  // read packet
+  size_t PACKET_SZ = 8;
+  read(PACKET_SZ, recv);
 
-  size_t n = 8;
-  recv = read(n);
-
-  if (!crcCheck(recv)) return false;
+  // verify Fletcher and acknowledgement
+  if (!checkFletcher(recv)) return false;
   if (!checkACK(recv,CMD_SET_3DM,CMD_3DM_GPS_MSG_FORMAT)) return false;
+
+  return true;
+}
+
+/// Sets the dynamics mode for the IMU
+bool IMU::setDynamicsMode()
+{
+  static std::vector<unsigned char> data, recv;
+
+  // clear data and recv vectors
+  data.clear();
+  recv.clear();
+
+  // setup packet
+  data.push_back(sync1);
+  data.push_back(sync2);
+  data.push_back(CMD_SET_3DM); // desc set (0x0C)
+  data.push_back(0x04);        // payload length is fixed 
+  data.push_back(0x04);        // payload length is fixed 
+  data.push_back(0x34);        // set dynamics 
+
+  // data packet begins here
+  data.push_back(0x01);             // apply new settings 
+
+  // dynamics mode- airborne 
+  data.push_back(0x07);  
+
+  // compute Fletcher and write the packet
+  calcFletcher(data);
+  write(data);
+  waitForMsg();
+
+  // read the packet
+  size_t PACKET_SZ = 8;
+  read(PACKET_SZ, recv);
+
+  // verify Fletcher and acknowledgement
+  if (!checkFletcher(recv)) return false;
+  if (!checkACK(recv,CMD_SET_3DM,0x34)) return false;
+
+  return true;
+}
+
+/// Sets signal conditioning for the IMU
+bool IMU::setAHRSSignalCond() {
+
+  static std::vector<unsigned char> data, recv;
+
+  // clear data and recv vectors
+  data.clear();
+  recv.clear();
+
+  // setup packet
+  data.push_back(sync1);
+  data.push_back(sync2);
+  data.push_back(CMD_SET_3DM); // desc set (0x0C)
+  data.push_back(0x10);        // payload length is fixed 
+  data.push_back(0x10);        // payload length is fixed 
+  data.push_back(0x35); // signal conditioning 
+
+  // data packet begins here
+  data.push_back(0x01);             // apply new settings 
+
+  // decimation for orientation
+  data.push_back(0x00);  // first, set placeholders           
+  data.push_back(0x00);             
+  to_two(0x01, data[data.size()-2], data[data.size()-1]);
+
+  // data conditioning flags
+  data.push_back(0x0);  // first, set placeholders
+  data.push_back(0x0);
+  to_two(0x1000 + 0x0001 + 0x0002, data[data.size()-2], data[data.size()-1]);
+
+  // accel/gyro adjustible filter bandwidth (1000 Hz)
+  data.push_back(0x01);
+
+  // mag adjustible filter bandwidth (1000 Hz)
+  data.push_back(0x01);
+
+  // up compensation values 
+  data.push_back(0x0);  // first, set placeholders
+  data.push_back(0x0);
+  to_two(0x01, data[data.size()-2], data[data.size()-1]);
+
+  // North compensation values 
+  data.push_back(0x0);  // first, set placeholders
+  data.push_back(0x0);
+  to_two(0x01, data[data.size()-2], data[data.size()-1]);
+
+  // mag power/bandwidth
+  data.push_back(0x00);
+
+  // setup reserved data
+  data.push_back(0x00);
+  data.push_back(0x00);
+
+  // compute Fletcher and write the packet
+  calcFletcher(data);
+  write(data);
+  waitForMsg();
+
+  // read the packet
+  size_t PACKET_SZ = 8;
+  read(PACKET_SZ, recv);
+
+  // verify Fletcher and acknowledgement
+  if (!checkFletcher(recv)) return false;
+  if (!checkACK(recv,CMD_SET_3DM,0x35)) return false;
 
   return true;
 }
 
 bool IMU::setAHRSMsgFormat() {
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear data and recv vectors
+  data.clear();
+  recv.clear();
+
+  // setup packet
   data.push_back(sync1);
   data.push_back(sync2);
-  data.push_back(CMD_SET_3DM); // desc set
-  data.push_back(0x0D); // length
-  data.push_back(0x0D);
-  data.push_back(CMD_3DM_AHRS_MSG_FORMAT);
+  data.push_back(CMD_SET_3DM); // desc set (0x0C)
+  data.push_back(22);  // total command length = 6*3 + 4 
+  data.push_back(22); 
+  data.push_back(CMD_3DM_AHRS_MSG_FORMAT); // (0x08)
 
-  data.push_back(FUN_USE_NEW);
-  data.push_back(0x03); // desc count
+  // data packet begins here
+  data.push_back(FUN_USE_NEW);             // (0x01)
+  data.push_back(0x06); // desc count
 
   data.push_back(0x04); // accelerometer vector
   data.push_back(0x0);
-  data.push_back(100/rate_); // 20 Hz
+  data.push_back(1000/_rate); 
 
   data.push_back(0x05); // gyro vector
   data.push_back(0x0);
-  data.push_back(100/rate_); // 20 Hz
+  data.push_back(1000/_rate); 
+
+  data.push_back(0x08); // velocity vector 
+  data.push_back(0x0);
+  data.push_back(1000/_rate); 
+
+  data.push_back(0x0A); // quaternion vector 
+  data.push_back(0x0);
+  data.push_back(1000/_rate); 
 
   data.push_back(0x0C); // euler angles
   data.push_back(0x0);
-  data.push_back(100/rate_); // rate decimation -> 20 Hz
+  data.push_back(1000/_rate); 
 
-  crc(data);
+  data.push_back(0x0E); // timestamp
+  data.push_back(0x0);
+  data.push_back(1000/_rate);
+
+  // compute Fletcher and write the packet
+  calcFletcher(data);
   write(data);
   waitForMsg();
 
-  tbyte_array recv;
+  // read the packet
+  size_t PACKET_SZ = 8;
+  read(PACKET_SZ, recv);
 
-  size_t n = 8;
-
-  recv = read(n);
-
-  if (!crcCheck(recv)) return false;
-
+  // verify Fletcher and acknowledgement
+  if (!checkFletcher(recv)) return false;
   if (!checkACK(recv,CMD_SET_3DM,CMD_3DM_AHRS_MSG_FORMAT)) return false;
 
   return true;
-
 }
 
-bool IMU::initKalmanFilter(float decl) {
-
-  tbyte_array data;
-
-  data.push_back(sync1);
-  data.push_back(sync2);
-  data.push_back(CMD_SET_NAVFILTER); // desc set
-  data.push_back(0x06); // length
-  data.push_back(0x06);
-  data.push_back(CMD_NAV_SET_INIT_FROM_AHRS);
-
-  /*data.push_back((decl>>16)&0xff); // MSB
-  data.push_back((decl>>8)&0xff);
-  data.push_back((decl>>4)&0xff);
-  data.push_back((decl)&0xff); // LSB*/
-
-  encodeFloat(data,decl);
-
-  crc(data);
-  write(data);
-  waitForMsg();
-
-  tbyte_array recv;
-
-  size_t n = 8;
-
-  recv = read(n);
-
-  if (!crcCheck(recv)) return false;
-
-  if (!checkACK(recv,CMD_SET_NAVFILTER,CMD_NAV_SET_INIT_FROM_AHRS)) return false;
-
-  return true;
-
-}
-
+/// EMD: unsure what this does
 bool IMU::resume() {
-
   return sendNoDataCmd(CMD_SET_BASIC, CMD_BASIC_RESUME);
-
 }
 
 
+/// EMD: unsure what this does
 bool IMU::setToIdle() {
-
   return sendNoDataCmd(CMD_SET_BASIC, CMD_BASIC_SET_TO_IDLE);
 
 }
 
 bool IMU::sendNoDataCmd(uint8_t cmd_set, uint8_t cmd) {
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear the vectors
+  data.clear();
+  recv.clear();
+
+  // set the data
   data.push_back(sync1);
   data.push_back(sync2);
   data.push_back(cmd_set); // desc set
@@ -811,22 +699,22 @@ bool IMU::sendNoDataCmd(uint8_t cmd_set, uint8_t cmd) {
   data.push_back(0x02);
   data.push_back(cmd);
 
-  crc(data);
+  // compute the Fletcher value
+  calcFletcher(data);
   write(data);
 
-  tbyte_array recv;
-
-  size_t n = 8;
-
+  // read the packet
+  size_t PACKET_SZ = 8;
   waitForMsg();
-  recv = read(n);
+  read(PACKET_SZ, recv);
 
-  if (!crcCheck(recv)) return false;
+  // check the packet
+  if (!checkFletcher(recv)) return false;
 
+  // verify acknowledgement
   if (!checkACK(recv,cmd_set,cmd)) return false;
 
   return true;
-
 }
 
 bool IMU::selfTest() {
@@ -835,8 +723,13 @@ bool IMU::selfTest() {
 
   setTimeout(posix_time::seconds(6));
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear data and recv vectors
+  data.clear();
+  recv.clear();
+
+  // prepare the packet
   data.push_back(sync1);
   data.push_back(sync2);
   data.push_back(CMD_SET_BASIC);
@@ -844,24 +737,25 @@ bool IMU::selfTest() {
   data.push_back(0x02);
   data.push_back(CMD_BASIC_DEV_BUILTIN_TEST);
 
-  crc(data);
+  // compute the Fletcher and write the packet
+  calcFletcher(data);
   write(data);
   waitForMsg();
 
-  tbyte_array recv;
-  size_t n = 14;
+  // read the packet
+  size_t PACKET_SZ = 14;
+  read(PACKET_SZ, recv);
 
-  recv = read(n);
-
-  if (!crcCheck(recv)) {
-
+  // compute a Fletcher check
+  if (!checkFletcher(recv)) {
     setTimeout(timeout_orig);
     return false;
-
   }
 
+  // set the timeout value
   setTimeout(timeout_orig);
 
+  // verify acknowledgement
   if (!checkACK(recv,CMD_SET_BASIC, CMD_BASIC_DEV_BUILTIN_TEST)) return false;
 
   if (recv[8]==0 && recv[9]==0 && recv[10]==0 && recv[11]==0) return true;
@@ -878,16 +772,19 @@ bool IMU::selfTest() {
     if (recv[10] & 0x8) errMsg("GPS: Power Control Error.");
 
     return false;
-
   }
-
 }
 
 
 bool IMU::devStatus() {
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear the data and recv vectors
+  data.clear();
+  recv.clear();
+
+  // setup the message
   data.push_back(sync1);
   data.push_back(sync2);
   data.push_back(CMD_SET_3DM);
@@ -896,57 +793,57 @@ bool IMU::devStatus() {
   data.push_back(CMD_3DM_DEV_STATUS);
   //data.push_back(((uint16_t)MODEL_ID>>2) & 0xff);
   //data.push_back((uint16_t)MODEL_ID & 0xff);
-  if (model_ == GX3_45){
+  if (_model == GX3_45){
     data.push_back(0x18);
     data.push_back(0x54);
-  }else if( model_ == GX3_35){
+  }else if( _model == GX3_35){
     data.push_back(0x18);
     data.push_back(0x51);
   }
   data.push_back(0x01); // basic status
 
-
-  crc(data);
+  // calculate Fletcher value and write the packet
+  calcFletcher(data);
   write(data);
   waitForMsg();
 
-  tbyte_array recv;
-  size_t n = 25;
+  // read the packet
+  size_t PACKET_SZ = 25;
+  read(PACKET_SZ, recv);
 
-  recv = read(n);
-
-  if (!crcCheck(recv)) {
-
+  // verify Fletcher value
+  if (!checkFletcher(recv)) {
     return false;
-
   }
 
+  // verify acknowledgement
   if (!checkACK(recv,CMD_SET_3DM, CMD_3DM_DEV_STATUS)) return false;
 
   //if (((uint8_t)recv[10] != ((MODEL_ID>>2)&0xff)) || ((uint8_t)recv[11] != (MODEL_ID & 0xff))) {
-  if ((model_ == GX3_45 && (((uint8_t)recv[8] != 0x18) || ((uint8_t)recv[9] != 0x54))) 
-      ||(model_ == GX3_35 && (((uint8_t)recv[8] != 0x18) || ((uint8_t)recv[9] != 0x51))) ){
+  if ((_model == GX3_45 && (((uint8_t)recv[8] != 0x18) || ((uint8_t)recv[9] != 0x54))) 
+      ||(_model == GX3_35 && (((uint8_t)recv[8] != 0x18) || ((uint8_t)recv[9] != 0x51))) ){
 
     errMsg("Wrong model number.");
     return false;
-
   }
 
   if (recv[11] != COMM_MODE_MIP) {
-
     errMsg("Not in MIP mode.");
     return false;
-
   }
 
   return true;
-
 }
 
 bool IMU::setStream(uint8_t stream, bool state) {
 
-  tbyte_array data;
+  static std::vector<unsigned char> data, recv;
 
+  // clear data and recv vectors
+  data.clear();
+  recv.clear();
+
+  // prepare message
   data.push_back(sync1);
   data.push_back(sync2);
   data.push_back(CMD_SET_3DM);
@@ -958,55 +855,248 @@ bool IMU::setStream(uint8_t stream, bool state) {
   if (state) data.push_back(0x01);
   else data.push_back(0x0);
 
-
-  crc(data);
+  // prepare message
+  calcFletcher(data);
   write(data);
   waitForMsg();
 
-  tbyte_array recv;
-  size_t n = 8;
+  // read the packet
+  size_t PACKET_SZ = 8;
+  read(PACKET_SZ, recv);
 
-  recv = read(n);
-
-  if (!crcCheck(recv)) {
-
+  // verify Fletcher value
+  if (!checkFletcher(recv)) 
     return false;
 
-  }
-
+  // verify acknowledgement
   if (!checkACK(recv,CMD_SET_3DM, CMD_3DM_STREAM_STATE)) return false;
 
   return true;
-
 }
 
+/// Disables all streams for the IMU
 bool IMU::disAllStreams() {
 
   bool ret = true;
 
   if (!setStream(0x01,false)) ret = false; // AHRS
   if (!setStream(0x02,false)) ret = false; // GPS
-  if (model_ == GX3_45)
-  {
-    if (!setStream(0x03,false)) ret = false; // NAV
-  }
+
+  // destroy running thread, if necessary
+  if (_thread_running)
+    _thread_running = false; 
+
   return ret;
-
 }
 
-void IMU::errMsg(std::string msg) {
+/// Reads from the AHRS stream
+void IMU::readFromAHRSStream()
+{
+  const float G = 9.80655;
+  static uint64_t last_time = std::numeric_limits<uint64_t>::max();
+  static std::vector<unsigned char> recv;
+  unsigned MAX_BUF_SIZE = 1000;
 
+  // read two bytes (header)
+  recv.clear();
+  read(2, recv);
+
+  if (recv[0] != 'u' || recv[1] != 'e')
+    return;
+
+  // (last packet data [76] + 2 byte checksum) 
+  size_t PACKET_SZ = 84; 
+
+  unsigned long current_time = get_current_time();
+
+  // read the data
+  recv.clear();
+  read(PACKET_SZ, recv);
+
+  // check Fletcher
+  if (!checkFletcher(recv)) return;
+//  if (!checkACK(recv,CMD_SET_3DM,CMD_3DM_POLL_AHRS)) return false;
+
+  if (recv[2] != 0x0E || recv[3] != 0x04) {
+
+    errMsg("AHRS: Wrong msg format (0x04).");
+    return;
+
+  }
+
+  // create some ahrs data
+  tahrs data;
+  data.time = current_time;
+
+  // get acceleration vector
+  unsigned ST = 4;
+  data.ax = extractFloat(&recv[ST])*G;  ST+= 4; // 0x04
+  data.ay = extractFloat(&recv[ST])*G;  ST+= 4;
+  data.az = extractFloat(&recv[ST])*G;  ST+= 4;
+
+  if (recv[ST] != 0x0E || recv[ST+1] != 0x05) {
+
+    errMsg("AHRS: Wrong msg format (0x05).");
+    return;
+
+  }
+
+  // get gravity vector
+  ST += 2;
+  data.gx = extractFloat(&recv[ST]);   ST+= 4; // 0x05
+  data.gy = extractFloat(&recv[ST]);   ST+= 4;
+  data.gz = extractFloat(&recv[ST]);   ST+= 4;
+
+  // get delta velocity vector
+  if (recv[ST] != 0x0E || recv[ST+1] != 0x08) {
+
+    errMsg("AHRS: Wrong msg format (0x08).");
+    return;
+  }
+  ST += 2;
+  data.vx = extractFloat(&recv[ST])*G;   ST+= 4; // 0x08
+  data.vy = extractFloat(&recv[ST])*G;   ST+= 4;
+  data.vz = extractFloat(&recv[ST])*G;   ST+= 4;
+
+  // get quaternion orientation
+  if (recv[ST] != 0x12 || recv[ST+1] != 0x0A) {
+
+    errMsg("AHRS: Wrong msg format (0x0A).");
+    return;
+
+  }
+
+  ST += 2;
+  data.q0 = extractFloat(&recv[ST]);  ST += 4;
+  data.q1 = extractFloat(&recv[ST]);  ST += 4;
+  data.q2 = extractFloat(&recv[ST]);  ST += 4;
+  data.q3 = extractFloat(&recv[ST]);  ST += 4;
+
+  // get roll-pitch-yaw
+  if (recv[ST] != 0x0E || recv[ST+1] != 0x0C) {
+
+    errMsg("AHRS: Wrong msg format (0x0C).");
+    return;
+
+  }
+
+  ST += 2;
+  data.r = extractFloat(&recv[ST]); ST += 4; // 0x0C
+  data.p = extractFloat(&recv[ST]); ST += 4;
+  data.y = extractFloat(&recv[ST]); ST += 4;
+
+  // get time 
+  if (recv[ST] != 0x06 || recv[ST+1] != 0x0E) {
+    errMsg("AHRS: Wrong msg format (0x0E).");
+    return;
+  }
+
+  ST += 2;
+  data.time = (uint64_t) (extractUInt(&recv[ST]) / 62.5);
+
+  // add the data to the buffer
+  pthread_mutex_lock(&_mutex);
+  if (_ahrs_buffer.size() > MAX_BUF_SIZE)
+    _ahrs_buffer.pop();
+  _ahrs_buffer.push(data);
+  pthread_mutex_unlock(&_mutex);
+
+  // update IMU state data
+  uint64_t dtint = (last_time == std::numeric_limits<uint64_t>::max()) ? 0 : data.time - last_time;
+  float dt = dtint/1000.0;
+  last_time = data.time;
+
+  // update linear acceleration and angular velocity
+  _xdd[0] = data.ax;
+  _xdd[1] = data.ay;
+  _xdd[2] = data.az;
+
+  // update angular velocity
+  _omega[0] = data.gx;
+  _omega[1] = data.gy;
+  _omega[2] = data.gz;
+
+  // update the orientation
+  _quat = Ravelin::Quatd::rpy(data.r, data.p, data.y);
+
+  // update the acceleration to the global frame
+  _xdd = _quat * _xdd;
+
+  // unbias linear acceleration
+  _xdd[2] += G;
+
+  // determine velocity
+  _xd += _xdd * dt;
+
+  // determine position
+  _x += _xd * dt;
+}
+
+/// Gets a AHRS data item off of the buffer
+tahrs IMU::getAHRSItem()
+{
+  pthread_mutex_lock(&_mutex);
+  tahrs data = _ahrs_buffer.front();
+  _ahrs_buffer.pop();
+  pthread_mutex_unlock(&_mutex);
+  return data;
+}
+
+/// Enables AHRS streaming 
+bool IMU::enableAHRSStream() {
+
+  bool value = setStream(0x01,true); // AHRS
+
+  // create a new thread to continually read from the stream
+  if (value)
+  {
+    // indicate that the thread is running
+    _thread_running = true;
+
+    // start the thread
+    pthread_t thread;
+    pthread_create(&thread, NULL, &ahrs_thread, this);
+  }
+
+  return value;
+}
+
+/// Creates the thread
+void* IMU::ahrs_thread(void* data)
+{
+  const unsigned SLEEP_US = 100;
+
+  // get the IMU pointer
+  IMU* imu = (IMU*) data;
+
+  // continually read from the IMU
+  while (true)
+  {
+    // see whether the thread is still running
+    if (!imu->_thread_running)
+      return NULL;
+
+    // read from the AHRS stream
+    imu->readFromAHRSStream();
+
+    // sleep a little
+    usleep(SLEEP_US);
+  }
+
+  return NULL;
+}
+
+/// Adds an error message to the vector of error messages
+void IMU::errMsg(const std::string& msg) {
   error_desc.push_back(msg);
-
 }
 
-bool IMU::checkACK(tbyte_array& arr, uint8_t cmd_set, uint8_t cmd) {
+/// Checks acknowledgement
+bool IMU::checkACK(const std::vector<unsigned char>& arr, uint8_t cmd_set, uint8_t cmd) {
 
   if (arr.size() < 6) {
-
-    errMsg("Too short reply.");
+    errMsg("IMU::checkACK() - too short of a reply.");
     return false;
-
   }
 
   /*if (arr[0] != sync1 || arr[1] != sync2) {
@@ -1017,55 +1107,42 @@ bool IMU::checkACK(tbyte_array& arr, uint8_t cmd_set, uint8_t cmd) {
   }*/
 
   if (arr[0] != cmd_set) {
-
-    errMsg("Wrong desc set in reply.");
+    errMsg("IMU::checkACK() - wrong description set in reply");
     return false;
-
   }
 
   if (arr[4] != cmd) {
-
-    errMsg("Wrong command echo.");
+    errMsg("IMU::checkACK() - wrong command echo");
     return false;
-
   }
 
   if (arr[5] != 0x0) {
-
-    errMsg("NACK.");
+    errMsg("IMU::checkACK() - NACK.");
     return false;
-
   }
 
   return true;
-
 }
 
-string IMU::getLastError() {
+/// Gets the last error message - error messages are progressively added to a vector
+std::string IMU::getLastError() {
 
   if (error_desc.size() > 0) {
-
-    string tmp;
-
-    tmp = error_desc.back();
+    std::string tmp = error_desc.back();
     error_desc.pop_back();
     return tmp;
-
   } else return "";
-
 }
 
-bool IMU::crcCheck(tbyte_array& arr) {
+/// Performs a Fletcher check for a string of unsigned characters
+bool IMU::checkFletcher(const std::vector<unsigned char>& arr) {
 
   unsigned char b1=0;
   unsigned char b2=0;
 
-  //cout << arr.size() << endl;
-
   if ( ((uint8_t)arr[1]+4) != (uint8_t)arr.size() ) {
-
-    std::cerr << "Sizes mismatch." << endl;
-
+    std::cerr << "Sizes mismatch." << std::endl;
+    return false;
   }
 
   uint8_t end;
@@ -1084,25 +1161,19 @@ bool IMU::crcCheck(tbyte_array& arr) {
    b2 += b1;
   }
 
-  /*for(unsigned int i=0; i<(arr.size()); i++)
-  cout << static_cast<int>(arr[i]) << " ";
-  cout << endl;*/
-
-
-  if (b1==(unsigned char)arr[arr.size()-2] && b2==(unsigned char)arr[arr.size()-1]) return true;
+  if (b1==(unsigned char)arr[arr.size()-2] && b2==(unsigned char) arr.back()) 
+    return true;
   else {
-
-    errMsg("Bad CRC.");
+    std::cerr << "Bad Fletcher value detected";
     return false;
-
   }
-
 }
 
-void IMU::crc(tbyte_array& arr) {
+/// Computes a Fletcher value for a string of unsigned characters
+void IMU::calcFletcher(std::vector<unsigned char>& arr) {
 
-  char b1=0;
-  char b2=0;
+  unsigned char b1=0;
+  unsigned char b2=0;
 
   for(unsigned int i=0; i<arr.size(); i++)
   {
@@ -1112,5 +1183,5 @@ void IMU::crc(tbyte_array& arr) {
 
   arr.push_back(b1);
   arr.push_back(b2);
-
 }
+

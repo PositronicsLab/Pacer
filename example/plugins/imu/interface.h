@@ -1,17 +1,23 @@
-#ifndef INTERFACE_H_
-#define INTERFACE_H_
+#ifndef IMU_INTERFACE_H_
+#define IMU_INTERFACE_H_
 
 #include <Ravelin/Pose3d.h>
 
 namespace microstrain_3dm_gx3_35 {
+ 
+    struct Pose {
+      Ravelin::Quatd orientation;
+      Ravelin::Origin3d position;
+    };
   
-  class imuInterface {
+  class IMUInterface {
     
   public:
     
-    imuInterface();
-    ~imuInterface();
+    IMUInterface(int rate);
+    ~IMUInterface();
     
+    Pose getPose();
     void update();
     bool init();
     
@@ -21,71 +27,41 @@ namespace microstrain_3dm_gx3_35 {
     bool reset_kalman_filter();
   protected:
     
-    boost::shared_ptr<IMU> imu_;
+    boost::shared_ptr<IMU> _imu;
     
-    struct NavPose {
-      double time;
-      Ravelin::Pose3d P;
-    } nav_pose;
-    
-    
+   
     struct IMUState {
       double time;
       Ravelin::Origin3d
         linear_acceleration,
+        linear_velocity,
+        position,
         angular_velocity;
       Ravelin::Quatd orientation;
-    } imu;
-    
-    struct Pose {
-      double time;
-      Ravelin::Quatd orientation;
-    } ps;
-    
-    struct NavFix {
-      double time;
-      double latitude,longitude,altitude;
-      bool fix_status;
-      Ravelin::Matrix3d position_covariance;
-      bool covariance_status;
+    } _imu_state;
 
-    } nav_fix;
+    std::string _port;
+    int _baud_rate;
     
-    std::string port_;
-    int baud_rate_;
-    float declination_;
+    bool _started;
+    bool _inited;
     
-    bool started_;
-    bool inited_;
+    double _linear_acceleration_stdev;
+    double _orientation_stdev;
+    double _angular_velocity_stdev;
     
-    double linear_acceleration_stdev_;
-    double orientation_stdev_;
-    double angular_velocity_stdev_;
+    float _rate;
     
-    float rate_;
+    bool _publish_pose;
+    bool _publish_imu;
+    bool _publish_gps;
+    bool _publish_gps_as_odom;
     
-    bool publish_pose_;
-    bool publish_imu_;
-    bool publish_gps_;
-    bool publish_gps_as_odom_;
-    
-    bool publish_nav_odom_;
-    bool publish_nav_pose_;
-    bool publish_nav_fix_;
-    
-    bool zero_height_;
-    
-    bool gps_fix_available_;
-    
-    //bool nav_odom_rel_;
-    
-  private:
-    
+    bool _gps_fix_available;
+    bool isDataAvailable() const { return !_imu->isAHRSBufferEmpty(); }
   };
-  
-  
-  
 } // ns
 
 
 #endif /* INTERFACE_H_ */
+

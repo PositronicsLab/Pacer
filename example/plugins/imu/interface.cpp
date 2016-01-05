@@ -5,361 +5,346 @@ using namespace microstrain_3dm_gx3_35;
 using namespace std;
 using namespace boost;
 
-#define MODEL microstrain_3dm_gx3_35::IMU::GX3_35
-
-/*
- * TODOs
- * add some services etc.
- */
-
 #include "../plugin.h"
 
-imuInterface::imuInterface(){
-  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+IMUInterface::IMUInterface(int rate){
 
-  port_ = ctrl->get_data<std::string>(plugin_namespace+".port");
-  baud_rate_ = ctrl->get_data<int>(plugin_namespace+".baud-rate");
-  declination_ = 3.8; // http://www.ngdc.noaa.gov/geomag-web/#declination
-  rate_  = ctrl->get_data<double>(plugin_namespace+".rate");;
-  
-  zero_height_ = true;
-  
-  linear_acceleration_stdev_ = 0.098;
-  orientation_stdev_ = 0.035;
-  angular_velocity_stdev_ = 0.012;
+   // set some reasonable values 
+  _port = "/dev/ttyACM0"; 
+  _baud_rate = 115200;
+  _rate  = rate; 
+  assert(rate <= 1000); 
+ 
+  _linear_acceleration_stdev = 0.098;
+  _orientation_stdev = 0.035;
+  _angular_velocity_stdev = 0.012;
 
+   // create the pointer 
+  _imu = boost::shared_ptr<IMU>(new IMU((int)floor(_rate), microstrain_3dm_gx3_35::IMU::GX3_35));
 
-  // for the 3D, we do not publish NAV
-  if (MODEL == microstrain_3dm_gx3_35::IMU::GX3_35)
-  {
-     publish_nav_odom_ = false;
-     publish_nav_pose_ = false;
-     publish_nav_fix_ = false;
-  }
-
-  // reset the IMU 
-  imu_.reset(new IMU((int)floor(rate_),MODEL));
+  // indicate that IMU is neither started nor inited  
+  _started = false;
+  _inited = false;
   
-  started_ = false;
-  inited_ = false;
-  
-  gps_fix_available_ = false;
+  _gps_fix_available = false;
 }
 
-bool imuInterface::reset_kalman_filter() {
-  
-  fprintf(stdout,"Resetting KF.");
-  
-  if (!imu_->setToIdle()) fprintf(stderr,"%s",imu_->getLastError().c_str());
-  if (!imu_->initKalmanFilter(declination_)) fprintf(stderr,"%s",imu_->getLastError().c_str());
-  if (!imu_->resume()) fprintf(stderr,"%s",imu_->getLastError().c_str());
-  
-  return true;
-  
-}
-
-bool imuInterface::init() {
-  
-  
-  if (!imu_->openPort(port_,(unsigned int)baud_rate_)) {
-    
-    fprintf(stderr,"Can't open port.");
-    return false;
-    
+/// Initializes the IMU
+bool IMUInterface::init() 
+{  
+  if (!_imu->openPort(_port,(unsigned int)_baud_rate)) 
+  {  
+    std::cerr << "Can't open port." << std::endl;
+    return false; 
   }
   
-  started_ = false;
-  
-  fprintf(stdout,"Pinging device");
-  imu_->setTimeout(posix_time::seconds(0.5));
-  if (!imu_->ping()) {
-    
-    fprintf(stderr,"Pinging device");
-    return false;
-    
-  }
-  
-  fprintf(stdout,"Setting to idle");
-  if (!imu_->setToIdle()) {
-    
-    fprintf(stderr,"Setting to idle");
-    return false;
-    
-  }
-  
-  fprintf(stdout,"Checking status");
-  if (!imu_->devStatus()) {
-    
-    fprintf(stderr,"Checking status");
-    return false;
-    
-  }
-  
-  fprintf(stdout,"Disabling all streams");
-  if (!imu_->disAllStreams()) {
-    
-    fprintf(stderr,"Disabling all streams");
-    return false;
-    
-  }
-  
-  fprintf(stdout,"Device self test");
-  if (!imu_->selfTest()) {
-    
-    fprintf(stderr,"Device self test");
-    return false;
-  }
-  
-  fprintf(stdout,"Setting AHRS msg format");
-  if (!imu_->setAHRSMsgFormat()) {
-    
-    fprintf(stderr,"Setting AHRS msg format");
-    return false;
-    
-  }
-  
-  fprintf(stdout,"Setting GPS msg format");
-  if (!imu_->setGPSMsgFormat()) {
-    
-    fprintf(stderr,"Setting GPS msg format");
-    return false;
-    
-		}
-  
-  if(imu_->model_ == IMU::GX3_45)
+  _started = false;
+ 
+  std::cout << "Disabling all streams" << std::endl;
+  if (!_imu->disAllStreams()) 
   {
-    fprintf(stdout,"Setting NAV msg format");
-    if (!imu_->setNAVMsgFormat()) {
-      
-      fprintf(stderr,"Setting NAV msg format");
-      return false;
-      
-    }
+    std::cerr << "Disabling all streams FAILED" << std::endl;
+    return false;
   }
   
+  std::cout << "Pinging device" << std::endl;
+  _imu->setTimeout(posix_time::seconds(0.5));
+
+  if (!_imu->ping()) 
+  {
+    std::cerr << "Pinging device FAILED" << std::endl;
+    return false;
+  }
+  
+  std::cout << "Setting to idle" << std::endl;
+  if (!_imu->setToIdle()) 
+  {
+    std::cerr << "Setting to idle FAILED" << std::endl;
+    return false;
+  }
+  
+  std::cout << "Checking status" << std::endl;
+  if (!_imu->devStatus()) 
+  {
+    std::cerr << "Checking status FAILED" << std::endl;
+    return false;
+  }
+  
+ 
+  std::cout << "Device self test" << std::endl;
+  if (!_imu->selfTest()) 
+  {
+    std::cerr << "Device self test FAILED" << std::endl;
+    return false;
+  }
+
+  std::cout << "Setting dynamics mode" << std::endl;
+  if (!_imu->setDynamicsMode()) 
+  {
+    std::cerr << "Setting dynamics mode FAILED" << std::endl;
+    return false;
+  }
+
+  std::cout << "Setting signal conditioning" << std::endl;
+  if (!_imu->setAHRSSignalCond()) 
+  {
+    std::cerr << "Setting AHRS signal conditioning FAILED" << std::endl;
+    return false;
+  }
+
+  std::cout << "Setting AHRS msg format" << std::endl;
+  if (!_imu->setAHRSMsgFormat()) 
+  {
+    std::cerr << "Setting AHRS msg format FAILED" << std::endl;
+    return false;
+  }
+
+  std::cout << "Setting GPS msg format" << std::endl;
+  if (!_imu->setGPSMsgFormat()) 
+  {
+    std::cerr << "Setting GPS msg format FAILED" << std::endl;
+    return false;
+  }
+ 
+  // start the IMU 
   start();
   
-  if(imu_->model_ == IMU::GX3_45)
+  _inited = true;
+  return true;
+}
+
+bool IMUInterface::start() {
+  
+  if (!_imu->resume()) 
   {
-    fprintf(stdout,"KF initialization");
-    if (!imu_->initKalmanFilter(declination_)) {
-      
-      fprintf(stderr,"KF initialization");
-      return false;
-      
-    }
+    std::cerr << "Resuming" << std::endl;
+    return false;
   }
   
-  inited_ = true;
+  // reset IMU state
+  for (int i=0; i< 3; i++)
+  {
+    _imu_state.linear_velocity[i] = 0.0f;
+    _imu_state.position[i] = 0.0f;
+  }
+
+  // enable AHRS stream
+  if (!_imu->enableAHRSStream()) 
+  {
+    std::cerr << "Enabling AHRS streaming" << std::endl;
+    return false;
+  }
+
+  // begin publishing IMU and pose
+  _publish_imu = _publish_pose = true;
+
+  _started = true;
   return true;
-  
 }
 
-bool imuInterface::start() {
+bool IMUInterface::stop() {
   
-  if (!imu_->resume()) {
-    
-    fprintf(stderr,"Resuming");
+  if (!_imu->setToIdle()) 
+  {
+    std::cerr << "To idle" << std::endl;
     return false;
-    
-		}
-  
-  started_ = true;
-  return true;
-  
-}
-
-bool imuInterface::stop() {
-  
-  if (!imu_->setToIdle()) {
-    
-    fprintf(stderr,"To idle");
-    return false;
-    
   }
   
-  started_ = false;
+  _started = false;
   return true;
   
 }
 
-void imuInterface::update() {
-  
-  if (!imu_->isOpen()) {
-    fprintf(stderr,"Port is not opened. Can't continue.");
+/*
+void IMUInterface::update() {
+
+  const double DT = 1;//1.0/_rate;
+  const float G = 9.80655;
+
+  if (!_imu->isOpen()) 
+  {
+    std::cerr << "Port is not opened. Can't continue." << std::endl;
     return;
   }
   
-  double angular_velocity_covariance = angular_velocity_stdev_ * angular_velocity_stdev_;
-  double orientation_covariance = orientation_stdev_ * orientation_stdev_;
-  double linear_acceleration_covariance = linear_acceleration_stdev_ * linear_acceleration_stdev_;
-  
-  fprintf(stdout,"Start polling device.");
-  
   int gps_msg_cnt = 0;
   
-  if (publish_nav_odom_ || publish_nav_pose_ || publish_nav_fix_) {
+  if (_publish_imu || _publish_pose) {
     
-    if (!imu_->pollNAV()) {
-      
-      fprintf(stderr,"NAV");
-      
-    }  
-    // TODO check nav filter status
+    if (!_imu->pollAHRS()) 
+      std::cerr << "AHRS polling failed!" << std::endl;
   }
   
-  if (publish_imu_ || publish_pose_) {
+  if (_publish_imu) {
     
-    if (!imu_->pollAHRS()) {
-      
-      fprintf(stderr,"AHRS");
-    }
+    const tahrs& q = _imu->getAHRS();
+    _imu_state.time = q.time;
     
-  }
-  
-  
-  if (publish_nav_pose_) {
+    _imu_state.linear_acceleration[0] = q.ax;
+    _imu_state.linear_acceleration[1] = q.ay;
+    _imu_state.linear_acceleration[2] = q.az;
     
-    fprintf(stdout,"Publishing NAV as Pose.");
-    
-    tnav n = imu_->getNAV();
-    
-    nav_pose.time = n.time;
-    
-    float yaw = n.est_y;
-    
-    yaw+=M_PI;
-    if (yaw > M_PI) yaw-=2*M_PI;
-    
-    nav_pose.P.q = Ravelin::Quatd::rpy(-n.est_r, n.est_p, -yaw);
-  }
-  
-  if (publish_imu_) {
-    
-    fprintf(stdout,"Publishing IMU data.");
-    
-    tahrs q = imu_->getAHRS();
-    
-    imu.time = q.time;
-    
-    imu.linear_acceleration[0] = -q.ax;
-    imu.linear_acceleration[1] = q.ay;
-    imu.linear_acceleration[2] = -q.az;
-    
-    imu.angular_velocity[0] = -q.gx;
-    imu.angular_velocity[1] = q.gy;
-    imu.angular_velocity[2] = -q.gz;
-    
+    _imu_state.angular_velocity[0] = -q.gx;
+    _imu_state.angular_velocity[1] = q.gy;
+    _imu_state.angular_velocity[2] = -q.gz;
+
+    // setup the orientation
     float yaw = q.y;
     
     // TODO is this needed?
     yaw+=M_PI;
     if (yaw > M_PI) yaw-=2*M_PI;
-    
-    imu.orientation = Ravelin::Quatd::rpy(-q.r, q.p, -yaw);
+
+    // set the orientation    
+    _imu_state.orientation = Ravelin::Quatd::rpy(-q.r, q.p, -yaw);
+
+    // update the acceleration to the global frame
+    _imu_state.linear_acceleration = _imu_state.orientation * _imu_state.linear_acceleration;
+
+    // unbias linear acceleration
+    _imu_state.linear_acceleration[2] += G;    
+
+    // determine velocity
+    _imu_state.linear_velocity[0] = q.ax*DT;
+    _imu_state.linear_velocity[1] = q.ay*DT;
+    _imu_state.linear_velocity[2] = q.az*DT;
+    _imu_state.linear_velocity[0] = q.vx;
+    _imu_state.linear_velocity[1] = q.vy;
+    _imu_state.linear_velocity[2] = q.vz;
+    _imu_state.linear_velocity = _imu_state.orientation * _imu_state.linear_velocity;
+
+    // determine position (using OSG)
+    _imu_state.position[0] += _imu_state.linear_velocity[0]*DT;
+    _imu_state.position[1] += _imu_state.linear_velocity[1]*DT;
+    _imu_state.position[2] += _imu_state.linear_velocity[2]*DT;
+    std::cout << _imu_state.position << std::endl;
   }
   
-  if (publish_pose_) {
+  if (_publish_pose) {
     
-    fprintf(stdout,"Publishing IMU data as PoseStamped.");
+    const tahrs& q = _imu->getAHRS();
     
-    tahrs q = imu_->getAHRS();
-    
-    ps.time = (q.time);
+    _ps.time = (q.time);
     
     float yaw = q.y;
     yaw+=M_PI;
     if (yaw > M_PI) yaw-=2*M_PI;
     
-    ps.orientation = Ravelin::Quatd::rpy(-q.r, q.p, -yaw);
+    _ps.orientation = Ravelin::Quatd::rpy(-q.r, q.p, -yaw);
+
+    // setup position
+    _ps.position = _imu_state.position; 
   }
   
   {
     
-    if (!imu_->pollGPS()) {
-      
-      fprintf(stderr,"GPS");
-      
+    if (!_imu->pollGPS()) 
+      std::cerr << "GPS" << std::endl;
+    
+    // get GPS data
+    const tgps& g = _imu->getGPS();
+    
+    if (g.lat_lon_valid && !_gps_fix_available) 
+    {
+      std::cout << "GPS fix available." << std::endl;
+      _gps_fix_available = true;
     }
     
-    tgps g;
-    g = imu_->getGPS();
-    
-    if (!g.lat_lon_valid) fprintf(stdout,"GPS fix not available.");
-    
-    if (g.lat_lon_valid && !gps_fix_available_) {
-      
-      fprintf(stdout,"GPS fix available.");
-      gps_fix_available_ = true;
-      
+    if (!g.lat_lon_valid && _gps_fix_available) 
+    {
+      std::cout << "GPS fix lost." << std::endl;
+      _gps_fix_available = false;
     }
     
-    if (!g.lat_lon_valid && gps_fix_available_) {
-      
-      fprintf(stdout,"GPS fix lost.");
-      gps_fix_available_ = false;
-      
-    }
-    
-    
-    if (gps_fix_available_) {
-      
-      if (gps_msg_cnt++==6*rate_) {
-        
+    if (_gps_fix_available) 
+    {
+      if (gps_msg_cnt++==6*_rate) 
+      {
         gps_msg_cnt = 0;
         
-        if (!g.lat_lon_valid) fprintf(stdout,"LAT/LON not valid.");
-        if (!g.hor_acc_valid) fprintf(stdout,"Horizontal accuracy not valid.");
-        else fprintf(stdout,"GPS horizontal accuracy: %f",g.horizontal_accuracy);
-        
+        if (!g.lat_lon_valid) std::cout << "LAT/LON not valid." << std::endl;
+        if (!g.hor_acc_valid) std::cout << "Horizontal accuracy not valid." << std::endl;
+        else 
+          std::cout << "GPS horizontal accuracy: " << g.horizontal_accuracy << std::endl;
       }
-      
-    }
-    
-  }
-  
-  if (publish_nav_fix_) {
-    
-    fprintf(stdout,"Publishing NAV as NavSatFix.");
-    
-    tnav n = imu_->getNAV();
-    
-    nav_fix.time = (n.time);
-    
-    nav_fix.latitude = n.est_latitude;
-    nav_fix.longitude = n.est_longtitude;
-    if (!zero_height_) nav_fix.altitude = n.est_height;
-    else nav_fix.altitude = 0.0;
-    
-    if (n.est_llh_valid) nav_fix.fix_status = true;
-    else  nav_fix.fix_status = false;
-    
-    if (n.est_pos_unc_valid) {
-      nav_fix.covariance_status = true;
-      nav_fix.position_covariance(0,0) = pow(n.est_north_pos_unc,2);
-      nav_fix.position_covariance(1,1) = pow(n.est_east_pos_unc,2);
-      nav_fix.position_covariance(2,2) = pow(n.est_down_pos_unc,2);
-    } else {
-      nav_fix.covariance_status = false;
     }
   }
 }
+*/
 
-imuInterface::~imuInterface() {
-  
-  imu_->closePort();
-  
+IMUInterface::~IMUInterface() {
+  _imu->closePort();
 }
 
-imuInterface * node;
+/// TODO: enable this for testing calcFletcher(.) and checkFletcher(.)
+/*
+int main(int argc, char* argv[])
+{
+  std::vector<char> msg;
 
+  // setup the message
+  msg.push_back(2);
+  msg.push_back(17);
+  msg.push_back(52);
+  msg.push_back(9);
+  msg.push_back(121);
+  msg.push_back(42);
+  msg.push_back(110);
+  msg.push_back(12);
+  msg.push_back(62);
+  msg.push_back(36);
+
+  IMU::calcFletcher(msg);
+  std::cout << "Fletcher checksum: " << ((int) msg[msg.size()-2]) << " " << ((int) msg.back()) << std::endl;
+
+  // construct an example return packet (protocol documentation PDF, p. 13)
+  msg.clear();
+  msg.push_back(0x75);
+  msg.push_back(0x65);
+  msg.push_back(0x01);
+  msg.push_back(0x04);
+  msg.push_back(0x04);
+  msg.push_back(0xF1);
+  msg.push_back(0x01);
+  msg.push_back(0x00);
+  msg.push_back(0xD5);
+  msg.push_back(0x6A);
+  std::cout << "Fletcher checks out? " << IMU::checkFletcher(msg) << std::endl; 
+}
+*/
+
+/// Gets the pose
+Pose IMUInterface::getPose()
+{
+  Pose p;
+  p.position = _imu->get_position();
+  p.orientation = _imu->get_orientation(); 
+  return p;
+}
+
+/// TODO: do something here... 
+void IMUInterface::update()
+{
+  // get IMU data if it is available 
+  Pose ps = getPose();
+}
+
+
+IMUInterface *node;
+
+// called by the plugin
 void loop(){
   node->update();
 }
 
+// called by the plugin
 void setup()
 {
-  node = new imuInterface();
+  // setup the polling frequency (Hz)
+  const int UPDATE_FREQ = 1000; 
+
+  // create the IMU interface
+  node = new IMUInterface(UPDATE_FREQ);
 
   fprintf(stdout,"Initializing.");
   if (!node->init()) {
@@ -369,3 +354,4 @@ void setup()
   
   fprintf(stdout,"Initialization completed.");
 }
+

@@ -25,6 +25,7 @@ Controller::Controller(): Robot(){
 }
 
 Controller::~Controller(){
+  Utility::visualize.clear();
   close_all_plugins();
 }
 

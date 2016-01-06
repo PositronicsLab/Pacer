@@ -51,7 +51,7 @@ class Pose : public Visualizable{
 public:
   double shade;
   Ravelin::Pose3d pose;
-  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.001){
+  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1){
     pose = Ravelin::Pose3d();
     eType = ePose;
     shade = sd;

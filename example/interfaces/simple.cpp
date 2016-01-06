@@ -15,15 +15,15 @@
 
 #include <Pacer/utilities.h>
 
-#ifdef NDEBUG
+//#ifdef NDEBUG
 #define logging \
 if (1) ; \
 else std::cout
-#else
-#define logging \
-if (0) ; \
-else std::cout
-#endif
+//#else
+//#define logging \
+//if (0) ; \
+//else std::cout
+//#endif
 
 #define SSTR( x ) dynamic_cast< std::ostringstream & >( \
 ( std::ostringstream() << std::dec << x ) ).str()
@@ -110,12 +110,12 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
     argvs.push_back("-r");
   } else {
     // Output ot OSG files
-    //    argvs.push_back("-y=osg");
+        argvs.push_back("-y=osg");
     //    double capture_step = 0.01;
     //    int rate = capture_step / atof(step_size.c_str());
     //    rate = std::max(1,rate);
     //    argvs.push_back("-v="+SSTR(rate));
-    //    argvs.push_back("-v=0");
+        argvs.push_back("-v=0");
   }
   argvs.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
   argvs.push_back("model.xml");

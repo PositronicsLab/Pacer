@@ -17,19 +17,17 @@
 
 #include <Pacer/utilities.h>
 
-//#ifdef NDEBUG
-//#define logging \
-//if (0) ; \
-//else std::cout
-//#else
+#ifdef NDEBUG
 #define logging \
-if (0) ; \
+if (1) ; \
 else std::cout
-//#endif
+#else
+#define logging \
+if (1) ; \
+else std::cout
+#endif
 
-#define SSTR( x ) dynamic_cast< std::ostringstream & >( \
-( std::ostringstream() << std::dec << x ) ).str()
-
+#define SSTR( x ) (( std::ostringstream() << std::dec << x ) ).str()
 
 using Moby::Simulator;
 using Ravelin::RigidBodyd;
@@ -127,7 +125,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     logging << "Set coords to : " << q << std::endl;
 
   }
-   /*
+  /*
   if(vm.count("BODY0.x")){
     // Get base Pose
     Pose3d P_base(*(robot->get_base_link()->get_pose().get()));
@@ -138,13 +136,15 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     // update linear
     P_base.x = Ravelin::Origin3d(position[0],position[1],position[2]);
     // set angular
-    P_base.q = Ravelin::Quatd::rpy(position[3],position[4],position[5]);
+//    P_base.q = Ravelin::Quatd::rpy(position[3],position[4],position[5]);
+    P_base.q = Ravelin::Quatd(position[3],position[4],position[5],position[6]);
     // apply changes
     robot->get_base_link()->set_pose(P_base);
   }
   // Update robot state
-*/
   robot->update_link_poses();
+   */
+
   // Joints
   BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
     if(vm.count(jp->joint_id+".x")){
@@ -367,11 +367,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   if (vm.count("pipe")) {
     fd1 = vm["pipe"].as<int>();
     logging << "Sample output FD: " << fd1 << std::endl;
-    char * buf = "abcdefghij";
-    write(fd1, buf, 10);
-    logging << "EXITING: " << std::endl;
-    exit(0);
-    logging << "EXITED: " << std::endl;
   } else {
     fprintf(stderr,"Sample with PID: %d did not get a port fd", pid);
   }
@@ -415,12 +410,12 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   if (vm.count("display")) {
     argvs.push_back("-r");
   } else {
-//    argvs.push_back("-y=osg");
+    argvs.push_back("-y=osg");
 //    double capture_step = 0.01;
 //    int rate = capture_step / atof(step_size.c_str());
 //    rate = std::max(1,rate);
 //    argvs.push_back("-v="+SSTR(rate));
-//    argvs.push_back("-v=0");
+    argvs.push_back("-v=0");
   }
   argvs.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
   argvs.push_back("model.xml");
@@ -441,11 +436,13 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   
   logging << "Moby Started: " << std::endl;
 
-  return;
   // clean up argv
-  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
-        delete [] moby_argv[i];
-  }
+//  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
+//    delete[] moby_argv[i];
+//  }
+//  delete[] moby_argv;
+
+  return;
 }
 
 
@@ -459,12 +456,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
 
 int main(int argc, char* argv[]){
   logging << " -- Sample Started -- " << std::endl;
-  
-  for (int i=0; i<argc; i++) {
-    std::cout << argv[i] << " ";
-  }
-  std::cout << std::endl;
-  
 
   // Cet this process's PID for debugging
   pid = getpid();
@@ -534,29 +525,31 @@ int main(int argc, char* argv[]){
     logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc, argv,robot);
-    stop_sim = !Moby::step(sim);
+      stop_sim = !Moby::step(sim);
     logging << "Simulation at time: t = " << sim->current_time <<  std::endl;
   }
   
   /*
    *  Collecting final data
    */
-//  {
-//    Ravelin::VectorNd q,qd;
-//    robot->get_generalized_coordinates_euler(q);
-//    logging << "q2 = " << q << std::endl;
-//    
-//    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
-//    logging << "qd2 = " << qd << std::endl;
-//  }
+  Ravelin::VectorNd q,qd;
+  robot->get_generalized_coordinates_euler(q);
+  logging << "q2 = " << q << std::endl;
   
+  std::ostringstream oss;
+  oss << std::dec << sim->current_time << " ";
+  for (int i=q.rows()-7; i<q.rows() ;i++) {
+    oss << q[i] << " ";
+  }
+  std::string str = oss.str();
+  write(fd1, str.c_str(), str.length());
+  close(fd1);
+  
+  robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
+  logging << "qd2 = " << qd << std::endl;
+
   // Clean up Moby
   Moby::close();
-  
-  int sim_elapsed_time = sim->current_time * 1.0e6;
-  
-  close(fd1);
 
-  _exit(sim_elapsed_time);
-  return sim_elapsed_time;
+  return 0;
 }

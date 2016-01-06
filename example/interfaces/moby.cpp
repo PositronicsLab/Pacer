@@ -272,7 +272,27 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     OUT_LOG(logINFO) << "MOBY: control: " << control_force;
   }
   }
-
+    
+  Ravelin::VectorNd base_control(6);
+  if(false && robot_ptr->get_data<Ravelin::VectorNd>("base-control",base_control) ){
+    for(int i=0;i<6;i++)
+      control_force[num_joint_dof+i] = base_control[i];
+    OUT_LOG(logINFO) << "MOBY: base control: " << control_force.segment(num_joint_dof,num_joint_dof+6);
+  }
+  
+  Ravelin::VectorNd base_update(7);
+  if( robot_ptr->get_data<Ravelin::VectorNd>("base-state",base_update) ){
+    Ravelin::VectorNd generalized_q;
+    abrobot->get_generalized_coordinates_euler(generalized_q);
+    //static Ravelin::VectorNd first_generalized_q = generalized_q;
+//    for(int i=0;i<3;i++)
+//      generalized_q[num_joint_dof+i] = first_generalized_q[num_joint_dof+i] + base_update[i];
+    for(int i=3;i<7;i++)
+      generalized_q[num_joint_dof+i] = base_update[i];
+    generalized_q[num_joint_dof+2] = base_update[2] + 1;
+    OUT_LOG(logINFO) << "MOBY: base state update: " << base_update;
+    abrobot->set_generalized_coordinates_euler(generalized_q);
+  }
   robot_ptr->reset_state();
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
   for(int i=0;i<eef_names.size();i++)

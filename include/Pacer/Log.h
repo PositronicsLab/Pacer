@@ -13,7 +13,17 @@
 
 inline std::string NowTime();
 
-enum TLogLevel { logNONE, logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
+typedef int TLogLevel;
+static const TLogLevel
+  logNONE    = 0,
+  logERROR   = 1,
+  logWARNING = 2,
+  logINFO    = 3,
+  logDEBUG   = 4,
+  logDEBUG1  = 5,
+  logDEBUG2  = 6,
+  logDEBUG3  = 7,
+  logDEBUG4  = 8;
 
 
 class Logger
@@ -35,13 +45,14 @@ private:
 
 inline Logger::Logger()
 {
+  
 }
 
 inline std::ostringstream& Logger::Get(TLogLevel level)
 {
-//    os << "- " << NowTime();
-//    os << " " << ToString(level) << ": ";
-    os << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
+    os << "- " << NowTime();
+    os << " " << ToString(level) << ": ";
+    os << std::string( (level > logDEBUG) ? (level - logDEBUG) : 0, '\t');
     return os;
 }
 
@@ -50,9 +61,8 @@ inline Logger::~Logger()
 #ifdef LOG_TO_FILE
     os << std::endl;
     FILE * pFile;
-    pFile = fopen ("out.log","a");
+    pFile = fopen("out.log","a");
     fprintf(pFile, "%s", os.str().c_str());
-    fflush(pFile);
     fclose (pFile);
 //#else
 //    fprintf(stdout, "%s", os.str().c_str());
@@ -62,7 +72,7 @@ inline Logger::~Logger()
 
 inline TLogLevel& Logger::ReportingLevel()
 {
-    static TLogLevel reportingLevel = logDEBUG4;
+    static TLogLevel reportingLevel;
     return reportingLevel;
 }
 

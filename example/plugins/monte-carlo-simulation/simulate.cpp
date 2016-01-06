@@ -147,6 +147,7 @@ struct SampleConditions{
   int     pipe_fd[2];
 };
 
+std::vector<Ravelin::Pose3d> completed_poses;
 std::map<pid_t, SampleConditions> sample_processes;
 //-----------------------------------------------------------------------------
 // Signal Handling : Simulation process exit detection and
@@ -162,28 +163,43 @@ void exit_sighandler( int signum, siginfo_t* info, void* context ) {
   {
     SampleConditions& sc = it->second;
     char buf[256];
+    FILE * file_stream = fdopen(sc.pipe_fd[0],"r");
     read(sc.pipe_fd[0], buf, 256);
     close(sc.pipe_fd[0]);
     std::string message(buf);
-    std::cout << "Process " << info->si_pid << " output message: " << message << std::endl;
+    std::vector<std::string> values;
+    boost::split(values, message, boost::is_any_of(" "));
+//    std::cout << "Process " << info->si_pid << " output message: " << message << std::endl;
     double start_time = sc.start_time;
+    double time_elapsed = atof(values[0].c_str());
+    completed_poses.push_back(Ravelin::Pose3d(Ravelin::Quatd(atof(values[4].c_str()), atof(values[5].c_str()), atof(values[6].c_str()), atof(values[7].c_str())),
+                      Ravelin::Origin3d( atof(values[1].c_str()), atof(values[2].c_str()), atof(values[3].c_str()))));
+    std::cout << "Sim ("<< info->si_pid <<") timeline: " << start_time << "  |======" << time_elapsed << "======>  " << (start_time+time_elapsed) << std::endl;
+//    Ravelin::Origin3d rpy;
+//    completed_poses.back().q.to_rpy(rpy);
+//    std::cout << "Sim ("<< info->si_pid <<") Orientation: " << rpy << std::endl;
+    
   }
   sample_processes.erase(it);
 #ifdef USE_THREADS
   pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
-//  std::cout << "Sim ("<< info->si_pid <<") timeline: " << sim_start_time << "  |======" << time_elapsed << "======>  " << expected_quit_time << std::endl;
-  std::cout << "Sim ("<< info->si_pid <<") exited!" << std::endl;
+//  std::cout << "Sim ("<< info->si_pid <<") exited!" << std::endl;
 }
 
 
 std::vector<std::string> SAMPLE_ARGV;
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
-std::string SAMPLE_BIN = "sample.bin",TASK_PATH = "./";
+std::string TASK_PATH = "./";
 
 struct sigaction action;
 long long unsigned int sample_idx=0;
 void loop(){
+  for (int i=0; i<completed_poses.size(); i++) {
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
+  }
+
+  
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   if(sample_idx<=NUM_SAMPLES){
     OUT_LOG(logINFO) << "Active processes: " << sample_processes.size() << " out of " << NUM_THREADS << " allowed simultaneous processes.";
@@ -256,7 +272,7 @@ void loop(){
       SampleConditions sc;
       sc.start_time = t;
       pipe(sc.pipe_fd);
-      std::cout << "Sample output FDs: " << sc.pipe_fd[1] << " --> " << sc.pipe_fd[0] << std::endl;
+      OUT_LOG(logDEBUG)  << "Sample output FDs: " << sc.pipe_fd[1] << " --> " << sc.pipe_fd[0] << std::endl;
       OUT_LOG(logDEBUG) << "Forking Process!";
       
       // Run each sample as its own process
@@ -287,11 +303,11 @@ void loop(){
         SAMPLE_ARGV.insert(SAMPLE_ARGV.end(), PARAMETER_ARGV.begin(), PARAMETER_ARGV.end());
         
         char* const* exec_argv = param_array(SAMPLE_ARGV);
-        OUT_LOG(logINFO) << "Executing " << SAMPLE_BIN << " with arguments:\n\t" << SAMPLE_ARGV << std::endl;
         OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
+        OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_ARGV << std::endl;
         
         chdir(TASK_PATH.c_str());
-        execv( SAMPLE_BIN.c_str() , exec_argv );
+        execv( SAMPLE_ARGV.front().c_str() , exec_argv );
         ///////////////////////////////////////////////////
         /// ---------- EXIT CHILD PROCESS ------------- ///
         ///////////////////////////////////////////////////
@@ -342,7 +358,7 @@ void loop(){
     action.sa_sigaction = NULL;  // might not be SIG_DFL
     sigaction( SIGCHLD, &action, NULL );
     // close self
-    ctrl->close_plugin(plugin_namespace);
+//    ctrl->close_plugin(plugin_namespace);
     return;
   }
 }
@@ -365,6 +381,7 @@ void setup(){
   
   create_distributions();
   
+  std::string SAMPLE_BIN("sample.bin");
   ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
   ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
   ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BIN);
@@ -378,6 +395,17 @@ void setup(){
   
   OUT_LOG(logDEBUG) << "MC-Simulation executable: " << SAMPLE_BIN;
   
+//#ifdef __LINUX__
+//  SAMPLE_ARGV.push_back("nice");
+//  SAMPLE_ARGV.push_back("-n");
+//  SAMPLE_ARGV.push_back("20");
+//#else
+//  // Start process with niceness
+//  SAMPLE_ARGV.push_back("nice");
+//  SAMPLE_ARGV.push_back("-n");
+//  SAMPLE_ARGV.push_back("20");
+//#endif
+
   SAMPLE_ARGV.push_back(SAMPLE_BIN);
   SAMPLE_ARGV.push_back("--duration");
   

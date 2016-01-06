@@ -8,9 +8,10 @@ using namespace boost;
 #include "../plugin.h"
 
 IMUInterface::IMUInterface(int rate){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
    // set some reasonable values 
-  _port = "/dev/ttyACM0"; 
+  _port = ctrl->get_data<std::string>(plugin_namespace+".port"); 
   _baud_rate = 115200;
   _rate  = rate; 
   assert(rate <= 1000); 
@@ -334,7 +335,36 @@ IMUInterface *node;
 
 // called by the plugin
 void loop(){
-  node->update();
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+ // node->update();
+  Pose ps = node->getPose();
+  static Ravelin::Origin3d p1 = ps.position,p2;
+  static Ravelin::Matrix3d R1 = Ravelin::Matrix3d(ps.orientation), R2;
+  
+  p2 = ps.position;
+  R2 = Ravelin::Matrix3d(ps.orientation);
+  
+  {
+    Ravelin::Origin3d dp = p2 - p1;
+    Ravelin::Matrix3d dR = R2 - R1;
+    Ravelin::Origin3d dr(dR(2,1),dR(0,2),dR(1,0));
+    Ravelin::VectorNd control = Ravelin::VectorNd::zero(6);
+    control.segment(0,3) = dp * 10000.0;
+    control.segment(3,6) = dr * 500.0;
+    ctrl->set_data<Ravelin::VectorNd>("base-control",control);
+  }
+  {  
+    Ravelin::VectorNd state = Ravelin::VectorNd::zero(7);
+    state.segment(0,3) = p2;
+    state[3] = ps.orientation.x;
+    state[4] = ps.orientation.y;
+    state[5] = ps.orientation.z;
+    state[6] = ps.orientation.w;
+    ctrl->set_data<Ravelin::VectorNd>("base-state",state);
+  }
+  p1 = p2;
+  R1 = R2;
+  
 }
 
 // called by the plugin

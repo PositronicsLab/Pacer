@@ -51,7 +51,7 @@ namespace Pacer{
       const std::string LOG_TYPE = get_data<std::string>("logging");
       OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
       FILELog::ReportingLevel() =
-      FILELog::FromString( (!LOG_TYPE.empty()) ? LOG_TYPE : "ERROR");
+      FILELog::FromString( (!LOG_TYPE.empty() ) ? LOG_TYPE : "INFO");
       // ================= INIT ROBOT ==========================
       init_robot();
       // After Robot loads, load plugins

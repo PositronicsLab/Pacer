@@ -26,12 +26,12 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static int ITER = 0;
   int RTF = (int) ctrl->get_data<double>(plugin_namespace+".real-time-factor");
   if(ITER%RTF == 0){
-    try {
+//    try {
       loop();
-    } catch (std::exception& e) {
-      ctrl_weak_ptr.reset();
-      throw std::runtime_error(e.what());
-    }
+//    } catch (std::exception& e) {
+//      ctrl_weak_ptr.reset();
+//      throw std::runtime_error(e.what());
+//    }
   }
   ITER+=1;
 }

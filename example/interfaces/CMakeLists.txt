@@ -64,6 +64,10 @@ IF(DXL_FOUND)
 ENDIF(DXL_FOUND)
 ENDIF(USE_DXL)
 
+add_executable(PacerHardwareDriver ${CMAKE_SOURCE_DIR}/example/interfaces/hardware.cpp)
+target_link_libraries(PacerHardwareDriver ${REQLIBS})
+target_link_libraries(PacerHardwareDriver ServoController)
+
 # simple example
 add_executable(pacer-driver ${CMAKE_SOURCE_DIR}/example/interfaces/simple.cpp)
 target_link_libraries(pacer-driver Pacer Moby Ravelin MobyDriver boost_program_options )

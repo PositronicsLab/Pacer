@@ -9,7 +9,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 # setup include directories
-include_directories("include")
+include_directories( include
+                    /usr/local/include )
 set(PROJECT_SRC_DIR ./src)
 
 #find BOOST libraries

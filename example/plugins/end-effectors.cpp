@@ -23,17 +23,28 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   for(unsigned i=0;i<eef_names_.size();i++){
     Ravelin::Origin3d xd,xdd;
-    
+    //angular
+    Ravelin::Origin3d rpy,axd,axdd;
+   
+
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J = ctrl->calc_link_jacobian(local_q,eef_names_[i]);
     
     // Now that model state is set ffrom jacobian calculation
     const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
+   
+    
+    Ravelin::Pose3d foot_pose(Ravelin::Quatd(),Ravelin::Origin3d,link->get_pose());
+    foot_pose.update_relative_pose(Pacer::GLOBAL);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));
+    
     Ravelin::Origin3d x(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
     bool new_var = ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.x",x);
     
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qd,xd);
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qdd,xdd);
+    J.block(3,6,0,NUM_JOINT_DOFS).mult(qd,axd);
+    J.block(3,6,0,NUM_JOINT_DOFS).mult(qdd,axdd);
     
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xd",xd);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xdd",xdd);

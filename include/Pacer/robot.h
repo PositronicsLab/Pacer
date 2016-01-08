@@ -867,24 +867,24 @@ namespace Pacer{
       OUT_LOG(logDEBUG) << "Set: foot "<< id <<"_" << enum_string(u) << " <-- " << val;
       check_phase(u);
 #ifdef USE_THREADS
-      pthread_mutex_lock(&_foot_state_mutex);
+      pthread_mutex_lock(&_state_mutex);
 #endif
       _foot_state[u][id] = val;
       _foot_is_set[id] = true;
       
 #ifdef USE_THREADS
-      pthread_mutex_unlock(&_foot_state_mutex);
+      pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
     Ravelin::Origin3d& get_foot_value(const std::string& id, unit_e u, Ravelin::Origin3d& val)
     {
 #ifdef USE_THREADS
-      pthread_mutex_lock(&_foot_state_mutex);
+      pthread_mutex_lock(&_state_mutex);
 #endif
       val = _foot_state[u][id];
 #ifdef USE_THREADS
-      pthread_mutex_unlock(&_foot_state_mutex);
+      pthread_mutex_unlock(&_state_mutex);
 #endif
       OUT_LOG(logDEBUG) << "Get: foot "<< id <<"_" << enum_string(u) << " --> " << val;
       return val;
@@ -902,7 +902,7 @@ namespace Pacer{
     {
       check_phase(u);
 #ifdef USE_THREADS
-      pthread_mutex_lock(&_foot_state_mutex);
+      pthread_mutex_lock(&_state_mutex);
 #endif
       std::map<std::string, Ravelin::Origin3d >::const_iterator it;
       for (it=val.begin(); it != val.end(); it++) {
@@ -914,14 +914,14 @@ namespace Pacer{
         }
       }
 #ifdef USE_THREADS
-      pthread_mutex_unlock(&_foot_state_mutex);
+      pthread_mutex_unlock(&_state_mutex);
 #endif
     }
     
     std::map<std::string,Ravelin::Origin3d>& get_foot_value(unit_e u, std::map<std::string,Ravelin::Origin3d>& val)
     {
 #ifdef USE_THREADS
-      pthread_mutex_lock(&_foot_state_mutex);
+      pthread_mutex_lock(&_state_mutex);
 #endif
       std::map<std::string, Ravelin::Origin3d >::iterator it;
       for (it=_foot_state[u].begin(); it != _foot_state[u].end(); it++) {
@@ -929,7 +929,7 @@ namespace Pacer{
         val[(*it).first] = (*it).second;
       }
 #ifdef USE_THREADS
-      pthread_mutex_unlock(&_foot_state_mutex);
+      pthread_mutex_unlock(&_state_mutex);
 #endif
       return val;
     }

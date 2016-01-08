@@ -281,7 +281,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   }
   
   Ravelin::VectorNd base_update(7);
-  if( robot_ptr->get_data<Ravelin::VectorNd>("base-state",base_update) ){
+  if(false && robot_ptr->get_data<Ravelin::VectorNd>("base-state",base_update) ){
     Ravelin::VectorNd generalized_q;
     abrobot->get_generalized_coordinates_euler(generalized_q);
     //static Ravelin::VectorNd first_generalized_q = generalized_q;
@@ -289,7 +289,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 //      generalized_q[num_joint_dof+i] = first_generalized_q[num_joint_dof+i] + base_update[i];
     for(int i=3;i<7;i++)
       generalized_q[num_joint_dof+i] = base_update[i];
-    generalized_q[num_joint_dof+2] = base_update[2] + 1;
     OUT_LOG(logINFO) << "MOBY: base state update: " << base_update;
     abrobot->set_generalized_coordinates_euler(generalized_q);
   }

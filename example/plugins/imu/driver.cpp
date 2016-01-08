@@ -1012,12 +1012,12 @@ void IMU::readFromAHRSStream()
   _xdd[2] = data.az;
 
   // update angular velocity
-  _omega[0] = data.gx;
+  _omega[0] = -data.gx;
   _omega[1] = data.gy;
-  _omega[2] = data.gz;
+  _omega[2] = -data.gz;
 
   // update the orientation
-  _quat = Ravelin::Quatd::rpy(data.r, data.p, data.y);
+  _quat = Ravelin::Quatd::rpy(-data.r, data.p, -data.y);
 
   // update the acceleration to the global frame
   _xdd = _quat * _xdd;

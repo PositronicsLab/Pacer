@@ -333,16 +333,21 @@ void IMUInterface::update()
 
 IMUInterface *node;
 
+Ravelin::Transform3d imu_transform;
 // called by the plugin
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
  // node->update();
   Pose ps = node->getPose();
-  static Ravelin::Origin3d p1 = ps.position,p2;
-  static Ravelin::Matrix3d R1 = Ravelin::Matrix3d(ps.orientation), R2;
+  Ravelin::Pose3d imu_pose(ps.orientation,ps.position,Pacer::GLOBAL);
   
-  p2 = ps.position;
-  R2 = Ravelin::Matrix3d(ps.orientation);
+  Ravelin::Pose3d robot_pose = imu_transform.inverse_transform(imu_pose);
+  
+  static Ravelin::Origin3d p1 = robot_pose.x,p2;
+  static Ravelin::Matrix3d R1 = Ravelin::Matrix3d(robot_pose.q), R2;
+  
+  p2 = robot_pose.x;
+  R2 = Ravelin::Matrix3d(robot_pose.q);
   
   {
     Ravelin::Origin3d dp = p2 - p1;
@@ -356,10 +361,10 @@ void loop(){
   {  
     Ravelin::VectorNd state = Ravelin::VectorNd::zero(7);
     state.segment(0,3) = p2;
-    state[3] = ps.orientation.x;
-    state[4] = ps.orientation.y;
-    state[5] = ps.orientation.z;
-    state[6] = ps.orientation.w;
+    state[3] = robot_pose.q.x;
+    state[4] = robot_pose.q.y;
+    state[5] = robot_pose.q.z;
+    state[6] = robot_pose.q.w;
     ctrl->set_data<Ravelin::VectorNd>("base-state",state);
   }
   p1 = p2;
@@ -370,8 +375,16 @@ void loop(){
 // called by the plugin
 void setup()
 {
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  static std::vector<double> pose_vec(6);
+  ctrl->get_data<std::vector<double> >(plugin_namespace+".pose",pose_vec);
+  imu_transform = Ravelin::Transform3d
+     (Ravelin::Quatd::rpy(pose_vec[3],pose_vec[4],pose_vec[5]),
+      Ravelin::Origin3d(pose_vec[0],pose_vec[1],pose_vec[2]));
+
+
   // setup the polling frequency (Hz)
-  const int UPDATE_FREQ = 1000; 
+  const int UPDATE_FREQ =  ctrl->get_data<int>(plugin_namespace+".rate"); 
 
   // create the IMU interface
   node = new IMUInterface(UPDATE_FREQ);

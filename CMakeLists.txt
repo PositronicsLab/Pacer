@@ -66,6 +66,8 @@ ENDIF(SPLITTING_METHOD)
 # end 
 IF(USE_THREADS)
   add_definitions(-DUSE_THREADS)
+  set (REQLIBS ${REQLIBS} pthread)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ENDIF(USE_THREADS)
 
 IF(LOGGING)

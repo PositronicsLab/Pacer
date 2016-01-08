@@ -64,7 +64,7 @@ IF(DXL_FOUND)
 ENDIF(DXL_FOUND)
 ENDIF(USE_DXL)
 
-add_executable(PacerHardwareDriver ${CMAKE_SOURCE_DIR}/example/interfaces/hardware.cpp)
+add_executable(PacerHardwareDriver ${CMAKE_SOURCE_DIR}/example/interfaces/arduino.cpp)
 target_link_libraries(PacerHardwareDriver ${REQLIBS})
 target_link_libraries(PacerHardwareDriver ServoController)
 

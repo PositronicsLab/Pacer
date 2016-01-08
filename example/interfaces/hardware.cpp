@@ -39,14 +39,15 @@ void init(std::string model_f,std::string vars_f){
   COMMAND.resize(IDS.size());
   
   std::map<std::string,Ravelin::VectorNd> joint_pos_map;
-  robot_ptr->get_joint_value(Pacer::Robot::position,joint_pos_map);
+  robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
   for(int i=0;i<IDS.size();i++){
-    COMMAND[i] = joint_pos_map[NAMES[i]][0];
+    COMMAND[i] = joint_pos_map[NAMES[i]][0] + TARE[IDS[i]];
   }
   
 #ifdef USE_THREADS
   pthread_mutex_unlock(&command_mutex_);;
 #endif
+  loop();
   
 #ifdef USE_THREADS
   const char *message;
@@ -99,7 +100,7 @@ void controller(double t)
       std::map<std::string,Ravelin::VectorNd> joint_pos_map;
       robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
       for(int i=0;i<NAMES.size();i++){
-        COMMAND[i] = joint_pos_map[NAMES[i]][0] + TARE[IDS[i]];
+        COMMAND[i] = sin(t * 16.0) * M_PI/8.0; //joint_pos_map[NAMES[i]][0] + TARE[IDS[i]];
       }
     }
 #ifdef USE_THREADS

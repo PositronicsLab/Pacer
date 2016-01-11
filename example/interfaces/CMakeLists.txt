@@ -52,7 +52,6 @@ ENDIF(USE_GAZEBO)
 
 add_executable(PacerMotorDriver ${CMAKE_SOURCE_DIR}/example/interfaces/motor.cpp)
 target_link_libraries(PacerMotorDriver ${REQLIBS})
-
 option(USE_DXL "use dynamixel motor driver for motor control?" OFF)
 # look for DXL
 IF(USE_DXL)
@@ -66,7 +65,11 @@ ENDIF(USE_DXL)
 
 add_executable(PacerHardwareDriver ${CMAKE_SOURCE_DIR}/example/interfaces/arduino.cpp)
 target_link_libraries(PacerHardwareDriver ${REQLIBS})
-target_link_libraries(PacerHardwareDriver ServoController)
+option(USE_ARDUINO "use dynamixel motor driver for motor control?" OFF)
+IF(USE_ARDUINO)
+  add_definitions(-DUSE_ARDUINO)
+  target_link_libraries(PacerHardwareDriver ServoController)
+ENDIF(USE_ARDUINO)
 
 # simple example
 add_executable(pacer-driver ${CMAKE_SOURCE_DIR}/example/interfaces/simple.cpp)

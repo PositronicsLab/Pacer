@@ -203,7 +203,8 @@ void controller(double t)
       std::map<std::string,Ravelin::VectorNd> joint_pos_map;
       robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
       for(int i=0;i<NAMES.size();i++){
-        COMMAND[i] = sin(t * 16.0) * M_PI/8.0; //joint_pos_map[NAMES[i]][0] + TARE[IDS[i]];
+        //COMMAND[i] = sin(t * 16.0) * M_PI/8.0; //joint_pos_map[NAMES[i]][0] + TARE[IDS[i]];
+        COMMAND[i] = joint_pos_map[NAMES[i]][0] + TARE[IDS[i]];
       }
     }
 #ifdef USE_THREADS

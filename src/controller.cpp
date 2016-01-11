@@ -75,7 +75,8 @@ bool Controller::init_plugin(const std::string& plugin_name){
   OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();
   OUT_LOG(logINFO) << "\tPATH: " << pPath.c_str();
   // attempt to read the file
-  void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
+  //void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
+  void* HANDLE = dlopen(lib_path.c_str(), RTLD_NOW);
   if (!HANDLE)
   {
     std::cerr << "driver: failed to read plugin from " << filename << std::endl;

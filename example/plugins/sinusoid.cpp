@@ -9,10 +9,10 @@
 #include "plugin.h"
 using namespace Ravelin;
 
+  VectorNd q_init;
+  int N;
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  VectorNd q_init = ctrl->get_data<Ravelin::VectorNd>("init.q");
-  const int N = q_init.size();
   VectorNd q_goal   = Ravelin::VectorNd::zero(N);
   VectorNd qd_goal  = Ravelin::VectorNd::zero(N);
   VectorNd qdd_goal = Ravelin::VectorNd::zero(N);
@@ -36,4 +36,7 @@ void loop(){
 
 void setup(){
   OUT_LOG(logINFO) << "INITING SINUSOID";
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  q_init = ctrl->get_data<Ravelin::VectorNd>("init.q");
+  N = q_init.size();
 }

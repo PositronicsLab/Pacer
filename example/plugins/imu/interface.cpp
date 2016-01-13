@@ -356,7 +356,7 @@ void loop(){
     Ravelin::VectorNd control = Ravelin::VectorNd::zero(6);
     control.segment(0,3) = dp * 10000.0;
     control.segment(3,6) = dr * 500.0;
-    ctrl->set_data<Ravelin::VectorNd>("base-control",control);
+//    ctrl->set_data<Ravelin::VectorNd>("base-control",control);
   }
   {  
     Ravelin::VectorNd state = Ravelin::VectorNd::zero(7);
@@ -365,7 +365,10 @@ void loop(){
     state[4] = robot_pose.q.y;
     state[5] = robot_pose.q.z;
     state[6] = robot_pose.q.w;
-    ctrl->set_data<Ravelin::VectorNd>("base-state",state);
+  //  ctrl->set_data<Ravelin::VectorNd>("base-state",state);
+    double time_now = -1;
+    ctrl->get_data<double>("trajectory.time",time_now);
+    std::cerr << time_now << " " << state << std::endl;
   }
   p1 = p2;
   R1 = R2;

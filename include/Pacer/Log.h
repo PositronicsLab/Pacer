@@ -56,12 +56,21 @@ inline std::ostringstream& Logger::Get(TLogLevel level)
     return os;
 }
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 inline Logger::~Logger()
 {
 #ifdef LOG_TO_FILE
     os << std::endl;
     FILE * pFile;
-    pFile = fopen("out.log","a");
+    static int pid = getpid();
+    char buffer[9];
+    sprintf(buffer,"%06d",pid);
+    static std::string name("out-"+std::string(buffer)+".log");
+    pFile = fopen(name.c_str(),"a");
     fprintf(pFile, "%s", os.str().c_str());
     fclose (pFile);
 //#else

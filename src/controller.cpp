@@ -131,13 +131,15 @@ bool Controller::init_all_plugins(){
 void Controller::control(double t){
     OUT_LOG(logDEBUG) << ">> Controller::control(.)";
   // Import Robot Data
+  static long long unsigned int iter = 0;
   static double last_time = -0.001;
   const double dt = t - last_time;
   
   OUTLOG(t,"virtual_time",logINFO);
   OUTLOG(dt,"virtual_time_step",logINFO);
   increment_phase(INITIALIZATION);
-  update();
+  //if(iter == 0)
+   update();
   increment_phase(PERCEPTION);
 #ifdef USE_PLUGINS
   update_plugins(t);
@@ -145,6 +147,8 @@ void Controller::control(double t){
   increment_phase(WAITING);
   reset_contact();
   last_time = t;
+
+  iter++;
   OUT_LOG(logINFO) << "<< Controller::control(.)";
 }
 // ===========================  END CONTROLLER  ===============================

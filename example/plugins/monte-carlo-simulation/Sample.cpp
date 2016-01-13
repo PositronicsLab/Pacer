@@ -5,6 +5,8 @@
 #include <Ravelin/Transform3d.h>
 #include <Ravelin/Vector3d.h>
 
+#include <Moby/XMLWriter.h>
+
 #include <stdio.h>
 #include <set>
 #include <string.h>
@@ -36,9 +38,11 @@ using Ravelin::RCArticulatedBodyd;
 using Ravelin::Pose3d;
 using Ravelin::DynamicBodyd;
 using boost::shared_ptr;
+bool EXPORT_XML = false;
 unsigned SAMPLE_NUMBER = 0;
 int fd1 = 0;
 int pid = 0;
+double DURATION = 0;
 
 
 namespace Moby {
@@ -345,6 +349,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   desc.add_options()
   ("help", "produce help message")
   // INPUT BY EXPERIMENT
+  ("xml,y","Output XML model file for robot")
   ("sample", po::value<unsigned>(),"Sample Number")
   ("pipe", po::value<int>()->default_value(0),"Pipe fd (output side only 'fd1')")
   // INPUT BY USER
@@ -371,6 +376,9 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
     fprintf(stderr,"Sample with PID: %d did not get a port fd", pid);
   }
   
+  if (vm.count("xml")) {
+    EXPORT_XML = true;
+  }
   // Get sample number for output
   if (vm.count("sample")) {
     SAMPLE_NUMBER = vm["sample"].as<unsigned>();
@@ -393,7 +401,9 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   std::string
   step_size = vm["stepsize"].as<std::string>(),
   duration = vm["duration"].as<std::string>();
-  
+ 
+  DURATION = atof(duration.c_str());
+
   /*
    *  Moby Initialization
    */
@@ -516,12 +526,19 @@ int main(int argc, char* argv[]){
 //    logging << "qd1 = " << qd << std::endl;
 //  }
   
+  if(EXPORT_XML){
+     // write the file (fails silently)
+     char buffer[128];
+     sprintf(buffer, "model-%06u.xml", pid);
+     Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim);
+  }
+  
   /*
    *  Running experiment
    */
   logging << " -- Starting simulation -- " << std::endl;
   bool stop_sim = false;
-  while (!stop_sim) {
+  while (!stop_sim &&  sim->current_time < DURATION) {
     logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc, argv,robot);

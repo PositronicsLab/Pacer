@@ -3,6 +3,12 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
+#include <Pacer/controller.h>
+#include <time.h>
+
+
+using Pacer::Controller;
+using Pacer::Robot;
 /////////////////////////////////////////////////////////////////////
 ///////////////////////// MOTOR /////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -12,7 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef USE_ARDUINO
 #include <ServoController/ServoDriver.h>
+#endif 
 
 #include <boost/assign/list_of.hpp>
 #include <boost/assign/std/vector.hpp>
@@ -40,7 +48,9 @@ void get_data(){
     std::vector<double> pos(N), vel(N), torque(N);
     std::vector<int> recieved_ids(N);
     bool got_data = false;
-    got_data = getVal(recieved_ids,pos,vel,torque);
+#ifdef USE_ARDUINO
+    got_data = Arduino::getVal(recieved_ids,pos,vel,torque);
+#endif 
     if(got_data){
       printf(" ID |    POS    |    VEL    |    TOR    | \n");
       for(int i=0;i<N;i++)
@@ -61,10 +71,45 @@ double sleep_duration(double duration){
 std::string DEVICE_NAME;
 const int baud = 115200;
 
-void setup(){
+double TIME = 0.0;
+void control_arduino(){
+  
+  const int N = IDS.size();
+  const int Bps = ( baud / 10 );
+  const int Bytes = ( N * 3 ) ;
+  const double seconds_per_message = 0.001;//( 1.0 / ((double) Bps) ) * ((double)Bytes);
+#ifndef NDEBUG
+  for(int i=0;i<N;i++)
+    printf("%2.6f(%d)    ",COMMAND[i],IDS[i]);
+  printf("\n");
+#endif
+  // Use torque controller
+#ifdef USE_ARDUINO
+  Arduino::setVal(IDS,COMMAND);
+#endif
+  double remaining = sleep_duration(seconds_per_message);
+#ifndef NDEBUG
+  printf("TIME: %f + ( %f - %f )",TIME,seconds_per_message,remaining);
+  printf("\n");
+#endif
+  // only add time for time waited: subtract remaining time (rem)
+  TIME += seconds_per_message - remaining;
+}
+
+// ============================================================================
+// ================================ INIT ======================================
+// ============================================================================
+
+boost::shared_ptr<Controller> robot_ptr;
+unsigned NDOFS;
+
+void init(std::string model_f,std::string vars_f){
+  OUT_LOG(logDEBUG2) << "STARTING PACER" << std::endl;
+ 
+  // add tare values to map
   TARE[3] = -1.5709;
-  TARE[7] = 0;
-  TARE[11] = -1.5709;
+  TARE[7] = -1.5709;
+  TARE[11] = 0;
   
   std::vector<std::string> dxl_name = boost::assign::list_of
   /*("LF_X_1")("RF_X_1")("LH_X_1")*/("RH_X_1")
@@ -79,52 +124,9 @@ void setup(){
   IDS = dxl_ids;
   NAMES = dxl_name;
   
-  init(DEVICE_NAME.c_str(),baud);
-}
-
-double TIME = 0.0;
-void loop(){
-  
-  const int N = IDS.size();
-  const int Bps = ( baud / 10 );
-  const int Bytes = ( N * 3 ) ;
-  const double seconds_per_message = 0.005;//( 1.0 / ((double) Bps) ) * ((double)Bytes);
-  for(int i=0;i<N;i++)
-    printf("%2.6f(%d)    ",COMMAND[i],IDS[i]);
-  printf("\n");
-  
-  // Use torque controller
-  //setVal(IDS,COMMAND);
-
-  double remaining = sleep_duration(seconds_per_message);
-  printf("TIME: %f + ( %f - %f )",TIME,seconds_per_message,remaining);
-  printf("\n");
-  // only add time for time waited: subtract remaining time (rem)
-  TIME += seconds_per_message - remaining;
-}
-/****************************************************************************
- * Copyright 2014 Samuel Zapolsky
- * This library is distributed under the terms of the Apache V2.0
- * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
- ****************************************************************************/
-#include <Pacer/controller.h>
-#include <time.h>
-
-
-using Pacer::Controller;
-using Pacer::Robot;
-
-boost::shared_ptr<Controller> robot_ptr;
-unsigned NDOFS;
-
-// ============================================================================
-// ================================ INIT ======================================
-// ============================================================================
-
-void init(std::string model_f,std::string vars_f){
-  OUT_LOG(logDEBUG2) << "STARTING PACER" << std::endl;
-    
-  setup();
+#ifdef USE_ARDUINO
+  Arduino::init(DEVICE_NAME.c_str(),baud);
+#endif 
 
   /// Set up quadruped robot, linking data from moby's articulated body
   /// to the quadruped model used by Control-Moby
@@ -150,7 +152,6 @@ void init(std::string model_f,std::string vars_f){
 #ifdef USE_THREADS
   pthread_mutex_unlock(&command_mutex_);;
 #endif
-  loop();
   
 #ifdef USE_THREADS
   const char *message;
@@ -214,7 +215,7 @@ void controller(double t)
   
 #ifndef USE_THREADS
   OUT_LOG(logDEBUG2) << "call control_motor() from controller" << std::endl;
-  loop();
+  control_arduino();
 #endif
   last_t = t;
   

@@ -139,15 +139,15 @@ void init(std::string model_f,std::string vars_f){
   //    (0)(0)(0)(0)
   //    (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
   //    (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(-M_PI_2 );
   
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT+250);
-  dxl_->tare.push_back( M_PI_2 * MX_64R_RAD2UNIT+40);
+  dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(-M_PI_2 );
   
   dxl_->tare.push_back(0);
   dxl_->tare.push_back(0);
@@ -164,7 +164,7 @@ void init(std::string model_f,std::string vars_f){
   
   dxl_->stype = dxl_type;
   dxl_->ids.push_back(1);
-  dxl_->ids.push_back(100);
+  dxl_->ids.push_back(2);
   dxl_->ids.push_back(4);
   dxl_->ids.push_back(3);
   

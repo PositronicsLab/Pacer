@@ -5,10 +5,11 @@ if(BUILD_MONTECARLO)
 
   target_link_libraries(monte-carlo-simulation ${REQLIBS})
 
-  find_package (gsl QUIET)
+  find_package (GSL QUIET)
   IF(GSL_FOUND)
   add_definitions(-DUSE_GSL)
   include_directories(${GSL_INCLUDE_DIRS})
+  link_directories(${GSL_LIBRARY_DIRS})
   target_link_libraries(monte-carlo-simulation ${GSL_LIBRARIES})
   ENDIF(GSL_FOUND)
 

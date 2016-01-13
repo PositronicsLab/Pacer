@@ -6,7 +6,17 @@
 #include "random.h"
 #include <boost/algorithm/string.hpp>
 
-#define SSTR( x ) ( ( std::ostringstream() << std::dec << x ) ).str()
+#include <string>
+#include <sstream>
+//#define SSTR( x ) ( std::ostringstream() << std::dec << x ).str()
+
+template <typename T>
+static std::string SSTR(T x)
+{
+    std::ostringstream oss;
+    oss << std::dec << x;
+    return oss.str();
+}
 
 //                NAME                  DOF                 RANDOM VALUE        DEFAULT
 typedef std::pair<std::vector<boost::shared_ptr<Generator> >, std::vector<double> > ParamDefaultPair;
@@ -138,7 +148,7 @@ void create_distributions(){
 #ifdef USE_THREADS
 pthread_mutex_t _sample_processes_mutex;
 #else
-#pragma Y_Warning("This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.")
+#error This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
 #endif
 
 struct SampleConditions{
@@ -407,9 +417,16 @@ void setup(){
 //#endif
 
   SAMPLE_ARGV.push_back(SAMPLE_BIN);
-  SAMPLE_ARGV.push_back("--duration");
   
+  SAMPLE_ARGV.push_back("--duration");
   SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".duration")));
+  
+  bool EXPORT_XML = false;
+  ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
+  if(EXPORT_XML){
+    SAMPLE_ARGV.push_back("--xml");
+  }
+
   SAMPLE_ARGV.push_back("--stepsize");
   SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
   

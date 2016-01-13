@@ -36,10 +36,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     
     Ravelin::Pose3d foot_pose(Ravelin::Matrix3d(link->get_pose()->q)*Ravelin::Matrix3d(0,0,-1, -1,0,0, 0,1,0),link->get_pose()->x,link->get_pose()->rpose);
     foot_pose.update_relative_pose(Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));    
     
-    
-    OUT_LOG(logERROR) << eef_names_[i] << ".orientation: " <<foot_pose.q;
+    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
 
     Ravelin::Origin3d x(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
     bool new_var = ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.x",x);

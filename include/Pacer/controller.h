@@ -10,6 +10,12 @@
 #include <Moby/XMLTree.h>
 #include <Moby/XMLReader.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+
 namespace Pacer{
   
   class Controller;
@@ -39,7 +45,11 @@ namespace Pacer{
       FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
 #ifdef LOG_TO_FILE
       FILE * pFile;
-      pFile = fopen ("out.log","w");
+      static int pid = getpid();
+      char buffer[9];
+      sprintf(buffer,"%06d",pid);
+      static std::string name("out-"+std::string(buffer)+".log");
+      pFile = fopen (name.c_str(),"w");
       fprintf(pFile, "INITED LOGGER\n");
       fflush(pFile);
       fclose (pFile);

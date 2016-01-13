@@ -29,7 +29,7 @@ void loop(){
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
-  q_goal = ctrl->get_joint_generalized_value(Pacer::Controller::position_goal);
+  q_goal = ctrl->get_joint_generalized_value(Pacer::Controller::position);
   qd_goal = Ravelin::VectorNd::zero(q_goal.rows());
   qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
   

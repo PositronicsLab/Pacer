@@ -18,6 +18,7 @@ using Pacer::Controller;
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
 // pointer to the Pacer controller
+//boost::shared_ptr<Ravelin::Pose3d> GLOBAL;
  boost::shared_ptr<Controller> robot_ptr;
 
 // Weak pointer to moby objects
@@ -29,6 +30,8 @@ boost::weak_ptr<Moby::ControlledBody> controlled_weak_ptr;
 
 #ifdef USE_OSG_DISPLAY
 void render( std::vector<Pacer::VisualizablePtr>& viz_vect);
+void visualize_primitive(Moby::PrimitivePtr& primitive, boost::shared_ptr<const Ravelin::Pose3d>& pose_ptr, boost::shared_ptr<Moby::Simulator>& sim);
+void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& c, boost::shared_ptr<Moby::Simulator> sim );
 #endif
 
  // ============================================================================
@@ -461,8 +464,68 @@ boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::Collisio
   return e;
 }
 
+boost::weak_ptr<Moby::ArticulatedBody> abrobot_weak_ptr;
 // hooks into Moby's post integration step callback function
-void post_step_callback_fn(Moby::Simulator* s){}
+void post_step_callback_fn(Moby::Simulator* s){
+  boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
+
+#ifdef USE_OSG_DISPLAY
+  // display collision
+  static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
+
+  boost::shared_ptr<Moby::ArticulatedBody> abrobot(abrobot_weak_ptr);
+  BOOST_FOREACH(boost::shared_ptr<Ravelin::RigidBodyd> rbd, abrobot->get_links()){
+    boost::shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
+    
+    boost::shared_ptr<Ravelin::Pose3d> foot_pose;
+    BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
+      Moby::PrimitivePtr primitive = cg->get_geometry();
+      boost::shared_ptr<const Ravelin::Pose3d> cg_pose = cg->get_pose();
+      boost::shared_ptr<Moby::SpherePrimitive> foot_geometry;
+      foot_geometry = boost::dynamic_pointer_cast<Moby::SpherePrimitive>(primitive);
+      if(foot_geometry){
+        foot_pose = boost::shared_ptr<Ravelin::Pose3d>(new Ravelin::Pose3d(cg_pose->q,cg_pose->x,cg_pose->rpose));
+      }
+      visualize_primitive(primitive,cg_pose,sim);
+    }
+    
+    for (int i=0;i<_foot_ids.size(); i++) {
+      if(rb->body_id.compare(_foot_ids[i]) == 0){
+        boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = rb;
+        bool is_foot = true;
+        do {
+          OUT_LOG(logDEBUG) << "  " << rb_ptr->body_id;
+          
+          boost::shared_ptr<Ravelin::Jointd> joint_ptr = rb_ptr->get_inner_joint_explicit();
+          OUT_LOG(logDEBUG) << "  " << joint_ptr->joint_id;
+          
+          {
+            Ravelin::Pose3d joint_pose = *(joint_ptr->get_pose());
+            joint_pose.update_relative_pose(Pacer::GLOBAL);
+            
+            {
+              Ravelin::Pose3d link_pose = (is_foot)? *foot_pose : *(rb_ptr->get_pose());
+              link_pose.update_relative_pose(Pacer::GLOBAL);
+              visualize_ray(Ravelin::Vector3d(joint_pose.x.data()),Ravelin::Vector3d(link_pose.x.data()),Ravelin::Vector3d(1,0,0),sim);
+            }
+            
+            rb_ptr = joint_ptr->get_inboard_link();
+            
+            {
+              Ravelin::Pose3d link_pose = *(rb_ptr->get_pose());
+              link_pose.update_relative_pose(Pacer::GLOBAL);
+              visualize_ray(Ravelin::Vector3d(joint_pose.x.data()),Ravelin::Vector3d(link_pose.x.data()),Ravelin::Vector3d(1,0,0),sim);
+            }
+          }
+          is_foot = false;
+        }
+        while (rb_ptr != abrobot->get_base_link());
+      }
+    }
+
+  }
+#endif
+}
 
 /// Event callback function for setting friction vars pre-event
 void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
@@ -503,6 +566,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
     {
       boost::shared_ptr<Moby::ArticulatedBody> abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(i->second);
       if(abrobot){
+        abrobot_weak_ptr = boost::weak_ptr<Moby::ArticulatedBody>(abrobot);
         controlled_body = boost::dynamic_pointer_cast<Moby::ControlledBody>(i->second);
         controlled_weak_ptr = boost::weak_ptr<Moby::ControlledBody>(controlled_body);
       }
@@ -535,7 +599,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   if (csim){
     csim->constraint_post_callback_fn        = &post_event_callback_fn;
   }
-
+  sim->post_step_callback_fn = &post_step_callback_fn;
   // CONTROLLER CALLBACK
   controlled_body->controller                     = &controller_callback;
   

@@ -95,6 +95,11 @@ void control_arduino(){
   // only add time for time waited: subtract remaining time (rem)
   TIME += seconds_per_message - remaining;
 }
+void *control_arduino(void * data){
+  while(1){
+    control_arduino();
+  }
+}
 
 // ============================================================================
 // ================================ INIT ======================================
@@ -155,7 +160,7 @@ void init(std::string model_f,std::string vars_f){
   
 #ifdef USE_THREADS
   const char *message;
-  static int iret = pthread_create( &thread, NULL,&loop,(void*)NULL);
+  static int iret = pthread_create( &thread, NULL,&control_arduino,(void*)NULL);
   if(iret)
   {
     fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);

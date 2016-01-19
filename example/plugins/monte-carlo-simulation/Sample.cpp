@@ -16,7 +16,10 @@
 #include <string.h>
 #include "common.h"
 #include "random.h"
+
+#ifdef USE_OSG_DISPLAY
 #include "visualize.cpp"
+#endif
 
 #include <boost/shared_ptr.hpp>
 
@@ -498,6 +501,36 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   }
 }
 
+/*
+ void parse_command_line_options(int argc, char* argv[]){
+ // Declare the supported options.
+ po::options_description desc("Moby initialization options");
+ desc.add_options()
+ ("help", "produce help message")
+ ("pipe-from-parent", po::value<int>()->default_value(0),"Pipe to child fd (output side only 'fd1')")
+ ("pipe-to-parent", po::value<int>()->default_value(0),"Pipe to parent fd (input side only 'fd0')");
+ 
+ logging << "Parsing Variable Map from command line" << std::endl;
+ 
+ po::variables_map vm;
+ //  po::store(po::parse_command_line(argc, argv, desc), vm);
+ po::parsed_options parsed
+ = po::command_line_parser(argc, argv).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).options(desc).allow_unregistered().run();
+ po::store(parsed, vm);
+ //  po::notify(vm);
+ 
+ logging << "Parsed Variable Map from command line" << std::endl;
+ 
+ if (vm.count("pipe")) {
+ FD_TO_PARENT_WRITE = vm["pipe-to-parent"].as<int>();
+ FD_FROM_PARENT_READ = vm["pipe-from-parent"].as<int>();
+ logging << "Sample output FD: " << fd1 << std::endl;
+ } else {
+ fprintf(stderr,"Sample with PID: %d did not get a port fd", pid);
+ }
+ }
+ */
+
 void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim){
   // Declare the supported options.
   po::options_description desc("Moby initialization options");
@@ -522,14 +555,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   //  po::notify(vm);
   
   logging << "Parsed Variable Map from command line" << std::endl;
-  
-  
-  if (vm.count("pipe")) {
-    fd1 = vm["pipe"].as<int>();
-    logging << "Sample output FD: " << fd1 << std::endl;
-  } else {
-    fprintf(stderr,"Sample with PID: %d did not get a port fd", pid);
-  }
   
   if (vm.count("xml")) {
     EXPORT_XML = true;

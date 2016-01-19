@@ -605,40 +605,74 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   
   // ================= INIT ROBOT STATE ==========================
   
+//  robot_ptr->control(0);
+
   std::map<std::string,Ravelin::VectorNd > q_start, qd_start;
   robot_ptr->get_joint_value(Pacer::Robot::position,q_start);
+//  robot_ptr->get_joint_value(Pacer::Robot::position_goal, q_start);
+//  robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd_start);
+
+  // get pacer data
+  Ravelin::VectorNd base_x, base_xd;
+  robot_ptr->get_base_value(Pacer::Robot::position,base_x);
+  robot_ptr->get_base_value(Pacer::Robot::velocity,base_xd);
+  OUTLOG(base_x,"Initial base Coords",logERROR);
+  OUTLOG(base_xd,"Initial base Vel",logERROR);
   
+  OUTLOG(q_start,"Initial joint Coords",logERROR);
+  OUTLOG(qd_start,"Initial joint Vel",logERROR);
+
+  //update pacer
+//  robot_ptr->reset_state();
+
+  // Push robot data to Moby
   boost::shared_ptr<Moby::ArticulatedBody>
   abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(controlled_body);
   std::vector<boost::shared_ptr<Ravelin::Jointd> > joints = abrobot->get_joints();
+
+
+  // get generalized data from Moby
+  Ravelin::VectorNd gq, gqd;
+  abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
+  abrobot->get_generalized_coordinates_euler(gq);
+
+  // set values into vectors
+  gqd.set_zero();
+  gq.set_zero();
+
+  //base
+  gq.set_sub_vec(gq.size()-7,base_x);
+  gqd.set_sub_vec(gqd.size()-6,base_xd);
+  // joints
+  /*
+  for(int i=0;i<joints.size();i++){
+    //      joints[i]->add_force(u[joints[i]->joint_id]);
+    int joint_index = joints[i]->get_coord_index();
+    int num_joint_dofs = joints[i]->num_dof();
+    std::string& joint_id = joints[i]->joint_id;
+    for(int joint_dof=0;joint_dof<num_joint_dofs;joint_dof++){
+      gq[joint_index+joint_dof] = q_start[joint_id][joint_dof];
+      gqd[joint_index+joint_dof] = qd_start[joint_id][joint_dof];
+    }
+  }
+  */
+  // send to moby
+  abrobot->set_generalized_coordinates_euler(gq);
+  abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
   
+  
+  ///*
   for(unsigned i=0;i<joints.size();i++){
     if(joints[i]->num_dof() != 0){
       assert(joints[i]->num_dof() == q_start[joints[i]->joint_id].rows());
       joints[i]->q = q_start[joints[i]->joint_id];
     }
   }
-  
+  // update moby
   boost::shared_ptr<Moby::RCArticulatedBody>
   rcabrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(abrobot);
   rcabrobot->update_link_poses();
-  
-  Ravelin::VectorNd base_x, base_xd;
-  robot_ptr->get_base_value(Pacer::Robot::position,base_x);
-  robot_ptr->get_base_value(Pacer::Robot::velocity,base_xd);
-  
-  OUTLOG(base_x,"Initial base Coords",logERROR);
-  OUTLOG(base_xd,"Initial base Vel",logERROR);
-  
-  Ravelin::VectorNd gq, gqd;
-  abrobot->get_generalized_coordinates_euler(gq);
-  gq.set_sub_vec(gq.size()-7,base_x);
-  abrobot->set_generalized_coordinates_euler(gq);
-
-  abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
-  gqd.set_zero();
-  gqd.set_sub_vec(gqd.size()-6,base_xd);
-  abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
+  //*/
 }
 } // end extern C
 
@@ -659,16 +693,22 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
     switch((*it)->eType){
       case Pacer::Visualizable::eRay:{
         Pacer::Ray * v = static_cast<Pacer::Ray*>((it)->get());
+        if (!std::isfinite(v->point1.norm())) break;
+        if (!std::isfinite(v->point2.norm())) break;
+
         visualize_ray(v->point1,v->point2,v->color,v->size,sim);
         break;
       }
       case Pacer::Visualizable::ePoint:{
         Pacer::Point * v = static_cast<Pacer::Point*>((it)->get());
+        if (!std::isfinite(v->point.norm())) break;
         visualize_ray(v->point,v->point,v->color,v->size,sim);
         break;
       }
       case Pacer::Visualizable::ePose:{
         Pacer::Pose * v = static_cast<Pacer::Pose*>((it)->get());
+        if (!std::isfinite(v->pose.x.norm())) break;
+        //        if (!std::isfinite(v->pose.q.norm())) break;
         draw_pose(v->pose,sim,v->shade,v->size);
         break;
       }

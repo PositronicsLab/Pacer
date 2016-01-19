@@ -148,7 +148,7 @@ void create_distributions(){
 #ifdef USE_THREADS
 pthread_mutex_t _sample_processes_mutex;
 #else
-#error This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
+#warning This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
 #endif
 
 struct SampleConditions{

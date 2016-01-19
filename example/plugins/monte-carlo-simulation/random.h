@@ -43,6 +43,8 @@ class Generator {
     gaussian,
     uniform
   } distribution_type;
+  bool first_sample;
+
 public:
   Generator(){
     seed = get_current_time();
@@ -50,9 +52,20 @@ public:
     if( generator == NULL ) std::cout << "failed to initialize rng\n";
     gsl_rng_set( generator, seed );
     distribution_type = none;
+    first_sample = true;
   }
   
-  void set_gaussian(double mu, double sigma, double min=-std::numeric_limits<float>::max(), double max=std::numeric_limits<float>::max())
+  void set_gaussian(double mu, double sigma)
+  {
+    distribution_type = gaussian;
+    this->min = mu - 3.0*sigma;
+    this->max = mu + 3.0*sigma;
+    this->mu = mu;
+    this->sigma = sigma;
+  }
+
+  //  void set_gaussian(double mu, double sigma, double min=-std::numeric_limits<float>::max(), double max=std::numeric_limits<float>::max())
+  void set_gaussian(double mu, double sigma, double min, double max)
   {
     distribution_type = gaussian;
     this->min = min;
@@ -76,6 +89,7 @@ public:
     distribution_type = uniform;
     this->min = min;
     this->max = max;
+    this->mu = (min+max) / 2.0;
   }
   
   ~Generator(){
@@ -83,6 +97,10 @@ public:
   }
   
   double generate() {
+    if (first_sample) {
+      first_sample = false;
+      return mu;
+    }
     double number;
     switch(distribution_type) {
       case gaussian:

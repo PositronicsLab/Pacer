@@ -10,6 +10,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
+  int NUM_FEET = eef_names_.size();
+  
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
   
   Ravelin::VectorNd qd  = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
@@ -21,7 +23,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   ctrl->set_model_state(local_q);
 
-  for(unsigned i=0;i<eef_names_.size();i++){
+  for(unsigned i=0;i<NUM_FEET;i++){
     Ravelin::Origin3d xd,xdd;
     //angular
     Ravelin::Origin3d rpy,axd,axdd;
@@ -38,10 +40,11 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     foot_pose.update_relative_pose(Pacer::GLOBAL);
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));    
     
-    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
+//    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
 
-    Ravelin::Origin3d x(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
-    bool new_var = ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.x",x);
+//    Ravelin::Origin3d x(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
+    bool new_var = ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.x",foot_pose.x);
+    ctrl->set_data<Ravelin::Quatd>(eef_names_[i]+".state.q",foot_pose.q);
     
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qd,xd);
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qdd,xdd);
@@ -50,13 +53,14 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xd",xd);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xdd",xdd);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::position,x);
+    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::position,foot_pose.x);
     ctrl->set_foot_value(eef_names_[i],Pacer::Controller::velocity,xd);
     ctrl->set_foot_value(eef_names_[i],Pacer::Controller::acceleration,xdd);
     ctrl->set_foot_value(eef_names_[i],Pacer::Controller::load,Ravelin::Origin3d(0,0,0));
 
     if(new_var){
-      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".init.x",x);
+      ctrl->set_data<Ravelin::Quatd>(eef_names_[i]+".init.q",foot_pose.q);
+      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".init.x",foot_pose.x);
       ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".init.xd",xd);
     }
 
@@ -66,7 +70,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   if(start_time == t){
     local_q.segment(0,qd.rows()) = Ravelin::VectorNd::zero(qd.rows());
     ctrl->set_model_state(local_q);
-    for(unsigned i=0;i<eef_names_.size();i++){
+    std::vector<Ravelin::Origin3d> x1(NUM_FEET) ,x2(NUM_FEET);
+
+    for(unsigned i=0;i<NUM_FEET;i++){
       Ravelin::Origin3d x,base_x;
       ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".init.x",x);
       base_x = x;
@@ -74,20 +80,31 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".base",base_x);
       
       const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
-      Ravelin::Origin3d x_reaching(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
-      
+      x1[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
+    }
+    
+    std::fill(local_q.segment(0,qd.rows()).begin(),local_q.segment(0,qd.rows()).end(),M_PI);
+    ctrl->set_model_state(local_q);
+
+    for(unsigned i=0;i<NUM_FEET;i++){
+      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
+      x2[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
+
       // write in maximum reach from limb base
-      double reach = (x_reaching-base_x).norm()*0.75;
-      ctrl->set_data<double>(eef_names_[i]+".reach",reach);
+      double reach = (x1[i]-x2[i]).norm();
+      ctrl->set_data<double>(eef_names_[i]+".reach",reach*0.95);
     }
   }
 }
+
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-  for(unsigned i=0;i<eef_names_.size();i++){
+  int NUM_FEET = eef_names_.size();
+
+  for(unsigned i=0;i<NUM_FEET;i++){
    variable_names.push_back(eef_names_[i]+".stance");
    variable_names.push_back(eef_names_[i]+".state.x");
    variable_names.push_back(eef_names_[i]+".state.xd");

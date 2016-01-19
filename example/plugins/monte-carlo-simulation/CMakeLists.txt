@@ -12,6 +12,7 @@ if(BUILD_MONTECARLO)
   link_directories(${GSL_LIBRARY_DIRS})
   target_link_libraries(monte-carlo-simulation ${GSL_LIBRARIES})
   ENDIF(GSL_FOUND)
+endif(BUILD_MONTECARLO)
 
 #find BOOST libraries
 set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
@@ -43,4 +44,3 @@ include_directories(${BOOST_INCLUDE_DIR})
       add_definitions (-DUSE_OSG_DISPLAY)
     ENDIF(OSG_FOUND)
   ENDIF(USE_OSG_DISPLAY)
-endif(BUILD_MONTECARLO)

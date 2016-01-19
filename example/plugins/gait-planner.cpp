@@ -876,7 +876,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   //  ctrl->set_model_state(q);
   double min_reach = INFINITY;
   for(int i=0;i<NUM_FEET;i++){
-//    min_reach = std::min(min_reach, ctrl->get_data<double>(foot_names[i]+".reach"));
+    min_reach = std::min(min_reach, ctrl->get_data<double>(foot_names[i]+".reach"));
     foot_init[i] = Vector3d(ctrl->get_data<Origin3d>(foot_names[i]+".init.x"),base_frame);
     foot_pos[i] = foot_init[i];
     Origin3d workv;
@@ -902,11 +902,11 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     origins.resize(NUM_FEET);
     for(int i=0;i<NUM_FEET;i++){
       Vector3d origin = foot_init[i];
-//      if(length >= 0)
-        origin[0] = Utility::sign<double>(foot_init[i][0])*length/2;
-//      if(width >= 0)
-        origin[1] = Utility::sign<double>(foot_init[i][1])*width/2;
-//      if(height >= 0)
+      if(length >= 0)
+        origin[0] = Utility::sign<double>(foot_init[i][0])*length/2.0;
+      if(width >= 0)
+        origin[1] = Utility::sign<double>(foot_init[i][1])*width/2.0;
+      if(height >= 0)
         origin[2] = -std::min(height,min_reach);
       origin.pose = base_frame;
       OUT_LOG(logDEBUG1) << "Length is " << origin[0];

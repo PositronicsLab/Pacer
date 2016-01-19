@@ -78,7 +78,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       base_x = x;
       base_x[2] = 0;
       ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".base",base_x);
-      
+      x2[i] = base_x;
       const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
       x1[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
     }

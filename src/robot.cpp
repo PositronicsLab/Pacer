@@ -244,17 +244,8 @@ void Robot::init_robot(){
   OUT_LOG(logDEBUG) << "> > Robot::init_robot(.)";
   // ================= LOAD SCRIPT DATA ==========================
   
-  if (!getenv("PACER_MODEL_PATH"))
-    throw std::runtime_error("Environment variable PACER_MODEL_PATH not defined");
-  
-  std::string pPath(getenv ("PACER_MODEL_PATH"));
-  OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
-  
-  
-  // ================= BUILD ROBOT ==========================
   std::string robot_model_file = get_data<std::string>("robot-model");
-  // Get Model type
-  
+
   std::string model_type;
   
   {
@@ -266,8 +257,21 @@ void Robot::init_robot(){
     }
     model_type = strs.back();
   }
+
+  if (robot_model_file[0] != '/') {
+    if (!getenv("PACER_MODEL_PATH"))
+      throw std::runtime_error("Environment variable PACER_MODEL_PATH not defined");
+    
+    std::string pPath(getenv ("PACER_MODEL_PATH"));
+    OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
+    robot_model_file = pPath+"/"+robot_model_file;
+  }
   
-  robot_model_file = pPath+"/"+robot_model_file;
+  
+  // ================= BUILD ROBOT ==========================
+  // Get Model type
+  
+  
   OUT_LOG(logINFO) << "Using robot model : " << robot_model_file;
   
   /// The map of objects read from the simulation XML file

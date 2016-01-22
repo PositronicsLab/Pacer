@@ -105,8 +105,10 @@ void control_arduino(){
   // only add time for time waited: subtract remaining time (rem)
   TIME += seconds_per_message - remaining;
 }
-void* control_arduino(void * data){
-  control_arduino();
+void *control_arduino(void * data){
+  while(1){
+    control_arduino();
+  }
 }
 
 // ============================================================================

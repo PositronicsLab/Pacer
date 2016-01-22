@@ -27,12 +27,15 @@ IF(USE_OSG_DISPLAY)
 ENDIF(USE_OSG_DISPLAY)
 
 
+option(SIMULATE_UNCERTAINTY "Build Pacer moby plugin with control and state perturbations?" OFF)
+IF(SIMULATE_UNCERTAINTY)
 find_package (gsl QUIET)
 IF(GSL_FOUND)
   add_definitions(-DSIMULATE_UNCERTAINTY)
   include_directories(${GSL_INCLUDE_DIRS})
   target_link_libraries(PacerMobyPlugin ${GSL_LIBRARIES})
 ENDIF(GSL_FOUND)
+ENDIF(SIMULATE_UNCERTAINTY)
 target_link_libraries(PacerMobyPlugin ${REQLIBS} ${EXTRA_LIBS})
 
   # Gazebo Interface

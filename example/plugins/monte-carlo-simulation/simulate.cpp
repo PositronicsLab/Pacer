@@ -13,9 +13,9 @@
 template <typename T>
 static std::string SSTR(T x)
 {
-    std::ostringstream oss;
-    oss << std::dec << x;
-    return oss.str();
+  std::ostringstream oss;
+  oss << std::dec << x;
+  return oss.str();
 }
 
 //                NAME                  DOF                 RANDOM VALUE        DEFAULT
@@ -148,7 +148,7 @@ void create_distributions(){
 #ifdef USE_THREADS
 pthread_mutex_t _sample_processes_mutex;
 #else
-#error This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
+#warning This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
 #endif
 
 struct SampleConditions{
@@ -164,8 +164,8 @@ std::map<pid_t, SampleConditions> sample_processes;
 //-----------------------------------------------------------------------------
 void exit_sighandler( int signum, siginfo_t* info, void* context ) {
   // returns time in mu_seconds
-//  double time_elapsed = ( (double) info->si_status ) *  (double) 1.0e-6;
-
+  //  double time_elapsed = ( (double) info->si_status ) *  (double) 1.0e-6;
+  
 #ifdef USE_THREADS
   pthread_mutex_lock(&_sample_processes_mutex);
 #endif
@@ -179,22 +179,22 @@ void exit_sighandler( int signum, siginfo_t* info, void* context ) {
     std::string message(buf);
     std::vector<std::string> values;
     boost::split(values, message, boost::is_any_of(" "));
-//    std::cout << "Process " << info->si_pid << " output message: " << message << std::endl;
+    //    std::cout << "Process " << info->si_pid << " output message: " << message << std::endl;
     double start_time = sc.start_time;
     double time_elapsed = atof(values[0].c_str());
     completed_poses.push_back(Ravelin::Pose3d(Ravelin::Quatd(atof(values[4].c_str()), atof(values[5].c_str()), atof(values[6].c_str()), atof(values[7].c_str())),
-                      Ravelin::Origin3d( atof(values[1].c_str()), atof(values[2].c_str()), atof(values[3].c_str()))));
+                                              Ravelin::Origin3d( atof(values[1].c_str()), atof(values[2].c_str()), atof(values[3].c_str()))));
     std::cout << "Sim ("<< info->si_pid <<") timeline: " << start_time << "  |======" << time_elapsed << "======>  " << (start_time+time_elapsed) << std::endl;
-//    Ravelin::Origin3d rpy;
-//    completed_poses.back().q.to_rpy(rpy);
-//    std::cout << "Sim ("<< info->si_pid <<") Orientation: " << rpy << std::endl;
+    //    Ravelin::Origin3d rpy;
+    //    completed_poses.back().q.to_rpy(rpy);
+    //    std::cout << "Sim ("<< info->si_pid <<") Orientation: " << rpy << std::endl;
     
   }
   sample_processes.erase(it);
 #ifdef USE_THREADS
   pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
-//  std::cout << "Sim ("<< info->si_pid <<") exited!" << std::endl;
+  //  std::cout << "Sim ("<< info->si_pid <<") exited!" << std::endl;
 }
 
 
@@ -208,169 +208,168 @@ void loop(){
   for (int i=0; i<completed_poses.size(); i++) {
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
   }
-
+  
   
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  if(sample_idx<=NUM_SAMPLES){
-    OUT_LOG(logINFO) << "Active processes: " << sample_processes.size() << " out of " << NUM_THREADS << " allowed simultaneous processes.";
-//    int started = 0;
+  OUT_LOG(logINFO) << "Active processes: " << sample_processes.size() << " out of " << NUM_THREADS << " allowed simultaneous processes.";
+  //    int started = 0;
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_sample_processes_mutex);
+#endif
+  int sample_processes_size = sample_processes.size();
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_sample_processes_mutex);
+#endif
+  
+  while ( sample_processes_size < NUM_THREADS && sample_idx<NUM_SAMPLES){
+    
+    // CREATE A NEW SAMPLE
+    sample_idx++;
+    OUT_LOG(logINFO) << "New Sample: " << sample_idx;
+    
+    // Get current state
+    std::map<std::string,Ravelin::VectorNd> joint_position, joint_velocity;
+    ctrl->get_joint_value(Pacer::Robot::position,joint_position);
+    ctrl->get_joint_value(Pacer::Robot::velocity,joint_velocity);
+    
+    Ravelin::VectorNd base_position, base_velocity;
+    ctrl->get_base_value(Pacer::Robot::position,base_position);
+    ctrl->get_base_value(Pacer::Robot::velocity,base_velocity);
+    
+    Ravelin::VectorNd base_position_spatial(6);
+    base_position_spatial.segment(0,3) = base_position.segment(0,3);
+    Ravelin::Origin3d rpy;
+    Ravelin::Quatd(base_position[3],base_position[4],base_position[5],base_position[6]).to_rpy(rpy);
+    base_position_spatial.segment(3,6) = rpy;
+    
+    joint_position["BODY0"] = base_position_spatial;
+    joint_velocity["BODY0"] = base_velocity;
+    OUT_LOG(logINFO) << "Positions: \n" << joint_position;
+    OUT_LOG(logINFO) << "Velocities: \n" << joint_velocity;
+    
+    std::vector<std::string> PARAMETER_ARGV;
+    // NOTE: parallelize this loop
+    for(ParamMap::iterator it = parameter_generator.begin(); it != parameter_generator.end();
+        it++){
+      std::vector<std::string> params;
+      boost::split(params, it->first, boost::is_any_of("."));
+      OUT_LOG(logDEBUG) << "--"<< it->first;
+      PARAMETER_ARGV.push_back("--" + it->first);
+      if (it->second.first.empty()) {
+        for (int i=0;i<it->second.second.size(); i++) {
+          double value = it->second.second[i];
+          OUT_LOG(logDEBUG) << " " << value;
+          PARAMETER_ARGV.push_back(SSTR(value));
+        }
+      } else { // Generators created for variable
+        for (int i=0;i<it->second.first.size(); i++) {
+          double value = it->second.first[i]->generate();
+          
+          if (params.back().compare("x") == 0) {
+            value += joint_position[params.front()][i];
+          } else if (params.back().compare("xd") == 0) {
+            value = joint_velocity[params.front()][i] * (value+1.0);
+          }
+          
+          OUT_LOG(logDEBUG) << " " << value;
+          // Convert to command line argument
+          PARAMETER_ARGV.push_back(SSTR(value));
+        }
+      }
+    }
+    
+    
+    // Before forking, set up the pipe;
+    SampleConditions sc;
+    sc.start_time = t;
+    pipe(sc.pipe_fd);
+    OUT_LOG(logDEBUG)  << "Sample output FDs: " << sc.pipe_fd[1] << " --> " << sc.pipe_fd[0] << std::endl;
+    OUT_LOG(logDEBUG) << "Forking Process!";
+    
+    // Run each sample as its own process
+    pid_t pid = fork();
+    if( pid < 0 ) {
+      // fork failed
+      OUT_LOG(logERROR) << "Forking Process!";
+      
+      throw std::runtime_error("Fork failed!");
+    }
+    
+    if( pid == 0 ) {
+      ////////////////////////////////////////////////////
+      /// ---------- START CHILD PROCESS ------------- ///
+      // Child process is write-only, closes receiving end of pipe
+      close(sc.pipe_fd[0]);
+      
+      pid = getpid();
+      
+      OUT_LOG(logDEBUG) << "Started Sample ("<< sample_idx <<") with PID ("<< pid <<")";
+      
+      SAMPLE_ARGV.push_back("--pipe");
+      SAMPLE_ARGV.push_back(SSTR(sc.pipe_fd[1]));
+      
+      SAMPLE_ARGV.push_back("--sample");
+      SAMPLE_ARGV.push_back(SSTR(sample_idx));
+      // Add PARAMETER_ARGV to SAMPLE_ARGV
+      SAMPLE_ARGV.insert(SAMPLE_ARGV.end(), PARAMETER_ARGV.begin(), PARAMETER_ARGV.end());
+      
+      char* const* exec_argv = param_array(SAMPLE_ARGV);
+      OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
+      OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_ARGV << std::endl;
+      
+      chdir(TASK_PATH.c_str());
+      execv( SAMPLE_ARGV.front().c_str() , exec_argv );
+      ///////////////////////////////////////////////////
+      /// ---------- EXIT CHILD PROCESS ------------- ///
+      ///////////////////////////////////////////////////
+      
+      // NOTE: unreachable code (memory leak)
+      // TODO: clean up argv
+      for ( size_t i = 0 ; i <= SAMPLE_ARGV.size() ; i++ )
+        delete [] exec_argv[i];
+      
+      // This code should be unreachable unless exec failed
+      perror( "execve" );
+      throw std::runtime_error("This code should be unreachable unless execve failed!");
+      /// ---------- END CHILD PROCESS ------------- ///
+      //////////////////////////////////////////////////
+    }
+    ////////////////////////////////////////////////////////
+    /// ---------- CONTINUE PARENT PROCESS ------------- ///
+    // Parent is read-only, closing sending end of pipe
+    close(sc.pipe_fd[1]);
+    
+    sc.pid = pid;
+    
+    // Before anything else, register child process in signal map
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-    int sample_processes_size = sample_processes.size();
+    sample_processes[sc.pid] = sc;
+    sample_processes_size = sample_processes.size();
 #ifdef USE_THREADS
     pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
-    if ( sample_processes_size < NUM_THREADS ){
-      // CREATE A NEW SAMPLE
-      sample_idx++;
-      OUT_LOG(logINFO) << "New Sample: " << sample_idx;
-      
-      // Get current state
-      std::map<std::string,Ravelin::VectorNd> joint_position, joint_velocity;
-      ctrl->get_joint_value(Pacer::Robot::position,joint_position);
-      ctrl->get_joint_value(Pacer::Robot::velocity,joint_velocity);
-      
-      Ravelin::VectorNd base_position, base_velocity;
-      ctrl->get_base_value(Pacer::Robot::position,base_position);
-      ctrl->get_base_value(Pacer::Robot::velocity,base_velocity);
-      
-      Ravelin::VectorNd base_position_spatial(6);
-      base_position_spatial.segment(0,3) = base_position.segment(0,3);
-      Ravelin::Origin3d rpy;
-      Ravelin::Quatd(base_position[3],base_position[4],base_position[5],base_position[6]).to_rpy(rpy);
-      base_position_spatial.segment(3,6) = rpy;
-      
-      joint_position["BODY0"] = base_position_spatial;
-      joint_velocity["BODY0"] = base_velocity;
-      OUT_LOG(logINFO) << "Positions: \n" << joint_position;
-      OUT_LOG(logINFO) << "Velocities: \n" << joint_velocity;
-      
-      std::vector<std::string> PARAMETER_ARGV;
-      // NOTE: parallelize this loop
-      for(ParamMap::iterator it = parameter_generator.begin(); it != parameter_generator.end();
-          it++){
-        std::vector<std::string> params;
-        boost::split(params, it->first, boost::is_any_of("."));
-        OUT_LOG(logDEBUG) << "--"<< it->first;
-        PARAMETER_ARGV.push_back("--" + it->first);
-        if (it->second.first.empty()) {
-          for (int i=0;i<it->second.second.size(); i++) {
-            double value = it->second.second[i];
-            OUT_LOG(logDEBUG) << " " << value;
-            PARAMETER_ARGV.push_back(SSTR(value));
-          }
-        } else { // Generators created for variable
-          for (int i=0;i<it->second.first.size(); i++) {
-            double value = it->second.first[i]->generate();
-            
-            if (params.back().compare("x") == 0) {
-              value += joint_position[params.front()][i];
-            } else if (params.back().compare("xd") == 0) {
-              value = joint_velocity[params.front()][i] * (value+1.0);
-            }
-            
-            OUT_LOG(logDEBUG) << " " << value;
-            // Convert to command line argument
-            PARAMETER_ARGV.push_back(SSTR(value));
-          }
-        }
-      }
-      
-      
-      // Before forking, set up the pipe;
-      SampleConditions sc;
-      sc.start_time = t;
-      pipe(sc.pipe_fd);
-      OUT_LOG(logDEBUG)  << "Sample output FDs: " << sc.pipe_fd[1] << " --> " << sc.pipe_fd[0] << std::endl;
-      OUT_LOG(logDEBUG) << "Forking Process!";
-      
-      // Run each sample as its own process
-      pid_t pid = fork();
-      if( pid < 0 ) {
-        // fork failed
-        OUT_LOG(logERROR) << "Forking Process!";
-        
-        throw std::runtime_error("Fork failed!");
-      }
-      
-      if( pid == 0 ) {
-        ////////////////////////////////////////////////////
-        /// ---------- START CHILD PROCESS ------------- ///
-        // Child process is write-only, closes receiving end of pipe
-        close(sc.pipe_fd[0]);
-
-        pid = getpid();
-        
-        OUT_LOG(logDEBUG) << "Started Sample ("<< sample_idx <<") with PID ("<< pid <<")";
-        
-        SAMPLE_ARGV.push_back("--pipe");
-        SAMPLE_ARGV.push_back(SSTR(sc.pipe_fd[1]));
-
-        SAMPLE_ARGV.push_back("--sample");
-        SAMPLE_ARGV.push_back(SSTR(sample_idx));
-        // Add PARAMETER_ARGV to SAMPLE_ARGV
-        SAMPLE_ARGV.insert(SAMPLE_ARGV.end(), PARAMETER_ARGV.begin(), PARAMETER_ARGV.end());
-        
-        char* const* exec_argv = param_array(SAMPLE_ARGV);
-        OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
-        OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_ARGV << std::endl;
-        
-        chdir(TASK_PATH.c_str());
-        execv( SAMPLE_ARGV.front().c_str() , exec_argv );
-        ///////////////////////////////////////////////////
-        /// ---------- EXIT CHILD PROCESS ------------- ///
-        ///////////////////////////////////////////////////
-        
-        // NOTE: unreachable code (memory leak)
-        // TODO: clean up argv
-        for ( size_t i = 0 ; i <= SAMPLE_ARGV.size() ; i++ )
-          delete [] exec_argv[i];
-        
-        // This code should be unreachable unless exec failed
-        perror( "execve" );
-        throw std::runtime_error("This code should be unreachable unless execve failed!");
-        /// ---------- END CHILD PROCESS ------------- ///
-        //////////////////////////////////////////////////
-      }
-      ////////////////////////////////////////////////////////
-      /// ---------- CONTINUE PARENT PROCESS ------------- ///
-      // Parent is read-only, closing sending end of pipe
-      close(sc.pipe_fd[1]);
-      
-      sc.pid = pid;
-
-      // Before anything else, register child process in signal map
-#ifdef USE_THREADS
-      pthread_mutex_lock(&_sample_processes_mutex);
-#endif
-      sample_processes[sc.pid] = sc;
-#ifdef USE_THREADS
-      pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
-      
-//      OUT_LOG(logINFO) << "Plugin sleeping to permit Sample (" << sample_idx << ") with PID ("<< pid <<") to start";
-//      
-//      // yield for a short while to let the system start the process
-//      struct timespec nanosleep_req;
-//      struct timespec nanosleep_rem;
-//      nanosleep_req.tv_sec = 0;
-//      nanosleep_req.tv_nsec = 1;
-//      nanosleep(&nanosleep_req,&nanosleep_rem);
-
-    }
     
-    return;
-  } else {
+    //      OUT_LOG(logINFO) << "Plugin sleeping to permit Sample (" << sample_idx << ") with PID ("<< pid <<") to start";
+    //
+    //      // yield for a short while to let the system start the process
+    struct timespec req,rem;
+    req.tv_sec = 0;
+    req.tv_nsec = 1;
+    nanosleep(&req,&rem);
+  }
+  
+  if(sample_processes_size == 0){
     OUT_LOG(logINFO) << "Experiment Complete";
     // uninstall sighandler
     //    action.sa_handler = SIG_DFL;
     action.sa_sigaction = NULL;  // might not be SIG_DFL
     sigaction( SIGCHLD, &action, NULL );
     // close self
-//    ctrl->close_plugin(plugin_namespace);
-    return;
+    ctrl->close_plugin(plugin_namespace);
   }
+  return;
 }
 
 void setup(){
@@ -405,17 +404,17 @@ void setup(){
   
   OUT_LOG(logDEBUG) << "MC-Simulation executable: " << SAMPLE_BIN;
   
-//#ifdef __LINUX__
-//  SAMPLE_ARGV.push_back("nice");
-//  SAMPLE_ARGV.push_back("-n");
-//  SAMPLE_ARGV.push_back("20");
-//#else
-//  // Start process with niceness
-//  SAMPLE_ARGV.push_back("nice");
-//  SAMPLE_ARGV.push_back("-n");
-//  SAMPLE_ARGV.push_back("20");
-//#endif
-
+  //#ifdef __LINUX__
+  //  SAMPLE_ARGV.push_back("nice");
+  //  SAMPLE_ARGV.push_back("-n");
+  //  SAMPLE_ARGV.push_back("20");
+  //#else
+  //  // Start process with niceness
+  //  SAMPLE_ARGV.push_back("nice");
+  //  SAMPLE_ARGV.push_back("-n");
+  //  SAMPLE_ARGV.push_back("20");
+  //#endif
+  
   SAMPLE_ARGV.push_back(SAMPLE_BIN);
   
   SAMPLE_ARGV.push_back("--duration");
@@ -426,7 +425,7 @@ void setup(){
   if(EXPORT_XML){
     SAMPLE_ARGV.push_back("--xml");
   }
-
+  
   SAMPLE_ARGV.push_back("--stepsize");
   SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
   

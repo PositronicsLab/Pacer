@@ -253,6 +253,12 @@ static void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL){
 
 }
 
+static void OUTLOG(const Ravelin::Quatd& z, std::string name,TLogLevel LL){
+  
+  OUT_LOG(LL) << std::setprecision(9)
+  << name << " = " << z ;
+}
+
 static void OUTLOG(double x, std::string name,TLogLevel LL){
 
     OUT_LOG(LL) << name << " = " << x << ";" << std::endl;

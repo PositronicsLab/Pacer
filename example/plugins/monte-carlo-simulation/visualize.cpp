@@ -96,15 +96,15 @@ osg::ref_ptr<osg::Geode> buildBox( const double x,const double y,const double z 
 {
   osg::ref_ptr<osg::Geode>      boxGeode = new osg::Geode;
   osg::ref_ptr<osg::Geometry>   boxGeometry = new osg::Geometry;
- 
+  
   osg::Vec3 center(0,0,0);
   osg::Box* box = new osg::Box(center, x,y,z );
-
+  
   osg::TessellationHints *hints = new osg::TessellationHints();
   hints->setTessellationMode( osg::TessellationHints::USE_TARGET_NUM_FACES );
   hints->setCreateNormals( true );
   hints->setDetailRatio( 0.1 );
-
+  
   osg::ShapeDrawable* shape = new osg::ShapeDrawable( box, hints );
   
   double R = fRand(0,0.25) * VIBRANCY;
@@ -145,7 +145,7 @@ osg::ref_ptr<osg::Geode> buildCylinder( const double r,const double h )
 }
 
 osg::Group* visualize_box(double x, double y, double z,const Ravelin::Pose3d& pose){
-
+  
   // the osg node this event visualization will attach to
   osg::Group* group_root = new osg::Group();
   
@@ -200,7 +200,7 @@ osg::Group* visualize_sphere(double r, const Ravelin::Pose3d& pose){
   hints->setCreateNormals( true );
   hints->setDetailRatio( 0.1 );
   
-//  geode->setColor( color );
+  //  geode->setColor( color );
   
   osg::PositionAttitudeTransform* transform;
   transform = new osg::PositionAttitudeTransform();
@@ -277,12 +277,11 @@ void visualize_primitive(Moby::PrimitivePtr& primitive, boost::shared_ptr<const 
   boost::shared_ptr<Moby::CylinderPrimitive> cylinder = boost::dynamic_pointer_cast<Moby::CylinderPrimitive>(primitive);
   if (cylinder){
     double r = cylinder->get_radius(),
-           h = cylinder->get_height();
+    h = cylinder->get_height();
     osg::Node * node = visualize_cylinder(r,h,pose);
     sim->add_transient_vdata( node );
     return;
   }
-  OUT_LOG(logDEBUG1) << "Body has unknown collision data, can't visualize!";
 }
 
 /// Draws a ray directed from a contact point along the contact normal
@@ -377,13 +376,13 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
 void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<Simulator> sim ,double lightness, double size){
   Ravelin::Pose3d pose(p);
   assert(lightness >= 0.0 && lightness <= 2.0);
-  pose.update_relative_pose(Pacer::GLOBAL);
+  pose.update_relative_pose(GLOBAL);
   Ravelin::Matrix3d Rot(pose.q);
   Rot*= 0.3;
   double alpha = (lightness > 1.0)? 1.0 : lightness,
   beta = (lightness > 1.0)? lightness-1.0 : 0.0;
   
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),size,sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),size,sim);
-  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),size,sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),size,sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),size,sim);
+  visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),size,sim);
 }

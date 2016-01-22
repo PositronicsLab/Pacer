@@ -42,6 +42,9 @@ void loop(){
   }
   
   ctrl->set_data<double>("trajectory.time",time);
+  if(time > 10.0){
+    time = 10.0;
+  }
 
   for(int i=0;i<N;i++){
     q_goal[i]    = q_init[i] +    sin( time * f ) * M_PI * a;

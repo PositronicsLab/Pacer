@@ -32,9 +32,26 @@ unsigned NDOFS;
 static Ravelin::VectorNd q_motors,qd_motors,u_motors;
 static Ravelin::VectorNd q_sensor,qd_sensor,u_sensor;
 
-static double FREQ = 1000;
+static double TIME = 0; 
+double sleep_duration(double duration){
+  timespec req,rem;
+  int seconds = duration;
+  req.tv_nsec = (duration - (double)seconds) * 1.0e+9;
+  req.tv_sec = seconds;
+  nanosleep(&req,&rem);
+  return 0;//( ( (double) rem.tv_nsec / 1.0e+9 ) + (double) rem.tv_sec);
+}
+/// Gets the current time (as a floating-point number)
+double get_current_time()
+{
+  const double MICROSEC = 1.0/1000000;
+  timeval t;
+  gettimeofday(&t, NULL);
+  return (double) t.tv_sec + (double) t.tv_usec * MICROSEC;
+}
 
-void *control_motor(void* data){
+
+void control_motor(){
   OUT_LOG(logDEBUG2) << ">> control_motor()" << std::endl;
 #ifdef USE_THREADS
   while(true)
@@ -93,12 +110,19 @@ void *control_motor(void* data){
     OUT_LOG(logDEBUG) << "<< motor controller";
     OUT_LOG(logDEBUG2) << "<< motor controller" << std::endl;
     
-#ifdef USE_THREADS
-    sleep(1.0/FREQ);
-#endif
   }
   OUT_LOG(logDEBUG2) << "<< control_motor()" << std::endl;
-  return data;
+  
+  const double seconds_per_message = 0.001;
+  double remaining = sleep_duration(seconds_per_message);
+#ifndef NDEBUG
+  printf("TIME: %f + ( %f - %f )",TIME,seconds_per_message,remaining);
+  printf("\n");
+#endif
+  TIME += seconds_per_message - remaining;
+}
+void *control_motor(void* data){
+  control_motor();
 }
 
 // ============================================================================
@@ -127,9 +151,9 @@ void init(std::string model_f,std::string vars_f){
   
   // Set Dynamixel Names
   std::vector<std::string> joint_name = boost::assign::list_of<std::string>
-  ("LF_X_1")("RF_X_1")("LH_X_1")("RH_X_1")
-  ("LF_Y_2")("RF_Y_2")("LH_Y_2")("RH_Y_2")
-  ("LF_Y_3")("RF_Y_3")("LH_Y_3")("RH_Y_3");
+  /*("LF_X_1")("RF_X_1")("LH_X_1")*/("RH_X_1")
+  /*("LF_Y_2")("RF_Y_2")("LH_Y_2")*/("RH_Y_2")
+  /*("LF_Y_3")("RF_Y_3")("LH_Y_3")*/("RH_Y_3");
 #ifdef USE_DXL
   // LINKS robot
   ::joint_name = joint_name;
@@ -139,43 +163,43 @@ void init(std::string model_f,std::string vars_f){
   //    (0)(0)(0)(0)
   //    (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
   //    (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(-M_PI_2 );
+  //dxl_->tare.push_back(-M_PI_2 );
+  //dxl_->tare.push_back(-M_PI_2 );
+  //dxl_->tare.push_back(-M_PI_2 );
+  dxl_->tare.push_back(M_PI_2 * RX_24F_RAD2UNIT);
   
-  dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(-M_PI_2 );
+  //dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT);
+  //dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT);
+  //dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT);
+  dxl_->tare.push_back(M_PI_2 * MX_64R_RAD2UNIT);
   
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
+  //dxl_->tare.push_back(0);
+ //dxl_->tare.push_back(0);
+  //dxl_->tare.push_back(0);
   dxl_->tare.push_back(0);
   
   //dxl_->tare = dxl_tare;
   
   // Set Dynamixel Type
   std::vector<DXL::Dynamixel::Type> dxl_type = boost::assign::list_of
-  (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)
-  (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::MX_64R)(DXL::Dynamixel::MX_64R)
-  (DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F);
+  /*(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)*/(DXL::Dynamixel::RX_24F)
+  /*(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::MX_64R)*/(DXL::Dynamixel::MX_64R)
+  /*(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)*/(DXL::Dynamixel::RX_24F);
   
   dxl_->stype = dxl_type;
-  dxl_->ids.push_back(1);
-  dxl_->ids.push_back(2);
-  dxl_->ids.push_back(4);
+  //dxl_->ids.push_back(1);
+  //dxl_->ids.push_back(2);
+  //dxl_->ids.push_back(4);
   dxl_->ids.push_back(3);
   
-  dxl_->ids.push_back(5);
-  dxl_->ids.push_back(6);
-  dxl_->ids.push_back(8);
+  //dxl_->ids.push_back(5);
+  //dxl_->ids.push_back(6);
+  //dxl_->ids.push_back(8);
   dxl_->ids.push_back(7);
   
-  dxl_->ids.push_back(9);
-  dxl_->ids.push_back(10);
-  dxl_->ids.push_back(12);
+  //dxl_->ids.push_back(9);
+  //dxl_->ids.push_back(10);
+  //dxl_->ids.push_back(12);
   dxl_->ids.push_back(11);
   
   q_motors.set_zero(dxl_->ids.size());
@@ -210,6 +234,7 @@ void init(std::string model_f,std::string vars_f){
   pthread_mutex_unlock(&joint_data_mutex_);;
 #endif
   
+  double wait_time = 5.0;
 #ifdef USE_THREADS
   const char *message;
   static int iret = pthread_create( &thread, NULL,&control_motor,(void*)NULL);
@@ -218,17 +243,25 @@ void init(std::string model_f,std::string vars_f){
     fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
     exit(1);
   }
+  const double t0 = get_current_time();
+  double t1 = get_current_time();
+  while( t1 - t0 < wait_time){
+    t1 = get_current_time();
+    fprintf(stdout,"refreshing actuators (threads): TIME: %f \n",t1-t0);
+    sleep_duration(0.1);
+  }
+#else
+  OUT_LOG(logDEBUG2) << "call control_motor() from controller" << std::endl;
+  const double t0 = get_current_time();
+  double t1 = get_current_time();
+  while( t1 - t0 < wait_time){
+    t1 = get_current_time();
+    fprintf(stdout,"refreshing actuators (no threads): TIME: %f \n",t1-t0);
+    control_motor();
+    sleep_duration(0.1);
+  }
 #endif
   
-}
-
-/// Gets the current time (as a floating-point number)
-double get_current_time()
-{
-  const double MICROSEC = 1.0/1000000;
-  timeval t;
-  gettimeofday(&t, NULL);
-  return (double) t.tv_sec + (double) t.tv_usec * MICROSEC;
 }
 
 void controller(double t)
@@ -294,7 +327,7 @@ void controller(double t)
       robot_ptr->get_joint_value(Pacer::Robot::velocity_goal,joint_vel_map);
       for(int i=0;i<joint_name.size();i++){
         q_motors[i] = joint_pos_map[joint_name[i]][0];
-        qd_motors[i] = joint_vel_map[joint_name[i]][0];
+        qd_motors[i] = 0;//joint_vel_map[joint_name[i]][0];
       }
     } else {
       std::map<std::string,Ravelin::VectorNd> joint_load_map;
@@ -311,7 +344,7 @@ void controller(double t)
   
 #ifndef USE_THREADS
   OUT_LOG(logDEBUG2) << "call control_motor() from controller" << std::endl;
-  control_motor((void*)NULL);
+  control_motor();
 #endif
   last_t = t;
 #ifdef TIMING
@@ -339,15 +372,8 @@ int main(int argc, char* argv[])
   
   init("model","vars.xml");
   
-  double t=0;
-  //  struct timeval start_t, now_t;
-  //  gettimeofday(&start_t, NULL);
-  while(t<max_time){
-    t += 1.0/FREQ;
-    //    gettimeofday(&now_t, NULL);
-    //    double t = (now_t.tv_sec - start_t.tv_sec) + (now_t.tv_usec - start_t.tv_usec) * 1E-6;
-    controller(t);
-    sleep(1.0/FREQ);
+  while(TIME<max_time){
+    controller(TIME);
   }
   
 #ifdef USE_THREADS

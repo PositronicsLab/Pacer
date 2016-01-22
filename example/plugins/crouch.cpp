@@ -7,8 +7,6 @@ using namespace Ravelin;
 
 const double grav     = 9.81; // m / s*s
 
-boost::shared_ptr<Pacer::Controller> ctrl;
-
 struct Trajectory {
   VectorNd coefs;
   VectorNd T;
@@ -57,6 +55,8 @@ bool eval_Nd_cubic_spline(std::vector<Trajectory>& trajs, double t, VectorNd& x,
 }
 
 std::vector<Trajectory> calc_crouch(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
   std::vector<double> position = ctrl->get_data<std::vector<double> >(plugin_namespace + ".position");
   
@@ -87,8 +87,7 @@ std::vector<Trajectory> calc_crouch(){
 
 
 void loop(){
-boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  ::ctrl = ctrl;
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   static double start_jump_time = t;
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
   static Vector3d com_x = ctrl->get_data<Vector3d>("center_of_mass.x");

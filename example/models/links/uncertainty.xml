@@ -10,7 +10,7 @@
         <!-- Steel: 7850, Aluminum: 2712, Polycarbonate: 1200 -->
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">1200</min>
+          <min    type="double vector">600</min>
           <max    type="double vector">2712</max>
         </density>
       </BODY0>
@@ -19,7 +19,11 @@
       <LF_FOOT>
         <id type="string vector">density length radius foot.radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.043</mu>
@@ -32,7 +36,11 @@
           </radius>
         
         <foot> 
-          <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <radius>
             <distribution type="string">gaussian</distribution>
             <min    type="double vector">0.005</min>
@@ -43,7 +51,11 @@
       <RF_FOOT>
         <id type="string vector">density length radius foot.radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.043</mu>
@@ -56,7 +68,16 @@
           </radius>
         
         <foot> 
-          <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
+          <length>
+            <distribution type="string">gaussian</distribution>
+            <mu    type="double vector">0.043</mu>
+            <sigma type="double vector">0.005</sigma>
+          </length>
           <radius>
             <distribution type="string">gaussian</distribution>
             <min    type="double vector">0.005</min>
@@ -67,7 +88,11 @@
       <LH_FOOT>
         <id type="string vector">density length radius foot.radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.043</mu>
@@ -79,8 +104,13 @@
             <max    type="double vector">0.015</max>
           </radius>
         
+        
         <foot> 
-          <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <radius>
             <distribution type="string">gaussian</distribution>
             <min    type="double vector">0.005</min>
@@ -91,7 +121,11 @@
       <RH_FOOT>
         <id type="string vector">density length radius foot.radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.043</mu>
@@ -104,7 +138,11 @@
           </radius>
         
         <foot> 
-          <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
           <radius>
             <distribution type="string">gaussian</distribution>
             <min    type="double vector">0.005</min>
@@ -118,7 +156,11 @@
       <LF_LEG_2>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.076</mu>
@@ -133,7 +175,11 @@
       <RF_LEG_2>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.076</mu>
@@ -148,7 +194,11 @@
       <LH_LEG_2>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.076</mu>
@@ -163,7 +213,11 @@
       <RH_LEG_2>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.076</mu>
@@ -179,7 +233,11 @@
       <LF_LEG_1>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.021</mu>
@@ -194,7 +252,11 @@
       <RF_LEG_1>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.021</mu>
@@ -209,7 +271,11 @@
       <LH_LEG_1>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.021</mu>
@@ -224,7 +290,11 @@
       <RH_LEG_1>
         <id type="string vector">density length radius</id>
         <!-- Steel: 7850, Aluminum: 2712 -->
-        <density type="double vector">1200</density>
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.021</mu>

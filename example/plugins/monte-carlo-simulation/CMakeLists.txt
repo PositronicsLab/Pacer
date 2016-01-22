@@ -2,16 +2,7 @@
 option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
   add_library(monte-carlo-simulation MODULE simulate.cpp)
-
   target_link_libraries(monte-carlo-simulation ${REQLIBS})
-
-  find_package (GSL QUIET)
-  IF(GSL_FOUND)
-  add_definitions(-DUSE_GSL)
-  include_directories(${GSL_INCLUDE_DIRS})
-  link_directories(${GSL_LIBRARY_DIRS})
-  target_link_libraries(monte-carlo-simulation ${GSL_LIBRARIES})
-  ENDIF(GSL_FOUND)
 endif(BUILD_MONTECARLO)
 
 #find BOOST libraries

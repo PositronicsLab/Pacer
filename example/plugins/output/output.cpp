@@ -206,7 +206,6 @@ void setup(){
     //noecho();
     //nonl();
     curs_set(0);
-    inited = true;
     resize_term(100,200);
     move(0,0);
 #endif

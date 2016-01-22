@@ -7,9 +7,9 @@ void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   static double start_time = t;
   
-  const  std::vector<std::string>
-  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-  
+  std::vector<std::string> eef_names_;// = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  if(eef_names_.empty())
+    eef_names_.push_back("RH_FOOT");
   int NUM_FEET = eef_names_.size();
   
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
@@ -39,19 +39,19 @@ void loop(){
     foot_pose.update_relative_pose(Pacer::GLOBAL);
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));
     
-//    OUTLOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
-    OUTLOG(foot_pose.q,eef_names_[i]+".state.q",logERROR);
-    OUTLOG(foot_pose.x,eef_names_[i]+".state.x",logERROR);
+    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
+    OUTLOG(foot_pose.q,eef_names_[i]+".state.q",logINFO);
+    OUTLOG(foot_pose.x,eef_names_[i]+".state.x",logINFO);
     
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qd,xd);
     J.block(0,3,0,NUM_JOINT_DOFS).mult(qdd,xdd);
     J.block(3,6,0,NUM_JOINT_DOFS).mult(qd,axd);
     J.block(3,6,0,NUM_JOINT_DOFS).mult(qdd,axdd);
     
-    OUTLOG(xd,eef_names_[i]+".state.xd",logERROR);
-    OUTLOG(xdd,eef_names_[i]+".state.xdd",logERROR);
-    OUTLOG(axd,eef_names_[i]+".state.axd",logERROR);
-    OUTLOG(axdd,eef_names_[i]+".state.axdd",logERROR);
+    OUTLOG(xd,eef_names_[i]+".state.xd",logINFO);
+    OUTLOG(xdd,eef_names_[i]+".state.xdd",logINFO);
+    OUTLOG(axd,eef_names_[i]+".state.axd",logINFO);
+    OUTLOG(axdd,eef_names_[i]+".state.axdd",logINFO);
 
   }
 }

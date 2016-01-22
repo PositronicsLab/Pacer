@@ -3,12 +3,14 @@
 #include "../plugin.h"
 
 #include "common.h"
-#include "random.h"
+#include <Pacer/Random.h>
 #include <boost/algorithm/string.hpp>
 
 #include <string>
 #include <sstream>
 //#define SSTR( x ) ( std::ostringstream() << std::dec << x ).str()
+
+bool get_data_online = false;
 
 template <typename T>
 static std::string SSTR(T x)
@@ -18,129 +20,9 @@ static std::string SSTR(T x)
   return oss.str();
 }
 
+Random::ParamMap parameter_generator;
+
 //                NAME                  DOF                 RANDOM VALUE        DEFAULT
-typedef std::pair<std::vector<boost::shared_ptr<Generator> >, std::vector<double> > ParamDefaultPair;
-typedef std::map<std::string, ParamDefaultPair > ParamMap;
-ParamMap parameter_generator;
-
-void parse_distribution(const std::string& parameters,std::vector<boost::shared_ptr<Generator> >& generator){
-  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  std::vector<double> min, max, mu, sigma;
-  int N = 0;
-  bool has_min = false, has_max = false, has_mu = false, has_sigma = false;
-  
-  std::string distribution_type;
-  if(!ctrl->get_data<std::string>(parameters+".distribution", distribution_type))
-    throw std::runtime_error("there is no default value OR distribution params for this!");
-  
-  OUT_LOG(logDEBUG) << parameters << " has a distribution of type: " << distribution_type;
-  
-  if ((has_min = ctrl->get_data<std::vector<double> >(parameters+".min", min))){
-    OUT_LOG(logDEBUG) << "min = " << min;
-    N = min.size();
-  }
-  if ((has_max = ctrl->get_data<std::vector<double> >(parameters+".max", max))){
-    OUT_LOG(logDEBUG) << "max = " << max;
-    N = max.size();
-  }
-  if ((has_mu = ctrl->get_data<std::vector<double> >(parameters+".mu", mu))){
-    OUT_LOG(logDEBUG) << "mu = " << mu;
-    N = mu.size();
-  }
-  if ((has_sigma = ctrl->get_data<std::vector<double> >(parameters+".sigma", sigma))){
-    OUT_LOG(logDEBUG) << "sigma = " << sigma;
-    N = sigma.size();
-  }
-  
-  generator.resize(N);
-  for (int i=0;i<N;i++) {
-    generator[i] = boost::shared_ptr<Generator>(new Generator());
-    if(distribution_type.compare("gaussian") == 0){
-      if (has_max && has_min && has_mu && has_sigma) {
-        generator[i]->set_gaussian(mu[i],sigma[i],min[i],max[i]);
-      } else if (has_max && has_min && !has_mu && !has_sigma) {
-        generator[i]->set_gaussian_from_limits(min[i],max[i]);
-      } else if (has_max && !has_min && !has_mu && !has_sigma) {
-        generator[i]->set_gaussian_from_limits(-max[i],max[i]);
-      } else if (!has_max && !has_min && has_mu && has_sigma) {
-        generator[i]->set_gaussian(mu[i],sigma[i]);
-      } else {
-        throw std::runtime_error("Not a valid set of params for a GAUSSIAN distribution!");
-      }
-    } else if(distribution_type.compare("uniform") == 0){
-      if (has_max && has_min) {
-        generator[i]->set_uniform(min[i],max[i]);
-      } else if (has_max && !has_min){
-        generator[i]->set_uniform(-max[i],max[i]);
-      } else {
-        throw std::runtime_error("Not a valid set of params for a UNIFORM distribution!");
-      }
-    } else {
-      throw std::runtime_error("Not a valid distribution!");
-    }
-  }
-}
-
-// create distribution map
-void create_distributions(){
-  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  // Initialize Parameter distributions
-  
-  // FOR EACH UNCERTAINTY (manufacturing ,state)
-  std::vector<std::string> uncertainty_names;
-  if(ctrl->get_data<std::vector<std::string> >("uncertainty.id",uncertainty_names)){
-    for (int i=0; i<uncertainty_names.size();i++) {
-      std::string& uncertainty_name = uncertainty_names[i];
-      
-      // FOR EACH TYPE (joint, link)
-      std::vector<std::string> type_names;
-      if(ctrl->get_data<std::vector<std::string> >("uncertainty."+uncertainty_name+".id",type_names)){
-        for (int j=0; j<type_names.size();j++) {
-          std::string& type_name = type_names[j];
-          
-          // FOR EACH OBJECT (joint name, link name)
-          std::vector<std::string> object_names;
-          if(ctrl->get_data<std::vector<std::string> >("uncertainty."+uncertainty_name+"."+type_name+".id",object_names)){
-            for (int k=0; k<object_names.size();k++) {
-              std::string& object_name = object_names[k];
-              
-              std::vector<std::string> value_names;
-              if(ctrl->get_data<std::vector<std::string> >("uncertainty."+uncertainty_name+"."+type_name+"."+object_name+".id",value_names)){
-                for (int l=0; l<value_names.size();l++) {
-                  std::string& value_name = value_names[l];
-                  
-                  // Create vector of generators and default values
-                  std::vector<boost::shared_ptr<Generator> > generator;
-                  std::vector<double>                        default_value;
-                  // try to use default value
-                  if(!ctrl->get_data<std::vector<double> >("uncertainty."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name,default_value)){
-                    // if we're here then there are sub-tags to this parameter (generator params)
-                    parse_distribution("uncertainty."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name,generator);
-                    
-                    OUT_LOG(logDEBUG) << "Created generator for uncertain parameter: "<< object_name << "." << value_name;
-                    OUT_LOG(logDEBUG) << "\t FROM: uncertainty."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name;
-                  } else {
-                    OUT_LOG(logDEBUG) << "Used default for uncertain parameter: "<< object_name << "." << value_name;
-                    OUT_LOG(logDEBUG) << "\t FROM: uncertainty."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name;
-                    OUT_LOG(logDEBUG) << "\t default: " << default_value;
-                  }
-                  
-                  // error check
-                  if( (generator.empty() && default_value.empty()) || (!generator.empty() && !default_value.empty()))
-                    throw std::runtime_error("there are default values AND distribution params for this value!");
-                  
-                  OUT_LOG(logDEBUG) << "parameter: "<< object_name << "." << value_name << " pushed to map.";
-                  parameter_generator[object_name+"."+value_name] = ParamDefaultPair(generator,default_value);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 #include <signal.h>
 #include <unistd.h>
 #include <map>
@@ -249,32 +131,24 @@ void loop(){
     
     std::vector<std::string> PARAMETER_ARGV;
     // NOTE: parallelize this loop
-    for(ParamMap::iterator it = parameter_generator.begin(); it != parameter_generator.end();
-        it++){
+    Random::ParamValueMap generated_params;
+    Random::generate_parameters(parameter_generator,ctrl,generated_params);
+    
+    for(Random::ParamValueMap::iterator it = generated_params.begin(); it != generated_params.end();it++){
       std::vector<std::string> params;
       boost::split(params, it->first, boost::is_any_of("."));
-      OUT_LOG(logDEBUG) << "--"<< it->first;
+      OUT_LOG(logDEBUG) << "--"<< it->first << " " << it->second;
       PARAMETER_ARGV.push_back("--" + it->first);
-      if (it->second.first.empty()) {
-        for (int i=0;i<it->second.second.size(); i++) {
-          double value = it->second.second[i];
-          OUT_LOG(logDEBUG) << " " << value;
-          PARAMETER_ARGV.push_back(SSTR(value));
+      for (int i=0;i<it->second.size(); i++) {
+        double value = it->second[i];
+        
+        if (params.back().compare("x") == 0) {
+          value += joint_position[params.front()][i];
+        } else if (params.back().compare("xd") == 0) {
+          value = joint_velocity[params.front()][i] * (value+1.0);
         }
-      } else { // Generators created for variable
-        for (int i=0;i<it->second.first.size(); i++) {
-          double value = it->second.first[i]->generate();
-          
-          if (params.back().compare("x") == 0) {
-            value += joint_position[params.front()][i];
-          } else if (params.back().compare("xd") == 0) {
-            value = joint_velocity[params.front()][i] * (value+1.0);
-          }
-          
-          OUT_LOG(logDEBUG) << " " << value;
-          // Convert to command line argument
-          PARAMETER_ARGV.push_back(SSTR(value));
-        }
+        // Convert to command line argument
+        PARAMETER_ARGV.push_back(SSTR(value));
       }
     }
     
@@ -362,12 +236,14 @@ void loop(){
   
   if(sample_processes_size == 0){
     OUT_LOG(logINFO) << "Experiment Complete";
-    // uninstall sighandler
-    //    action.sa_handler = SIG_DFL;
-    action.sa_sigaction = NULL;  // might not be SIG_DFL
-    sigaction( SIGCHLD, &action, NULL );
-    // close self
-    ctrl->close_plugin(plugin_namespace);
+    if (get_data_online) {
+      // uninstall sighandler
+      //    action.sa_handler = SIG_DFL;
+      action.sa_sigaction = NULL;  // might not be SIG_DFL
+      sigaction( SIGCHLD, &action, NULL );
+      // close self
+    }
+//    ctrl->close_plugin(plugin_namespace);
   }
   return;
 }
@@ -381,14 +257,17 @@ void setup(){
   //-----------------------------------------------------------------------------
   // install sighandler to detect when gazebo finishes
   // TODO: make sighandler class more compatible with using a member function
-  memset( &action, 0, sizeof(struct sigaction) );
-  //  action.sa_handler = exit_sighandler;
-  action.sa_sigaction = exit_sighandler; // NEW
-  sigaction( SIGCHLD, &action, NULL );
+  ctrl->get_data<bool>(plugin_namespace+".get-data-online", get_data_online);
+
+  if(get_data_online){
+    memset( &action, 0, sizeof(struct sigaction) );
+    //  action.sa_handler = exit_sighandler;
+    action.sa_sigaction = exit_sighandler; // NEW
+    sigaction( SIGCHLD, &action, NULL );
+  }
   
   OUT_LOG(logDEBUG) << "Importing sources of uncertainty";
-  
-  create_distributions();
+  Random::create_distributions("uncertainty",ctrl,parameter_generator);
   
   std::string SAMPLE_BIN("sample.bin");
   ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);

@@ -15,7 +15,6 @@
 #include <set>
 #include <string.h>
 #include "common.h"
-#include "random.h"
 
 #ifdef USE_OSG_DISPLAY
 #include "visualize.cpp"

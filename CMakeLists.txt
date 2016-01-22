@@ -44,6 +44,7 @@ option(LOGGING "Write logs to <working_dir>/out.log" ON)
 option(BUILD_EXAMPLES "Build simulation examples" OFF)
 option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
 option(USE_THREADS "Build Pacer with multi-threading support?" OFF)
+option(USE_GSL "Build Pacer with randomization support?" OFF)
 
 # fix the C++ linking error on 64-bit Linux
 set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
@@ -70,6 +71,18 @@ IF(USE_THREADS)
   set (REQLIBS ${REQLIBS} pthread)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ENDIF(USE_THREADS)
+
+IF(USE_GSL)
+find_package (GSL REQUIRED)
+IF(GSL_FOUND)
+  add_definitions(-DUSE_GSL)
+  include_directories(${GSL_INCLUDE_DIRS})
+  link_directories(${GSL_LIBRARY_DIRS})
+  set(REQLIBS ${REQLIBS} ${GSL_LIBRARIES})
+  # handle linking error for GSL
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GSL_LIBRARY_DIRS}/libgsl.dylib")
+ENDIF(GSL_FOUND)
+ENDIF(USE_GSL)
 
 IF(LOGGING)
   add_definitions( -DLOG_TO_FILE )

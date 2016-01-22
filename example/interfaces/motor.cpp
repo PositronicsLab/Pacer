@@ -119,7 +119,8 @@ void control_motor(){
   printf("TIME: %f + ( %f - %f )",TIME,seconds_per_message,remaining);
   printf("\n");
 #endif
-  TIME += seconds_per_message - remaining;
+  //TIME += seconds_per_message - remaining;
+  TIME = get_current_time();
 }
 void *control_motor(void* data){
   control_motor();
@@ -150,57 +151,59 @@ void init(std::string model_f,std::string vars_f){
   robot_ptr->set_generalized_value(Pacer::Robot::acceleration_goal,robot_ptr->get_generalized_value(Pacer::Robot::acceleration));
   
   // Set Dynamixel Names
-  std::vector<std::string> joint_name = boost::assign::list_of<std::string>
-  /*("LF_X_1")("RF_X_1")("LH_X_1")*/("RH_X_1")
-  /*("LF_Y_2")("RF_Y_2")("LH_Y_2")*/("RH_Y_2")
-  /*("LF_Y_3")("RF_Y_3")("LH_Y_3")*/("RH_Y_3");
+  std::vector<std::string> joint_names;
+  joint_names.push_back("LF_X_1");
+  joint_names.push_back("RF_X_1");
+  joint_names.push_back("RH_X_1");
+  joint_names.push_back("LH_X_1");
+
+  joint_names.push_back("LF_Y_2");
+  joint_names.push_back("RF_Y_2");
+  joint_names.push_back("RH_Y_2");
+  joint_names.push_back("LH_Y_2");
+
+  joint_names.push_back("LF_Y_3");
+  joint_names.push_back("RF_Y_3");
+  joint_names.push_back("RH_Y_3");
+  joint_names.push_back("LH_Y_3");
 #ifdef USE_DXL
   // LINKS robot
-  ::joint_name = joint_name;
-  dxl_->names = joint_name;
-  // Set Joint Angles
-  //std::vector<int> dxl_tare = boost::assign::list_of
-  //    (0)(0)(0)(0)
-  //    (M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * RX_24F_RAD2UNIT)(-M_PI/4 * MX_64R_RAD2UNIT+40)(M_PI/4 * MX_64R_RAD2UNIT+250)
-  //    (M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(-M_PI/2 * RX_24F_RAD2UNIT)(M_PI/2 * RX_24F_RAD2UNIT);
-  //dxl_->tare.push_back(-M_PI_2 );
-  //dxl_->tare.push_back(-M_PI_2 );
-  //dxl_->tare.push_back(-M_PI_2 );
-  dxl_->tare.push_back(M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
   
-  //dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT);
-  //dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT);
-  //dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT);
-  dxl_->tare.push_back(M_PI_2 * MX_64R_RAD2UNIT);
-  
-  //dxl_->tare.push_back(0);
- //dxl_->tare.push_back(0);
-  //dxl_->tare.push_back(0);
+  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
+  dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT - 20 );
+  dxl_->tare.push_back( M_PI_2 * MX_64R_RAD2UNIT - 270);
+
+  dxl_->tare.push_back(0);
+  dxl_->tare.push_back(0);
+  dxl_->tare.push_back(0);
   dxl_->tare.push_back(0);
   
-  //dxl_->tare = dxl_tare;
-  
-  // Set Dynamixel Type
-  std::vector<DXL::Dynamixel::Type> dxl_type = boost::assign::list_of
-  /*(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)*/(DXL::Dynamixel::RX_24F)
-  /*(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::MX_64R)*/(DXL::Dynamixel::MX_64R)
-  /*(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)(DXL::Dynamixel::RX_24F)*/(DXL::Dynamixel::RX_24F);
-  
-  dxl_->stype = dxl_type;
-  //dxl_->ids.push_back(1);
-  //dxl_->ids.push_back(2);
-  //dxl_->ids.push_back(4);
-  dxl_->ids.push_back(3);
-  
-  //dxl_->ids.push_back(5);
-  //dxl_->ids.push_back(6);
-  //dxl_->ids.push_back(8);
-  dxl_->ids.push_back(7);
-  
-  //dxl_->ids.push_back(9);
-  //dxl_->ids.push_back(10);
-  //dxl_->ids.push_back(12);
-  dxl_->ids.push_back(11);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::MX_64R);
+  dxl_->stype.push_back(DXL::Dynamixel::MX_64R);
+
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+
+
+  dxl_->names = joint_names;
+
+  for(int i=1;i<=dxl_->names.size();i++){
+    dxl_->ids.push_back(i);
+  }
   
   q_motors.set_zero(dxl_->ids.size());
   qd_motors.set_zero(dxl_->ids.size());
@@ -266,7 +269,8 @@ void init(std::string model_f,std::string vars_f){
 
 void controller(double t)
 {
-  OUT_LOG(logDEBUG2) << "controller()" << std::endl;
+  OUT_LOG(logDEBUG2) << "controller()";
+  std::cout << "controller() " << t << std::endl;
   static double last_t = -0.001;
   double dt = t-last_t;
   
@@ -325,6 +329,7 @@ void controller(double t)
       robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
       std::map<std::string,Ravelin::VectorNd> joint_vel_map;
       robot_ptr->get_joint_value(Pacer::Robot::velocity_goal,joint_vel_map);
+      std::cout << joint_pos_map << std::endl;
       for(int i=0;i<joint_name.size();i++){
         q_motors[i] = joint_pos_map[joint_name[i]][0];
         qd_motors[i] = 0;//joint_vel_map[joint_name[i]][0];
@@ -371,9 +376,10 @@ int main(int argc, char* argv[])
   double max_time = INFINITY;
   
   init("model","vars.xml");
-  
-  while(TIME<max_time){
-    controller(TIME);
+ 
+  double FIRST_TIME = get_current_time();
+  while((TIME-FIRST_TIME)<max_time){
+    controller( (TIME-FIRST_TIME) );
   }
   
 #ifdef USE_THREADS

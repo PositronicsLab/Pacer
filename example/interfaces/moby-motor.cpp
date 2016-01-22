@@ -10,9 +10,7 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-#ifdef SIMULATE_UNCERTAINTY
-#include "Random.h"
-#endif
+#include <Pacer/Random.h>
 
 using Pacer::Controller;
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;

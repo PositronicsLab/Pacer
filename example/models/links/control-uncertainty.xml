@@ -1,34 +1,91 @@
 <XML>
-  <noise> <!-- standard normal gaussian distribution bounded by [min,max] -->
-    <!-- with mu and sigma not set, sigma = (max-min)/6 ; mu = (min+max)/2 -->
-    <!--           <variables type="string vector">positon velocity q qd</variables>-->
-    <variables type="string vector"></variables>
-    <positon>
-      <!-- x y x   roll pitch yaw -->
-      <min type="double">-0.01 -0.01 0    -0 -0 -0</min>
-      <max type="double"> 0.01  0.01 0     0  0  0</max>
-    </positon>
-    <velocity>
-      <!-- x y x   dx-axis dy-axis dz-axis-->
-      <min type="double">-0.01 -0.01 -0.01    -0.001 -0.001 -0.001</min>
-      <max type="double"> 0.01  0.01  0.01     0.001  0.001  0.001</max>
-    </velocity>
-    
-    <q>
-      <!-- Optional Parameter:<mu>    -->
-      <!-- Optional Parameter:<sigma> -->
-      <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
-      <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
-    </q>
-    <qd>
-      <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
-      <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
-    </qd>
-    <u>
-      <!-- Optional Parameter:<mu>    -->
-      <!-- Optional Parameter:<sigma> -->
-      <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
-      <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
-    </u>
-  </noise>
+  <control-uncertainty-jitter>
+    <id type="string vector">jitter</id>
+    <jitter>
+      <id type="string vector">noise delay</id>
+      <noise>
+        <id type="string vector">control sensor</id>
+        <control>
+          <id type="string vector">q qd u</id>
+          <q>
+            <distribution type="string">gaussian</distribution>
+            <min type="double vector">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+            <max type="double vector"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+          </q>
+          <qd>
+            <distribution type="string">gaussian</distribution>
+            <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+            <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+          </qd>
+          <u>
+            <distribution type="string">gaussian</distribution>
+            <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+            <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+          </u>
+        </control>
+        <sensor>
+          <id type="string vector">q qd u</id>
+          <positon>
+            <distribution type="string">gaussian</distribution>
+            <!-- x y x   roll pitch yaw -->
+            <min type="double">-0.01 -0.01 0    -0 -0 -0</min>
+            <max type="double"> 0.01  0.01 0     0  0  0</max>
+          </positon>
+          <velocity>
+            <distribution type="string">gaussian</distribution>
+            <!-- x y x   dx-axis dy-axis dz-axis-->
+            <min type="double">-0.01 -0.01 -0.01    -0.001 -0.001 -0.001</min>
+            <max type="double"> 0.01  0.01  0.01     0.001  0.001  0.001</max>
+          </velocity>
+          <q>
+            <distribution type="string">gaussian</distribution>
+            <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+            <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+          </q>
+          <qd>
+            <distribution type="string">gaussian</distribution>
+            <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+            <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+          </qd>
+          <u>
+            <distribution type="string">gaussian</distribution>
+            <min type="double">-0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01    -0.01 -0.01 -0.01 </min>
+            <max type="double"> 0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01     0.01  0.01  0.01 </max>
+          </u>
+        </sensor>
+      </noise>
+      <delay>
+        <id type="string vector">control sensor</id>
+        <control>
+          <id type="string vector">dynamic kinematic</id>
+          <dynamic type="double vector">0</dynamic>
+          <kinematic>
+            <distribution type="string">gaussian</distribution>
+            <min type="double vector">-0.001</min>
+            <max type="double vector">0.001</max>
+          </kinematic>
+        </control>
+      </delay>
+    </jitter>
+  </control-uncertainty-jitter>
+  <initial-control-uncertainty>
+    <id type="string vector">initial</id>
+    <initial>
+      <id type="string vector">delay</id>
+      <delay>
+        <id type="string vector">control sensor</id>
+        <control>
+          <id type="string vector">dynamic kinematic</id>
+          <dynamic type="double vector">0</dynamic>
+          <kinematic>
+            <distribution type="string">gaussian</distribution>
+            <mu type="double vector">0.18</mu>
+            <sigma type="double vector">0.01</sigma>
+            <min type="double vector">0</min>
+            <max type="double vector">0.3</max>
+          </kinematic>
+        </control>
+      </delay>
+    </initial>
+  </initial-control-uncertainty>
 </XML>

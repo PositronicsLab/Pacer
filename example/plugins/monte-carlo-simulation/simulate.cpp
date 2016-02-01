@@ -132,8 +132,11 @@ void loop(){
     std::vector<std::string> PARAMETER_ARGV;
     // NOTE: parallelize this loop
     Random::ParamValueMap generated_params;
-    Random::generate_parameters(parameter_generator,ctrl,generated_params);
     
+    OUT_LOG(logDEBUG)  << ">> Random::generate_parameters";
+    Random::generate_parameters(parameter_generator,ctrl,generated_params);
+    OUT_LOG(logDEBUG)  << "<< Random::generate_parameters";
+
     for(Random::ParamValueMap::iterator it = generated_params.begin(); it != generated_params.end();it++){
       std::vector<std::string> params;
       boost::split(params, it->first, boost::is_any_of("."));
@@ -245,6 +248,8 @@ void loop(){
     }
 //    ctrl->close_plugin(plugin_namespace);
   }
+  
+  sleep(1);
   return;
 }
 

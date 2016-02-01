@@ -1060,6 +1060,11 @@ namespace Pacer{
     const boost::shared_ptr<Ravelin::RigidBodyd> get_root_link(){return _root_link;}
     
     int joint_dofs(){return NUM_JOINT_DOFS;}
+    
+    boost::shared_ptr<Ravelin::ArticulatedBodyd>& get_abrobot(){
+      return _abrobot;
+    };
+
   private:
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);

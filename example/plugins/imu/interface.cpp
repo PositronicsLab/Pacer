@@ -366,9 +366,7 @@ void loop(){
     state[5] = robot_pose.q.z;
     state[6] = robot_pose.q.w;
   //  ctrl->set_data<Ravelin::VectorNd>("base-state",state);
-    double time_now = -1;
-    ctrl->get_data<double>("trajectory.time",time_now);
-    std::cerr << time_now << " " << state << std::endl;
+    std::cerr << t << " " << state << std::endl;
   }
   p1 = p2;
   R1 = R2;

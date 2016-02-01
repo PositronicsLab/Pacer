@@ -55,15 +55,20 @@
         </sensor>
       </noise>
       <delay>
-        <id type="string vector">control sensor</id>
+        <id type="string vector">control</id>
         <control>
-          <id type="string vector">dynamic kinematic</id>
+          <id type="string vector">dynamic kinematic end-effector</id>
           <dynamic type="double vector">0</dynamic>
           <kinematic>
             <distribution type="string">gaussian</distribution>
             <min type="double vector">-0.001</min>
             <max type="double vector">0.001</max>
           </kinematic>
+          <end-effector>
+            <distribution type="string">gaussian</distribution>
+            <min type="double vector">-0.001</min>
+            <max type="double vector">0.001</max>
+          </end-effector>
         </control>
       </delay>
     </jitter>
@@ -73,9 +78,9 @@
     <initial>
       <id type="string vector">delay</id>
       <delay>
-        <id type="string vector">control sensor</id>
+        <id type="string vector">control</id>
         <control>
-          <id type="string vector">dynamic kinematic</id>
+          <id type="string vector">dynamic kinematic end-effector</id>
           <dynamic type="double vector">0</dynamic>
           <kinematic>
             <distribution type="string">gaussian</distribution>
@@ -84,6 +89,13 @@
             <min type="double vector">0</min>
             <max type="double vector">0.3</max>
           </kinematic>
+          <end-effector>
+            <distribution type="string">gaussian</distribution>
+            <mu type="double vector">0.18</mu>
+            <sigma type="double vector">0.01</sigma>
+            <min type="double vector">0</min>
+            <max type="double vector">0.3</max>
+          </end-effector>
         </control>
       </delay>
     </initial>

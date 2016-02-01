@@ -64,7 +64,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   desc.add_options()
   ("help", "produce help message")
   // INPUT BY USER
-  ("duration", po::value<std::string>()->default_value("1"), "set duration (virtual time) of each sample")
+  ("duration", po::value<std::string>()->default_value("20"), "set duration (virtual time) of each sample")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
   ("display,r","visualize in moby");
   
@@ -192,10 +192,10 @@ int main(int argc, char* argv[]){
   
   logging << " -- Found Robot -- " << std::endl;
   
-  if(!environment)
-    throw std::runtime_error("Could not find environment");
+//  if(!environment)
+//    throw std::runtime_error("Could not find environment");
   
-  logging << " -- Found Environment -- " << std::endl;
+//  logging << " -- Found Environment -- " << std::endl;
   
   /*
    *  Running experiment

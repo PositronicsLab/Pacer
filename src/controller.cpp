@@ -138,8 +138,7 @@ void Controller::control(double t){
   OUTLOG(t,"virtual_time",logINFO);
   OUTLOG(dt,"virtual_time_step",logINFO);
   increment_phase(INITIALIZATION);
-  if(iter == 0)
-   update();
+  update();
   increment_phase(PERCEPTION);
 #ifdef USE_PLUGINS
   update_plugins(t);

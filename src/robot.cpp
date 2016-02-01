@@ -170,8 +170,7 @@ void Robot::update(){
   set_generalized_value(load_goal,Ravelin::VectorNd::zero(generalized_fext.rows()));
 
   Ravelin::Vector3d workv;
-  workv = Ravelin::Vector3d(generalized_q.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose());
-  set_data<Ravelin::Vector3d>("base.state.x",workv);
+  set_data<Ravelin::Vector3d>("base.state.x",Ravelin::Vector3d(generalized_q.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose()));
   set_data<Ravelin::Quatd>("base.state.q",Ravelin::Quatd(generalized_q[NUM_JOINT_DOFS+3],generalized_q[NUM_JOINT_DOFS+4],generalized_q[NUM_JOINT_DOFS+5],generalized_q[NUM_JOINT_DOFS+6]));
 
   workv = Ravelin::Vector3d(generalized_qd.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose());

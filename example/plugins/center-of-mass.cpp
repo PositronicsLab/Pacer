@@ -31,6 +31,21 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   center_of_mass_x.pose = Pacer::GLOBAL;
   double total_mass=0;
   
+  {
+    static double start_time = t;
+    Ravelin::Vector3d base_state_x;
+    Ravelin::Quatd base_state_q;
+    ctrl->get_data<Ravelin::Vector3d>("base.state.x",base_state_x);
+    ctrl->get_data<Ravelin::Quatd>("base.state.q",base_state_q);
+    Ravelin::VectorNd state = Ravelin::VectorNd::zero(7);
+    state.segment(0,3) = base_state_x;
+    state[3] = base_state_q.x;
+    state[4] = base_state_q.y;
+    state[5] = base_state_q.z;
+    state[6] = base_state_q.w;
+    OUT_LOG(logERROR)<< "simulated-imu-state-data " << (t-start_time) << " " << state << std::endl;
+  }
+
   const std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >& _id_link_map = ctrl->get_links();
   std::map<std::string, boost::shared_ptr<Ravelin::RigidBodyd> >::const_iterator it;
   for(it=_id_link_map.begin();it!=_id_link_map.end();it++){

@@ -236,8 +236,7 @@ bool next_flight_phase(const std::vector<double>& touchdown,const std::vector<do
  * @param foot_vel : NUM_FEET length vector of 3x1 cartesian velocities for feet (populated with current values)
  * @param foot_acc : NUM_FEET length vector of 3x1 cartesian acceleration for feet (populated with current values)
  */
-void walk_toward(
-                 // PARAMETERS
+void walk_toward(// PARAMETERS
                  const VectorNd& command,
                  const std::vector<double>& touchdown,
                  const std::vector<std::vector<double> >& footholds,
@@ -256,6 +255,7 @@ void walk_toward(
                  std::vector<Vector3d>&
                  foot_acc)
 {
+  
   OUT_LOG(logDEBUG) << " -- walk_toward() entered";
   
   boost::shared_ptr<Pacer::Controller> ctrl = ctrl_weak_ptr.lock();
@@ -264,8 +264,12 @@ void walk_toward(
   NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
   
   // Up is oriented wrt global up vector (+Z-axis for BASE_HORIZONTAL_FRAME)
-  Vector3d up = Pose3d::transform_vector(base_frame,Vector3d(0,0,1,base_horizontal_frame));
-  
+  bool global_up = false;
+  ctrl->get_data<bool>(plugin_namespace+".global-up",global_up);
+  Vector3d up =Vector3d(0,0,1,base_frame);
+  if(global_up)
+    up = Pose3d::transform_vector(base_frame,Vector3d(0,0,1,base_horizontal_frame));
+
   // Find time since last call
   static double last_time = -0.001;
   double dt = t - last_time;
@@ -788,6 +792,7 @@ void walk_toward(
 void loop(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // Find time since last call
+  static double first_time = t;
   static double last_time = t;
   double dt = t - last_time;
   last_time = t;
@@ -931,8 +936,12 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     else
       active_feet[foot_names[i]] = false;
   }
+  std::vector<double> new_command;
+  if(ctrl->get_data<std::vector<double> >(plugin_namespace+".command",new_command)){
+    go_to = VectorNd(6,&new_command[0]);
+  }
   
-  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
+  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t-first_time,foot_pos,foot_vel, foot_acc);
   
   for(int i=0;i<NUM_FEET;i++){
     ctrl->set_data<Origin3d>(foot_names[i]+".goal.x",Origin3d(foot_pos[i]));

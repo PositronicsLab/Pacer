@@ -680,10 +680,10 @@ int main(int argc, char* argv[]){
   
   logging << " -- Found Robot -- " << std::endl;
   
-  if(!environment)
-    throw std::runtime_error("Could not find environment");
+//  if(!environment)
+//    throw std::runtime_error("Could not find environment");
   
-  logging << " -- Found Environment -- " << std::endl;
+//  logging << " -- Found Environment -- " << std::endl;
   
   // Apply uncertainty to robot model
   apply_manufacturing_uncertainty(argc, argv,robot);
@@ -706,17 +706,17 @@ int main(int argc, char* argv[]){
   //  }
   
   if(EXPORT_XML){
-    Ravelin::VectorNd q0,q;
-    robot->get_generalized_coordinates_euler(q0);
-    q = q0;
-    q.segment(0,q.rows()-7) = Ravelin::VectorNd::zero(q.rows()-7);
-    robot->set_generalized_coordinates_euler(q);
+//    Ravelin::VectorNd q0,q;
+//    robot->get_generalized_coordinates_euler(q0);
+//    q = q0;
+//    q.segment(0,q.rows()-7) = Ravelin::VectorNd::zero(q.rows()-7);
+//    robot->set_generalized_coordinates_euler(q);
 
     // write the file (fails silently)
     char buffer[128];
     sprintf(buffer, "model-%06u.xml", pid);
-    Moby::XMLWriter::serialize_to_xml(std::string(buffer), boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot));
-    robot->set_generalized_coordinates_euler(q0);
+    Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim);
+//    robot->set_generalized_coordinates_euler(q0);
   }
   
   /*

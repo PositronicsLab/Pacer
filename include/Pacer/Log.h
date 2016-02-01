@@ -50,8 +50,8 @@ inline Logger::Logger()
 
 inline std::ostringstream& Logger::Get(TLogLevel level)
 {
-    os << "- " << NowTime();
-    os << " " << ToString(level) << ": ";
+//    os << "- " << NowTime();
+//    os << " " << ToString(level) << ": ";
     os << std::string( (level > logDEBUG) ? (level - logDEBUG) : 0, '\t');
     return os;
 }

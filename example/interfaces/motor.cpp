@@ -29,10 +29,11 @@ using Pacer::Robot;
 boost::shared_ptr<Controller> robot_ptr;
 unsigned NDOFS;
 
-static Ravelin::VectorNd q_motors,qd_motors,u_motors;
-static Ravelin::VectorNd q_sensor,qd_sensor,u_sensor;
+static std::vector<double> q_motors,qd_motors,u_motors;
+static std::vector<double> q_sensor,qd_sensor,u_sensor;
 
 static double TIME = 0; 
+static double FIRST_TIME = 0;
 double sleep_duration(double duration){
   timespec req,rem;
   int seconds = duration;
@@ -52,66 +53,33 @@ double get_current_time()
 
 
 void control_motor(){
+  fprintf(stdout,"refreshing actuators (threads): TIME: %f \n",TIME-FIRST_TIME);
   OUT_LOG(logDEBUG2) << ">> control_motor()" << std::endl;
-#ifdef USE_THREADS
-  while(true)
-#endif
+
+  OUT_LOG(logDEBUG) << ">> motor controller";
+
+  OUT_LOG(logDEBUG2) << "READ OUT COMMANDS" << std::endl;
+  
   {
-    OUT_LOG(logDEBUG2) << ">> motor controller loop" << std::endl;
-
-    OUT_LOG(logDEBUG) << ">> motor controller";
-    OUT_LOG(logDEBUG) << "q_des = " << q_motors;
-    OUT_LOG(logDEBUG) << "qd_des = " << qd_motors;
-    OUT_LOG(logDEBUG) << "u_des = " << u_motors;
-    qd_motors.set_zero();
-
-    OUT_LOG(logDEBUG2) << "READ OUT COMMANDS" << std::endl;
-
-    std::vector<double> qm, qdm, um;
 #ifdef USE_THREADS
-    if(pthread_mutex_trylock(&joint_data_mutex_))
+    pthread_mutex_lock(&joint_data_mutex_);
 #endif
-    {
-      qm = std::vector<double>(q_motors.begin(),q_motors.end());
-      qdm = std::vector<double>(qd_motors.begin(),qd_motors.end());
-      um = std::vector<double>(u_motors.begin(),u_motors.end());
-#ifdef USE_THREADS
-      pthread_mutex_unlock(&joint_data_mutex_);
-#endif
-    }
-    
-    std::vector<double> qs, qds, us;
-    
 #ifdef USE_DXL
-    dxl_->set_state(qm,qdm);
-    qs = qm;
-    qds = qdm;
-//    dxl_->get_state(qs,qds,us);
-//    dxl_->set_torque(um);
+      OUT_LOG(logDEBUG) << "q_des = " << q_motors;
+      OUT_LOG(logDEBUG) << "qd_des = " << qd_motors;
+      OUT_LOG(logDEBUG) << "u_des = " << u_motors;
+      dxl_->set_state(q_motors,qd_motors);
+//      dxl_->get_state(q_sensor,qd_sensor,u_sensor);
+      q_sensor = q_motors;
+      qd_sensor = qd_motors;
+      OUT_LOG(logDEBUG) << "q = " << q_sensor;
+      OUT_LOG(logDEBUG) << "qd = " << qd_sensor;
 #endif
-    
-    OUT_LOG(logDEBUG2) << "READ IN SENSORS" << std::endl;
-
-#ifdef USE_THREADS
-    if(pthread_mutex_trylock(&joint_data_mutex_))
-#endif
-    {
-      q_sensor = Ravelin::VectorNd(qs.size(),&qm[0]);
-      qd_sensor = Ravelin::VectorNd(qds.size(),&qdm[0]);
-//      u_sensor = Ravelin::VectorNd(us.size(),&um[0]);
 #ifdef USE_THREADS
       pthread_mutex_unlock(&joint_data_mutex_);
 #endif
     }
-    
-    OUT_LOG(logDEBUG) << "q = " << q_sensor;
-    OUT_LOG(logDEBUG) << "qd = " << qd_sensor;
-//    OUT_LOG(logDEBUG) << "u = " << u_sensor;
-    OUT_LOG(logDEBUG) << "<< motor controller";
-    OUT_LOG(logDEBUG2) << "<< motor controller" << std::endl;
-    
-  }
-  OUT_LOG(logDEBUG2) << "<< control_motor()" << std::endl;
+  OUT_LOG(logDEBUG) << "<< motor controller";
   
   const double seconds_per_message = 0.001;
   double remaining = sleep_duration(seconds_per_message);
@@ -120,10 +88,12 @@ void control_motor(){
   printf("\n");
 #endif
   //TIME += seconds_per_message - remaining;
-  TIME = get_current_time();
 }
+  
 void *control_motor(void* data){
-  control_motor();
+  while(1){
+    control_motor();
+  }
 }
 
 // ============================================================================
@@ -151,21 +121,20 @@ void init(std::string model_f,std::string vars_f){
   robot_ptr->set_generalized_value(Pacer::Robot::acceleration_goal,robot_ptr->get_generalized_value(Pacer::Robot::acceleration));
   
   // Set Dynamixel Names
-  std::vector<std::string> joint_names;
-  joint_names.push_back("LF_X_1");
-  joint_names.push_back("RF_X_1");
-  joint_names.push_back("RH_X_1");
-  joint_names.push_back("LH_X_1");
+  joint_name.push_back("LF_X_1");
+  joint_name.push_back("RF_X_1");
+  joint_name.push_back("RH_X_1");
+  joint_name.push_back("LH_X_1");
 
-  joint_names.push_back("LF_Y_2");
-  joint_names.push_back("RF_Y_2");
-  joint_names.push_back("RH_Y_2");
-  joint_names.push_back("LH_Y_2");
+  joint_name.push_back("LF_Y_2");
+  joint_name.push_back("RF_Y_2");
+  joint_name.push_back("RH_Y_2");
+  joint_name.push_back("LH_Y_2");
 
-  joint_names.push_back("LF_Y_3");
-  joint_names.push_back("RF_Y_3");
-  joint_names.push_back("RH_Y_3");
-  joint_names.push_back("LH_Y_3");
+  joint_name.push_back("LF_Y_3");
+  joint_name.push_back("RF_Y_3");
+  joint_name.push_back("RH_Y_3");
+  joint_name.push_back("LH_Y_3");
 #ifdef USE_DXL
   // LINKS robot
   dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
@@ -198,26 +167,21 @@ void init(std::string model_f,std::string vars_f){
   dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
   dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
 
-
-  dxl_->names = joint_names;
+  dxl_->names = joint_name;
 
   for(int i=1;i<=dxl_->names.size();i++){
     dxl_->ids.push_back(i);
   }
   
-  q_motors.set_zero(dxl_->ids.size());
-  qd_motors.set_zero(dxl_->ids.size());
-  u_motors.set_zero(dxl_->ids.size());
-  
   dxl_->relaxed(false);
   
   int N = dxl_->ids.size();
-  q_motors = Ravelin::VectorNd::zero(N);
-  qd_motors = Ravelin::VectorNd::zero(N);
-  u_motors = Ravelin::VectorNd::zero(N);
-  q_sensor = Ravelin::VectorNd::zero(N);
-  qd_sensor = Ravelin::VectorNd::zero(N);
-  u_sensor = Ravelin::VectorNd::zero(N);
+  q_motors = std::vector<double>(N);
+  qd_motors = std::vector<double>(N);
+  u_motors = std::vector<double>(N);
+  q_sensor = std::vector<double>(N);
+  qd_sensor = std::vector<double>(N);
+  u_sensor = std::vector<double>(N);
   
   std::map<std::string,Ravelin::VectorNd> joint_pos_map;
   robot_ptr->get_joint_value(Pacer::Robot::position,joint_pos_map);
@@ -228,9 +192,7 @@ void init(std::string model_f,std::string vars_f){
     q_sensor[i] = joint_pos_map[dxl_->JointName(i)][0];
     qd_sensor[i] = 0;
     u_sensor[i] = 0;
-
   }
-
 #endif
   
 #ifdef USE_THREADS
@@ -329,11 +291,11 @@ void controller(double t)
       robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
       std::map<std::string,Ravelin::VectorNd> joint_vel_map;
       robot_ptr->get_joint_value(Pacer::Robot::velocity_goal,joint_vel_map);
-      std::cout << joint_pos_map << std::endl;
       for(int i=0;i<joint_name.size();i++){
-        q_motors[i] = joint_pos_map[joint_name[i]][0];
+        q_motors[i]  = joint_pos_map[joint_name[i]][0];
         qd_motors[i] = 0;//joint_vel_map[joint_name[i]][0];
       }
+
     } else {
       std::map<std::string,Ravelin::VectorNd> joint_load_map;
       robot_ptr->get_joint_value(Pacer::Robot::load_goal,joint_load_map);
@@ -341,7 +303,6 @@ void controller(double t)
         u_motors[i] = joint_load_map[joint_name[i]][0];
       }
     }
-    
 #ifdef USE_THREADS
     pthread_mutex_unlock(&joint_data_mutex_);
 #endif
@@ -377,10 +338,11 @@ int main(int argc, char* argv[])
   
   init("model","vars.xml");
  
-  double FIRST_TIME = get_current_time();
-  while((TIME-FIRST_TIME)<max_time){
+  FIRST_TIME = get_current_time();
+  do {
+    TIME = get_current_time();
     controller( (TIME-FIRST_TIME) );
-  }
+  } while((TIME-FIRST_TIME)<max_time);
   
 #ifdef USE_THREADS
   pthread_join( thread, NULL);

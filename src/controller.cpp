@@ -18,7 +18,6 @@
 using namespace Pacer;
 
 std::map<std::string,void*> Controller::handles;
-std::map<std::string, Controller::init_t> Controller::INIT;
   
 Controller::Controller(): Robot(){
 
@@ -50,7 +49,6 @@ bool Controller::remove_plugin(const std::string& plugin_name){
   if(it == handles.end())
     return false;
 
-  INIT.erase(plugin_name);
   remove_plugin_update(plugin_name);
   void * &handle = (*it).second;
   dlclose(handle);
@@ -89,18 +87,17 @@ bool Controller::init_plugin(const std::string& plugin_name){
   
   // attempt to load the initializer
   dlerror();
-  INIT[plugin_name] = (init_t) dlsym(HANDLE, "init");
+  Controller::init_t INIT = (init_t) dlsym(HANDLE, "init");
   const char* dlsym_error = dlerror();
   if (dlsym_error)
   {
     std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
     std::cerr << "        error follows: " << std::endl << dlsym_error << std::endl;
-    INIT.erase(plugin_name);
     throw std::runtime_error("driver: cannot load symbol 'init' from " + filename);
     return false;
   } else {
     // Init the plugin
-    (*INIT[plugin_name])(this->ptr(),plugin_name.c_str());
+    (*INIT)(this->ptr(),plugin_name.c_str());
   }
   return true;
 }
@@ -128,11 +125,13 @@ bool Controller::init_all_plugins(){
 // =========================== Begin Robot Controller =========================
 // ============================================================================
 
-void Controller::control(double t){
+void Controller::control(double absolute_time){
     OUT_LOG(logDEBUG) << ">> Controller::control(.)";
   // Import Robot Data
   static long long unsigned int iter = 0;
+  static double first_time = absolute_time;
   static double last_time = -0.001;
+  double t = absolute_time-first_time;
   const double dt = t - last_time;
   
   OUTLOG(t,"virtual_time",logINFO);

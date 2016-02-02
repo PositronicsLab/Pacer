@@ -16,13 +16,26 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   Ravelin::VectorNd qd  = ctrl->get_joint_generalized_value(Pacer::Controller::velocity);
   Ravelin::VectorNd qdd = ctrl->get_joint_generalized_value(Pacer::Controller::acceleration);
+  
+  int NUM_JOINT_DOFS = qd.rows();
+  
   // Initialize end effectors
   Ravelin::VectorNd local_q = ctrl->get_generalized_value(Pacer::Controller::position);
-  int NUM_JOINT_DOFS = qd.rows();
-  local_q.set_sub_vec(NUM_JOINT_DOFS,Utility::pose_to_vec(Ravelin::Pose3d()));
 
+#ifdef USE_OSG_DISPLAY
+  // 1 w/ base position
   ctrl->set_model_state(local_q);
+  for(unsigned i=0;i<NUM_FEET;i++){
+    Ravelin::Pose3d foot_pose(Ravelin::Matrix3d(link->get_pose()->q)*Ravelin::Matrix3d(0,0,-1, -1,0,0, 0,1,0),link->get_pose()->x,link->get_pose()->rpose);
+    foot_pose.update_relative_pose(Pacer::GLOBAL);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));    
+    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
+  }
+#endif
 
+  // q w/o base position
+  local_q.set_sub_vec(NUM_JOINT_DOFS,Utility::pose_to_vec(Ravelin::Pose3d()));
+  ctrl->set_model_state(local_q);
   for(unsigned i=0;i<NUM_FEET;i++){
     Ravelin::Origin3d xd,xdd;
     //angular
@@ -38,9 +51,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     
     Ravelin::Pose3d foot_pose(Ravelin::Matrix3d(link->get_pose()->q)*Ravelin::Matrix3d(0,0,-1, -1,0,0, 0,1,0),link->get_pose()->x,link->get_pose()->rpose);
     foot_pose.update_relative_pose(Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));    
     
-//    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
 
 //    Ravelin::Origin3d x(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
     bool new_var = ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.x",foot_pose.x);

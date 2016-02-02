@@ -298,7 +298,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 //    OUT_LOG(logINFO) << "MOBY: base state update: " << base_update;
 //    abrobot->set_generalized_coordinates_euler(generalized_q);
 //  }
-  robot_ptr->reset_state();
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
   for(int i=0;i<eef_names.size();i++)
     robot_ptr->remove_data(eef_names[i]+".contact-force");
@@ -535,7 +534,8 @@ void post_step_callback_fn(Moby::Simulator* s){
   {
   // display collision
   static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
-  
+  robot_ptr->set_model_state(robot_ptr->get_generalized_value(Pacer::Robot::position));
+
   boost::shared_ptr<Moby::ArticulatedBody> abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(robot_ptr->get_abrobot());
   BOOST_FOREACH(boost::shared_ptr<Ravelin::RigidBodyd> rbd, abrobot->get_links()){
     boost::shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
@@ -589,6 +589,7 @@ void post_step_callback_fn(Moby::Simulator* s){
   }
   }
 #endif
+robot_ptr->reset_state();
 
 }
 

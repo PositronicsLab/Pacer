@@ -19,7 +19,7 @@ double t;
 
 
 // Implemented by specific plugin
-void loop();
+static void loop();
 
 void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ::t = t;
@@ -36,7 +36,7 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   ITER+=1;
 }
 
-void setup();
+static void setup();
 
 std::vector<std::string> variable_names;
 void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){

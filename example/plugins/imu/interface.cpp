@@ -360,13 +360,18 @@ void loop(){
   }
   {  
     Ravelin::VectorNd state = Ravelin::VectorNd::zero(7);
-    state.segment(0,3) = p2;
+    //state.segment(0,3) = p2;
     state[3] = robot_pose.q.x;
     state[4] = robot_pose.q.y;
     state[5] = robot_pose.q.z;
     state[6] = robot_pose.q.w;
   //  ctrl->set_data<Ravelin::VectorNd>("base-state",state);
+    bool apply_state = false;
+    if(apply_state){
     std::cerr << t << " " << state << std::endl;
+    } else {
+      ctrl->set_base_value(Pacer::Robot::position,state);
+    }
   }
   p1 = p2;
   R1 = R2;

@@ -103,7 +103,6 @@ file(GLOB LIBSOURCES
 "src/*.cpp"
 )
 
-add_library(Pacer ${LIBSOURCES})
 
 # LibXml2
 IF(LIBXML2_FOUND)
@@ -112,6 +111,12 @@ ENDIF(LIBXML2_FOUND)
 
 set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES})
 
+add_executable(pacer ${LIBSOURCES})
+target_link_libraries(pacer ${REQLIBS})
+set_target_properties(pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(TARGETS pacer DESTINATION bin)
+
+add_library(Pacer ${LIBSOURCES})
 target_link_libraries(Pacer ${REQLIBS})
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(TARGETS Pacer DESTINATION lib)

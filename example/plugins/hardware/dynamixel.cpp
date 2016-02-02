@@ -3,7 +3,7 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#include <Pacer/controller.h>
+#include "../plugin.h"
 #include <time.h>
 
 #include <boost/assign/list_of.hpp>
@@ -20,14 +20,6 @@ std::vector<std::string> joint_name;
 pthread_mutex_t joint_data_mutex_;
 pthread_t thread;
 #endif
-
-std::string DEVICE_NAME;
-
-using Pacer::Controller;
-using Pacer::Robot;
-
-boost::shared_ptr<Controller> robot_ptr;
-unsigned NDOFS;
 
 static std::vector<double> q_motors,qd_motors,u_motors;
 static std::vector<double> q_sensor,qd_sensor,u_sensor;
@@ -53,6 +45,7 @@ static double get_current_time()
 
 
 static void control_motor(){
+    boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   fprintf(stdout,"refreshing actuators (threads): TIME: %f \n",TIME-FIRST_TIME);
   OUT_LOG(logDEBUG2) << ">> control_motor()" << std::endl;
 
@@ -65,15 +58,23 @@ static void control_motor(){
     pthread_mutex_lock(&joint_data_mutex_);
 #endif
 #ifdef USE_DXL
+#ifndef USE_THREADS
       OUT_LOG(logDEBUG) << "q_des = " << q_motors;
       OUT_LOG(logDEBUG) << "qd_des = " << qd_motors;
       OUT_LOG(logDEBUG) << "u_des = " << u_motors;
+#endif
       dxl_->set_state(q_motors,qd_motors);
-//      dxl_->get_state(q_sensor,qd_sensor,u_sensor);
-      q_sensor = q_motors;
-      qd_sensor = qd_motors;
+      static bool fake_state = ctrl->get_data<bool>(plugin_namespace+".fake-state");
+      if(fake_state){
+        q_sensor = q_motors;
+        qd_sensor = qd_motors;
+      } else {
+        dxl_->get_state(q_sensor,qd_sensor,u_sensor);
+      }
+#ifndef USE_THREADS
       OUT_LOG(logDEBUG) << "q = " << q_sensor;
       OUT_LOG(logDEBUG) << "qd = " << qd_sensor;
+#endif
 #endif
 #ifdef USE_THREADS
       pthread_mutex_unlock(&joint_data_mutex_);
@@ -96,29 +97,107 @@ static void *control_motor(void* data){
   }
 }
 
-// ============================================================================
-// ================================ INIT ======================================
-// ============================================================================
+  static std::map<std::string,Ravelin::VectorNd> q,qd,qdd,u;
+void loop()
+{
+    boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
-static void init(){
-  OUT_LOG(logDEBUG2) << "STARTING PACER" << std::endl;
+  OUT_LOG(logDEBUG2) << "controller()";
+  std::cout << "controller() " << t << std::endl;
+  static double last_t = -0.001;
+  double dt = t-last_t;
+  
+  
+  static std::map<std::string,Ravelin::VectorNd>  qd_last = qd;
+#ifdef USE_THREADS
+  if(pthread_mutex_lock(&joint_data_mutex_))
+#endif
+  {
+    for(int i=0;i<joint_name.size();i++){
+      q[joint_name[i]][0] = q_sensor[i];
+      qd[joint_name[i]][0] = qd_sensor[i];
+      u[joint_name[i]][0] = u_sensor[i];
+    }
+    
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&joint_data_mutex_);
+#endif
+    for(int i=0;i<joint_name.size();i++){
+      qdd[joint_name[i]] = qd[joint_name[i]];
+      qdd[joint_name[i]] -= qd_last[joint_name[i]];
+      qdd[joint_name[i]] /= dt;
+    }
+  }
+  qd_last = qd;
+  bool APPLY_SENSORS = false;
+  ctrl->get_data<bool>(plugin_namespace+".apply-sensors",APPLY_SENSORS);
+  if(APPLY_SENSORS){
+    ctrl->set_joint_value(Pacer::Robot::position,q);
+    ctrl->set_joint_value(Pacer::Robot::velocity,qd);
+    ctrl->set_joint_value(Pacer::Robot::load,u);
+    ctrl->set_joint_value(Pacer::Robot::acceleration,qdd);
+  }
+#ifdef USE_THREADS
+  if(pthread_mutex_lock(&joint_data_mutex_))
+#endif
+  {
+    bool kineamtic_control = ctrl->get_data<bool>(plugin_namespace+".kinematic-control");
+    if(kineamtic_control){
+      std::map<std::string,Ravelin::VectorNd> joint_pos_map;
+      ctrl->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
+      //std::map<std::string,Ravelin::VectorNd> joint_vel_map;
+      //ctrl->get_joint_value(Pacer::Robot::velocity_goal,joint_vel_map);
+      OUT_LOG(logDEBUG) << "kineamtic control = " << joint_pos_map;
+      for(int i=0;i<joint_name.size();i++){
+        q_motors[i]  = joint_pos_map[joint_name[i]][0];
+        qd_motors[i] = 0;//joint_vel_map[joint_name[i]][0];
+      }
+    } else {
+      std::map<std::string,Ravelin::VectorNd> joint_load_map;
+      OUT_LOG(logDEBUG) << "torque control = " << joint_load_map;
+      ctrl->get_joint_value(Pacer::Robot::load_goal,joint_load_map);
+      for(int i=0;i<joint_name.size();i++){
+        u_motors[i] = joint_load_map[joint_name[i]][0];
+      }
+    }
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&joint_data_mutex_);
+#endif
+  }
+  
+#ifdef USE_THREADS
+  OUT_LOG(logDEBUG) << "q_des = " << q_motors;
+  OUT_LOG(logDEBUG) << "qd_des = " << qd_motors;
+  OUT_LOG(logDEBUG) << "u_des = " << u_motors;
+  OUT_LOG(logDEBUG) << "q = " << q_sensor;
+  OUT_LOG(logDEBUG) << "qd = " << qd_sensor;
+#else
+  OUT_LOG(logDEBUG2) << "call control_motor() from controller" << std::endl;
+  control_motor();
+#endif
+  
+  last_t = t;
+  OUT_LOG(logDEBUG2) << "end controller()" << std::endl;
+}
+
+void destruct(){
+  #ifdef USE_THREADS
+    pthread_join( thread, NULL);
+  #endif
+}
+
+
+void setup(){
+    boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  ctrl->get_joint_value(Pacer::Robot::position,q);
+  ctrl->get_joint_value(Pacer::Robot::velocity,qd);
+  ctrl->get_joint_value(Pacer::Robot::load,u);
+
+  std::string DEVICE_NAME = ctrl->get_data<std::string>(plugin_namespace+".port");
 #ifdef USE_DXL
   // If use robot is active also init dynamixel controllers
   dxl_ = new DXL::Dynamixel(DEVICE_NAME.c_str());
 #endif
-  
-  /// Set up quadruped robot, linking data from moby's articulated body
-  /// to the quadruped model used by Control-Moby
-  OUT_LOG(logDEBUG2) << "STARTING ROBOT" << std::endl;
-  
-  robot_ptr = boost::shared_ptr<Controller>(new Controller());
-  
-  robot_ptr->init();
-  OUT_LOG(logDEBUG2) << "ROBOT INITED" << std::endl;
-  
-  robot_ptr->set_generalized_value(Pacer::Robot::position_goal,robot_ptr->get_generalized_value(Pacer::Robot::position));
-  robot_ptr->set_generalized_value(Pacer::Robot::velocity_goal,robot_ptr->get_generalized_value(Pacer::Robot::velocity));
-  robot_ptr->set_generalized_value(Pacer::Robot::acceleration_goal,robot_ptr->get_generalized_value(Pacer::Robot::acceleration));
   
   // Set Dynamixel Names
   joint_name.push_back("LF_X_1");
@@ -174,8 +253,9 @@ static void init(){
   }
   
   dxl_->relaxed(false);
+#endif
   
-  int N = dxl_->ids.size();
+  int N = joint_name.size();
   q_motors = std::vector<double>(N);
   qd_motors = std::vector<double>(N);
   u_motors = std::vector<double>(N);
@@ -183,23 +263,21 @@ static void init(){
   qd_sensor = std::vector<double>(N);
   u_sensor = std::vector<double>(N);
   
-  std::map<std::string,Ravelin::VectorNd> joint_pos_map;
-  robot_ptr->get_joint_value(Pacer::Robot::position,joint_pos_map);
-  for(int i=0;i<dxl_->ids.size();i++){
-    q_motors[i] = joint_pos_map[dxl_->JointName(i)][0];
+  for(int i=0;i<N;i++){
+    q_motors[i] = q[joint_name[i]][0];
     qd_motors[i] = 0;
     u_motors[i] = 0;
-    q_sensor[i] = joint_pos_map[dxl_->JointName(i)][0];
+    q_sensor[i] = q[joint_name[i]][0];
     qd_sensor[i] = 0;
     u_sensor[i] = 0;
   }
-#endif
   
 #ifdef USE_THREADS
   pthread_mutex_unlock(&joint_data_mutex_);;
 #endif
   
   double wait_time = 5.0;
+  ctrl->get_data<double>(plugin_namespace+".hold-time",wait_time);
 #ifdef USE_THREADS
   const char *message;
   static int iret = pthread_create( &thread, NULL,&control_motor,(void*)NULL);
@@ -226,126 +304,4 @@ static void init(){
     sleep_duration(0.1);
   }
 #endif
-  
 }
-
-void controller(double t)
-{
-  OUT_LOG(logDEBUG2) << "controller()";
-  std::cout << "controller() " << t << std::endl;
-  static double last_t = -0.001;
-  double dt = t-last_t;
-  
-  
-  std::map<std::string,Ravelin::VectorNd> q,qd,qdd,u;
-  robot_ptr->get_joint_value(Pacer::Robot::position,q);
-  robot_ptr->get_joint_value(Pacer::Robot::velocity,qd);
-  robot_ptr->get_joint_value(Pacer::Robot::load,u);
-
-  static std::map<std::string,Ravelin::VectorNd>  qd_last = qd;
-#ifdef USE_THREADS
-  if(pthread_mutex_lock(&joint_data_mutex_))
-#endif
-  {
-    for(int i=0;i<joint_name.size();i++){
-      q[joint_name[i]][0] = q_sensor[i];
-      qd[joint_name[i]][0] = qd_sensor[i];
-      u[joint_name[i]][0] = u_sensor[i];
-    }
-    
-#ifdef USE_THREADS
-    pthread_mutex_unlock(&joint_data_mutex_);
-#endif
-    for(int i=0;i<joint_name.size();i++){
-      qdd[joint_name[i]] = qd[joint_name[i]];
-      qdd[joint_name[i]] -= qd_last[joint_name[i]];
-      qdd[joint_name[i]] /= dt;
-    }
-  }
-  qd_last = qd;
-  
-  robot_ptr->set_joint_value(Pacer::Robot::position,q);
-  robot_ptr->set_joint_value(Pacer::Robot::velocity,qd);
-  robot_ptr->set_joint_value(Pacer::Robot::load,u);
-  robot_ptr->set_joint_value(Pacer::Robot::acceleration,qdd);
-  
-  
-  /*
-   robot_ptr->set_generalized_value(Pacer::Robot::position,robot_ptr->get_generalized_value(Pacer::Robot::position_goal));
-   robot_ptr->set_generalized_value(Pacer::Robot::velocity,robot_ptr->get_generalized_value(Pacer::Robot::velocity_goal));
-   robot_ptr->set_generalized_value(Pacer::Robot::acceleration,robot_ptr->get_generalized_value(Pacer::Robot::acceleration_goal));
-   
-   robot_ptr->set_joint_generalized_value(Pacer::Robot::position,robot_ptr->get_joint_generalized_value(Pacer::Robot::position) += (robot_ptr->get_joint_generalized_value(Pacer::Robot::velocity_goal)*=dt));
-   */
-  
-  
-  robot_ptr->control(t);
-  
-#ifdef USE_THREADS
-  if(pthread_mutex_lock(&joint_data_mutex_))
-#endif
-  {
-    bool kineamtic_control = true;
-    if(kineamtic_control){
-      std::map<std::string,Ravelin::VectorNd> joint_pos_map;
-      robot_ptr->get_joint_value(Pacer::Robot::position_goal,joint_pos_map);
-      std::map<std::string,Ravelin::VectorNd> joint_vel_map;
-      robot_ptr->get_joint_value(Pacer::Robot::velocity_goal,joint_vel_map);
-      for(int i=0;i<joint_name.size();i++){
-        q_motors[i]  = joint_pos_map[joint_name[i]][0];
-        qd_motors[i] = 0;//joint_vel_map[joint_name[i]][0];
-      }
-
-    } else {
-      std::map<std::string,Ravelin::VectorNd> joint_load_map;
-      robot_ptr->get_joint_value(Pacer::Robot::load_goal,joint_load_map);
-      for(int i=0;i<joint_name.size();i++){
-        u_motors[i] = joint_load_map[joint_name[i]][0];
-      }
-    }
-#ifdef USE_THREADS
-    pthread_mutex_unlock(&joint_data_mutex_);
-#endif
-  }
-  
-#ifndef USE_THREADS
-  OUT_LOG(logDEBUG2) << "call control_motor() from controller" << std::endl;
-  control_motor();
-#endif
-  last_t = t;
-#ifdef TIMING
-  static double last_time, this_time;
-  static bool inited = false;
-  if(inited){
-    this_time = get_current_time();
-    double duration_ms = (this_time - last_time)*1000.0;
-    //    std::cerr<< "dt = " << duration_ms<<std::endl;
-  }
-  inited = true;
-  last_time = get_current_time();
-#endif
-  OUT_LOG(logDEBUG2) << "end controller()" << std::endl;
-}
-
-int main(int argc, char* argv[])
-{
-  for(int i=0;i<argc;i++){
-    OUT_LOG(logDEBUG2) << argv[i] << std::endl;
-  }
-  
-  DEVICE_NAME = argv[1];
-  double max_time = INFINITY;
-  
-  init();
- 
-  FIRST_TIME = get_current_time();
-  do {
-    TIME = get_current_time();
-    controller( (TIME-FIRST_TIME) );
-  } while((TIME-FIRST_TIME)<max_time);
-  
-#ifdef USE_THREADS
-  pthread_join( thread, NULL);
-#endif
-}
-

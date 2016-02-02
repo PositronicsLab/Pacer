@@ -65,10 +65,6 @@ namespace Pacer{
       // ================= INIT ROBOT ==========================
       init_robot();
       // After Robot loads, load plugins
-#ifdef USE_PLUGINS
-      if(!init_all_plugins())
-        throw std::runtime_error("One of the plugins failed to load");
-#endif
     }
   private:
     std::string PARAMS_FILE;
@@ -115,7 +111,6 @@ namespace Pacer{
   private:
     typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
     static std::map<std::string, void*> handles;
-    static std::map<std::string, init_t> INIT;
     typedef std::map<std::string , update_t> name_update_t;
     
     std::map<int , name_update_t> _update_priority_map;
@@ -144,6 +139,12 @@ namespace Pacer{
     bool init_all_plugins();
     
     bool update_plugins(double t){
+    #ifdef USE_PLUGINS
+      if(t == 0){
+        if(!init_all_plugins())
+          throw std::runtime_error("One of the plugins failed to load");
+      }
+    #endif
       OUT_LOG(logINFO) << ">> update_plugins()";
       //name_update_t& non_realtime_map = _update_priority_map[NON_REALTIME];
       //if(!_update_priority_map[i].empty())

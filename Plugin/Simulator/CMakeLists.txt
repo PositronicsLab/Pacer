@@ -1,5 +1,5 @@
-  # Gazebo Interface
-  add_library(PacerMobyPlugin MODULE ${CMAKE_SOURCE_DIR}/example/interfaces/moby.cpp)
+# Moby Interface
+add_library(PacerMobyPlugin MODULE ${CMAKE_CURRENT_SOURCE_DIR}/moby.cpp)
 # osg
 option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
 IF(USE_OSG_DISPLAY)
@@ -25,8 +25,9 @@ IF(USE_OSG_DISPLAY)
     add_definitions (-DUSE_OSG_DISPLAY)
   ENDIF(OSG_FOUND)
 ENDIF(USE_OSG_DISPLAY)
+target_link_libraries (PacerMobyPlugin ${REQLIBS})
 
-  # Gazebo Interface
+# Gazebo Interface
 set(USE_GAZEBO CACHE BOOL false)
 IF(USE_GAZEBO)
 include (FindPkgConfig)
@@ -36,9 +37,9 @@ ENDIF(PKG_CONFIG_FOUND)
 include_directories(${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
 IF(GAZEBO_FOUND)
-  add_library(PacerGazeboPlugin SHARED ${CMAKE_SOURCE_DIR}/example/interfaces/gazebo.cpp)
+  add_library(PacerGazeboPlugin SHARED ${CMAKE_CURRENT_SOURCE_DIR}/gazebo.cpp)
   target_link_libraries(PacerGazeboPlugin ${REQLIBS} ${GAZEBO_LIBRARIES} ${BOOST_LIBRARIES} ${Boost_SYSTEM_LIBRARY} protobuf ${EXTRA_LIBS})
 ENDIF(GAZEBO_FOUND)
 ENDIF(USE_GAZEBO)
 
-install (DIRECTORY ${CMAKE_BINARY_DIR}/Plugin/Simulator DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
+install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)

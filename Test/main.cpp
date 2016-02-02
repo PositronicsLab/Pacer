@@ -24,7 +24,7 @@ int main(int argc, char** argv){
 #endif
   boost::shared_ptr<Simulator> sim;
   std::string pacer_model_path(getenv ("PACER_MODEL_PATH"));
-  std::string pacer_interface_path(getenv ("PACER_INTERFACE_PATH"));
+  std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
   // run sample
   std::vector<std::string> argvs;
   // OSG output first and last viewer frame

@@ -64,10 +64,10 @@ bool Controller::init_plugin(const std::string& plugin_name){
   if (!plugin_filename_found)
     throw std::runtime_error("Plugin "+plugin_name+" needs a filename!");
   
-  if (!getenv("PACER_PLUGIN_PATH"))
+  if (!getenv("PACER_COMPONENT_PATH"))
     throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
   
-  std::string pPath(getenv("PACER_PLUGIN_PATH"));
+  std::string pPath(getenv("PACER_COMPONENT_PATH"));
   std::string lib_path = pPath+"/"+filename;
   OUT_LOG(logINFO) << "Loading Plugin: " << plugin_name;
   OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();

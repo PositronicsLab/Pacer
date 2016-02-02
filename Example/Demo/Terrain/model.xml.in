@@ -29,16 +29,18 @@
 
   <!-- setup the platform rigid body; it is not active -->
 <!--     <Box id="ground-primitive-viz" rpy="1.5708 0.0 0"  xlen="8" ylen="0.001" zlen="8" />-->
-     <Heightmap id="ground-primitive1" filename="heightmap2.dat" width="1" depth="1" rpy="1.5708 0 0" />
+     <Heightmap id="ground-primitive1" filename="heightmap.dat" width="1" depth="1" rpy="1.5708 0 0" />
 <RigidBody id="GROUND1" color="0.6 0.6 0.6 0" enabled="false"
-  position="0 0 -0.04"
+  visualization-id="ground-primitive1"
+  position="0 0 -0.05"
   compliant="false">
     <CollisionGeometry primitive-id="ground-primitive1" />
   </RigidBody>
 
      <Heightmap id="ground-primitive2" filename="heightmap2.dat" width="1" depth="1" rpy="1.5708 0 0" />
-<RigidBody id="GROUND2" color="0.6 0.6 0.6 0" enabled="false"
-  position="1 0 -0.04"
+     <RigidBody id="GROUND2" color="0.6 0.6 0.6 0" enabled="false"
+  visualization-id="ground-primitive2"
+  position="1 0 -0.05"
   compliant="false">
     <CollisionGeometry primitive-id="ground-primitive2" />
   </RigidBody>

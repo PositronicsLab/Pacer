@@ -1,6 +1,5 @@
   <XML>
   <plugins type="string vector">
-      waypoints
       error-check
       center-of-mass
       end-effectors
@@ -8,6 +7,7 @@
       gait-planner
       ik-feet
       idyn-controller
+   joint-PID-controller-accel
   </plugins>
   
   <!--
@@ -127,6 +127,7 @@
   <gait-planner>
     <file type="string">libgait-planner.so</file>
     <real-time-factor type="double">1</real-time-factor>
+    <command type="double vector">1 0 0 0 0 0</command>
     <priority type="double">1</priority>
     <pose type="double">0.0 0 0 0 0 0</pose>
     <feet type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</feet>
@@ -138,8 +139,8 @@
     <length type="double">0.309926</length>
     <width type="double">0.1344496</width>
     <height type="double">0.161853</height>
-    <gait type="double">0  0.5  0.5  0</gait>
-    <duty-factor type="double">0.3 0.3 0.3 0.3</duty-factor>
+    <gait type="double">0.25  0.75  0.75  0.25</gait>
+    <duty-factor type="double">0.4 0.4 0.4 0.4</duty-factor>
   </gait-planner>
   
   <wcpg>
@@ -231,13 +232,13 @@
     <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
     <priority type="double">4</priority>
     <real-time-factor type="double">1</real-time-factor>
-    <dt type="double">0</dt>
+    <dt type="double">0.001</dt>
     <alpha type="double">1</alpha>
     <last-cfs type="bool">false</last-cfs>
     <last-cfs-filter type="bool">false</last-cfs-filter>
     <des-contact type="bool">true</des-contact>
     <max-contacts-per-foot type="double">1</max-contacts-per-foot>
-    <type type="string vector">CFLCP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+    <type type="string vector">CFQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
 <!--CFQP CFLCP NSQP NSLCP-->
   </idyn-controller>
 </XML>

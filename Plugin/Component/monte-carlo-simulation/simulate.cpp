@@ -280,10 +280,10 @@ void setup(){
   ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BIN);
   ctrl->get_data<std::string>(plugin_namespace+".task-directory", TASK_PATH);
   
-  if (!getenv("PACER_PLUGIN_PATH"))
+  if (!getenv("PACER_COMPONENT_PATH"))
     throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
   
-  std::string pPath(getenv("PACER_PLUGIN_PATH"));
+  std::string pPath(getenv("PACER_COMPONENT_PATH"));
   SAMPLE_BIN = pPath + "/" + SAMPLE_BIN ;
   
   OUT_LOG(logDEBUG) << "MC-Simulation executable: " << SAMPLE_BIN;

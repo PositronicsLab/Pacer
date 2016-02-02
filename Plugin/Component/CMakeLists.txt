@@ -18,4 +18,4 @@ foreach(dir ${sub-dir})
   endif()
 endforeach()
 
-install (DIRECTORY ${CMAKE_BINARY_DIR}/Plugin/Components DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
+install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)

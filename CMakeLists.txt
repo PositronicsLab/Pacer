@@ -9,7 +9,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 # setup include directories
-include_directories( include
+include_directories( src/include
                     /usr/local/include )
 set(PROJECT_SRC_DIR ./src)
 
@@ -109,7 +109,7 @@ set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(TARGETS Pacer DESTINATION lib)
 
 # install include dirs
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/Pacer DESTINATION include)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/include/Pacer DESTINATION include)
 
 # Setup configuration file
 configure_file(${CMAKE_SOURCE_DIR}/CMakeModules/setup.sh.in ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
@@ -119,7 +119,7 @@ install (FILES ${CMAKE_BINARY_DIR}/setup.sh DESTINATION share/Pacer)
 set(REQLIBS ${REQLIBS} Pacer)
 
 # EXAMPLES
-option(BUILD_PLUGINS "Build simulation examples" OFF)
+option(BUILD_PLUGINS "Build Simulator and Pacer Component Plugins?" ON)
 IF(BUILD_PLUGINS)
   add_definitions( -DUSE_PLUGINS)
   add_subdirectory( Plugin )

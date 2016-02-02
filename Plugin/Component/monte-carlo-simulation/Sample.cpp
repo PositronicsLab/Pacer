@@ -574,7 +574,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
     << desc << std::endl;
   }
   
-  std::string pacer_interface_path(getenv ("PACER_INTERFACE_PATH"));
+  std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
   logging << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
   
   std::string

@@ -34,7 +34,7 @@ Z = z.reshape(X.shape)
 zsize = Z.shape
 zsize_txt = ''.join((str(zsize[0]),' ',str(zsize[1])))
 print zsize_txt
-np.savetxt('heightmap2.dat',Z,delimiter=' ',header=zsize_txt)
+np.savetxt('heightmap.dat',Z,delimiter=' ',header=zsize_txt)
 
 ax.plot_surface(X, Y, Z)
 

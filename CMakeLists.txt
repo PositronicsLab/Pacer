@@ -41,27 +41,14 @@ option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
 # these are the setting for the in-source compiler flow control
 option(LOGGING "Write logs to <working_dir>/out.log" ON)
-option(BUILD_EXAMPLES "Build simulation examples" OFF)
-option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
 option(USE_THREADS "Build Pacer with multi-threading support?" OFF)
+option(SPLITTING_METHOD "Force pacer to use a Splitting Method when running an optimization" OFF)
 option(USE_GSL "Build Pacer with randomization support?" OFF)
 
 # fix the C++ linking error on 64-bit Linux
 set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl")
 
-# These are invisible options *experimental*
-IF(RANDOM_FRICTION)
-  add_definitions( -DRANDOM_FRICTION)
-ENDIF(RANDOM_FRICTION)
-
-IF(BUILD_PLUGINS)
-  add_definitions( -DUSE_PLUGINS)
-ENDIF(BUILD_PLUGINS)
-
-IF(CONSOLE)
-  add_definitions( -DUSE_GLCONSOLE)
-ENDIF(CONSOLE)
-
+# used in LCP solver
 IF(SPLITTING_METHOD)
   add_definitions( -DSPLITTING_METHOD )
 ENDIF(SPLITTING_METHOD)
@@ -111,10 +98,10 @@ ENDIF(LIBXML2_FOUND)
 
 set(REQLIBS ${MOBY_LIBRARIES} ${RAVELIN_LIBRARIES})
 
-add_executable(pacer ${LIBSOURCES})
-target_link_libraries(pacer ${REQLIBS})
-set_target_properties(pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-install(TARGETS pacer DESTINATION bin)
+add_executable(pacer-driver ${LIBSOURCES})
+target_link_libraries(pacer-driver ${REQLIBS})
+set_target_properties(pacer-driver PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(TARGETS pacer-driver DESTINATION bin)
 
 add_library(Pacer ${LIBSOURCES})
 target_link_libraries(Pacer ${REQLIBS})
@@ -129,27 +116,20 @@ configure_file(${CMAKE_SOURCE_DIR}/CMakeModules/setup.sh.in ${CMAKE_BINARY_DIR}/
 
 install (FILES ${CMAKE_BINARY_DIR}/setup.sh DESTINATION share/Pacer)
 
-# install plugins and models
-install (DIRECTORY ${CMAKE_SOURCE_DIR}/example/models DESTINATION ${CMAKE_INSTALL_PREFIX}/share/Pacer)
-if(BUILD_PLUGINS)
-install (DIRECTORY ${CMAKE_BINARY_DIR}/example/plugins DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
-endif(BUILD_PLUGINS)
-if(BUILD_INTERFACES)
-install (DIRECTORY ${CMAKE_BINARY_DIR}/example/interfaces DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/Pacer)
-endif(BUILD_INTERFACES)
-
 set(REQLIBS ${REQLIBS} Pacer)
 
 # EXAMPLES
-IF(BUILD_EXAMPLES)
-  add_subdirectory( example )
-ENDIF(BUILD_EXAMPLES)
+option(BUILD_PLUGINS "Build simulation examples" OFF)
+IF(BUILD_PLUGINS)
+  add_definitions( -DUSE_PLUGINS)
+  add_subdirectory( Plugin )
+ENDIF(BUILD_PLUGINS)
 
+option(BUILD_TESTS "Build Pacer Unit tests and Regression Tests for debugging?" OFF)
 IF(BUILD_TESTS)
   enable_testing()
-  add_custom_target(unit-test ${CMAKE_CTEST_COMMAND} -V)
   add_custom_target(regression-test ${CMAKE_CTEST_COMMAND} -V)
-  add_subdirectory( test )
+  add_subdirectory( Test )
 ENDIF(BUILD_TESTS)
 
 # uninstall target

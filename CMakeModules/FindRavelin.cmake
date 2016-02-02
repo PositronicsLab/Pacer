@@ -9,7 +9,7 @@
 
 find_path(
   RAVELIN_INCLUDE_DIR
-  NAMES Ravelin/VectorNd.h
+  NAMES Ravelin/VectorN.h
   PATHS /usr/local/include /usr/include
 )
 

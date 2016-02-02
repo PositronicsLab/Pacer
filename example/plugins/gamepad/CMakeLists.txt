@@ -1,5 +1,5 @@
-find_package(SDL2)
-find_package(curses)
+find_package(SDL2 QUIET)
+find_package(curses QUIET)
 
 IF(SDL2_FOUND)
 IF(CURSES_FOUND AND USE_CURSES)

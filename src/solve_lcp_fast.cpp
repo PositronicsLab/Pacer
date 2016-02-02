@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include <Moby/insertion_sort>
-#include <Pacer/project_common.h>
+#include <Pacer/utilities.h>
 
 using namespace Ravelin;
 

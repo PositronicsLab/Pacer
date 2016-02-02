@@ -5,6 +5,8 @@
  ****************************************************************************/
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
+#include "plugin.h"
+
 using namespace Pacer;
 using namespace Ravelin;
 
@@ -12,33 +14,60 @@ static Vector3d workv3_;
 static VectorNd q,qd_base;
 static VectorNd workv_;
 
-boost::shared_ptr<Pacer::Controller> ctrl_ptr;
-  boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
-  std::string plugin_namespace;
-  std::vector<std::string> foot_names;
+#define DISPLAY
+
+enum FOOT_PHASE {
+  STANCE,
+  SWING,
+  NONE
+};
+
+enum GAIT_PHASE {
+  FULL_SUPPORT,
+  PARTIAL_SUPPORT,
+  FLIGHT
+};
+
+boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
+Ravelin::Origin3d roll_pitch_yaw;
+
+std::vector<std::string> foot_names;
+
 std::map<std::string,bool> active_feet;
 
 Origin3d planar_robot(Origin3d x,Origin3d xd){
-  double dX =xd[0]*cos(x[2])+xd[1]*sin(x[2]),
-  dY =xd[0]*sin(x[2])+xd[1]*cos(x[2]);
-  return x + Origin3d(dX,dY,xd[2]);
+  double
+  dX = xd[0]*cos(x[2])-xd[1]*sin(x[2]),
+  dY = xd[0]*sin(x[2])+xd[1]*cos(x[2]);
+  return Origin3d(dX,dY,xd[2]);
 }
 
 Pose3d end_state(Pose3d state,Origin3d planar_command, double t_max,double dt = 0.001){
-  state.update_relative_pose(Moby::GLOBAL);
+  state.update_relative_pose(Pacer::GLOBAL);
   Ravelin::Origin3d roll_pitch_yaw;
   state.q.to_rpy(roll_pitch_yaw);
-
+  
   Origin3d planar_state(state.x[0],state.x[1],roll_pitch_yaw[2]);
-
+  
   for (double t=0; t<t_max; t+=dt) {
-    planar_state = planar_robot(planar_state,dt*planar_command);
+    planar_state += planar_robot(planar_state,dt*planar_command);
   }
   
   Ravelin::Pose3d state_t_max(
-    Ravelin::AAngled(0,0,1,planar_state[2]),
-    Origin3d(planar_state[0],planar_state[1],state.x[2]),Moby::GLOBAL);
-
+                              Ravelin::AAngled(0,0,1,planar_state[2]),
+                              Origin3d(planar_state[0],planar_state[1],state.x[2]),GLOBAL);
+  
+  Origin3d dir = planar_robot(planar_state,Origin3d(0.1,0,0));
+  
+  Utility::visualize.push_back
+  (Pacer::VisualizablePtr
+   (new Pacer::Ray
+    (Vector3d(planar_state[0],planar_state[1],0.01),
+     Vector3d(planar_state[0]+dir[0],planar_state[1]+dir[1],0.01),
+     Vector3d(0,0,0),0.05)
+    )
+   );
+  
   return state_t_max;
 }
 
@@ -46,13 +75,13 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
   // Find future robot position (command, time)
   // update: Planar process model
   boost::shared_ptr<Pose3d> state_ptr(new Pose3d(state));
-  Vector3d x_global = Pose3d::transform_point(Moby::GLOBAL,Vector3d(x.data(),state_ptr));
+  Vector3d x_global = Pose3d::transform_point(Pacer::GLOBAL,Vector3d(x.data(),state_ptr));
   
   // Find foothold closest to "x" at future base position (x,footholds)
   double min_dist = INFINITY;
   int    min_vec = 0;
   for(int i=0;i<footholds.size();i++){
-    Vector3d foothold(footholds[i][0],footholds[i][1],footholds[i][2],Moby::GLOBAL);
+    Vector3d foothold(footholds[i][0],footholds[i][1],footholds[i][2],GLOBAL);
     double norm = (foothold-x_global).norm();
     if(norm < min_dist){
       min_dist = norm;
@@ -62,7 +91,7 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
   
   const std::vector<double> &this_foothold = footholds[min_vec];
   
-  Vector3d final_foothold(this_foothold[0],this_foothold[1],this_foothold[2], Moby::GLOBAL);
+  Vector3d final_foothold(this_foothold[0],this_foothold[1],this_foothold[2], Pacer::GLOBAL);
   
   double max_dist = 0.05;
   // Interpolate closest point to desired foothold (featured are horizontal and planar circles)
@@ -72,51 +101,57 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
       dir.normalize();
       final_foothold = final_foothold + dir*this_foothold[3];
       Utility::visualize.push_back(Pacer::VisualizablePtr(new Pacer::Point(
-         Vector3d(final_foothold[0],final_foothold[1],final_foothold[2]),
-         Vector3d(1,1,1),0.05)));
+                                                                           Vector3d(final_foothold[0],final_foothold[1],final_foothold[2]),
+                                                                           Vector3d(1,1,1),0.05)));
       final_foothold[2] = this_foothold[2];
     } else {
       return Vector3d(x.data(),state_ptr);
-      final_foothold = Vector3d(x_global[0],x_global[1],x_global[2], Moby::GLOBAL);
+      final_foothold = Vector3d(x_global[0],x_global[1],x_global[2], Pacer::GLOBAL);
     }
   }
   
   return Pose3d::transform_point(state_ptr,final_foothold);
 }
 
-bool gait_phase(double touchdown,double duty_factor,double gait_progress){
-  double liftoff = touchdown + duty_factor,left_in_phase = 0;
-  liftoff = liftoff - (double) ((int) liftoff);
-
-  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
-  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
-  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
-  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
-
-  // ----- STANCE PHASE ------
-  if(// during STANCE (no wrap around)
-     ( gait_progress >= touchdown  &&  gait_progress  < liftoff)
-     // during STANCE (with wrap around) -- same as !SWING
-    || (!(gait_progress  < touchdown  &&  gait_progress >= liftoff) && liftoff < touchdown)
-     ){
+bool in_interval(double t,double t0,double tF){
+  // during STANCE (no wrap around)
+  if (// during interval
+      ( t >= t0  &&  t  < tF)
+      // during interval (with wrap around)
+      || (!(t  < t0  &&  t >= tF) && tF < t0)){
     return true;
   }
-  // ----- SWING PHASE -----
   return false;
-
 }
 
-double gait_phase(double touchdown,double duty_factor,double gait_progress,bool this_phase){
-  double liftoff = touchdown + duty_factor,left_in_phase = 0;
-  liftoff = liftoff - (double) ((int) liftoff);
-
+FOOT_PHASE gait_phase(double touchdown,double duty_factor,double gait_progress){
+  double liftoff = decimal_part(touchdown + duty_factor),
+  left_in_phase = 0;
+  
   OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
   OUT_LOG(logDEBUG) << "touchdown " << touchdown;
   OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
   OUT_LOG(logDEBUG) << "liftoff " << liftoff;
-
+  
   // ----- STANCE PHASE ------
-  if(this_phase){
+  if(in_interval(gait_progress,touchdown,liftoff)){
+    return STANCE;
+  }
+  // ----- SWING PHASE -----
+  return SWING;
+  
+}
+
+double gait_phase(double touchdown,double duty_factor,double gait_progress,FOOT_PHASE this_phase){
+  double liftoff = decimal_part(touchdown + duty_factor),left_in_phase = 0;
+  
+  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+  
+  // ----- STANCE PHASE ------
+  if(this_phase == STANCE){
     // left in stance phase = negaive time left in phase
     left_in_phase = (liftoff - gait_progress);
     if(left_in_phase < 0)
@@ -129,6 +164,59 @@ double gait_phase(double touchdown,double duty_factor,double gait_progress,bool 
       left_in_phase = (1.0 - gait_progress) + touchdown;
   }
   return left_in_phase;
+}
+
+bool next_flight_phase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double initial_time,
+                       double& time_until_takeoff,double& flight_phase_duration){
+  double gait_progress = initial_time;
+  
+  double one_cycle = 1;
+  
+  double this_liftoff = 0;
+  while(one_cycle>0){
+    bool all_swing_phase = true;
+    double next_touchdown = std::numeric_limits<double>::max();
+    double next_liftoff = std::numeric_limits<double>::max();
+    // Check the next phase change for each foot
+    for (int i=0; i<foot_names.size(); i++) {
+      FOOT_PHASE phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
+      if(phase == SWING){
+        double next_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,phase)+NEAR_ZERO;
+        next_touchdown = std::min(next_touchdown,next_phase);
+      }else{
+        all_swing_phase = false;
+        double next_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,phase)+NEAR_ZERO;
+        next_liftoff = std::min(next_liftoff,next_phase);
+      }
+    }
+    // if looking at a flight phase, then exit
+    if(all_swing_phase == true){
+      time_until_takeoff = this_liftoff;
+      flight_phase_duration = next_touchdown;
+      break;
+    }
+    // increment checking point
+    this_liftoff += next_liftoff;
+    gait_progress += next_liftoff+NEAR_ZERO;
+    gait_progress = decimal_part(gait_progress);
+    if(gait_progress >= 1.0) gait_progress = NEAR_ZERO;
+    one_cycle -= next_liftoff;
+    // and loop
+  }
+  
+  if (one_cycle <= 0) {
+    OUT_LOG(logDEBUG1) << "No flight phase in gait";
+    
+    time_until_takeoff = std::numeric_limits<double>::max();
+    flight_phase_duration = 0;
+    return false;
+  }
+  
+  OUT_LOG(logDEBUG1) << "Next flight phase was found at: " << gait_progress << std::endl
+  << "\tWith duration: " << flight_phase_duration << std::endl
+  << "\toccuring in: " << time_until_takeoff <<" * (gait-duration) seconds";
+  
+  return true;
 }
 
 /**
@@ -148,19 +236,18 @@ double gait_phase(double touchdown,double duty_factor,double gait_progress,bool 
  * @param foot_vel : NUM_FEET length vector of 3x1 cartesian velocities for feet (populated with current values)
  * @param foot_acc : NUM_FEET length vector of 3x1 cartesian acceleration for feet (populated with current values)
  */
-void walk_toward(
-    // PARAMETERS
-    const VectorNd& command,
-    const std::vector<double>& touchdown,
-    const std::vector<std::vector<double> >& footholds,
-    const std::vector<double>& duty_factor,
-    double gait_duration,
-    double step_height,
-    bool STANCE_ON_CONTACT,
-    // MODEL
-    std::vector<Origin3d>& origins,
-    const Vector3d& center_of_mass_x,
-    double t,
+void walk_toward(// PARAMETERS
+                 const VectorNd& command,
+                 const std::vector<double>& touchdown,
+                 const std::vector<std::vector<double> >& footholds,
+                 const std::vector<double>& duty_factor,
+                 double gait_duration,
+                 double step_height,
+                 bool STANCE_ON_CONTACT,
+                 // MODEL
+                 std::vector<Origin3d>& origins,
+                 const Vector3d& center_of_mass_x,
+                 double t,
                  std::vector<Vector3d>&
                  foot_pos,
                  std::vector<Vector3d>&
@@ -168,305 +255,442 @@ void walk_toward(
                  std::vector<Vector3d>&
                  foot_acc)
 {
+  
   OUT_LOG(logDEBUG) << " -- walk_toward() entered";
   
-  static bool inited = false;
+  boost::shared_ptr<Pacer::Controller> ctrl = ctrl_weak_ptr.lock();
   
   const int NUM_FEET = origins.size(),
   NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
   
-  Vector3d up = Pose3d::transform_vector(base_frame,Vector3d(0,0,1,base_horizontal_frame));
-  
+  // Up is oriented wrt global up vector (+Z-axis for BASE_HORIZONTAL_FRAME)
+  bool global_up = false;
+  ctrl->get_data<bool>(plugin_namespace+".global-up",global_up);
+  Vector3d up =Vector3d(0,0,1,base_frame);
+  if(global_up)
+    up = Pose3d::transform_vector(base_frame,Vector3d(0,0,1,base_horizontal_frame));
+
   // Find time since last call
   static double last_time = -0.001;
   double dt = t - last_time;
   last_time = t;
   
-  // Check if this method has been called recently,
-  // reset if no call has been made for dt > 1 phase
-  if(dt > gait_duration * (*std::min_element(duty_factor.begin(),duty_factor.end())) )
-    inited = false;
-
   // persistent Vector storing spline coefs
-  // [foot][dimension]
+  // indexing: [foot][dimension]
   static std::vector< std::vector<VectorNd> > spline_coef(NUM_FEET);
   
   // persistent Vector storing time delimitations to each spline
-  // [foot]
+  // indexing: [foot]
   static std::vector<VectorNd> spline_t(NUM_FEET);
+  static std::vector<FOOT_PHASE> last_phase;
   
-  double gait_progress = t/gait_duration;
+  // Check if this method has been called recently,
+  // reset if no call has been made for dt > 1 phase
+  if(dt > gait_duration * (*std::min_element(duty_factor.begin(),duty_factor.end())) )
+    last_phase.clear();
   
-  // Get the decimal part of gait_progress
-  gait_progress = gait_progress - (double) ((int) gait_progress);
-  if(gait_progress >= 1) gait_progress = Moby::NEAR_ZERO;
-
-//  Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
-//  turn_origin = Pose3d::transform_point(base_frame, turn_origin);
-  Origin3d turn_origin(0,command[0]/command[5],0);
-  
-  boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
-
-  // (Re)Populate spline vectors
-  if(!inited){
+  if(last_phase.empty()){
     for(int i=0;i<NUM_FEET;i++){
+      // -- Populate last phase vector --
+      last_phase.push_back(NONE);
+      // -- Populate spline vectors --
       spline_coef[i].resize(3);
-      for(int d=0; d<3;d++){
+      for(int d=0; d<3;d++)
         spline_coef[i][d] = VectorNd();
-      }
-
       spline_t[i] = VectorNd::zero(2);
     }
   }
   
-//  Pose3d furture_state
-//    = end_state(*(base_horizontal_frame.get()),
-//                Origin3d(command[0],command[1],command[5]),
-//                1.0);
-//  
-//  furture_state.update_relative_pose(Moby::GLOBAL);
-//  
-//  Utility::visualize.push_back(
-//    Pacer::VisualizablePtr(
-//      new Pacer::Point(
-//       Vector3d(furture_state.x[0],furture_state.x[1],furture_state.x[2]),
-//       Vector3d(0,0,0),1)));
+#ifdef DO_NOT_DISPLAY
+  //  Vector3d turn_origin(0,command[0]/command[5],0,base_horizontal_frame);
+  //  turn_origin = Pose3d::transform_point(base_frame, turn_origin);
+  Origin3d turn_origin(-command[1]/command[5],command[0]/command[5],0);
   
-  ////////////////// PHASE PLANNING ///////////////////////
-  static std::vector<bool> last_phase = std::vector<bool>(NUM_FEET);
+  if (std::fabs(command[5]) > Pacer::NEAR_ZERO) {
+    boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
+    
+    turning_frame->update_relative_pose(Pacer::GLOBAL);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data())-Vector3d(0,0,1), Vector3d(turning_frame->x.data())+Vector3d(0,0,1),   Vector3d(0,1,0),0.05)));
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data()), Vector3d(base_horizontal_frame->x.data()),   Vector3d(0,1,0),0.05)));
+    
+    turning_frame->update_relative_pose(base_horizontal_frame);
+  }
+#endif
+  
+  ////////////////// FOOT PHASE ASSIGNMENT ///////////////////////
+  double gait_progress = decimal_part(t/gait_duration);
+  // Get the decimal part of gait_progress
+  if(gait_progress >= 1) gait_progress = Pacer::NEAR_ZERO;
+  
+  // Check for flight phase
+  double flight_phase_duration;
+  double until_takeoff;
+  bool has_flight_phase = next_flight_phase(touchdown,duty_factor,gait_progress,
+                                            until_takeoff,flight_phase_duration);
+  
+  // Figure out the phase of each foot
+  std::vector<FOOT_PHASE> phase_vector(NUM_FEET);
+  std::vector<double> left_in_phase_v(NUM_FEET);
+  std::vector<bool> early_stance(NUM_FEET);
+  std::vector<double> liftoff(NUM_FEET);
+  std::vector<Pose3d> end_of_step_state(NUM_FEET);
+  std::vector<Pose3d> mid_of_next_step_state(NUM_FEET);
+  static std::vector<Vector3d> start_of_step_foothold(NUM_FEET);
+  
   for(int i=0;i<NUM_FEET;i++){
-    bool this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
+    // Assign liftoff times
+    liftoff[i] = decimal_part(touchdown[i] + duty_factor[i]);
+    if(liftoff[i] >= 1.0) liftoff[i] = 0;
+    
+    FOOT_PHASE this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
+    phase_vector[i] = this_phase;
+    
+    bool active_foot = active_feet[foot_names[i]];
+    // Make sure Early Contact is valid
+    bool early_contact = STANCE_ON_CONTACT && ((this_phase == SWING) && active_foot);
+    if(early_contact){
+      if (// If in latter part of swing phase
+          in_interval(gait_progress,liftoff[i],decimal_part(liftoff[i]+(1.0-duty_factor[i])/2.0))
+          // AND robot is not tilted toward new contact
+          // avoid Positive pitch (forward) and X positive contact (forward)
+          && (sgn(roll_pitch_yaw[1]) != sgn(origins[i][0]) || sgn(roll_pitch_yaw[1]) == 0)
+          // avoid negative roll (left) and Y positive contact (left)
+          && (sgn(roll_pitch_yaw[0]) == sgn(origins[i][1]) || sgn(roll_pitch_yaw[0]) == 0)
+          )
+      {
+        // Switch foot to stance phase early
+        this_phase = STANCE;
+        early_stance[i] = true;
+      }
+    }
+    
+    if(this_phase == STANCE)
+      early_stance[i] = false;
+    
     double left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,this_phase);
-    OUT_LOG(logDEBUG) << "\t Stance Phase? : " << this_phase;
+    
+    if(early_stance[i]){
+      this_phase = STANCE;
+      left_in_phase = left_in_phase + duty_factor[i];
+    }
+
+    left_in_phase_v[i] = left_in_phase;
+    OUT_LOG(logDEBUG) << "\t Stance Phase? : " << ((this_phase == STANCE)? "STANCE" : "SWING");
     OUT_LOG(logDEBUG) << "\t left in phase (%) : " << left_in_phase * 100.0;
     OUT_LOG(logDEBUG) << "\t left in phase (sec) : " << left_in_phase * gait_duration;
-    ctrl_ptr->set_data<bool>(foot_names[i]+".stance",this_phase);
+    ctrl->set_data<bool>(foot_names[i]+".stance",((this_phase == STANCE)? true : false));
     
-    OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }, stance: " << this_phase;
+    OUT_LOG(logDEBUG) << "\t PHASE PROGRESS: { " << touchdown[i] << " .. " << gait_progress << " .. " << (touchdown[i] + duty_factor[i]) <<" }, " << ((this_phase == STANCE)? "STANCE" : "SWING");
     
-    Pose3d end_of_step_state
-      = end_state(*(base_horizontal_frame.get()),
-                  Origin3d(command[0],command[1],command[5]),
-                  fabs(left_in_phase*gait_duration));
+    // At the end of the current swing phase:
+    end_of_step_state[i]
+    = end_state(*(base_horizontal_frame.get()),
+                Origin3d(command[0],command[1],command[5]),
+                fabs(left_in_phase*gait_duration));
     
-    end_of_step_state.update_relative_pose(Moby::GLOBAL);
-
-    Utility::visualize.push_back(
-      Pacer::VisualizablePtr(
-        new Pacer::Point(
-          Vector3d(end_of_step_state.x[0],end_of_step_state.x[1],end_of_step_state.x[2]),
-          Vector3d(0,0,0),0.15)));
+    end_of_step_state[i].update_relative_pose(Pacer::GLOBAL);
+    
+    OUTLOG(end_of_step_state[i].x,"end_of_step_state["+boost::icl::to_string<double>::apply(i)+"]",logERROR);
+    // At the middle of the next stance phase:
+    mid_of_next_step_state[i]
+    = end_state(end_of_step_state[i],
+                Origin3d(command[0],command[1],command[5]),
+                fabs( (((this_phase == STANCE)? 1.0-duty_factor[i] : duty_factor[i])/2.0) *gait_duration));
+    
+    mid_of_next_step_state[i].update_relative_pose(Pacer::GLOBAL);
+    
+    OUTLOG(mid_of_next_step_state[i].x,"mid_of_next_step_state["+boost::icl::to_string<double>::apply(i)+"]",logERROR);
+    
+#ifdef DISPLAY
+    Vector3d color;
+    switch(i){
+      case 0: color = Vector3d(1,0,0);
+        break;
+      case 1: color = Vector3d(0,1,0);
+        break;
+      case 2: color = Vector3d(0,0,1);
+        break;
+      case 3: color = Vector3d(1,0,1);
+        break;
+      default:
+        color = Vector3d(0,0,0);
+    }
+    
+    Utility::visualize.push_back
+    (Pacer::VisualizablePtr
+     (new Pacer::Point
+      (Vector3d(end_of_step_state[i].x[0],
+                end_of_step_state[i].x[1],
+                end_of_step_state[i].x[2]-0.05),
+       color,0.1)
+      )
+     );
+#endif
+    
+  }
   
+  
+  ///////////////////////////////////////////////////////////////////////
+  //////////////////////// FOOT PHASE PLANNING //////////////////////////
+  ///////////////////////////////////////////////////////////////////////
+  
+  //////////////////////// PLANNING STANCE PHASE /////////////////////////
+  for(int i=0;i<NUM_FEET;i++){
+    FOOT_PHASE &this_phase = phase_vector[i];
+    double  &left_in_phase = left_in_phase_v[i];
+    
     Vector3d
-            &x   = foot_pos[i],
-            &xd  = foot_vel[i],
-            &xdd = foot_acc[i];
-            
+    &x   = foot_pos[i],
+    &xd  = foot_vel[i],
+    &xdd = foot_acc[i];
+    
     Origin3d xt(x);
     
-    // Check if Spline must be re-evaluated
-    bool replan_path = (!inited || last_phase[i] != this_phase);
-    bool active_foot = active_feet[foot_names[i]];
-    if(this_phase || (STANCE_ON_CONTACT && active_foot)){
-      if(STANCE_ON_CONTACT && active_foot)
-        if (gait_progress > (touchdown[i] + duty_factor[i]/2))
-          this_phase = true;
-      replan_path = false;
-      VectorNd zero_base_generalized_q;
-      zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
-      zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
-      /// STANCE FEET ARE IN GAIT POSE
-      // Put goal in gait pose
-      VectorNd gait_pose_vec = Utility::pose_to_vec(gait_pose);
-      zero_base_generalized_q.set_sub_vec(NUM_JOINT_DOFS,gait_pose_vec);
-      Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
-      
-      J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+Pacer::NSPATIAL).mult(command,workv3_,-1.0,0);
-      OUTLOG(J,"J",logDEBUG);
-      workv3_.pose = base_frame;
-      xd.pose = base_frame;
-
-      if (dt < Moby::NEAR_ZERO)
-        xdd.set_zero();
-      else 
-        xdd = (workv3_ - xd)/dt;
-      
-      xd = workv3_;
-      xdd.pose = base_frame;
-      xd.pose = base_frame;
-      x.pose = base_frame;
-      x = x + xd * dt;
-    
-      { // Visualize this
-        Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
-        Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd) * (left_in_phase*gait_duration);
-        Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.05)));
-      }
-      
-      OUT_LOG(logDEBUG) << "x " << x;
-      OUT_LOG(logDEBUG) << "xd " << xd;
-      OUT_LOG(logDEBUG) << "xdd " << xdd;
-      OUT_LOG(logDEBUG) << "U " << workv3_;
-      
-      last_phase[i] = this_phase;
+    // If stance foot OR foot is contacting ground
+    if(this_phase != STANCE){
       continue;
-    } else {
-      OUT_LOG(logDEBUG) << "\t Time: " << t;
-      OUT_LOG(logDEBUG) << "\t Time coefs: " << spline_t[i];
-      // Set liftoff feet (opposite of this_phase variable)
-      for(int d=0; d<3;d++){
-        OUT_LOG(logDEBUG) << "\t Spline coefs: " << spline_coef[i][d];
-        replan_path = !Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
-        if(replan_path){
-          OUT_LOG(logDEBUG) << "\t Must replan path!";
-          break;
-        }
-      }
-      OUT_LOG(logDEBUG) << "x " << x;
-      OUT_LOG(logDEBUG) << "xd " << xd;
-      OUT_LOG(logDEBUG) << "xdd " << xdd;
     }
 
-    bool redirect_path = false;
-    if(!replan_path){
-      redirect_path = true;
+    VectorNd zero_base_generalized_q;
+    zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
+    zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
+    /// STANCE FEET ARE IN GAIT POSE
+    // Put goal in gait pose
+    VectorNd gait_pose_vec = Utility::pose_to_vec(gait_pose);
+    OUTLOG(gait_pose,"gait_pose",logDEBUG);
+    zero_base_generalized_q.set_sub_vec(NUM_JOINT_DOFS,gait_pose_vec);
+    OUTLOG(gait_pose_vec,"gait_pose_vec",logDEBUG);
+    OUTLOG(zero_base_generalized_q,"zero_base_generalized_q",logDEBUG);
+    
+    Ravelin::MatrixNd J = ctrl->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
+    
+    Ravelin::VectorNd base_command = command;
+    
+    // add forces to propel robot over upcoming flight phase
+    if(has_flight_phase){
+      // Duration of flight
+      double flight_phase_seconds = flight_phase_duration * gait_duration;
+      // upward velocity we must reach to return to ground after flight_phase_seconds
+      double gravity = 9.8;// m / s*s
+      double upward_velocity = gravity * flight_phase_seconds * 0.5;
+      
+      static double last_until_takeoff = -1;
+      if (until_takeoff > last_until_takeoff)
+        last_until_takeoff = until_takeoff;
+      
+      double duration_until_flight = 1.0 - until_takeoff/last_until_takeoff;
+      OUTLOG(duration_until_flight,"duration_until_flight",logDEBUG);
+
+      double z_axis_command = sigmoid_interp(0.0,upward_velocity,duration_until_flight);
+      OUTLOG(upward_velocity,"upward_velocity for flight",logDEBUG);
+      OUTLOG(z_axis_command,"z_axis_command for flight",logDEBUG);
+      base_command[2] += z_axis_command;
     }
+    
+    OUTLOG(base_command,"base_command(with flight factored in)",logDEBUG);
+    
+    
+    J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(base_command,workv3_,-1.0,0);
+    
+    workv3_.pose = base_frame;
+    xd.pose = base_frame;
+    
+    if (dt < Pacer::NEAR_ZERO)
+      xdd.set_zero();
+    else
+      xdd = (workv3_ - xd)/dt;
+    
+    xd = workv3_;
+    xdd.pose = base_frame;
+    xd.pose = base_frame;
+    x.pose = base_frame;
+    x = x + xd * dt;
+    
+#ifdef DISPLAY
+    Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
+    Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd) * (left_in_phase*gait_duration);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.05)));
+#endif
+    
+    OUT_LOG(logDEBUG) << "x " << x;
+    OUT_LOG(logDEBUG) << "xd " << xd;
+    OUT_LOG(logDEBUG) << "xdd " << xdd;
+  }
+  
+  ///////////////////////////////////////////////////////////////////////
+  //////////////////////// PLANNING SWING PHASE /////////////////////////
+  ///////////////////////////////////////////////////////////////////////
+  for(int i=0;i<NUM_FEET;i++){
+    FOOT_PHASE &this_phase = phase_vector[i];
+    
+    // Skip plan if in stance phase for this foot
+    if (this_phase == STANCE)
+      continue;
+    
+    Vector3d
+    &x   = foot_pos[i],
+    &xd  = foot_vel[i],
+    &xdd = foot_acc[i];
+    xdd.pose = base_frame;
+    xd.pose = base_frame;
+    x.pose = base_frame;
+    
+    // Calc where the robot will be if the current command remains the same
+    double  &left_in_phase = left_in_phase_v[i];
+    double swing_phase_duration = (1.0-duty_factor[i]);
+    
+    // Check if Spline must be re-evaluated
+    bool replan_path = (last_phase[i] != this_phase);
+    
+    double redirect_path_interval = 0;
+    ctrl->get_data<double>(plugin_namespace+".redirect-swing-interval",redirect_path_interval);
+    
+    bool redirect_path = false;
+    // TODO: Fix Redirect path
+    // NOTE: 'redirect_path_interval' is the progress through the step at which the step is finalized.
+    // (the last 1/4 of the swing phase is not replanned based on new commands)
+    
+    if(// if a new swing pahse is not being planned
+       (!replan_path)
+       // AND if we are in the early half of the swing phase
+       ){
+      double finalize_path_time
+      = decimal_part(liftoff[i] + swing_phase_duration*redirect_path_interval);
+      if(in_interval(gait_progress,liftoff[i],finalize_path_time))
+        redirect_path = true;
+    }
+    
     // Stance phase (opposite to signal switch on next re-program)
     // Plan a new spline for this foot
-    if(replan_path || redirect_path){
-      // take time at end of spline_t history
-      double t0 = t;
-      if(redirect_path)
-        t0 = *(spline_t[i].begin());
-      xd.set_zero();
-      xdd.set_zero();
-      
-      double gait_progress = t0/gait_duration;
-      
-      // Get the decimal part of gait_progress
-      gait_progress = gait_progress - (double) ((int) gait_progress);
-      if(gait_progress >= 1) gait_progress = Moby::NEAR_ZERO;
-      
-      bool this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
-      double left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,this_phase);
-
-
-      // Calculate foot step info
-      // Determine linear portion of step
-      boost::shared_ptr< Pose3d> foot_frame(new Pose3d(Ravelin::Quatd::identity(),origins[i],base_frame));
-
-      Origin3d x0 = origins[i];
-
-      /// SWING FEET ARE IN HORIZONTAL POSE
-      Vector3d foot_goal(command[0],command[1],0,base_horizontal_frame);
-      foot_goal = Pose3d::transform_vector(foot_frame,foot_goal);
-
-      
-      if(fabs(command[5]) > Moby::NEAR_ZERO){
-        // Determine shape of step needed to yaw robot
-        Origin3d rotation_axis = Origin3d(up.data());
-
-        Ravelin::AAngled aa_gamma(Vector3d(rotation_axis,turning_frame),command[5] *  left_in_phase*gait_duration);
-        OUTLOG(aa_gamma,"aa_gamma",logDEBUG);
-        Ravelin::Matrix3d R_gamma;
-        R_gamma = aa_gamma;
-        OUTLOG(R_gamma,"R_gamma",logDEBUG);
-
-        R_gamma.mult(Pose3d::transform_vector(turning_frame, foot_goal), workv3_);
-        workv3_.pose = turning_frame;
-        foot_goal = Pose3d::transform_vector(foot_frame, workv3_);
+    if( !(replan_path || redirect_path) ){
+      OUT_LOG(logDEBUG1) << "Using old spline: " << i;
+      // Try to use current (existing spline)
+      for(int d=0; d<3;d++){
+        OUT_LOG(logDEBUG) << "\t Spline coefs: " << spline_coef[i][d];
+        if(!Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d])){
+          OUT_LOG(logDEBUG) << "\t Time: " << t;
+          OUT_LOG(logDEBUG) << "\t Time coefs: " << spline_t[i];
+          throw std::runtime_error("Error: swing foot path spline ended early!");
+        }
       }
-
-      // scale step length by interval duration
-      foot_goal *=  left_in_phase*gait_duration;
-
-      // All steps wrt to x0
-      foot_goal /= 2;
-
-      OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
-
+    } else {
+      OUT_LOG(logDEBUG1) << "Creating new spline: " << i;
+      
+      Vector3d x_start = x,xd_start(0,0,0),xdd_;
+      
+      if(replan_path){
+        OUT_LOG(logDEBUG1) << "NEW SPLINE";
+        start_of_step_foothold[i] = Pose3d::transform_point(base_horizontal_frame,x_start);
+      }
+      if(redirect_path)
+        OUT_LOG(logDEBUG1) << "REDIRECT SPLINE Mid-Step";
+      
+      // take time at end of spline_t history
+      double t0 = t - ( swing_phase_duration-left_in_phase ) * gait_duration;
+      
+      /// SWING FEET ARE IN HORIZONTAL POSE
+      // set down foot where the origin will be in the middle of the next stance phase
+      // (with respect to the start of the next stance phase)
+      boost::shared_ptr<Pose3d> mid_of_next_step_state_ptr(new Pose3d(mid_of_next_step_state[i]));
+      boost::shared_ptr<Pose3d> end_of_step_state_ptr(new Pose3d(end_of_step_state[i]));
+      Vector3d foot_goal(origins[i],mid_of_next_step_state_ptr);
+      foot_goal = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
+      
+#ifdef DISPLAY
+      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,start_of_step_foothold[i]);
+      p1[2] = 0;
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p1,   Vector3d(1,0,0),0.075)));
+      Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,foot_goal);
+      p2[2] = 0;
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p2,   Vector3d(0,1,0),0.075)));
+#endif
+      
       // Generate control points for swing foot spline
       std::vector<Origin3d> control_points;
-      {
-        // SWING
-        OUT_LOG(logDEBUG) << "\tPlanning Swing phase (phase > 0)...";
-
-        foot_goal /= (1-duty_factor[i]);
-        OUT_LOG(logDEBUG) << "\tstep = " << foot_goal;
-        Origin3d up_step(up.data());
-        up_step*=step_height;
-        
-        if(redirect_path){
-          Vector3d x_,xd_,xdd_;
-          for(int d=0; d<3;d++)
-            Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t0,x_[d],xd_[d],xdd_[d]);
-          control_points.push_back(Origin3d(x_));
-        } else {
-          control_points.push_back(xt);
-        }
-        
-        control_points.push_back(control_points[0] + up_step);
-
-        Origin3d foot_destinaton = x0 + Origin3d(foot_goal);
-        if(footholds.empty()){
-          control_points.push_back(foot_destinaton + up_step + Origin3d(foot_goal)*0.1);
-          control_points.push_back(foot_destinaton);
-        } else {
-          Vector3d x_fh = select_foothold(footholds, end_of_step_state, foot_destinaton);
-            
-          foot_destinaton = Origin3d(x_fh);
-          
-          // Reach new foothold, account for movement of robot during step
-          control_points.push_back(foot_destinaton + up_step);
-          control_points.push_back(foot_destinaton);
-        }
+      
+      Origin3d up_step(up.data());
+      up_step*=step_height;
+      
+      if(redirect_path){
+        // transform location of step start to current pose
+        x_start = start_of_step_foothold[i];
+        x_start.pose = base_horizontal_frame;
+        OUT_LOG(logDEBUG1) << "x_start local: " << x_start;
       }
-
+      control_points.push_back(Origin3d(x_start));
+      
+      OUT_LOG(logDEBUG) << "Calculating step [" << i << "] : " << control_points[0] << " --> " << foot_goal;
+      
+      Origin3d foot_destination = Origin3d(foot_goal);
+      Origin3d foot_direction = foot_destination - Origin3d(x_start);
+      
+      // Perturb spline control point values to make them solvable
+      Origin3d spline_robustness = origins[i];
+      spline_robustness[2] = 0;
+      spline_robustness[1] = -spline_robustness[1] * sgn(foot_destination[1]);
+      spline_robustness[0] = fabs(spline_robustness[0]) * sgn(foot_destination[0]);
+      spline_robustness.normalize();
+      spline_robustness = spline_robustness * 1e-3;
+      spline_robustness[2] = 1e-3;
+      control_points.push_back(control_points[0] + up_step - spline_robustness);
+      
+      if(footholds.empty()){
+        control_points.push_back(foot_destination + up_step + 0.1*foot_direction + spline_robustness);
+        control_points.push_back(foot_destination);
+      } else {
+        Vector3d x_fh = select_foothold(footholds, end_of_step_state[i], foot_destination);
+        
+        foot_destination = Origin3d(x_fh);
+        
+        // Reach new foothold, account for movement of robot during step
+        control_points.push_back(foot_destination + up_step);
+        control_points.push_back(foot_destination);
+      }
+      
       // create spline using set of control points, place at back of history
       int n = control_points.size();
       std::vector<Origin3d> new_control_points;
       std::vector<double>           T;
-    
+      
       // Add current position via point at current time in spline
       new_control_points.push_back(control_points[0]);
       T.push_back(t0);
-
-//      bool is_set = false;
-      for(int j=1,jj=1;jj<n;j++){
-        double this_time = t0 + fabs( left_in_phase*gait_duration / (double)(n-1)) * (double)jj ;
-//        if(redirect_path){
-//          OUTLOG(this_time,"redirect",logERROR);
-//
-//          if (this_time>t && !is_set && (t > t0+Moby::NEAR_ZERO) ){
-//            is_set = true;
-//            T.push_back(t);
-//            new_control_points.push_back(xt);
-//            OUTLOG(t,"insert_at",logERROR);
-//          } else {
-//            if(this_time > T[T.size()-1]+Moby::NEAR_ZERO){
-//              T.push_back(this_time);
-//              new_control_points.push_back(control_points[jj]);
-//            }
-//            jj++;
-//          }
-//          OUTLOG(new_control_points[j],"control_point",logERROR);
-//        } else {
-          T.push_back(this_time);
-          new_control_points.push_back(control_points[jj]);
-//          OUTLOG(new_control_points[j],"control_point",logERROR);
-          jj++;
-//        }
-//        OUTLOG(T[j],"t",logERROR);
-      }
       
-      if(redirect_path)
-        control_points = new_control_points;
-      n = control_points.size();
+      
+      //if(redirect_path && false){
+      //  // NOTE: This method results in bad trajectories, might work with higher order splines
+      //  bool is_set = false;
+      //  for(int j=1,jj=1;jj<n;j++){
+      //    double this_time =
+      //    t0 + ( swing_phase_duration*gait_duration / (double)(n-1)) * (double)jj ;
+      //
+      //    double last_time =
+      //    t0 + (swing_phase_duration*gait_duration / (double)(n-1)) * (double)(jj-1) ;
+      //    OUTLOG(this_time,"redirect",logERROR);
+      //
+      //    if ( (this_time-Pacer::NEAR_ZERO > t) && (!is_set) && (t > last_time+Pacer::NEAR_ZERO) ){
+      //      is_set = true;
+      //      T.push_back(t);
+      //      new_control_points.push_back(Origin3d(x));
+      //      OUTLOG(t,"insert_at",logERROR);
+      //    } else {
+      //      T.push_back(this_time);
+      //      new_control_points.push_back(control_points[jj]);
+      //      jj++;
+      //    }
+      //  }
+      //  control_points = new_control_points;
+      //  n = control_points.size();
+      //} else {
+      for(int j=1;j<n;j++){
+        double this_time = t0 + ( swing_phase_duration*gait_duration / (double)(n-1)) * (double)j ;
+        T.push_back(this_time);
+      }
+      //}
+      
       spline_t[i] = VectorNd(n,&T[0]);
       
-      OUTLOG(spline_t[i],"T",logDEBUG);
-
-//      Origin3d xd0, xdF;
+      //      Origin3d xd0, xdF;
       // Get touchdown and takeoff vel;
       {
         VectorNd zero_base_generalized_q;
@@ -476,61 +700,75 @@ void walk_toward(
         // Put goal in gait pose
         VectorNd gait_pose_vec = Utility::pose_to_vec(gait_pose);
         zero_base_generalized_q.set_sub_vec(NUM_JOINT_DOFS,gait_pose_vec);
-        Ravelin::MatrixNd J = ctrl_ptr->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
+        Ravelin::MatrixNd J = ctrl->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
         
         J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+Pacer::NSPATIAL).mult(command,workv3_,-1.0,0);
-        OUTLOG(J,"J",logDEBUG);
+        //        OUTLOG(J,"J",logDEBUG);
         xd = workv3_;
         xd.pose = base_frame;
+        if (replan_path) {
+          xd_start = xd;
+        }
       }
       
+      OUTLOG(xd_start,"xd1",logDEBUG);
+      OUTLOG(xd,"xd2",logDEBUG);
+
       n = control_points.size();
+      
+      OUT_LOG(logDEBUG1) << "Calc Spline AND Eval first step: " << i << " @ time: " << t;
+      OUTLOG(spline_t[i],"T",logDEBUG);
       for(int d=0;d<3;d++){
         VectorNd          &T = spline_t[i];
         VectorNd           X(n);
         VectorNd          &coefs = spline_coef[i][d];
-
+        
         for(int j=0;j<n;j++)
           X[j] = control_points[j][d];
-        OUTLOG(T,"T",logDEBUG);
-        OUTLOG(X,"X",logDEBUG);
-
-        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd[d],xd[d]),coefs);
-
+        
+        OUT_LOG(logDEBUG1) << "dimension: " << d;
+        OUTLOG(X,"X_control-points",logDEBUG);
+        
+        Utility::calc_cubic_spline_coefs(T,X,Ravelin::Vector2d(xd_start[d],xd[d]),coefs);
+        
         // then re-evaluate spline
         // NOTE: this will only work if we replanned for a t_0  <  t  <  t_0 + t_I
-        OUT_LOG(logDEBUG) << "Eval first step in spline";
-        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t+NEAR_ZERO,x[d],xd[d],xdd[d]);
       }
     }
-    //last_feet_active[i] = feet[i]->active;
-    //feet[i]->stance = !this_phase;
+    
     x.pose = base_frame;
     xd.pose = base_frame;
     xdd.pose = base_frame;
     
-    last_phase[i] = this_phase;
+    OUT_LOG(logDEBUG) << "x " << x;
+    OUT_LOG(logDEBUG) << "xd " << xd;
+    OUT_LOG(logDEBUG) << "xdd " << xdd;
   }
-
   
-  for(int i=0;i<footholds.size();i++){
-    Utility::visualize.push_back(
-      Pacer::VisualizablePtr(
-        new Pacer::Point(
-                         Vector3d(footholds[i][0],footholds[i][1],footholds[i][2]),
-                         Vector3d(1,0,0),10.0*footholds[i][3])));
-  }
-
+  // Reassign last
   for(int i=0;i<NUM_FEET;i++){
-
-///* VISUALIZE
-//#ifdef NDEBUG
-    if(last_phase[i])
+    last_phase[i] = phase_vector[i];
+  }
+  
+#ifdef DISPLAY
+  for(int i=0;i<footholds.size();i++){
+    Utility::visualize.push_back
+    (Pacer::VisualizablePtr
+     (new Pacer::Point
+      (Vector3d(footholds[i][0],footholds[i][1],footholds[i][2])
+       ,Vector3d(1,0,0)
+       ,10.0*footholds[i][3])
+      )
+     );
+  }
+  
+  for(int i=0;i<NUM_FEET;i++){
+    if(phase_vector[i] == STANCE)
       continue;
-
     VectorNd &T = spline_t[i];
     double max_t = T[T.rows()-1];
-    double min_t = T[0]+Moby::NEAR_ZERO;
+    double min_t = T[0]+Pacer::NEAR_ZERO;
     for(double t=min_t ; t<=max_t ; t += (max_t-min_t)/20){
       Vector3d x,xd,xdd;
       for(int d=0;d<3;d++){
@@ -539,29 +777,28 @@ void walk_toward(
       x.pose = base_frame;
       xd.pose = base_frame;
       xdd.pose = base_frame;
-      Vector3d p = Pose3d::transform_point(Moby::GLOBAL,x);
-      Vector3d v = Pose3d::transform_vector(Moby::GLOBAL,xd)/10;
-//      Vector3d a = Pose3d::transform_vector(Moby::GLOBAL,xdd)/100;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,1,0),0.05)));
-//      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,0),0.005)));
-//     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Vector3d(1,0.5,0)));
+      Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
+      Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd)/10;
+      //      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,1,0),0.025)));
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,0),0.005)));
+      //     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Vector3d(1,0.5,0)));
     }
-//#endif
-    //  END VISUALIZE */
   }
-  inited = true;
+#endif
   OUT_LOG(logDEBUG) << " -- walk_toward() exited";
 }
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  ctrl_ptr = ctrl;
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // Find time since last call
+  static double first_time = t;
   static double last_time = t;
   double dt = t - last_time;
   last_time = t;
   
   /// Moving average for command
-  const int queue_size = 10;
+  const int queue_size = 1;
   static std::deque<Origin3d> command_queue;
   static Origin3d sum_command = Origin3d(0,0,0);
   
@@ -571,36 +808,35 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     command_queue.push_front(command);
     sum_command += command;
   }
-
+  
   if(command_queue.size() > queue_size){
     sum_command -= command_queue.back();
     command_queue.pop_back();
   }
   
   Origin3d command = sum_command / (double) command_queue.size();
-
+  
   OUTLOG(command,"SE2_command",logERROR);
   
   /// Command velocity differential
-//  static Origin3d command = Origin3d(0,0,0);
-//  
-//  Origin3d dcommand = Origin3d(0,0,0);
-//  ctrl->get_data<Origin3d>("SE2_command",dcommand);
-//  command *= 0.999;
-//  command += dcommand*dt;
+  //  static Origin3d command = Origin3d(0,0,0);
+  //
+  //  Origin3d dcommand = Origin3d(0,0,0);
+  //  ctrl->get_data<Origin3d>("SE2_command",dcommand);
+  //  command *= 0.999;
+  //  command += dcommand*dt;
   
   VectorNd go_to;
   go_to.set_zero(6);
   go_to[0] = command[0];
   go_to[1] = command[1];
   go_to[5] = command[2];
-
+  
   std::vector<double>
-      duty_factor = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
-    this_gait = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".gait"),
-    input_gait_pose = ctrl_ptr->get_data<std::vector<double> >(plugin_namespace+".pose");
-  double gait_time = ctrl_ptr->get_data<double>(plugin_namespace+".gait-duration");
-  double step_height = ctrl_ptr->get_data<double>(plugin_namespace+".step-height");
+  duty_factor = ctrl->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
+  this_gait = ctrl->get_data<std::vector<double> >(plugin_namespace+".gait");
+  double gait_time = ctrl->get_data<double>(plugin_namespace+".gait-duration");
+  double step_height = ctrl->get_data<double>(plugin_namespace+".step-height");
   
   double vec_width = 5;
   std::vector<std::vector<double> > footholds;
@@ -616,86 +852,81 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     }
   }
   
-  foot_names = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
-
-  double width = ctrl_ptr->get_data<double>(plugin_namespace+".width");
-  double length = ctrl_ptr->get_data<double>(plugin_namespace+".length");
-  double height = ctrl_ptr->get_data<double>(plugin_namespace+".height");
-
+  foot_names = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".feet");
+  
+  double width = -1;
+  ctrl->get_data<double>(plugin_namespace+".width",width);
+  double length = -1;
+  ctrl->get_data<double>(plugin_namespace+".length",length);
+  double height = -1;
+  ctrl->get_data<double>(plugin_namespace+".height",height);
+  
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
-        ctrl->get_data<Pose3d>("base_link_frame")));
+                                                     ctrl->get_data<Pose3d>("base_link_frame")));
   base_horizontal_frame = boost::shared_ptr<Pose3d>( new Pose3d(
-      ctrl->get_data<Pose3d>("base_horizontal_frame")));
+                                                                ctrl->get_data<Pose3d>("base_horizontal_frame")));
   
-  { /// Adjust Gait
-    
-    
-  }
-  
-//  { /// Display command
-//    Origin3d dir(Pose3d::transform_vector(Moby::GLOBAL,Vector3d(command,base_horizontal_frame)).data());
-//    dir *= 2.0;
-//    dir[2] = command[2]/10;
-//    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  (dir+base_horizontal_frame->x).data(),   (base_horizontal_frame->x).data(),   Vector3d(0,1,0),0.5)));
-//  }
+  base_horizontal_frame->update_relative_pose(Pacer::GLOBAL);
   
   // Set up output vectors for gait planner
   int NUM_FEET = foot_names.size();
   std::vector<Vector3d>
-      foot_vel(NUM_FEET),
-      foot_pos(NUM_FEET),
-      foot_acc(NUM_FEET),
-      foot_init(NUM_FEET);
+  foot_vel(NUM_FEET),
+  foot_pos(NUM_FEET),
+  foot_acc(NUM_FEET),
+  foot_init(NUM_FEET);
   q = ctrl->get_generalized_value(Pacer::Robot::position);
   qd_base = ctrl->get_base_value(Pacer::Robot::velocity);
   
-//  ctrl_ptr->set_model_state(q);
+  //  ctrl->set_model_state(q);
+  double min_reach = INFINITY;
   for(int i=0;i<NUM_FEET;i++){
-    foot_init[i] = ctrl_ptr->get_data<Vector3d>(foot_names[i]+".init.x");
+    min_reach = std::min(min_reach, ctrl->get_data<double>(foot_names[i]+".reach"));
+    foot_init[i] = Vector3d(ctrl->get_data<Origin3d>(foot_names[i]+".init.x"),base_frame);
     foot_pos[i] = foot_init[i];
-    ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
+    Origin3d workv;
+    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.x",workv))
+      foot_pos[i] = Vector3d(workv,base_frame);
     foot_vel[i] = Vector3d(0,0,0,base_frame);
-    ctrl_ptr->get_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
+    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.xd",workv))
+      foot_vel[i] = Vector3d(workv,base_frame);
     foot_acc[i] = Vector3d(0,0,0,base_frame);
   }
-
   
-  gait_pose = boost::shared_ptr<Pose3d>(
-      new Pose3d(
-        Ravelin::Quatd::rpy(
-          input_gait_pose[3],
-          input_gait_pose[4],
-          input_gait_pose[5]
-        ),
-        Origin3d(
-          input_gait_pose[0] /*+ command[0]/(4.0*gait_time)*/,
-          input_gait_pose[1] /*+ command[1]/(4.0*gait_time)*/,
-          input_gait_pose[2]
-        ),
-        base_frame
-      )
-    );
+  
+  gait_pose = boost::shared_ptr<Pose3d>( new Pose3d() );
+  
+  if( !ctrl->get_data<Pose3d>("base_stability_frame",*(gait_pose.get())))
+    *(gait_pose.get()) = *(base_frame.get());
+  gait_pose->update_relative_pose(base_frame);
+  gait_pose->q.to_rpy(roll_pitch_yaw);
   
   // Assign foot origins (ideal foot placemenet at rest)
   std::vector<Origin3d> origins;
   if(origins.empty()){
     origins.resize(NUM_FEET);
     for(int i=0;i<NUM_FEET;i++){
-      Vector3d origin(
-                   Utility::sign<double>(foot_init[i][0])*length/2,
-                   Utility::sign<double>(foot_init[i][1])*width/2,
-                   -height,base_frame);
+      Vector3d origin = foot_init[i];
+      if(length >= 0)
+        origin[0] = Utility::sign<double>(foot_init[i][0])*length/2.0;
+      if(width >= 0)
+        origin[1] = Utility::sign<double>(foot_init[i][1])*width/2.0;
+      if(height >= 0)
+        origin[2] = -std::min(height,min_reach);
+      origin.pose = base_frame;
+      OUT_LOG(logDEBUG1) << "Length is " << origin[0];
+      OUT_LOG(logDEBUG1) << "Width is " << origin[1];
+      OUT_LOG(logDEBUG1) << "Height is " << origin[2];
+
       origins[i] = Pose3d::transform_point(gait_pose,origin);
+      
     }
   }
   
-  gait_pose->update_relative_pose(Moby::GLOBAL);
-  ctrl->set_data<Pose3d>("base_stability_frame",*(gait_pose.get()));
-  
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
-
-  int STANCE_ON_CONTACT = ctrl_ptr->get_data<int>(plugin_namespace+".stance-on-contact");
+  
+  bool STANCE_ON_CONTACT = ctrl->get_data<bool>(plugin_namespace+".stance-on-contact");
   
   for(int i=0;i<foot_names.size();i++){
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
@@ -705,58 +936,30 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
     else
       active_feet[foot_names[i]] = false;
   }
+  std::vector<double> new_command;
+  if(ctrl->get_data<std::vector<double> >(plugin_namespace+".command",new_command)){
+    go_to = VectorNd(6,&new_command[0]);
+  }
   
-  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t,foot_pos,foot_vel, foot_acc);
+  walk_toward(go_to,this_gait,footholds,duty_factor,gait_time,step_height,STANCE_ON_CONTACT,origins,ctrl->get_data<Vector3d>("center_of_mass.x"),t-first_time,foot_pos,foot_vel, foot_acc);
   
   for(int i=0;i<NUM_FEET;i++){
-    ctrl->set_data<Vector3d>(foot_names[i]+".goal.x",foot_pos[i]);
-    ctrl->set_data<Vector3d>(foot_names[i]+".goal.xd",foot_vel[i]);
-    ctrl->set_data<Vector3d>(foot_names[i]+".goal.xdd",foot_acc[i]);
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.x",Origin3d(foot_pos[i]));
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xd",Origin3d(foot_vel[i]));
+    ctrl->set_data<Origin3d>(foot_names[i]+".goal.xdd",Origin3d(foot_acc[i]));
+
+    ctrl->set_foot_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
+    ctrl->set_foot_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
+    ctrl->set_foot_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));
   }
 }
 
-/****************************************************************************
- * Copyright 2014 Samuel Zapolsky
- * This library is distributed under the terms of the Apache V2.0
- * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
- ****************************************************************************/
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- * void Deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl)
- */
+void setup(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
-void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  static int ITER = 0;
-  int RTF = (int) ctrl->get_data<double>(plugin_namespace+".real-time-factor");
-  if(ITER%RTF == 0)
-    Update(ctrl,t);
-  ITER+=1;
-}
-
-void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  ctrl->remove_data("base_stability_frame");
-
-  std::vector<std::string> foot_names
-  = ctrl_ptr->get_data<std::vector<std::string> >(plugin_namespace+".feet");
-
-  int NUM_FEET = foot_names.size();
-
-  for(int i=0;i<NUM_FEET;i++){
-    ctrl->remove_data(foot_names[i]+".goal.x");
-    ctrl->remove_data(foot_names[i]+".goal.xd");
-    ctrl->remove_data(foot_names[i]+".goal.xdd");
-    ctrl->remove_data(foot_names[i]+".stance");
+  const  std::vector<std::string>
+  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  for(unsigned i=0;i<eef_names_.size();i++){
+    variable_names.push_back(eef_names_[i]+".stance");
   }
 }
-
-extern "C" {
-  void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
-    plugin_namespace = std::string(std::string(name));
-    
-    int priority = ctrl->get_data<double>(plugin_namespace+".priority");
-    
-    ctrl->add_plugin_update(priority,name,&update);
-    ctrl->add_plugin_deconstructor(name,&deconstruct);
-  }
-}
-

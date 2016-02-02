@@ -1,6 +1,7 @@
 #!/bin/bash
 export PACER_HOME=@CMAKE_SOURCE_DIR@
 export PACER_MODEL_PATH=$PACER_HOME/example/models
+export TESTING_ROBOT=links
 export PACER_PLUGIN_PATH=@CMAKE_CURRENT_BINARY_DIR@/example/plugins
 export PACER_INTERFACE_PATH=@CMAKE_CURRENT_BINARY_DIR@/example/interfaces
 export GAZEBO_MODEL_PATH=$PACER_HOME/example/models:$GAZEBO_MODEL_PATH

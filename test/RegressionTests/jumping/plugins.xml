@@ -1,0 +1,217 @@
+<XML>
+  <plugins type="string vector">
+    plugin-scheduler
+    end-effectors
+    error-check
+    center-of-mass
+        ik-feet
+        eef-PID-controller
+        stand
+  </plugins>
+  <!-- Other Control Modules
+    -->
+  <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
+  <plugin-scheduler>
+    <file type="string">libplugin-scheduler.so</file>
+    <real-time-factor type="double">10</real-time-factor>
+    <priority type="double">0</priority>
+    <relative-start-time type="bool">true</relative-start-time>
+    <events type="string vector">init jump</events>
+    <!--  PERSISTENT    -->
+    <init>
+      <time type="double">0.1</time>
+      <close type="string vector">
+        stand
+      </close>
+      <open type="string vector">
+        crouch
+      </open>
+    </init>
+    <!--   WALK   -->
+    
+    <jump>
+      <time type="double">0.6</time>
+      <close type="string vector">
+        crouch
+      </close>
+      <open type="string vector">
+        jump
+        viz-jump
+      </open>
+    </jump>
+    
+    <land>
+      <time type="double">0.6</time>
+      <close type="string vector">
+        jump
+      </close>
+      <open type="string vector">
+        freeze
+      </open>
+    </land>
+  </plugin-scheduler>
+
+  <freeze>
+    <file type="string">libstay.so</file>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">1</priority>
+  </freeze>
+  
+  <exit-on-contact>
+    <file type="string">libexit-contact.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </exit-on-contact>
+
+  <viz-jump>
+    <priority type="double">0</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <file type="string">libvisualize-ballistic-moton.so</file>
+  </viz-jump>
+
+
+  <ik-feet>
+    <file type="string">libinverse-kinematics.so</file>
+    <priority type="double">8</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <abs-err-tolerance type="double">1e-3</abs-err-tolerance>
+  </ik-feet>
+  
+  <stand>
+    <file type="string">libstand.so</file>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">1</priority>
+  </stand>
+
+  <reset-trajectory>
+    <file type="string">libgoto-stand.so</file>
+     <real-time-factor type="double">1</real-time-factor>
+     <priority type="double">1</priority>
+     <time-to-pose type="double">0.2</time-to-pose>
+  </reset-trajectory>
+  
+  <error-check>
+    <file type="string">liberror-check.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </error-check>
+  
+  <exit>
+    <file type="string">libexit.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </exit>
+  
+  <crouch>
+    <file type="string">libcrouch.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">5</priority>
+    <position type="double">-0.03 0 -0.06</position>
+    <duration type="double">0.5</duration>
+  </crouch>
+  
+  <jump>
+    <file type="string">libjump.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">5</priority>
+    <angle-of-elevation type="double">1.1</angle-of-elevation>
+    <heading type="double">0</heading>
+    <range type="double">0.50</range>
+    <duration type="double">0.3</duration>
+  </jump>
+  
+  <center-of-mass>
+    <file type="string">libcenter-of-mass.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </center-of-mass>
+  
+  <end-effectors>
+    <file type="string">libend-effectors.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+  </end-effectors>
+  
+  <output>
+    <file type="string">output/liboutput.so</file>
+    <real-time-factor type="double">10</real-time-factor>
+    <priority type="double">10</priority>
+    <print-data>
+      <vec3 type="string vector">
+        center_of_mass.x
+        center_of_mass.xd
+        center_of_mass.xdd
+        roll_pitch_yaw
+        zero_moment_point
+      </vec3>
+      <pose3 type="string vector">
+        base_link_frame
+        base_horizontal_frame
+        base_stability_frame
+      </pose3>
+      <end-effector>
+        <vec3 type="string vector">
+          state.x state.xd state.xdd
+          goal.x goal.xd goal.xdd
+        </vec3>
+        <bool type="string vector">
+          stance
+        </bool>
+      </end-effector>
+    </print-data>
+  </output>
+  
+  <settle-feet>
+    <file type="string">libsettle.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">4</priority>
+    <des-contact type="bool">false</des-contact>
+    <acceleration type="bool">false</acceleration>
+  </settle-feet>
+  
+  <orient-base>
+    <!-- Updates stability-frame until base-frame is level -->
+    <file type="string">liborient-base.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">1</priority>
+    <pose type="double">0.0 0 0 0 0 0</pose>
+  </orient-base>
+  
+  <eef-PID-controller>
+    <file type="string">libeef-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <id type="string">LF_FOOT           RF_FOOT             LH_FOOT             RH_FOOT</id>
+    <gains>
+      <kp type="double">1e3 1e3 1e3   1e3 1e3 1e3   1e3 1e3 1e3   1e3 1e3 1e3</kp>
+      <kv type="double">3e1 3e1 3e1     3e1 3e1 3e1     3e1 3e1 3e1     3e1 3e1 3e1     </kv>
+      <ki type="double">0 0 0     0 0 0     0 0 0     0 0 0</ki>
+    </gains>
+  </eef-PID-controller>
+  <joint-PID-controller>
+    <file type="string">libjoint-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
+      <kp type="double">2e1 2e1 2e1      2e1 2e1 2e1     2e1 2e1 2e1    2e1 2e1 2e1   </kp>
+      <kv type="double">1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1  1e-1 1e-1 1e-1</kv>
+      <ki type="double">0     0     0       0   0   0     0     0     0     0   0   0</ki>
+    </gains>
+  </joint-PID-controller>
+  
+  <idyn-controller>
+    <file type="string">inverse-dynamics/libinverse-dynamics.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <dt type="double">0</dt>
+    <alpha type="double">1</alpha>
+    <last-cfs type="bool">false</last-cfs>
+    <last-cfs-filter type="bool">false</last-cfs-filter>
+    <des-contact type="bool">true</des-contact>
+    <max-contacts-per-foot type="double">1</max-contacts-per-foot>
+    <type type="string vector">CFQP</type> <!-- CFQP (BEST: Clawar), CFLCP (EXPERIMENTAL: Anitesciu-Potra), NSQP (EXPERIMENTAL: No-slip CLAWAR), NSLCP (BEST: No-slip LCP) -->
+<!--CFQP CFLCP NSQP NSLCP-->
+  </idyn-controller>
+</XML>

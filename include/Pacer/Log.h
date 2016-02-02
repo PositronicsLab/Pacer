@@ -8,18 +8,29 @@
 
 #include <sstream>
 #include <string>
+#include <map>
 #include <stdio.h>
 
 inline std::string NowTime();
 
-enum TLogLevel { logNONE, logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
+typedef int TLogLevel;
+static const TLogLevel
+  logNONE    = 0,
+  logERROR   = 1,
+  logWARNING = 2,
+  logINFO    = 3,
+  logDEBUG   = 4,
+  logDEBUG1  = 5,
+  logDEBUG2  = 6,
+  logDEBUG3  = 7,
+  logDEBUG4  = 8;
 
 
-class Log
+class Logger
 {
 public:
-    Log();
-    virtual ~Log();
+    Logger();
+    virtual ~Logger();
     std::ostringstream& Get(TLogLevel level = logINFO);
 public:
     static TLogLevel& ReportingLevel();
@@ -28,50 +39,59 @@ public:
 protected:
     std::ostringstream os;
 private:
-    Log(const Log&);
-    Log& operator =(const Log&);
+    Logger(const Logger&);
+    Logger& operator =(const Logger&);
 };
 
-inline Log::Log()
+inline Logger::Logger()
 {
+  
 }
 
-inline std::ostringstream& Log::Get(TLogLevel level)
+inline std::ostringstream& Logger::Get(TLogLevel level)
 {
 //    os << "- " << NowTime();
 //    os << " " << ToString(level) << ": ";
-    os << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
+    os << std::string( (level > logDEBUG) ? (level - logDEBUG) : 0, '\t');
     return os;
 }
 
-inline Log::~Log()
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+inline Logger::~Logger()
 {
-    os << std::endl;
 #ifdef LOG_TO_FILE
+    os << std::endl;
     FILE * pFile;
-    pFile = fopen ("out.log","a");
+    static int pid = getpid();
+    char buffer[9];
+    sprintf(buffer,"%06d",pid);
+    static std::string name("out-"+std::string(buffer)+".log");
+    pFile = fopen(name.c_str(),"a");
     fprintf(pFile, "%s", os.str().c_str());
-    fflush(pFile);
     fclose (pFile);
-#else
-    fprintf(stdout, "%s", os.str().c_str());
-    fflush(stdout);
+//#else
+//    fprintf(stdout, "%s", os.str().c_str());
+//    fflush(stdout);
 #endif
 }
 
-inline TLogLevel& Log::ReportingLevel()
+inline TLogLevel& Logger::ReportingLevel()
 {
-    static TLogLevel reportingLevel = logDEBUG4;
+    static TLogLevel reportingLevel;
     return reportingLevel;
 }
 
-inline std::string Log::ToString(TLogLevel level)
+inline std::string Logger::ToString(TLogLevel level)
 {
     static const char* const buffer[] = {"NONE","ERROR", "WARNING", "INFO", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
     return buffer[level];
 }
 
-inline TLogLevel Log::FromString(const std::string& level)
+inline TLogLevel Logger::FromString(const std::string& level)
 {
     if (level == "DEBUG4")
         return logDEBUG4;
@@ -91,16 +111,20 @@ inline TLogLevel Log::FromString(const std::string& level)
         return logERROR;
     if (level == "NONE")
         return logNONE;
-    Log().Get(logWARNING) << "Unknown logging level '" << level << "'. Using INFO level as default.";
+    Logger().Get(logWARNING) << "Unknown logging level '" << level << "'. Using INFO level as default.";
     return logINFO;
 }
 
-typedef Log FILELog;
-
+typedef Logger FILELog;
+#ifdef LOG_TO_FILE
 #define OUT_LOG(level) \
     if (level > FILELog::ReportingLevel()) ; \
-    else Log().Get(level)
-
+    else FILELog().Get(level)
+#else
+#define OUT_LOG(level) \
+  if (1) ; \
+  else FILELog().Get(level)
+#endif
 #define LOG(level) (level > FILELog::ReportingLevel())
 
 #include <sys/time.h>
@@ -119,22 +143,7 @@ inline std::string NowTime()
     return result;
 }
 
-void OUTLOG(const Ravelin::VectorNd& M, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SharedVectorNd& M, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::MatrixNd& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SharedConstMatrixNd& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Matrix3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Pose3d& P, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Origin3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Vector3d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::Vector2d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::SVector6d& z, std::string name,TLogLevel LL);
-void OUTLOG(const Ravelin::AAngled& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::vector<double>& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::vector<int>& z, std::string name,TLogLevel LL);
-void OUTLOG(double x, std::string name,TLogLevel LL);
-void OUTLOG(const std::string& z, std::string name,TLogLevel LL);
-void OUTLOG(const std::vector<std::string>& z, std::string name,TLogLevel LL);
 extern std::string LOG_TYPE;
+
 
 #endif // LOG_H

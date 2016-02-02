@@ -6,15 +6,6 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
-    static const double     _PI= 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348;
-    static const double _TWO_PI= 6.2831853071795864769252867665590057683943387987502116419498891846156328125724179972560696;
-#include <Ravelin/MatrixNd.h>
-#include <Ravelin/Transform3d.h>
-#include <Ravelin/VectorNd.h>
-#include <Ravelin/SVector6d.h>
-#include <Ravelin/Vector3d.h>
-#include <mutex>
-#include <Pacer/Log.h>
 #include <boost/assign/std/vector.hpp>
 #include <boost/assign/list_of.hpp>
 
@@ -29,19 +20,25 @@
 #include <iomanip>      // std::setprecision
 #include <math.h>
 #include <numeric>
-#include <Pacer/Visualizable.h>
 
-template < class T >
-std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
-{
-  os << "[";
-  for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
-  {
-    os << " " << *ii;
-  }
-  os << "]";
-  return os;
-}
+#include <boost/icl/type_traits/to_string.hpp>
+//template<typename T>
+//using toString = boost::icl::to_string<T>;
+
+static const double _TWO_PI= M_PI*2.0;
+
+#include <Pacer/Visualizable.h>
+#include <Pacer/output.h>
+
+#include <Ravelin/LinAlgd.h>
+
+#ifdef __GNUC__
+# define Y_Warning(x) message x
+#else
+# define Y_Warning(x) message(x)
+#endif
+
+static Ravelin::LinAlgd LA_;
 
 class Utility{
 
@@ -68,6 +65,20 @@ public:
     p[5] = T.q.z;
     p[6] = T.q.w;
     return p;
+  }
+  
+  static Ravelin::Pose3d vec_to_pose(const Ravelin::VectorNd& p){
+    Ravelin::Pose3d T;
+    //    Ravelin::Transform3d T = Ravelin::Pose3d::calc_relative_pose(pose,boost::shared_ptr<Ravelin::Pose3d>( new Ravelin::Pose3d()));
+    T.x[0] = p[0];
+    T.x[1] = p[1];
+    T.x[2] = p[2];
+                 
+    T.q.x  = p[3];
+    T.q.y  = p[4];
+    T.q.z  = p[5];
+    T.q.w  = p[6];
+    return T;
   }
     // Floating-point modulo
     // The result (the remainder) has same sign as the divisor.
@@ -115,7 +126,7 @@ public:
     // wrap [rad] angle to [-PI..PI)
     static double WrapPosNegPI(double fAng)
     {
-        return Mod(fAng + _PI, _TWO_PI) - _PI;
+        return Mod(fAng + M_PI, _TWO_PI) - M_PI;
     }
 
     // wrap [rad] angle to [0..TWO_PI)
@@ -224,10 +235,36 @@ public:
 
 	// Solvers
   static void solve(Ravelin::MatrixNd& M,Ravelin::VectorNd& bx);
-	static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
-	static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x);
-	static bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
+  static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x, Ravelin::VectorNd& v, bool warm_start = false,bool regularize = true);
+  static bool solve_qp_pos(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, Ravelin::VectorNd& x, bool warm_start = false);
+  static bool solve_qp(const Ravelin::MatrixNd& Q, const Ravelin::VectorNd& c, const Ravelin::MatrixNd& A, const Ravelin::VectorNd& b, Ravelin::VectorNd& x);
 	static bool lcp_symm_iter(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, Ravelin::VectorNd& z, double lambda, double omega, unsigned MAX_ITER);
   static bool lcp_fast(const Ravelin::MatrixNd& M, const Ravelin::VectorNd& q, const std::vector<unsigned>& indices, Ravelin::VectorNd& z, double zero_tol);
 };
+
+static double sigmoid(double x){
+  return (1.0 / (1.0 + exp(-x)));
+}
+
+static double sigmoid_interp(double v0, double vF, double alpha){
+  // sigmoid curve interpolates wrt to alpha \in {0..1}
+  double diff = vF - v0;
+  return v0 + diff*sigmoid(alpha*10.0 - 5.0);
+}
+
+template <typename T>
+static int sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+template <typename T>
+static T sqr(T val) {
+  return val*val;
+}
+
+static double decimal_part(double val){
+  return val - (double) ((int) val);
+  
+}
+
 #endif // UTILITIES_H

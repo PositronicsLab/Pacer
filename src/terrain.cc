@@ -27,7 +27,7 @@ RigidBodyPtr create_terrain(unsigned nsph, double width_ext, double height_ext, 
     // set the pose on the collision geometry
     Pose3d T;
 //    T.update_relative_pose(rb->get_pose());
-    T.update_relative_pose(Moby::GLOBAL);
+    T.update_relative_pose(GLOBAL);
     T.x[0] = (double) rand()/RAND_MAX * 2.0 * width_ext - width_ext;
     T.x[2] = (double) rand()/RAND_MAX * 2.0 * height_ext - height_ext;
     T.x[1] = (double) rand()/RAND_MAX * 2.0 * width_ext - width_ext;

@@ -1,10 +1,10 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
-std::string plugin_namespace;
+#include "plugin.h"
 using namespace Ravelin;
 
-boost::shared_ptr<Pacer::Controller> ctrl;
+const double grav     = 9.81; // m / s*s
 
 struct Trajectory {
   VectorNd coefs;
@@ -27,8 +27,8 @@ std::vector<Trajectory> init_Nd_cubic_spline(const std::vector<VectorNd>& X,cons
       traj.X[i] = X[i][d];
       traj.T[i] = T[i];
     }
-    OUTLOG(traj.T,"T"+std::to_string(d),logDEBUG);
-    OUTLOG(traj.X,"X"+std::to_string(d),logDEBUG);
+    OUTLOG(traj.T,"T"+boost::icl::to_string<double>::apply(d),logDEBUG);
+    OUTLOG(traj.X,"X"+boost::icl::to_string<double>::apply(d),logDEBUG);
   }
   return trajs;
 }
@@ -54,6 +54,8 @@ bool eval_Nd_cubic_spline(std::vector<Trajectory>& trajs, double t, VectorNd& x,
 }
 
 std::vector<Trajectory> calc_jump(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+
   // Set takeoff angle
   double angle_of_elevation = ctrl->get_data<double>(plugin_namespace + ".angle-of-elevation");
   double heading_angle = ctrl->get_data<double>(plugin_namespace + ".heading");
@@ -85,22 +87,26 @@ std::vector<Trajectory> calc_jump(){
   OUTLOG(fabs(v_spatial), "|v_spatial|", logERROR);
   
   // Check that we did this right
-  assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Moby::NEAR_ZERO);
+  assert(fabs( v_liftoff.norm() - fabs(v_spatial) ) < Pacer::NEAR_ZERO);
   
   std::vector<VectorNd> X, Xd;
+  std::vector<double> T;
+  // Only 2 vel values (start and end)
   //Xd0
   Xd.push_back(VectorNd::zero(3));
   //Xdf
   Xd.push_back(VectorNd(3,v_liftoff.data()));
   
+  // n pos values (start, via, and end)
   // X0
   X.push_back(VectorNd::zero(3));
+  T.push_back(0);
+  
   // Xf
   X.push_back(VectorNd::zero(3));
-  X[1][2] += 0.05;
-  std::vector<double> T;
-  T.push_back(0);
-  T.push_back(duration);
+  X.back()[0] += 0.05;
+  X.back()[2] += 0.08;
+  T.push_back(T.back()+duration);
   
   std::vector<Trajectory> leap_trajectory = init_Nd_cubic_spline(X,Xd,T);
   if(!calc_Nd_cubic_spline(leap_trajectory)){
@@ -111,11 +117,12 @@ std::vector<Trajectory> calc_jump(){
 }
 
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
-  ctrl = ctrl_ptr;
-  double start_jump_time = t;
+void loop(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  static double start_jump_time = t;
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
-
+  static Vector3d com_x = ctrl->get_data<Vector3d>("center_of_mass.x");
+  
   static bool first_step = true;
   
   const  std::vector<std::string>
@@ -131,7 +138,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   { // Do spline calculations
     static std::vector<Trajectory> leap_spline;
     
-    if(t >= start_jump_time && t < start_jump_time+duration){
+    if(t >= start_jump_time){
       
       if (leap_spline.empty()) {
         std::cout << "Calculating jump" << std::endl;
@@ -152,13 +159,27 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
       
       // Find base trajectory
       if(!eval_Nd_cubic_spline(leap_spline,t-start_jump_time,x,xd,xdd)){
-        for(unsigned i=0;i<eef_names_.size();i++){
-          ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
-          ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",Vector3d(0,0,0));
-          ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",Vector3d(0,0,0));
-        }
+        ctrl->open_plugin("reset-trajectory");
+        ctrl->close_plugin("eef-PID-controller");
+        ctrl->close_plugin(plugin_namespace);
         return;
       }
+      
+#ifndef USE_OSG_DISPLAY
+      com_x.pose = Pacer::GLOBAL;
+      double heading = ctrl->get_data<double>(plugin_namespace + ".heading");
+      double range = ctrl->get_data<double>(plugin_namespace + ".range");
+      
+      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1)));
+      
+      for(double i=start_jump_time;i<start_jump_time+duration;i+=0.01){
+        VectorNd x(3), xd(3), xdd(3);
+        if(eval_Nd_cubic_spline(leap_spline,i,x,xd,xdd)){
+          Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(  Vector3d(x[0],x[1],x[2]) + com_x, Vector3d(x[0],x[1],x[2]) + com_x + Vector3d(xd[0],xd[1],xd[2])*0.01,   Vector3d(1,0,0),0.02)));
+          //      OUTLOG(x,"x",logERROR);
+        }
+      }
+#endif
     } else {
       return;
     }
@@ -188,8 +209,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
     
     // Now that model state is set ffrom jacobian calculation
     if(first_step){
-      const Moby::RigidBodyPtr link = ctrl->get_link(eef_names_[i]);
-      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Moby::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
+      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
+      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xd,xd_foot,-1,0);
@@ -206,45 +227,5 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl_ptr, double t){
   first_step = false;
 }
 
-
-/****************************************************************************
- * Copyright 2014 Samuel Zapolsky
- * This library is distributed under the terms of the Apache V2.0
- * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
- ****************************************************************************/
-/** This is a quick way to register your plugin function of the form:
- * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
- * void Deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl)
- */
-
-void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  static int ITER = 0;
-  int RTF = (int) ctrl->get_data<double>(plugin_namespace+".real-time-factor");
-  if(ITER%RTF == 0)
-    Update(ctrl,t);
-  ITER+=1;
-}
-
-void deconstruct(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
-  std::vector<std::string>
-  foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-  
-  int NUM_FEET = foot_names.size();
-  
-  for(int i=0;i<NUM_FEET;i++){
-    ctrl->remove_data(foot_names[i]+".goal.x");
-    ctrl->remove_data(foot_names[i]+".goal.xd");
-    ctrl->remove_data(foot_names[i]+".goal.xdd");
-  }
-}
-
-extern "C" {
-  void init(const boost::shared_ptr<Pacer::Controller> ctrl, const char* name){
-    plugin_namespace = std::string(std::string(name));
-    
-    int priority = ctrl->get_data<double>(plugin_namespace+".priority");
-    
-    ctrl->add_plugin_update(priority,name,&update);
-    ctrl->add_plugin_deconstructor(name,&deconstruct);
-  }
+void setup(){
 }

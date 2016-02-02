@@ -34,7 +34,7 @@
 /* EOF */
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
-std::string plugin_namespace;
+#include "../plugin.h"
 
 #ifdef USE_CURSES
 void print_bar(int pos, int len)
@@ -51,7 +51,7 @@ void print_bar(int pos, int len)
 }
 #endif
 
-int str2int(const char* str, int* val)
+int str2int(const char* str, long int* val)
 {
   char* endptr;
   errno = 0;    /* To distinguish success/failure after call */
@@ -198,7 +198,8 @@ class Joystick
 #endif
   } // while
  
-  Joystick(): Joystick(0) {}
+  Joystick(){}
+  
   Joystick(int joy_idx){
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
  
@@ -248,15 +249,16 @@ class Joystick
 
 #include <boost/assign/list_of.hpp>
 
-void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
+void loop(){
+boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   // SDL2 will only report events when the window has focus, so set
   // this hint as we don't have a window
   const int JDEADZONE = 2000;
   std::string GAMEPAD_TYPE = ctrl->get_data<std::string>(plugin_namespace+".type");
 
-  try {
-    static Joystick j = Joystick(0);
+//  try {
+    static Joystick j(0);
 
     j.update();
     
@@ -422,8 +424,8 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
           ctrl->set_data<double>("gait-planner.step-height",initial_step_height);
           ctrl->set_data<double>("gait-planner.gait-duration",initial_gait_duration+gait_duration);
         }
-      } else // j.buttons[4] == 1
-      {
+      }
+      if(j.buttons[4] == 1){
         static std::vector<double> initial_duty_factor = ctrl->get_data< std::vector<double> >("gait-planner.duty-factor");
         std::vector<double> new_duty_factor = initial_duty_factor;
         static double duty_factor = initial_duty_factor[0];
@@ -496,7 +498,7 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
         command_SE2[0] = max_forward_speed * - (double) j.axes[X] / (double) MAX_VAL;
         command_SE2[1] = max_strafe_speed * - (double) j.axes[Y] / (double) MAX_VAL;
       }
-      if(fabs(j.axes[THETA]) < JDEADZONE)
+      if(abs(j.axes[THETA]) < JDEADZONE)
         command_SE2[2] = 0;
       else
         command_SE2[2] = max_turn_speed * - (double) j.axes[THETA] / (double) MAX_VAL;
@@ -506,13 +508,12 @@ void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   //  std::cout << "forward (m/s)     = " << command_SE2[0] << std::endl;
   //  std::cout << "strafe_left (m/s) = " << command_SE2[1] << std::endl;
   //  std::cout << "turn_left (rad/s) = " << command_SE2[2] << std::endl;
-  } catch(std::exception& e){
-    std::cerr << "Could not connect to Controller: " << GAMEPAD_TYPE << std::endl;
-    throw std::runtime_error( "Could not connect to Controller: " + GAMEPAD_TYPE);
-  }
+//  } catch(std::exception& e){
+//    std::cerr << "Could not connect to Controller: " << GAMEPAD_TYPE << std::endl;
+//    throw std::runtime_error( "Could not connect to Controller: " + GAMEPAD_TYPE);
+//  }
 }
 
-/** This is a quick way to register your plugin function of the form:
-  * void Update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t)
-  */
-#include "../register-plugin"
+void setup(){
+  
+}

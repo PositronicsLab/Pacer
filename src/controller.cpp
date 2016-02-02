@@ -16,17 +16,19 @@
 #include <vector>
 
 using namespace Pacer;
+
+std::map<std::string,void*> Controller::handles;
   
 Controller::Controller(): Robot(){
 
 }
 
 Controller::~Controller(){
+  Utility::visualize.clear();
   close_all_plugins();
 }
 
 
-std::map<std::string,void*> handles;
 bool Controller::close_all_plugins(){
   typedef std::pair<std::string,void*> handle_pair;
   // close the loaded plugin libraries
@@ -40,8 +42,6 @@ bool Controller::close_all_plugins(){
   return true;
 }
 
-typedef void (*init_t)(const boost::shared_ptr<Controller>, const char*);
-std::map<std::string, init_t> INIT;
 
 bool Controller::remove_plugin(const std::string& plugin_name){
   std::map<std::string, void*>::iterator it = handles.find(plugin_name);
@@ -49,7 +49,6 @@ bool Controller::remove_plugin(const std::string& plugin_name){
   if(it == handles.end())
     return false;
 
-  INIT.erase(plugin_name);
   remove_plugin_update(plugin_name);
   void * &handle = (*it).second;
   dlclose(handle);
@@ -74,7 +73,8 @@ bool Controller::init_plugin(const std::string& plugin_name){
   OUT_LOG(logINFO) << "\tLIB: " << filename.c_str();
   OUT_LOG(logINFO) << "\tPATH: " << pPath.c_str();
   // attempt to read the file
-  void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
+  //void* HANDLE = dlopen(lib_path.c_str(), RTLD_LAZY);
+  void* HANDLE = dlopen(lib_path.c_str(), RTLD_NOW);
   if (!HANDLE)
   {
     std::cerr << "driver: failed to read plugin from " << filename << std::endl;
@@ -87,27 +87,25 @@ bool Controller::init_plugin(const std::string& plugin_name){
   
   // attempt to load the initializer
   dlerror();
-  INIT[plugin_name] = (init_t) dlsym(HANDLE, "init");
+  Controller::init_t INIT = (init_t) dlsym(HANDLE, "init");
   const char* dlsym_error = dlerror();
   if (dlsym_error)
   {
     std::cerr << "driver warning: cannot load symbol 'init' from " << filename << std::endl;
     std::cerr << "        error follows: " << std::endl << dlsym_error << std::endl;
-    INIT.erase(plugin_name);
     throw std::runtime_error("driver: cannot load symbol 'init' from " + filename);
     return false;
   } else {
     // Init the plugin
-    (*INIT[plugin_name])(this->ptr(),plugin_name.c_str());
+    (*INIT)(this->ptr(),plugin_name.c_str());
   }
   return true;
 }
 
 bool Controller::init_all_plugins(){
-  OUT_LOG(logDEBUG) << ">> Controller::init_plugins()";
-
+  OUT_LOG(logINFO) << ">> Controller::init_plugins()";
+  handles = std::map<std::string,void*>();
   bool RETURN_FLAG = true;
-  close_all_plugins();
   std::vector<init_t> INIT;
 
   // call the initializers, if any
@@ -119,7 +117,7 @@ bool Controller::init_all_plugins(){
       RETURN_FLAG = false;
   }
     
-  OUT_LOG(logDEBUG) << "<< Controller::init_plugins()";
+  OUT_LOG(logINFO) << "<< Controller::init_plugins()";
   return RETURN_FLAG;
 }
 
@@ -127,41 +125,29 @@ bool Controller::init_all_plugins(){
 // =========================== Begin Robot Controller =========================
 // ============================================================================
 
-void Controller::control(double t){
+void Controller::control(double absolute_time){
     OUT_LOG(logDEBUG) << ">> Controller::control(.)";
   // Import Robot Data
+  static long long unsigned int iter = 0;
+  static double first_time = absolute_time;
   static double last_time = -0.001;
+  double t = absolute_time-first_time;
   const double dt = t - last_time;
   
-  OUTLOG(t,"virtual_time",logERROR);
-  OUTLOG(dt,"virtual_time_step",logERROR);
-  
+  OUTLOG(t,"virtual_time",logINFO);
+  OUTLOG(dt,"virtual_time_step",logINFO);
+  increment_phase(INITIALIZATION);
   update();
-  lock_state();
+  increment_phase(PERCEPTION);
 #ifdef USE_PLUGINS
   update_plugins(t);
 #endif
-  unlock_state();
- 
-  {
-    // Enforce limits
-    // Note: homogeneous limits
-    static std::vector<double> load_max = get_data<std::vector<double> >("init.joint.limits.u");
-
-    Ravelin::VectorNd u = get_joint_generalized_value(Pacer::Controller::load_goal);
-    OUTLOG(u,"U_NO_LIMIT",logERROR);
-
-    for (int i=0;i<u.rows(); i++) {
-      if(u[i] > load_max[0]) u[i] = load_max[0];
-      else if(u[i] < -load_max[0]) u[i] = -load_max[0];
-    }
-    OUTLOG(u,"U_WITH_LIMIT",logERROR);
-    set_joint_generalized_value(Pacer::Controller::load_goal,u);
-  }
-  
+  increment_phase(WAITING);
   reset_contact();
   last_time = t;
-  OUT_LOG(logDEBUG) << "<< Controller::control(.)";
+
+  iter++;
+  OUT_LOG(logINFO) << "<< Controller::control(.)";
 }
 // ===========================  END CONTROLLER  ===============================
 // ============================================================================

@@ -9,7 +9,7 @@
 
 find_path(
   MOBY_INCLUDE_DIR
-  NAMES Moby/EventDrivenSimulator.h
+  NAMES Moby/Simulator.h
   PATHS /usr/local/include /usr/include
 )
 
@@ -25,18 +25,19 @@ if( MOBY_INCLUDE_DIR )
     # Set uncached variables as per standard.
     set(MOBY_FOUND ON)
     set(MOBY_INCLUDE_DIRS ${MOBY_INCLUDE_DIR})
+    set(MOBY_LIBRARY_DIR ${MOBY_LIBRARY_DIRS})
     set(MOBY_LIBRARIES ${MOBY_LIBRARY})
   endif(MOBY_LIBRARY)
 else(MOBY_INCLUDE_DIR)
-  message(STATUS "FindMoby: Could not find EventDrivenSimulator.h")
+  message(STATUS "FindMoby: Could not find Simulator.h")
 endif(MOBY_INCLUDE_DIR)
 	    
 if(MOBY_FOUND)
   if(NOT MOBY_FIND_QUIETLY)
-    message(STATUS "FindMoby: Found both EventDrivenSimulator.h and libMoby")
+    message(STATUS "FindMoby: Found both Simulator.h and libMoby")
   endif(NOT MOBY_FIND_QUIETLY)
 else(MOBY_FOUND)
   if(MOBY_FIND_REQUIRED)
-    message(FATAL_ERROR "FindMoby: Could not find EventDrivenSimulator.h and/or libMoby")
+    message(FATAL_ERROR "FindMoby: Could not find Simulator.h and/or libMoby")
   endif(MOBY_FIND_REQUIRED)
 endif(MOBY_FOUND)

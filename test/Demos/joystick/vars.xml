@@ -1,0 +1,10 @@
+<XML>
+
+  <logging type="string">DEBUG1</logging>
+  <real-time-factor type="double">1</real-time-factor>
+  
+  <init-file type="file">../../../example/models/links/init.xml</init-file>
+  
+  <task-file type="file">plugins.xml</task-file>
+
+</XML>

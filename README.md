@@ -7,6 +7,10 @@ This repository hosts code for [Pacer] an open source robot locomotion library f
 
 [Pacer]: https://github.com/PositronicsLab/Pacer
 
+**For more information, check out the [wiki].**
+
+[wiki]: https://github.com/PositronicsLab/Pacer/wiki
+
 ##Dependencies 
 
 ####Required 

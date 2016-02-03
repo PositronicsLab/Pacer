@@ -42,7 +42,7 @@ static void init(){
 
 int main(int argc, char* argv[])
 {
-
+  assert(argc == 1);
   init();
  
   double TIME = 0;

@@ -24,8 +24,6 @@ pthread_t thread;
 static std::vector<double> q_motors,qd_motors,u_motors;
 static std::vector<double> q_sensor,qd_sensor,u_sensor;
 
-static double TIME = 0; 
-static double FIRST_TIME = 0;
 static double sleep_duration(double duration){
   timespec req,rem;
   int seconds = duration;
@@ -46,12 +44,10 @@ static double get_current_time()
 
 static void control_motor(){
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  //fprintf(stdout,"refreshing actuators (threads): TIME: %f \n",TIME-FIRST_TIME);
-  OUT_LOG(logDEBUG2) << ">> control_motor()" << std::endl;
+  OUT_LOG(logDEBUG2) << ">> control_motor()";
 
-  OUT_LOG(logDEBUG) << ">> motor controller";
 
-  OUT_LOG(logDEBUG2) << "READ OUT COMMANDS" << std::endl;
+  OUT_LOG(logDEBUG2) << "READ OUT COMMANDS" ;
   
   {
 #ifdef USE_THREADS
@@ -78,17 +74,13 @@ static void control_motor(){
 #endif
 #ifdef USE_THREADS
       pthread_mutex_unlock(&joint_data_mutex_);
+#else 
+      OUT_LOG(logDEBUG) << ">> motor controller " << t;
 #endif
     }
-  OUT_LOG(logDEBUG) << "<< motor controller";
   
   const double seconds_per_message = 0.001;
   double remaining = sleep_duration(seconds_per_message);
-#ifndef NDEBUG
-  printf("TIME: %f + ( %f - %f )",TIME,seconds_per_message,remaining);
-  printf("\n");
-#endif
-  //TIME += seconds_per_message - remaining;
 }
   
 static void *control_motor(void* data){
@@ -109,7 +101,7 @@ void loop()
   
   static std::map<std::string,Ravelin::VectorNd>  qd_last = qd;
 #ifdef USE_THREADS
-  if(pthread_mutex_lock(&joint_data_mutex_))
+  pthread_mutex_lock(&joint_data_mutex_);
 #endif
   {
     for(int i=0;i<joint_name.size();i++){
@@ -118,15 +110,15 @@ void loop()
       u[joint_name[i]][0] = u_sensor[i];
     }
     
-#ifdef USE_THREADS
-    pthread_mutex_unlock(&joint_data_mutex_);
-#endif
     for(int i=0;i<joint_name.size();i++){
       qdd[joint_name[i]] = qd[joint_name[i]];
       qdd[joint_name[i]] -= qd_last[joint_name[i]];
       qdd[joint_name[i]] /= dt;
     }
   }
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&joint_data_mutex_);
+#endif
   qd_last = qd;
   bool APPLY_SENSORS = false;
   ctrl->get_data<bool>(plugin_namespace+".apply-sensors",APPLY_SENSORS);
@@ -137,7 +129,7 @@ void loop()
     ctrl->set_joint_value(Pacer::Robot::acceleration,qdd);
   }
 #ifdef USE_THREADS
-  if(pthread_mutex_lock(&joint_data_mutex_))
+  pthread_mutex_lock(&joint_data_mutex_);
 #endif
   {
     bool kineamtic_control = ctrl->get_data<bool>(plugin_namespace+".kinematic-control");
@@ -159,19 +151,22 @@ void loop()
         u_motors[i] = joint_load_map[joint_name[i]][0];
       }
     }
+  }
 #ifdef USE_THREADS
     pthread_mutex_unlock(&joint_data_mutex_);
 #endif
-  }
   
 #ifdef USE_THREADS
+#ifdef USE_DXL
+  OUT_LOG(logDEBUG2) << "call control_motor() from controller (with threads)" << std::endl;
   OUT_LOG(logDEBUG) << "q_des = " << q_motors;
   OUT_LOG(logDEBUG) << "qd_des = " << qd_motors;
   OUT_LOG(logDEBUG) << "u_des = " << u_motors;
   OUT_LOG(logDEBUG) << "q = " << q_sensor;
   OUT_LOG(logDEBUG) << "qd = " << qd_sensor;
+#endif
 #else
-  OUT_LOG(logDEBUG2) << "call control_motor() from controller" << std::endl;
+  OUT_LOG(logDEBUG2) << "call control_motor() from controller (no threads)" << std::endl;
   control_motor();
 #endif
   

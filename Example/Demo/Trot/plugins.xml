@@ -45,8 +45,8 @@
   <dynamixel>
     <file type="string">hardware/libdynamixel.so</file>
     <real-time-factor type="double">1</real-time-factor>
-    <priority type="double">0</priority>
-    <port type="string">/dev/tty.usbserial-A9YL9ZZV</port>
+    <priority type="double">10</priority>
+    <port type="string">/dev/ttyUSB1</port>
     <fake-state type="bool">true</fake-state>
     <kinematic-control type="bool">true</kinematic-control>
     <apply-sensors type="bool">false</apply-sensors>

@@ -8,7 +8,9 @@
       ik-feet
    joint-PID-controller
    idyn-controller
-  </plugins>
+    dynamixel
+    imu-reader
+ </plugins>
   
   <!--
       ik-feet
@@ -30,6 +32,26 @@
    -->
   
   <!-- =================== PLUGIN DESCRIPTIONS ==================== -->
+  <imu-reader>
+    <priority type="double">0</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <baud-rate type="int">115200</baud-rate>
+    <rate type="int">1000</rate>
+    <pose type="double">0 0 0 0 0 0</pose>
+    <file type="string">imu/libimu-reader.so</file>
+    <apply-sensors type="bool">true</apply-sensors>
+    <port type="string">/dev/ttyACM0</port>
+  </imu-reader>
+  <dynamixel>
+    <file type="string">hardware/libdynamixel.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <priority type="double">0</priority>
+    <port type="string">/dev/ttyUSB0</port>
+    <fake-state type="bool">true</fake-state>
+    <kinematic-control type="bool">true</kinematic-control>
+    <apply-sensors type="bool">false</apply-sensors>
+    <hold-time type="double">1.0</hold-time>
+  </dynamixel>
   <error-check>
     <file type="string">liberror-check.so</file>
     <real-time-factor type="double">1</real-time-factor>

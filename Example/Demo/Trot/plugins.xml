@@ -7,12 +7,12 @@
       limits
       ik-feet
       joint-PID-controller
-    dynamixel
  </plugins>
   
   <!--
       ik-feet
    joint-PID-controller
+    dynamixel
    idyn-controller
    OTHER PLUGINS:
       ik-feet

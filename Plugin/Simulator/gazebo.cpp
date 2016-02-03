@@ -255,7 +255,7 @@ namespace gazebo
 //        robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
         robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
         
-        int is_kinematic = robot_ptr->get_data<int>("init.kinematic");
+        int is_kinematic = false;
         
         //  apply_sim_perturbations();
         for(int i=0;i<joints.size();i++){

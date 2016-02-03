@@ -4,12 +4,12 @@
       center-of-mass
       end-effectors
       gait-planner
-      ik-feet
-      dynamixel
+      eef-PID-controller
     </plugins>
   
   <!--
       ik-feet
+      dynamixel
    joint-PID-controller
    idyn-controller
    OTHER PLUGINS:

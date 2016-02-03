@@ -40,7 +40,7 @@ include_directories(${LIBXML2_INCLUDE_DIR})
 option(BUILD_SHARED_LIBS "Build as a shared library?" ON)
 
 # these are the setting for the in-source compiler flow control
-option(LOGGING "Write logs to <working_dir>/out.log" ON)
+option(LOGGING "Write logs to <working_dir>/out.log" OFF)
 option(USE_THREADS "Build Pacer with multi-threading support?" OFF)
 option(SPLITTING_METHOD "Force pacer to use a Splitting Method when running an optimization" OFF)
 option(USE_GSL "Build Pacer with randomization support?" OFF)

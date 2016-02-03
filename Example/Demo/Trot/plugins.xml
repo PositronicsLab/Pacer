@@ -8,8 +8,6 @@
       ik-feet
    joint-PID-controller
    idyn-controller
-    dynamixel
-    imu-reader
  </plugins>
   
   <!--
@@ -28,6 +26,8 @@
    gamepad
    waypoints
    output
+    dynamixel
+    imu-reader
 
    -->
   

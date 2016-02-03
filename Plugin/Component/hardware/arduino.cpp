@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef USE_ARDUINO
 #include <ServoController/ServoDriver.h>
+#endif
 
 #include "../plugin.h"
 
@@ -30,7 +32,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   send_pos[2] = sin( t * 16.0) * (M_PI/8.0) + TARE[ids[2]] ;
   
   //std::cout << t << " : " <<send_pos<< " -- " << ids <<std::endl;
+#ifdef USE_ARDUINO
   Arduino::setVal(ids,send_pos);
+#endif
 }
 
 void setup(){
@@ -52,5 +56,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   ctrl->get_data<std::string>(plugin_namespace+".port",port);
   ctrl->get_data<int>(plugin_namespace+".baud-rate",baud);
 
+#ifdef USE_ARDUINO
   Arduino::init(port.c_str(),baud);
+#endif
 }

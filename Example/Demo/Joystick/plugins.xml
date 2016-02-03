@@ -38,13 +38,13 @@
     <pose type="double">0 0 0 0 0 0</pose>
     <file type="string">imu/libimu-reader.so</file>
     <apply-sensors type="bool">true</apply-sensors>
-    <port type="string">/dev/ttyACM0</port>
+    <port type="string">/dev/tty.usbmodemfa131</port>
   </imu-reader>
   <dynamixel>
     <file type="string">hardware/libdynamixel.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">10</priority>
-    <port type="string">/dev/ttyUSB0</port>
+    <port type="string">/dev/tty.usbserial-A9YL9ZZV</port>
     <fake-state type="bool">true</fake-state>
     <kinematic-control type="bool">true</kinematic-control>
     <apply-sensors type="bool">false</apply-sensors>

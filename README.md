@@ -123,4 +123,4 @@ Access the library by using the examples found in the examples directory:
  Plugin          |  Everything needed to actually use Pacer: *Components* plug into Pacer and serve as perception, planning, control, or data collection modules;  Plugins built in *Simulator* plug Pacer into a simulator, currently [Gazebo] and [Moby] are supported.  
 
  [Moby]: https://github.com/PositronicsLab/Moby
- [Gazebo]: gazebosim.org
+ [Gazebo]: https://gazebosim.org

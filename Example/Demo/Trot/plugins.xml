@@ -6,8 +6,8 @@
       gait-planner
       limits
       ik-feet
-   joint-PID-controller
-   idyn-controller
+      joint-PID-controller
+    dynamixel
  </plugins>
   
   <!--
@@ -46,7 +46,7 @@
     <file type="string">hardware/libdynamixel.so</file>
     <real-time-factor type="double">1</real-time-factor>
     <priority type="double">0</priority>
-    <port type="string">/dev/ttyUSB0</port>
+    <port type="string">/dev/tty.usbserial-A9YL9ZZV</port>
     <fake-state type="bool">true</fake-state>
     <kinematic-control type="bool">true</kinematic-control>
     <apply-sensors type="bool">false</apply-sensors>

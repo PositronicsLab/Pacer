@@ -6,8 +6,6 @@
       gait-planner
       limits
       eef-PID-controller
-      imu-reader
-      dynamixel
     </plugins>
   
   <!--

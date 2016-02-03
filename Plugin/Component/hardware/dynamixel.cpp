@@ -46,7 +46,7 @@ static double get_current_time()
 
 static void control_motor(){
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  fprintf(stdout,"refreshing actuators (threads): TIME: %f \n",TIME-FIRST_TIME);
+  //fprintf(stdout,"refreshing actuators (threads): TIME: %f \n",TIME-FIRST_TIME);
   OUT_LOG(logDEBUG2) << ">> control_motor()" << std::endl;
 
   OUT_LOG(logDEBUG) << ">> motor controller";
@@ -103,7 +103,6 @@ void loop()
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   OUT_LOG(logDEBUG2) << "controller()";
-  std::cout << "controller() " << t << std::endl;
   static double last_t = -0.001;
   double dt = t-last_t;
   

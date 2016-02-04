@@ -228,6 +228,7 @@ void setup(){
   /////////////////////////////////
   ////  START WORKER PROCESSES ////
   for (int i=0; i<NUM_THREADS; i++) {
+    available_threads.insert(i);
     //////////////////////////////
     //////  SET UP PIPES /////////
     // Before forking, set up the pipe;

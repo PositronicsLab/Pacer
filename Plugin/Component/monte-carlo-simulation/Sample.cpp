@@ -45,12 +45,16 @@ using Ravelin::RCArticulatedBodyd;
 using Ravelin::Pose3d;
 using Ravelin::DynamicBodyd;
 using boost::shared_ptr;
+
+
 bool EXPORT_XML = false;
 unsigned SAMPLE_NUMBER = 0;
-int fd1 = 0;
+
+int CHILD_TO_PARENT_WRITE = 0;
+int PARENT_TO_CHILD_READ = 0;
+
 int pid = 0;
 double DURATION = 0;
-
 
 namespace Moby {
   extern void close();
@@ -81,6 +85,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   po::options_description desc("Monte Carlo Method state (applied at simulator start) uncertainty options");
   desc.add_options()
   ("help", "produce help message")
+  ("sample", po::value<unsigned>(),"Sample Number")
   ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
   ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
   
@@ -110,6 +115,18 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     logging << "Available options: " << std::endl
     << desc << std::endl;
   }
+  
+  
+  // Get sample number for output
+  if (vm.count("sample")) {
+    SAMPLE_NUMBER = vm["sample"].as<unsigned>();
+  } else {
+    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
+    exit(1);
+  }
+  
+  logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
+  
   
   /*
    *  Parameter Application
@@ -214,7 +231,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       desc.add_options()
       (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
     }
-  
+    
     if(rb->is_base())
       continue;
     
@@ -243,7 +260,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       
       desc.add_options()
       (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
-
+      
     }
   }
   
@@ -284,8 +301,8 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     Moby::CollisionGeometryPtr foot_geometry;
     shared_ptr<Moby::SpherePrimitive> foot_primitive;
     
-//    Moby::CollisionGeometryPtr limb_geometry;
-//    shared_ptr<Moby::CylinderPrimitive> limb_primitive;
+    //    Moby::CollisionGeometryPtr limb_geometry;
+    //    shared_ptr<Moby::CylinderPrimitive> limb_primitive;
     
     Moby::CollisionGeometryPtr base_geometry;
     shared_ptr<Moby::BoxPrimitive> base_primitive;
@@ -301,16 +318,16 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       }
     }
     
-//    if(LINK_IS_LIMB){
-//      BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
-//        Moby::PrimitivePtr primitive = cg->get_geometry();
-//        limb_primitive = boost::dynamic_pointer_cast<Moby::CylinderPrimitive>(primitive);
-//        if(foot_primitive){
-//          limb_geometry = cg;
-//          break;
-//        }
-//      }
-//    }
+    //    if(LINK_IS_LIMB){
+    //      BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
+    //        Moby::PrimitivePtr primitive = cg->get_geometry();
+    //        limb_primitive = boost::dynamic_pointer_cast<Moby::CylinderPrimitive>(primitive);
+    //        if(foot_primitive){
+    //          limb_geometry = cg;
+    //          break;
+    //        }
+    //      }
+    //    }
     
     if (LINK_IS_BASE) {
       BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
@@ -405,14 +422,14 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
                                      0,J[1],0,
                                      0,0,J[2]);
         
-//#ifdef USE_OSG_DISPLAY
-//        osg::Group* group_root = new osg::Group();
-//        {
-//          Ravelin::Pose3d display_pose(J_link.pose->q,J_link.pose->x,J_link.pose->rpose);
-//          display_pose.update_relative_pose(GLOBAL);
-//          group_root->addChild(visualize_cylinder(radius,length,display_pose));
-//        }
-//#endif
+        //#ifdef USE_OSG_DISPLAY
+        //        osg::Group* group_root = new osg::Group();
+        //        {
+        //          Ravelin::Pose3d display_pose(J_link.pose->q,J_link.pose->x,J_link.pose->rpose);
+        //          display_pose.update_relative_pose(GLOBAL);
+        //          group_root->addChild(visualize_cylinder(radius,length,display_pose));
+        //        }
+        //#endif
         if(LINK_IS_END_EFFECTOR){ // sphere foot
           foot_primitive->set_radius(foot_radius);
           
@@ -450,18 +467,18 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
           Ravelin::SpatialRBInertiad J_foot_new = foot_link_transform.transform(J_foot);
           J_foot_new.pose = J_link.pose;
           J_link += J_foot_new;
-//#ifdef USE_OSG_DISPLAY
-//          {
-//            Ravelin::Pose3d display_pose(foot_relative_to_link.q,foot_relative_to_link.x,foot_relative_to_link.rpose);
-//            display_pose.update_relative_pose(GLOBAL);
-//            group_root->addChild(visualize_sphere(radius,display_pose));
-//            rb->set_visualization_data(group_root);
-//          }
-//#endif
+          //#ifdef USE_OSG_DISPLAY
+          //          {
+          //            Ravelin::Pose3d display_pose(foot_relative_to_link.q,foot_relative_to_link.x,foot_relative_to_link.rpose);
+          //            display_pose.update_relative_pose(GLOBAL);
+          //            group_root->addChild(visualize_sphere(radius,display_pose));
+          //            rb->set_visualization_data(group_root);
+          //          }
+          //#endif
         }
-//#ifdef USE_OSG_DISPLAY
-//        rb->set_visualization_data(group_root);
-//#endif
+        //#ifdef USE_OSG_DISPLAY
+        //        rb->set_visualization_data(group_root);
+        //#endif
       } else if (LINK_IS_BASE) {
         // cylinder V = pi*h*r^2
         double x = base_primitive->get_x_len(),
@@ -483,15 +500,15 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
         J_link.J = Ravelin::Matrix3d(J[0],0,0,
                                      0,J[1],0,
                                      0,0,J[2]);
-//#ifdef USE_OSG_DISPLAY
-//        {
-//          Ravelin::Pose3d display_pose(J_link.pose->q,J_link.pose->x,J_link.pose->rpose);
-//          display_pose.update_relative_pose(GLOBAL);
-//          osg::Group* group_root = new osg::Group();
-//          group_root->addChild(visualize_box(x,y,z,display_pose));
-//          rb->set_visualization_data(group_root);
-//        }
-//#endif
+        //#ifdef USE_OSG_DISPLAY
+        //        {
+        //          Ravelin::Pose3d display_pose(J_link.pose->q,J_link.pose->x,J_link.pose->rpose);
+        //          display_pose.update_relative_pose(GLOBAL);
+        //          osg::Group* group_root = new osg::Group();
+        //          group_root->addChild(visualize_box(x,y,z,display_pose));
+        //          rb->set_visualization_data(group_root);
+        //        }
+        //#endif
       }
       logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" mass = " << J_link.m << std::endl;
       logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" inertia = " << J_link.J << std::endl;
@@ -500,36 +517,6 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   }
 }
 
-/*
- void parse_command_line_options(int argc, char* argv[]){
- // Declare the supported options.
- po::options_description desc("Moby initialization options");
- desc.add_options()
- ("help", "produce help message")
- ("pipe-from-parent", po::value<int>()->default_value(0),"Pipe to child fd (output side only 'fd1')")
- ("pipe-to-parent", po::value<int>()->default_value(0),"Pipe to parent fd (input side only 'fd0')");
- 
- logging << "Parsing Variable Map from command line" << std::endl;
- 
- po::variables_map vm;
- //  po::store(po::parse_command_line(argc, argv, desc), vm);
- po::parsed_options parsed
- = po::command_line_parser(argc, argv).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).options(desc).allow_unregistered().run();
- po::store(parsed, vm);
- //  po::notify(vm);
- 
- logging << "Parsed Variable Map from command line" << std::endl;
- 
- if (vm.count("pipe")) {
- FD_TO_PARENT_WRITE = vm["pipe-to-parent"].as<int>();
- FD_FROM_PARENT_READ = vm["pipe-from-parent"].as<int>();
- logging << "Sample output FD: " << fd1 << std::endl;
- } else {
- fprintf(stderr,"Sample with PID: %d did not get a port fd", pid);
- }
- }
- */
-
 void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim){
   // Declare the supported options.
   po::options_description desc("Moby initialization options");
@@ -537,8 +524,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   ("help", "produce help message")
   // INPUT BY EXPERIMENT
   ("xml,y","Output XML model file for robot")
-  ("sample", po::value<unsigned>(),"Sample Number")
-  ("pipe", po::value<int>()->default_value(0),"Pipe fd (output side only 'fd1')")
   // INPUT BY USER
   ("duration", po::value<std::string>()->default_value("1"), "set duration (virtual time) of each sample")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
@@ -558,15 +543,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   if (vm.count("xml")) {
     EXPORT_XML = true;
   }
-  // Get sample number for output
-  if (vm.count("sample")) {
-    SAMPLE_NUMBER = vm["sample"].as<unsigned>();
-  } else {
-    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
-    exit(1);
-  }
-  
-  logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
   
   if ( vm.count("help")  )
   {
@@ -635,6 +611,41 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
 }
 
 
+void parse_command_line_options(int argc, char* argv[]){
+  // Declare the supported options.
+  po::options_description desc("Moby initialization options");
+  desc.add_options()
+  ("help", "produce help message")
+  ("readpipe", po::value<int>()->default_value(0),"PARENT_TO_CHILD_READ")
+  ("writepipe", po::value<int>()->default_value(0),"CHILD_TO_PARENT_WRITE");
+  
+  logging << "Parsing Variable Map from command line" << std::endl;
+  
+  po::variables_map vm;
+  //  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::parsed_options parsed
+  = po::command_line_parser(argc, argv).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).options(desc).allow_unregistered().run();
+  po::store(parsed, vm);
+  //  po::notify(vm);
+  
+  logging << "Parsed Variable Map from command line" << std::endl;
+  
+  if (vm.count("readpipe")) {
+    PARENT_TO_CHILD_READ = vm["readpipe"].as<int>();
+    logging << "PID: "<<pid<<" input readpipe (PARENT_TO_CHILD_READ): " << PARENT_TO_CHILD_READ << std::endl;
+  } else {
+    fprintf(stderr,"Sample with PID: %d did not get a read pipe : PARENT_TO_CHILD_READ", pid);
+  }
+  
+  if (vm.count("writepipe")) {
+    CHILD_TO_PARENT_WRITE = vm["writepipe"].as<int>();
+    logging << "PID: "<<pid<<" output writepipe (CHILD_TO_PARENT_WRITE): " << CHILD_TO_PARENT_WRITE << std::endl;
+  } else {
+    fprintf(stderr,"Sample with PID: %d did not get a write pipe : CHILD_TO_PARENT_WRITE", pid);
+  }
+}
+
+
 /////////////////////////////////////////////////////////////////
 /// -------------------- MAIN FUNCTION -----------------------///
 #include <stdio.h>
@@ -643,20 +654,37 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
 #include <unistd.h>
 #include <sys/types.h>
 
-int main(int argc, char* argv[]){
+int main(int argc_main, char* argv_main[]){
   logging << " -- Sample Started -- " << std::endl;
   
   // Cet this process's PID for debugging
   pid = getpid();
   
+  // Setup pipes
+  parse_command_line_options(argc_main,argv_main);
+  
+  char message[MESSAGE_SIZE];
+  // Block on read until next simulation is scheduled
+  if( read(PARENT_TO_CHILD_READ, message, sizeof(message)) == -1 ) {
+    throw std::runtime_error("Could not read anything from pipe!");
+  }
+  
+  std::vector<char*> messagev;
+  char* chars_array = strtok(message, " ");
+  while(chars_array)
+  {
+    messagev.push_back(chars_array);
+    chars_array = strtok(NULL, "#");
+  }
+
+  int argc_sample = messagev.size();
+  char** argv_sample = &messagev[0];
+  
+  // Setup this instance of moby
   shared_ptr<Simulator> sim;
   logging << " -- Applying Simulator Options -- " << std::endl;
-  apply_simulator_options(argc,argv,sim);
+  apply_simulator_options(argc_sample,argv_sample,sim);
   logging << " -- Applied Simulator Options -- " << std::endl;
-  
-  /*
-   *  Option Parsing
-   */
   
   if(!sim)
     throw std::runtime_error("Could not start Moby");
@@ -680,43 +708,31 @@ int main(int argc, char* argv[]){
   
   logging << " -- Found Robot -- " << std::endl;
   
-//  if(!environment)
-//    throw std::runtime_error("Could not find environment");
+  //  if(!environment)
+  //    throw std::runtime_error("Could not find environment");
   
-//  logging << " -- Found Environment -- " << std::endl;
+  //  logging << " -- Found Environment -- " << std::endl;
   
   // Apply uncertainty to robot model
-  apply_manufacturing_uncertainty(argc, argv,robot);
+  apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
   
   // Apply uncertainty to robot initial conditions
   logging << " -- Applying State Uncertainty -- " << std::endl;
-  apply_state_uncertainty(argc, argv,robot);
+  apply_state_uncertainty(argc_sample,argv_sample,robot);
   logging << " -- Applied State Uncertainty -- " << std::endl;
   
-  /*
-   *  Collecting Initial data
-   */
-  //  {
-  //    Ravelin::VectorNd q,qd;
-  //    robot->get_generalized_coordinates_euler(q);
-  //    logging << "q1 = " << q << std::endl;
-  //
-  //    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
-  //    logging << "qd1 = " << qd << std::endl;
-  //  }
-  
   if(EXPORT_XML){
-//    Ravelin::VectorNd q0,q;
-//    robot->get_generalized_coordinates_euler(q0);
-//    q = q0;
-//    q.segment(0,q.rows()-7) = Ravelin::VectorNd::zero(q.rows()-7);
-//    robot->set_generalized_coordinates_euler(q);
-
+        Ravelin::VectorNd q0,q;
+        robot->get_generalized_coordinates_euler(q0);
+    q = q0;
+    q.segment(0,q.rows()-7) = Ravelin::VectorNd::zero(q.rows()-7);
+    robot->set_generalized_coordinates_euler(q);
+    
     // write the file (fails silently)
     char buffer[128];
     sprintf(buffer, "model-%06u.xml", pid);
     Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim);
-//    robot->set_generalized_coordinates_euler(q0);
+    robot->set_generalized_coordinates_euler(q0);
   }
   
   /*
@@ -727,10 +743,11 @@ int main(int argc, char* argv[]){
   while (!stop_sim &&  sim->current_time < DURATION) {
     //    logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
-    // apply_control_uncertainty(argc, argv,robot);
+    // apply_control_uncertainty(argc_sample,argv_sample,robot);
     stop_sim = !Moby::step(sim);
     //    logging << "Simulation at time: t = " << sim->current_time <<  std::endl;
   }
+  
   
   /*
    *  Collecting final data
@@ -745,14 +762,9 @@ int main(int argc, char* argv[]){
     oss << q[i] << " ";
   }
   std::string str = oss.str();
-  write(fd1, str.c_str(), str.length());
-  close(fd1);
+  write(CHILD_TO_PARENT_WRITE, str.c_str(), str.length());
   
-  robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
-  logging << "qd2 = " << qd << std::endl;
-  
-  // Clean up Moby
-  Moby::close();
+  execv( argv_main[0] , argv_main );
   
   return 0;
 }

@@ -1,8 +1,12 @@
 #ifndef _MC_COMMON_H_
 #define _MC_COMMON_H_
 
+#include <boost/algorithm/string.hpp>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <unistd.h>
+#include <fcntl.h>
 
 static char* const* param_array( std::vector< std::string >& params ) {
   
@@ -25,6 +29,17 @@ static char** param_array_noconst( std::vector< std::string >& params ) {
   
   return (char**) pa;
 }
+
+template <typename T>
+static std::string SSTR(T x)
+{
+  std::ostringstream oss;
+  oss << std::dec << x;
+  return oss.str();
+}
+
+
+static int MESSAGE_SIZE = 1024;
 
 //#include <deque>
 //static char** param_array_noconst( std::deque< std::string >& params ) {

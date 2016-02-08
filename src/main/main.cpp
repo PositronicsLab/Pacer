@@ -46,17 +46,28 @@ int main(int argc, char* argv[])
   init();
  
   double TIME = 0;
+  robot_ptr->control( TIME );
+
   bool REAL_TIME = false;
   double STEP_SIZE = 0.001;
   robot_ptr->get_data("main.realtime",REAL_TIME); 
-  robot_ptr->get_data("main.stepsize",STEP_SIZE); 
+  robot_ptr->get_data("main.stepsize",STEP_SIZE);
+
   do {
+
     if(REAL_TIME){
       TIME = get_current_time();
+      std::cerr << "Realtime : " <<  std::endl;
+
     } else {
       TIME += STEP_SIZE;
     }
-    robot_ptr->control( TIME );
+    static double FIRST_TIME = TIME-STEP_SIZE;
+
+    std::cerr << "time = " << (TIME-FIRST_TIME) << std::endl;
+
+    robot_ptr->control( TIME-FIRST_TIME );
   } while(1);
+  return 0;
 }
 

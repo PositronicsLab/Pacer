@@ -26,7 +26,7 @@
 
 #include <Pacer/utilities.h>
 
-#ifdef NDEBUG
+#ifndef DEBUG_OUTPUT
 #define logging \
 if (1) ; \
 else std::cout
@@ -85,7 +85,6 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   po::options_description desc("Monte Carlo Method state (applied at simulator start) uncertainty options");
   desc.add_options()
   ("help", "produce help message")
-  ("sample", po::value<unsigned>(),"Sample Number")
   ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
   ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
   
@@ -115,18 +114,6 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     logging << "Available options: " << std::endl
     << desc << std::endl;
   }
-  
-  
-  // Get sample number for output
-  if (vm.count("sample")) {
-    SAMPLE_NUMBER = vm["sample"].as<unsigned>();
-  } else {
-    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
-    exit(1);
-  }
-  
-  logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
-  
   
   /*
    *  Parameter Application
@@ -446,9 +433,8 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
           double inertia = 2.0*mass*sqr(foot_radius) / 5.0;
           double J[3] = {inertia,inertia,inertia};
           
-#ifndef NDEBUG
-          fprintf(stdout,"Sample %u : Link (foot) %s mass = %f\n",SAMPLE_NUMBER,rb->body_id.c_str(),mass);
-#endif
+          logging << "Sample " << SAMPLE_NUMBER << " : Link (foot) "<< rb->body_id.c_str() << " mass = "<< mass ;
+
           Ravelin::SpatialRBInertiad J_foot;
           J_foot.m = mass;
           J_foot.J = Ravelin::Matrix3d(J[0],0,0,
@@ -527,8 +513,9 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   // INPUT BY USER
   ("duration", po::value<std::string>()->default_value("1"), "set duration (virtual time) of each sample")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
-  ("display,r","visualize in moby");
-  
+  ("display,r","visualize in moby")
+  ("sample", po::value<unsigned>(),"Sample Number");
+ 
   logging << "Parsing Variable Map from command line" << std::endl;
   
   po::variables_map vm;
@@ -539,6 +526,19 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   //  po::notify(vm);
   
   logging << "Parsed Variable Map from command line" << std::endl;
+  
+  
+  // Get sample number for output
+  if (vm.count("sample")) {
+    SAMPLE_NUMBER = vm["sample"].as<unsigned>();
+  } else {
+    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
+    exit(1);
+  }
+  
+  logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
+  std::cerr << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
+  
   
   if (vm.count("xml")) {
     EXPORT_XML = true;
@@ -646,6 +646,7 @@ void parse_command_line_options(int argc, char* argv[]){
 }
 
 
+
 /////////////////////////////////////////////////////////////////
 /// -------------------- MAIN FUNCTION -----------------------///
 #include <stdio.h>
@@ -661,6 +662,9 @@ int main(int argc_main, char* argv_main[]){
   pid = getpid();
   
   // Setup pipes
+  for(int i=0;i<argc_main;i++){
+    
+  }
   parse_command_line_options(argc_main,argv_main);
   
   char message[MESSAGE_SIZE];
@@ -669,16 +673,21 @@ int main(int argc_main, char* argv_main[]){
     throw std::runtime_error("Could not read anything from pipe!");
   }
   
+  logging << "Message string: " << message << std::endl;
+
   std::vector<char*> messagev;
+  messagev.push_back("filler");
   char* chars_array = strtok(message, " ");
   while(chars_array)
   {
     messagev.push_back(chars_array);
-    chars_array = strtok(NULL, "#");
+    chars_array = strtok(NULL, " ");
   }
 
   int argc_sample = messagev.size();
   char** argv_sample = &messagev[0];
+  
+  logging << "Message vector: " << messagev << std::endl;
   
   // Setup this instance of moby
   shared_ptr<Simulator> sim;
@@ -738,14 +747,18 @@ int main(int argc_main, char* argv_main[]){
   /*
    *  Running experiment
    */
-  logging << " -- Starting simulation -- PID:" << pid << std::endl;
+#ifndef NDEBUG
+  std::cerr << " -- Starting simulation ("<< SAMPLE_NUMBER << ") -- PID:" << pid << std::endl;
+#endif
   bool stop_sim = false;
   while (!stop_sim &&  sim->current_time < DURATION) {
     //    logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc_sample,argv_sample,robot);
     stop_sim = !Moby::step(sim);
-    //    logging << "Simulation at time: t = " << sim->current_time <<  std::endl;
+#ifndef NDEBUG
+    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time <<  std::endl;
+#endif
   }
   
   
@@ -763,7 +776,9 @@ int main(int argc_main, char* argv_main[]){
   }
   std::string str = oss.str();
   write(CHILD_TO_PARENT_WRITE, str.c_str(), str.length());
-  
+#ifndef NDEBUG
+  std::cerr << "Sample with"<< SAMPLE_NUMBER << " and PID: "<< pid << " Ended! message: " << str << std::endl;
+#endif
   execv( argv_main[0] , argv_main );
   
   return 0;

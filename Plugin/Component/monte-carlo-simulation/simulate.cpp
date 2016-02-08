@@ -86,6 +86,8 @@ struct SampleConditions{
   ///// Set each time a new sample begins  /////
   int     sample_number;
   double  start_time;
+  bool  restart;
+  bool  inited;
 };
 
 typedef std::pair<int, SampleConditions> Sample;
@@ -97,24 +99,23 @@ std::string TASK_PATH = "./";
 long long unsigned int sample_idx=0;
 
 void loop(){
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+
   for (int i=0; i<completed_poses.size(); i++) {
+    std::cout << "Visualizing end pose: " << completed_poses[i];
+
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
   }
   
-  
-  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads.size() ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
   
   if ( available_threads.size() > 0 && sample_idx < NUM_SAMPLES){
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-    for(std::set<int>::iterator it = available_threads.begin(); it != available_threads.end();it++){
+    for(std::set<int>::iterator it = available_threads.begin(); it != available_threads.end();){
       int thread_number = (*it);
       SampleConditions& sc = sample_processes[thread_number];
-      
-      // CREATE A NEW SAMPLE
-      sample_idx += 1;
       
       std::vector<std::string> SAMPLE_ARGV = get_sample_options();
       
@@ -140,24 +141,27 @@ void loop(){
       char message[MESSAGE_SIZE];
       int message_size = 0;
       for(int i=0;i<SAMPLE_ARGV.size();i++){
-        sprintf(&message[message_size],"%s ",SAMPLE_ARGV[i].c_str());
-        message_size += SAMPLE_ARGV[i].size();
+        sprintf(&message[message_size]," %s ",SAMPLE_ARGV[i].c_str());
+        message_size += SAMPLE_ARGV[i].size()+1;
       }
       
       OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << "Starting at t=" << t
                      << "\nHas simulator options:\n" << SAMPLE_ARGV;
       
+      std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << "Starting at t=" << t << std::endl;
+
+      
       write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,sizeof(message));
       sc.start_time = t;
-      
-      it = available_threads.erase(it);
+      sc.sample_number = sample_idx++;
+      available_threads.erase(it++);
       if(sample_idx == NUM_SAMPLES)
         break;
     }
-    
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
+    
     
   } else if (available_threads.size() == 0 && sample_idx < NUM_SAMPLES) {
     OUT_LOG(logINFO) << "All threads are working: sample " << sample_idx << " out of " << NUM_SAMPLES << ".";
@@ -179,158 +183,52 @@ void loop(){
   return;
 }
 
-
 #include "select.cpp"
 
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
-  OUT_LOG(logDEBUG) << "Installing signal handler";
   //-----------------------------------------------------------------------------
   // Multi-core execution : Simulation process spawner
   //-----------------------------------------------------------------------------
   // install sighandler to detect when gazebo finishes
-  // TODO: make sighandler class more compatible with using a member function
-  ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
   
   OUT_LOG(logDEBUG) << "Importing sources of uncertainty";
   Random::create_distributions("uncertainty",ctrl,parameter_generator);
-  
-  std::string SAMPLE_BIN("sample.bin");
-  ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
-  ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
-  ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BIN);
-  ctrl->get_data<std::string>(plugin_namespace+".task-directory", TASK_PATH);
-  
-  if (!getenv("PACER_COMPONENT_PATH"))
-    throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
-  
-  std::string pPath(getenv("PACER_COMPONENT_PATH"));
-  SAMPLE_BIN = pPath + "/" + SAMPLE_BIN ;
-  
-  OUT_LOG(logDEBUG) << "MC-Simulation executable: " << SAMPLE_BIN;
-  
-  std::vector<std::string> SAMPLE_ARGV;
-  
-  //#ifdef __LINUX__
-  //  SAMPLE_ARGV.push_back("nice");
-  //  SAMPLE_ARGV.push_back("-n");
-  //  SAMPLE_ARGV.push_back("20");
-  //#else
-  //  // Start process with niceness
-  //  SAMPLE_ARGV.push_back("nice");
-  //  SAMPLE_ARGV.push_back("-n");
-  //  SAMPLE_ARGV.push_back("20");
-  //#endif
-  
-  SAMPLE_ARGV.push_back(SAMPLE_BIN);
   
   /////////////////////////////////
   ////  START WORKER PROCESSES ////
   for (int i=0; i<NUM_THREADS; i++) {
     available_threads.insert(i);
-    //////////////////////////////
-    //////  SET UP PIPES /////////
-    // Before forking, set up the pipe;
     SampleConditions sc;
-//    if(!init_pipe(sc.PARENT_TO_CHILD[READ_INDEX],sc.PARENT_TO_CHILD[WRITE_INDEX], false )){
-//      throw std::runtime_error("Could not open PARENT_TO_CHILD pipe to worker process.");
-//    }
-//    
-//    if(!init_pipe(sc.CHILD_TO_PARENT[READ_INDEX],sc.CHILD_TO_PARENT[WRITE_INDEX], false )){
-//      throw std::runtime_error("Could not open CHILD_TO_PARENT pipe to worker process.");
-//    }
-//    
-    if(!init_pipe(sc.PARENT_TO_CHILD, false )){
-      throw std::runtime_error("Could not open PARENT_TO_CHILD pipe to worker process.");
-    }
-    
-    if(!init_pipe(sc.CHILD_TO_PARENT, false )){
-      throw std::runtime_error("Could not open CHILD_TO_PARENT pipe to worker process.");
-    }
-    
-    
-    OUT_LOG(logDEBUG)  << "(CHILD) " << sc.CHILD_TO_PARENT[WRITE_INDEX] << " --> " << sc.CHILD_TO_PARENT[READ_INDEX] << " (PARENT)";
-    OUT_LOG(logDEBUG)  << "(PARENT) " << sc.PARENT_TO_CHILD[WRITE_INDEX] << " --> " << sc.PARENT_TO_CHILD[READ_INDEX] << " (CHILD)";
-    OUT_LOG(logDEBUG) << "Forking Process!";
-    
-    // Run each sample as its own process
-    pid_t pid = fork();
-    if( pid < 0 ) {
-      // fork failed
-      throw std::runtime_error("Fork failed!");
-    }
-    
-    if( pid == 0 ) {
-      ////////////////////////////////////////////////////
-      /// ---------- START CHILD PROCESS ------------- ///
-      // Child process is write-only, closes receiving end of pipe
-      close(sc.PARENT_TO_CHILD[WRITE_INDEX]);
-      close(sc.CHILD_TO_PARENT[READ_INDEX]);
-      
-      pid = getpid();
-      
-      OUT_LOG(logDEBUG) << "Started Thread ("<< i <<") with PID ("<< pid <<")";
-      
-      SAMPLE_ARGV.push_back("--readpipe");
-      SAMPLE_ARGV.push_back(SSTR(sc.PARENT_TO_CHILD[READ_INDEX]));
-      
-      SAMPLE_ARGV.push_back("--writepipe");
-      SAMPLE_ARGV.push_back(SSTR(sc.CHILD_TO_PARENT[WRITE_INDEX]));
-      
-      char* const* exec_argv = param_array(SAMPLE_ARGV);
-      OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
-      OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_ARGV << std::endl;
-      
-      chdir(TASK_PATH.c_str());
-      execv( SAMPLE_ARGV.front().c_str() , exec_argv );
-      ///////////////////////////////////////////////////
-      /// ---------- EXIT CHILD PROCESS ------------- ///
-      ///////////////////////////////////////////////////
-      
-      // NOTE: unreachable code (memory leak)
-      // TODO: clean up argv
-      for ( size_t i = 0 ; i <= SAMPLE_ARGV.size() ; i++ )
-        delete [] exec_argv[i];
-      
-      // This code should be unreachable unless exec failed
-      perror( "execv" );
-      throw std::runtime_error("This code should be unreachable unless execve failed!");
-      /// ---------- END CHILD PROCESS ------------- ///
-      //////////////////////////////////////////////////
-    }
-    ////////////////////////////////////////////////////////
-    /// ---------- CONTINUE PARENT PROCESS ------------- ///
-    // Parent is read-only, closing sending end of pipe
-    close(sc.PARENT_TO_CHILD[READ_INDEX]);
-    close(sc.CHILD_TO_PARENT[WRITE_INDEX]);
-    
-    sc.pid = pid;
-    
-    // Before anything else, register thread number with SampleConditions
+    sc.inited = false;
+    sc.restart = true;
     sample_processes[i] = sc;
-    
-    OUT_LOG(logINFO) << "Plugin sleeping to permit thread (" << i << ") with PID ("<< pid <<") to start";
-    struct timespec req,rem;
-    req.tv_sec = 0;
-    req.tv_nsec = 1;
-    nanosleep(&req,&rem);
   }
   
 #ifdef USE_THREADS
-  if (GET_DATA_ONLINE){
-    static int iret = pthread_create( &listener_thread, NULL,&listen_for_child_return_loop,(void*)NULL);
-    if(iret)
-    {
-      fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
-      exit(1);
-    }
-  }
+  pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
+  ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
+  std::cout << "Sleeping before actually starting anything" << t << std::endl;
+
+  start_process_spawner_thread();
+
+  register_exit_sighandler();
+
+  sleep(5);
+  std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
+
+  start_listener_thread();
+  
+
+  // wait for all new forked processes to start;
   
   return;
 }
 
 void destruct(){
   //  _close(ALL_PIPE_FDS);
+//-      action.sa_sigaction = NULL;  // might not be SIG_DFL
+//-      sigaction( SIGCHLD, &action, NULL );
 }

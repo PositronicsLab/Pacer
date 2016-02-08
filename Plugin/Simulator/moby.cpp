@@ -11,6 +11,17 @@
 
 #include <Pacer/Random.h>
 
+#include <time.h>
+
+static double sleep_duration(double duration){
+  timespec req,rem;
+  int seconds = duration;
+  req.tv_nsec = (duration - (double)seconds) * 1.0e+9;
+  req.tv_sec = seconds;
+  nanosleep(&req,&rem);
+  return 0;//( ( (double) rem.tv_nsec / 1.0e+9 ) + (double) rem.tv_sec);
+}
+
 using Pacer::Controller;
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
@@ -588,8 +599,14 @@ void post_step_callback_fn(Moby::Simulator* s){
   }
 #endif
 #endif
-robot_ptr->reset_state();
-
+  robot_ptr->reset_state();
+  
+  bool WAIT_TIMESTEP = false;
+  robot_ptr->get_data<bool>("moby.wait-timestep",WAIT_TIMESTEP);
+  if (WAIT_TIMESTEP) {
+    sleep_duration(0.001);
+  }
+  
 }
 
 /// Event callback function for setting friction vars pre-event

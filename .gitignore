@@ -1,0 +1,14 @@
+.DS_Store
+*~
+*.swp
+*.bak
+*.log
+*.mat
+*.dat
+*.osg
+driver.out*
+build/**/* 
+debug/**/* 
+release/**/* 
+CMakeFiles
+CMakeCache.txt

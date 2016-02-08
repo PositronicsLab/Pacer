@@ -1,0 +1,10 @@
+option(USE_GTEST "Use the GTest sesting system for Regression testing pacer?" ON)
+
+file(GLOB sub-dir "*")
+foreach(dir ${sub-dir})
+  if(IS_DIRECTORY ${dir})
+    if(EXISTS ${dir}/CMakeLists.txt)
+      add_subdirectory( ${dir} )
+    endif()
+  endif()
+endforeach()

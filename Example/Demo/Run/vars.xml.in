@@ -1,0 +1,16 @@
+<XML>
+
+  <logging type="string">NONE</logging>
+  <real-time-factor type="double">1</real-time-factor>
+  
+  <init-file type="file">@@PACER_MODEL_PATH@@/@@TESTING_ROBOT@@/init.xml</init-file>
+
+  <init>
+    <base>
+      <xd type="double"> 1 0 0.1 0 0 0 </xd> 
+    </base>
+  </init>
+
+  <task-file type="file">plugins.xml</task-file>
+
+</XML>

@@ -1,0 +1,585 @@
+<XML>
+  <uncertainty>
+    <id type="string vector">construction</id>
+  <construction>
+    <id type="string vector">links</id>
+    <links>
+      <id type="string vector">BODY0 LF_LEG_1 LF_LEG_2 LF_FOOT RF_LEG_1 RF_LEG_2 RF_FOOT LH_LEG_1 LH_LEG_2 LH_FOOT RH_LEG_1 RH_LEG_2 RH_FOOT</id>
+      <BODY0>
+        <id type="string vector">density</id>
+        <!-- Steel: 7850, Aluminum: 2712, Polycarbonate: 1200 -->
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">2712</max>
+        </density>
+      </BODY0>
+      
+      <!-- LOWER LEGS + FOOT -->
+      <LF_FOOT>
+        <id type="string vector">density length radius foot.radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <length>:
+            <distribution type="string">gaussian</distribution>
+            <mu    type="double vector">0.100</mu>
+            <sigma type="double vector">0.005</sigma>
+          </length>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.012</max>
+          </radius>
+        
+        <foot> 
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.010</max>
+          </radius>
+        </foot>
+      </LF_FOOT>
+      <RF_FOOT>
+        <id type="string vector">density length radius foot.radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <length>
+            <distribution type="string">gaussian</distribution>
+            <mu    type="double vector">0.1</mu>
+            <sigma type="double vector">0.005</sigma>
+          </length>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.012</max>
+          </radius>
+        
+        <foot> 
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <length>
+            <distribution type="string">gaussian</distribution>
+            <mu    type="double vector">0.1</mu>
+            <sigma type="double vector">0.005</sigma>
+          </length>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.010</max>
+          </radius>
+        </foot>
+      </RF_FOOT>
+      <LH_FOOT>
+        <id type="string vector">density length radius foot.radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <length>
+            <distribution type="string">gaussian</distribution>
+            <mu    type="double vector">0.1</mu>
+            <sigma type="double vector">0.005</sigma>
+          </length>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.012</max>
+          </radius>
+        
+        
+        <foot> 
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.010</max>
+          </radius>
+        </foot>
+      </LH_FOOT>
+      <RH_FOOT>
+        <id type="string vector">density length radius foot.radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <length>
+            <distribution type="string">gaussian</distribution>
+            <mu    type="double vector">0.1</mu>
+            <sigma type="double vector">0.005</sigma>
+          </length>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.012</max>
+          </radius>
+        
+        <foot> 
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+          <radius>
+            <distribution type="string">gaussian</distribution>
+            <min    type="double vector">0.01</min>
+            <max    type="double vector">0.012</max>
+          </radius>
+        </foot>
+      </RH_FOOT>
+
+
+      <!-- UPPER LEGS -->
+      <LF_LEG_2>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.077</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </LF_LEG_2>
+      <RF_LEG_2>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.077</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </RF_LEG_2>
+      <LH_LEG_2>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.077</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </LH_LEG_2>
+      <RH_LEG_2>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.077</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </RH_LEG_2>
+      <!-- HIPS -->
+      <LF_LEG_1>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.025</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </LF_LEG_1>
+      <RF_LEG_1>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.025</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </RF_LEG_1>
+      <LH_LEG_1>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.025</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </LH_LEG_1>
+      <RH_LEG_1>
+        <id type="string vector">density length radius</id>
+        
+        <density>
+          <distribution type="string">uniform</distribution>
+          <min    type="double vector">600</min>
+          <max    type="double vector">1200</max>
+        </density>
+        <length>
+          <distribution type="string">gaussian</distribution>
+          <mu    type="double vector">0.025</mu>
+          <sigma type="double vector">0.005</sigma>
+        </length>
+        <radius>
+          <distribution type="string">gaussian</distribution>
+          <min    type="double vector">0.01</min>
+          <max    type="double vector">0.012</max>
+        </radius>
+      </RH_LEG_1>
+      </links>
+    </construction>
+    <state>
+    <id type="string vector">links joints</id>
+      <links>
+        <id type="string vector">BODY0</id>
+        <BODY0>
+          <id type="string vector">xd</id>
+          <x>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <min    type="double vector">-0.01 -0.01 -0.01 -0.15 -0.15 -0.15</min>
+            <max    type="double vector"> 0.01  0.01  0.01  0.15  0.15  0.15</max>
+          </x>
+          <xd>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <min    type="double vector">-0.1 -0.1 -0.1 -0.1 -0.1 -0.1</min>
+            <max    type="double vector"> 0.1  0.1  0.1  0.1  0.1  0.1</max>
+          </xd>
+        </BODY0>
+      </links>
+      <joints>
+        <id type="string">LF_X_1 LF_Y_2 LF_Y_3  RF_X_1 RF_Y_2 RF_Y_3   LH_X_1 LH_Y_2 LH_Y_3   RH_X_1 RH_Y_2 RH_Y_3</id>
+        <!-- KNEE: Y_3 -->
+        <LF_Y_3>
+          <id type="string vector">xd</id>
+          
+          <x>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </LF_Y_3>
+        <RF_Y_3>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </RF_Y_3>
+        <LH_Y_3>
+          <id type="string vector">xd</id>
+          
+          <x>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </LH_Y_3>
+        <RH_Y_3>
+          <id type="string vector">xd</id>
+          
+          <x>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </RH_Y_3>
+        
+        <!-- HIP: Y_2 -->
+        <LF_Y_2>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </LF_Y_2>
+        <RF_Y_2>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </RF_Y_2>
+        <LH_Y_2>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </LH_Y_2>
+        <RH_Y_2>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </RH_Y_2>
+        
+        <!-- HIP (AB/AD)DUCTION: X_1 -->
+        <LF_X_1>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </LF_X_1>
+        <RF_X_1>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit  type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </RF_X_1>
+        <LH_X_1>
+          <id type="string vector">xd</id>
+          
+          <x>
+          
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </LH_X_1>
+        <RH_X_1>
+          <id type="string vector">xd</id>
+          
+          
+          <x>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">absolute</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </x>
+          <xd>
+            <distribution type="string">gaussian</distribution>
+            <unit   type="string vector">proportional</unit>
+            <!-- encoder resolution is: 0.00308907832 rad -->
+            <!-- data resolution is: 0.00308907832 rad / s -->
+            <min    type="double vector">-0.01</min>
+            <max    type="double vector"> 0.01</max>
+          </xd>
+        </RH_X_1>
+      </joints>
+    </state>
+  </uncertainty>
+</XML>

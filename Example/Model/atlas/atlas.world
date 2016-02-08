@@ -1,0 +1,69 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+  <physics type="ode">
+    <max_step_size>0.001</max_step_size>
+    <real_time_factor>1</real_time_factor>
+    <real_time_update_rate>1000</real_time_update_rate>
+    <max_contacts>1000</max_contacts>
+    <simbody>
+      <min_step_size>0.0001</min_step_size>
+      <accuracy>0.001</accuracy>
+      <max_transient_velocity>0.01</max_transient_velocity>
+      <contact>
+        <stiffness>1e8</stiffness>
+        <dissipation>100</dissipation>
+        <plastic_coef_restitution>0.5</plastic_coef_restitution>
+        <plastic_impact_velocity>0.5</plastic_impact_velocity>
+        <static_friction>0.1</static_friction>
+        <dynamic_friction>0.1</dynamic_friction>
+        <viscous_friction>0</viscous_friction>
+        <override_impact_capture_velocity>0.001</override_impact_capture_velocity>
+        <override_stiction_transition_velocity>0.001</override_stiction_transition_velocity>
+      </contact>
+    </simbody>
+    <bullet>
+      <solver>
+        <type>sequential_impulse</type>
+        <min_step_size>1e-5</min_step_size>
+        <iters>50</iters>
+        <sor>1.3</sor>
+      </solver>
+      <constraints>
+        <cfm>0.0</cfm>
+        <erp>0.2</erp>
+        <contact_surface_layer>0.001</contact_surface_layer>
+        <split_impulse>1</split_impulse>
+        <split_impulse_penetration_threshold>-0.01</split_impulse_penetration_threshold>
+      </constraints>
+    </bullet>
+    <ode>
+      <solver>
+        <type>quick</type>
+        <min_step_size>1e-6</min_step_size>
+        <iters>1000</iters>
+        <sor>1.0</sor>
+      </solver>
+      <constraints>
+        <cfm>0.0</cfm>
+        <erp>0.6</erp>
+        <contact_max_correcting_vel>1e2</contact_max_correcting_vel>
+        <contact_surface_layer>1e-5</contact_surface_layer>
+      </constraints>
+    </ode>
+  </physics>
+    <!-- Ground -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <!-- Links (Lynx) model -->
+    <include>
+      <uri>model://atlas</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+  </world>
+</sdf>

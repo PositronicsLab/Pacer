@@ -1,0 +1,69 @@
+<XML>
+  <logging type="string">ERROR</logging>
+  
+  <!-- the name and model description file for the hopper -->
+  <robot-model type="string">hopper/model.xml</robot-model>
+
+  <!-- elements under this node will be used to initialize the hopper -->
+  <init>
+    <!-- initial position (first three elements) and RPY orientation (next
+     three elements) for the base -->
+    <base>
+      <x type="double">0 0 2 0 0 0</x>
+    </base>
+
+    <!-- names of all of the joints -->
+    <joint>
+      <!--<id type="string">LEG_XY_1 LEG_Z_2</id>-->
+    <id type="string">ROLL_JOINT PITCH_JOINT PISTON_JOINT</id>
+
+    <!-- numbers of degrees-of-freedom of all of the joints -->
+    <!--<dofs type="double">2 1</dofs>-->
+    <dofs type="double">1 1 1</dofs>
+
+    <!-- initial positions of all of the joints -->
+    <q type="double">0 0 1</q>
+
+    <!-- the maximum allowable torque for each joint -->
+    <max-torque type="double">1e10 1e10 1e10</max-torque>
+    </joint>
+
+    <end-effector>
+     <id type="string vector">FOOT</id>
+    </end-effector>
+  </init>
+ 
+  <plugin>
+    <id type="string">gamepad   joint-PID-controller        hopper-controller</id>
+  </plugin>
+
+  <gamepad>
+    <file type="string">gamepad/libgamepad.so</file>
+    <real-time-factor type="double">1</real-time-factor>
+    <max-forward-speed type="double">0.3</max-forward-speed>
+    <max-strafe-speed type="double">0.2</max-strafe-speed>
+    <max-turn-speed type="double">1</max-turn-speed>
+    <priority type="double">2</priority>
+    <type type="string">SABRENT</type>
+  </gamepad>
+
+  <hopper-controller>
+    <file type="string">libhopper.so</file>
+    <priority type="double">3</priority>
+    <real-time-factor type="double">1</real-time-factor>
+  </hopper-controller>
+  
+  <joint-PID-controller>
+    <file type="string">libjoint-PID-controller.so</file>
+    <priority type="double">10</priority>
+    <real-time-factor type="double">1</real-time-factor>
+    <acceleration type="bool">false</acceleration>
+    <!-- Gains are for the q of joint ids respectively -->
+    <gains>
+      <kp type="double">2e3 2e3 2e3</kp>
+      <kv type="double">5e2 5e2 5e2</kv>
+      <ki type="double">0 0 0</ki>
+    </gains>
+  </joint-PID-controller>
+
+</XML>

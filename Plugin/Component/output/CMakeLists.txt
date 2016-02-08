@@ -1,0 +1,6 @@
+find_package(curses QUIET)
+IF(CURSES_FOUND AND USE_CURSES)
+add_definitions( -DUSE_CURSES )
+ENDIF()
+add_library(output MODULE output.cpp)
+target_link_libraries(output ${REQLIBS} ${CURSES_LIBRARIES})

@@ -1,0 +1,13 @@
+<XML>
+  <DRIVER>
+    <camera position="0.35 -0.55 0.5" target="0 0 0" up="0 0 1" />
+    <window location="0 0" size="640 480" />
+  </DRIVER>
+  <MOBY>
+    <EventDrivenSimulator integrator-id="rk4" Euler-step="0.001">
+      <DisabledPair object1-id="Monitor" object2-id="Monitor"/>
+      <DynamicBody dynamic-body-id="Monitor" />
+    </EventDrivenSimulator>
+    <SDF filename="model.sdf"/>
+  </MOBY>
+</XML>

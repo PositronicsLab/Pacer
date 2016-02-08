@@ -1,0 +1,15 @@
+<XML>
+  <DRIVER>
+    <camera position="0.35 -0.55 0.5" target="0 0 0" up="0 0 1" />
+    <window location="0 0" size="640 480" />
+  </DRIVER>
+  <MOBY>
+
+<TimeSteppingSimulator min-step-size="0.0005">
+  <DisabledPair object1-id="LINKS" object2-id="LINKS"/>
+  <DynamicBody dynamic-body-id="LINKS" />
+</TimeSteppingSimulator>
+
+<SDF filename="model.sdf"/>
+</MOBY>
+</XML>

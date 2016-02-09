@@ -533,7 +533,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
     SAMPLE_NUMBER = vm["sample"].as<unsigned>();
   } else {
     fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
-    exit(1);
+    throw std::runtime_error("Sample did not get a sample number, likely parent quit or pipe was closed.  Exiting this simulation.");
   }
   
   logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
@@ -568,7 +568,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   std::vector<std::string> argvs;
   argvs.push_back("montecarlo-moby-sample");
   // Max time is 0.3 seconds
-  argvs.push_back("-mt="+duration);
+//  argvs.push_back("-mt="+duration);
   argvs.push_back("-s="+step_size);
   // XML output last frame
   //  argvs.push_back("-w=0");
@@ -667,13 +667,15 @@ int main(int argc_main, char* argv_main[]){
   }
   parse_command_line_options(argc_main,argv_main);
   
+  std::cerr << " Sample with PID: "<< pid <<  " Started! waiting on piped parameters: "<< std::endl;
+
   char message[MESSAGE_SIZE];
   // Block on read until next simulation is scheduled
   if( read(PARENT_TO_CHILD_READ, message, sizeof(message)) == -1 ) {
     throw std::runtime_error("Could not read anything from pipe!");
   }
   
-  logging << "Message string: " << message << std::endl;
+  std::cerr << "Sample with PID: "<< pid <<  " read message string: " << message << std::endl;
 
   std::vector<char*> messagev;
   messagev.push_back("filler");
@@ -747,21 +749,26 @@ int main(int argc_main, char* argv_main[]){
   /*
    *  Running experiment
    */
-#ifndef NDEBUG
-  std::cerr << " -- Starting simulation ("<< SAMPLE_NUMBER << ") -- PID:" << pid << std::endl;
-#endif
+//#ifndef NDEBUG
+  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
+//#endif
   bool stop_sim = false;
   while (!stop_sim &&  sim->current_time < DURATION) {
     //    logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc_sample,argv_sample,robot);
-    stop_sim = !Moby::step(sim);
-#ifndef NDEBUG
-    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time <<  std::endl;
-#endif
+    try {
+      stop_sim = !Moby::step(sim);
+    } catch (...) {
+      stop_sim = true;
+    }
+//#ifndef NDEBUG
+//    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time <<  std::endl;
+//#endif
   }
-  
-  
+//#ifndef NDEBUG
+  std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time << " Ended!" << std::endl;
+//#endif
   /*
    *  Collecting final data
    */
@@ -770,15 +777,15 @@ int main(int argc_main, char* argv_main[]){
   logging << "q2 = " << q << std::endl;
   
   std::ostringstream oss;
-  oss << std::dec << sim->current_time << " ";
+  oss << std::dec << sim->current_time ;
   for (int i=q.rows()-7; i<q.rows() ;i++) {
-    oss << q[i] << " ";
+    oss << " " << q[i] ;
   }
   std::string str = oss.str();
   write(CHILD_TO_PARENT_WRITE, str.c_str(), str.length());
-#ifndef NDEBUG
-  std::cerr << "Sample with"<< SAMPLE_NUMBER << " and PID: "<< pid << " Ended! message: " << str << std::endl;
-#endif
+//#ifndef NDEBUG
+  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << str << std::endl;
+//#endif
   execv( argv_main[0] , argv_main );
   
   return 0;

@@ -1,6 +1,6 @@
 <XML>
   <uncertainty>
-    <id type="string vector">construction</id>
+    <id type="string vector">construction state</id>
   <construction>
     <id type="string vector">links</id>
     <links>
@@ -313,13 +313,8 @@
       <links>
         <id type="string vector">BODY0</id>
         <BODY0>
-          <id type="string vector">xd</id>
-          <x>
-            <distribution type="string">gaussian</distribution>
-            <unit   type="string vector">absolute</unit>
-            <min    type="double vector">-0.01 -0.01 -0.01 -0.15 -0.15 -0.15</min>
-            <max    type="double vector"> 0.01  0.01  0.01  0.15  0.15  0.15</max>
-          </x>
+          <id type="string vector"> x xd </id>
+          <x    type="double vector">0 0 0 0 0 0</x>
           <xd>
             <distribution type="string">gaussian</distribution>
             <unit   type="string vector">proportional</unit>
@@ -332,7 +327,7 @@
         <id type="string">LF_X_1 LF_Y_2 LF_Y_3  RF_X_1 RF_Y_2 RF_Y_3   LH_X_1 LH_Y_2 LH_Y_3   RH_X_1 RH_Y_2 RH_Y_3</id>
         <!-- KNEE: Y_3 -->
         <LF_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
             <distribution type="string">gaussian</distribution>
@@ -351,7 +346,7 @@
           </xd>
         </LF_Y_3>
         <RF_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -372,7 +367,7 @@
           </xd>
         </RF_Y_3>
         <LH_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
             <distribution type="string">gaussian</distribution>
@@ -391,7 +386,7 @@
           </xd>
         </LH_Y_3>
         <RH_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
             <distribution type="string">gaussian</distribution>
@@ -412,7 +407,7 @@
         
         <!-- HIP: Y_2 -->
         <LF_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -433,7 +428,7 @@
           </xd>
         </LF_Y_2>
         <RF_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -454,7 +449,7 @@
           </xd>
         </RF_Y_2>
         <LH_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -475,7 +470,7 @@
           </xd>
         </LH_Y_2>
         <RH_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -498,7 +493,7 @@
         
         <!-- HIP (AB/AD)DUCTION: X_1 -->
         <LF_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -519,7 +514,7 @@
           </xd>
         </LF_X_1>
         <RF_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -540,7 +535,7 @@
           </xd>
         </RF_X_1>
         <LH_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -560,7 +555,7 @@
           </xd>
         </LH_X_1>
         <RH_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           
           <x>

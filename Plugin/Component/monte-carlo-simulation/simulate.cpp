@@ -86,13 +86,12 @@ struct SampleConditions{
   ///// Set each time a new sample begins  /////
   int     sample_number;
   double  start_time;
+  bool  active;
   bool  restart;
   bool  inited;
 };
 
-typedef std::pair<int, SampleConditions> Sample;
-std::map<int, SampleConditions> sample_processes;
-std::set<int> available_threads;
+std::vector<SampleConditions> sample_processes;
 
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
 std::string TASK_PATH = "./";
@@ -100,22 +99,36 @@ long long unsigned int sample_idx=0;
 
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  std::cout << "NUM end poses: " << completed_poses.size() << " , t = "<< t <<  std::endl;
 
   for (int i=0; i<completed_poses.size(); i++) {
-    std::cout << "Visualizing end pose: " << completed_poses[i];
+    std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
 
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
   }
   
-  OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads.size() ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
+  int available_threads = 0;
+
+  for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
+    SampleConditions& sc = sample_processes[thread_number];
+    if(!sc.active)
+      available_threads++;
+  }
   
-  if ( available_threads.size() > 0 && sample_idx < NUM_SAMPLES){
+  OUT_LOG(logINFO) << "sample_processes: " << ( sample_processes.size() ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
+
+  
+  OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
+  std::cout << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes." << std::endl;
+  
+  if ( available_threads > 0 && sample_idx < NUM_SAMPLES ){
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-    for(std::set<int>::iterator it = available_threads.begin(); it != available_threads.end();){
-      int thread_number = (*it);
+    for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
       SampleConditions& sc = sample_processes[thread_number];
+      if(sc.active)
+        continue;
       
       std::vector<std::string> SAMPLE_ARGV = get_sample_options();
       
@@ -145,16 +158,16 @@ void loop(){
         message_size += SAMPLE_ARGV[i].size()+1;
       }
       
-      OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << "Starting at t=" << t
+      OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
                      << "\nHas simulator options:\n" << SAMPLE_ARGV;
       
-      std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << "Starting at t=" << t << std::endl;
+      std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl;
 
       
       write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,sizeof(message));
       sc.start_time = t;
       sc.sample_number = sample_idx++;
-      available_threads.erase(it++);
+      sc.active = true;
       if(sample_idx == NUM_SAMPLES)
         break;
     }
@@ -163,21 +176,21 @@ void loop(){
 #endif
     
     
-  } else if (available_threads.size() == 0 && sample_idx < NUM_SAMPLES) {
+  } else if (available_threads == 0 && sample_idx < NUM_SAMPLES) {
     OUT_LOG(logINFO) << "All threads are working: sample " << sample_idx << " out of " << NUM_SAMPLES << ".";
-  } else if (available_threads.size() == 0 && sample_idx == NUM_SAMPLES) {
+  } else if (available_threads == 0 && sample_idx == NUM_SAMPLES) {
     OUT_LOG(logINFO) << "All threads are working and all samples have been started.";
-    if (!GET_DATA_ONLINE)
-      ctrl->close_plugin(plugin_namespace);
-  } else if (available_threads.size() > 0 && sample_idx == NUM_SAMPLES) {
+//    if (!GET_DATA_ONLINE)
+//      ctrl->close_plugin(plugin_namespace);
+  } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
     OUT_LOG(logINFO) << "Not threads are working but all samples have been started.";
-    if (!GET_DATA_ONLINE)
-      ctrl->close_plugin(plugin_namespace);
+//    if (!GET_DATA_ONLINE)
+//      ctrl->close_plugin(plugin_namespace);
   }
   
-  if(sample_idx == NUM_SAMPLES && available_threads.size() == NUM_THREADS){
+  if(sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
     OUT_LOG(logINFO) << "Experiment Complete";
-    ctrl->close_plugin(plugin_namespace);
+//    ctrl->close_plugin(plugin_namespace);
   }
   
   return;
@@ -196,30 +209,36 @@ void setup(){
   OUT_LOG(logDEBUG) << "Importing sources of uncertainty";
   Random::create_distributions("uncertainty",ctrl,parameter_generator);
   
+  ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
+  ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
+
   /////////////////////////////////
   ////  START WORKER PROCESSES ////
-  for (int i=0; i<NUM_THREADS; i++) {
-    available_threads.insert(i);
-    SampleConditions sc;
-    sc.inited = false;
-    sc.restart = true;
-    sample_processes[i] = sc;
+  for(int thread_number=0;thread_number<NUM_THREADS;thread_number++){
+    sample_processes.push_back(SampleConditions());
+    sample_processes.back().inited = false;
+    sample_processes.back().active = false;
+    sample_processes.back().restart = true;
   }
   
 #ifdef USE_THREADS
   pthread_mutex_unlock(&_sample_processes_mutex);
 #endif
-  ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
-  std::cout << "Sleeping before actually starting anything" << t << std::endl;
 
+
+  ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
+  if (GET_DATA_ONLINE){
+    start_listener_thread();
+  }
+  
+  register_exit_sighandler();
+  
   start_process_spawner_thread();
 
-  register_exit_sighandler();
-
+  std::cout << "Sleeping before actually starting anything" << t << std::endl;
   sleep(5);
   std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
 
-  start_listener_thread();
   
 
   // wait for all new forked processes to start;

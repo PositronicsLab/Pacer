@@ -15,40 +15,32 @@
 
 char spstr[512];
 
-fd_set                         pending_fds;
 
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-bool select( void ) {
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// PIPE READING  /////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+bool select( const std::vector<int>& checked_fds , fd_set& pending_fds ) {
 //  __select( subscribed_fds, pending_fds );
 
   int max_fd = 0;
 
-  assert( sample_processes.size() > 0 );
-
+  int num_fds = 0;
+  
   FD_ZERO( &pending_fds );
-#ifdef USE_THREADS
-  pthread_mutex_lock(&_sample_processes_mutex);
-#endif
-  BOOST_FOREACH(Sample sample, sample_processes){
-    SampleConditions& sc = sample.second;
-     if(sc.restart){
-       continue;
-     }
 
-    max_fd = std::max( max_fd, sc.CHILD_TO_PARENT[READ_INDEX] );
-    FD_SET( sc.CHILD_TO_PARENT[READ_INDEX], &pending_fds );
-    OUT_LOG(logDEBUG2) << "checking -- fd: " << sc.CHILD_TO_PARENT[READ_INDEX];
+  for(int i=0;i<checked_fds.size();i++){
+    max_fd = std::max( max_fd, checked_fds[i] );
+    FD_SET( checked_fds[i] , &pending_fds );
+    num_fds += 1;
+    OUT_LOG(logINFO) << "LISTENER: checking -- fd: " << checked_fds[i];
   }
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
 
-  OUT_LOG(logDEBUG2) << "max_fd: " << max_fd ;
+  OUT_LOG(logINFO) << "LISTENER: max_fd: " << max_fd ;
 
   if( select( max_fd + 1, &pending_fds, NULL, NULL, NULL ) == -1 ) {
 
-    if( LOG(logDEBUG2) ){
+    if( LOG(logINFO) ){
       char buf[16];
       if( errno == EBADF ) 
         sprintf( buf, "EBADF" );
@@ -61,8 +53,8 @@ bool select( void ) {
       else 
         sprintf( buf, "UNKNOWN" );
 
-      sprintf( spstr, "ERROR : (coordinator.cpp) select() failed calling __select(...) : errno[%s]", buf );
-      OUT_LOG(logDEBUG2) << spstr;
+      sprintf( spstr, "ERROR : LISTENER: (select.cpp) select() failed calling __select(...) : errno[%s]", buf );
+      OUT_LOG(logINFO) << spstr;
     }
 
     return false;
@@ -71,65 +63,26 @@ bool select( void ) {
 }
 
 //-----------------------------------------------------------------------------
-int read_notifications( std::vector<std::string>& messages , std::vector<int>& completed_threads) {
-  char message[MESSAGE_SIZE];
-  int message_count = 0;
-#ifdef USE_THREADS
-  pthread_mutex_lock(&_sample_processes_mutex);
-#endif
-  BOOST_FOREACH(Sample sample, sample_processes){
-    int              thread_number = sample.first;
-    SampleConditions& sc    = sample.second;
+int read_notifications( const std::vector<int>& checked_threads ,  const std::vector<int>& checked_fds , const fd_set& pending_fds ,
+                       std::vector<std::string>& messages , std::vector<int>& completed_threads, std::vector<int>& error_threads ) {
+  for(int i=0;i<checked_fds.size();i++){
+    char message[MESSAGE_SIZE];
     int fd;
     // predator controller
-    if( FD_ISSET( sc.CHILD_TO_PARENT[READ_INDEX], &pending_fds ) != 0 ) {
-      fd = sc.CHILD_TO_PARENT[READ_INDEX];
-      if( read(fd, message, sizeof(message)) == -1 ) {
+    if( FD_ISSET( checked_fds[i], &pending_fds ) != 0 ) {
+      if( read(checked_fds[i], message, sizeof(message)) == -1 ) {
         message[0] = '\0';
-        OUT_LOG(logDEBUG2) << "Message failed to read from thread = "<<thread_number<<" FD: "<< sc.CHILD_TO_PARENT[READ_INDEX];
+        OUT_LOG(logINFO) << "LISTENER: Message failed to read from thread = "<< checked_threads[i] <<" FD: "<< checked_fds[i];
+        error_threads.push_back(checked_threads[i]);
       } else {
-        message_count += 1;
-        OUT_LOG(logDEBUG2) << "Message read from thread = "<<thread_number<<": "<<message;
+        messages.push_back(std::string(message));
+        completed_threads.push_back(checked_threads[i]);
+        OUT_LOG(logINFO) << "LISTENER: Message read from thread = "<< checked_threads[i] <<": "<<message;
       }
-      messages.push_back(std::string(message));
-      completed_threads.push_back(thread_number);
-      // Close test
     }
   }
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
-  return message_count;
-}
 
-
-//-----------------------------------------------------------------------------
-bool init_pipe( int& read_fd, int& write_fd, bool write_blocking = false ) {
-  int flags;
-  int fd[2];
-
-  if( pipe( fd ) != 0 ) {
-    return false;
-  }
-  flags = fcntl( fd[0], F_GETFL, 0 );
-  fcntl( fd[0], F_SETFL, flags );
-  flags = fcntl( fd[1], F_GETFL, 0 );
-  if( write_blocking )
-    fcntl( fd[1], F_SETFL, flags );
-  else
-    fcntl( fd[1], F_SETFL, flags | O_NONBLOCK );
-
-  if( dup2( fd[0], read_fd ) == -1 ) {
-    close( fd[0] );
-    close( fd[1] );
-    return false;
-  }
-  if( dup2( fd[1], write_fd ) == -1 ) {
-    close( read_fd );
-    close( fd[1] );
-    return false;
-  }
-  return true;
+  return messages.size();
 }
 
 //-----------------------------------------------------------------------------
@@ -151,36 +104,79 @@ bool init_pipe( int fd[2], bool write_blocking = false ) {
   return true;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// CHILD LISTENER  ///////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 void listen_for_child_return() {
-  if(select()){
+  std::vector<int> checked_fds,checked_threads;
+  fd_set pending_fds;
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_sample_processes_mutex);
+#endif
+  for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
+    SampleConditions& sc = sample_processes[thread_number];
+    if(sc.restart || !sc.inited || !sc.active){
+      continue;
+    }
+    checked_fds.push_back(sc.CHILD_TO_PARENT[READ_INDEX]);
+    checked_threads.push_back(thread_number);
+  }
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_sample_processes_mutex);
+#endif
+  if (checked_fds.empty()) {
+    return;
+  }
+
+  if(select(checked_fds,pending_fds)){
     std::vector<std::string> messages;
     std::vector<int> completed_threads;
-    int n_messages = read_notifications( messages , completed_threads );
+    std::vector<int> error_threads;
+    int n_messages = read_notifications( checked_threads, checked_fds,pending_fds, messages , completed_threads, error_threads );
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-    for (int i=0; i<n_messages; i++) {
+    for(int i=0;i<error_threads.size();i++){
+      int thread_number = error_threads[i];
+      sample_processes[thread_number].restart = true;
+      sample_processes[thread_number].active = false;
+    }
+    for(int i=0;i<completed_threads.size();i++){
       int thread_number = completed_threads[i];
       SampleConditions& sc = sample_processes[thread_number];
 
       if(messages[i].empty()){
-        std::cerr <<"Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned an empty message!" << std::endl;
-        continue;
+        // Something bad happened
+         OUT_LOG(logINFO) << "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned an empty message!";
+        sc.active = false;
+        sc.restart = true;
+//        throw std::runtime_error("returned an empty message!");
       }
 
       double start_time = sc.start_time;
+      
       OUT_LOG(logINFO) <<  "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned with message: " << messages[i];
-      std::cout << "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned with message: " << messages[i] << std::endl;
 
       std::vector<std::string> values;
+      // NOTE: trailing spaces will cause errors in boost::split
       boost::split(values, messages[i], boost::is_any_of(" "));
+      OUT_LOG(logINFO) << "Split message: " << values;
+      
+      // NOTE: this will have to change if I change message size
+      if(values.size() != 8){
+        // Something bad happened
+        OUT_LOG(logINFO) << "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned a missized message!";
+        sc.active = false;
+        sc.restart = true;
+//        throw std::runtime_error("Recieved bad message from child.");
+      }
       
       double time_elapsed = atof(values[0].c_str());
       completed_poses.push_back(Ravelin::Pose3d(Ravelin::Quatd(atof(values[4].c_str()), atof(values[5].c_str()), atof(values[6].c_str()), atof(values[7].c_str())),
                                                 Ravelin::Origin3d( atof(values[1].c_str()), atof(values[2].c_str()), atof(values[3].c_str()))));
       OUT_LOG(logINFO) << "Thread "<< thread_number << " Sample ("<< sc.sample_number <<") timeline: " << start_time << "  |======" << time_elapsed << "======>  " << (start_time+time_elapsed);
-      std::cout << "Thread "<< thread_number << " Sample ("<< sc.sample_number <<") timeline: " << start_time << "  |======" << time_elapsed << "======>  " << (start_time+time_elapsed) << ".  CURRENT TIME: " << t << std::endl;
-      available_threads.insert(thread_number);
+      sc.active = false;
     }
   }
 #ifdef USE_THREADS
@@ -201,24 +197,24 @@ pthread_t process_spawner_thread;
 #endif
 
 static void start_listener_thread(){
-#ifdef USE_THREADS
-  if (GET_DATA_ONLINE){
     static int iret = pthread_create( &listener_thread, NULL,&listen_for_child_return_loop,(void*)NULL);
     if(iret)
     {
       fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
       exit(1);
     }
-  }
-#endif
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// NEW PROCESS SPAWNER /////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 
 static void spawn_process(SampleConditions& sc, int thread_number){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   std::string SAMPLE_BIN("sample.bin");
-  ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
-  ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
   ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BIN);
   ctrl->get_data<std::string>(plugin_namespace+".task-directory", TASK_PATH);
   
@@ -238,35 +234,27 @@ static void spawn_process(SampleConditions& sc, int thread_number){
   //    SAMPLE_ARGV.push_back("-19");
   //  #else
   // Start process with niceness
-  //    SAMPLE_ARGV.push_back("nice");
-  //    SAMPLE_ARGV.push_back("-n");
-  //    SAMPLE_ARGV.push_back("-19");
-  //  #endif
+//      SAMPLE_ARGV.push_back("nice");
+//      SAMPLE_ARGV.push_back("-n");
+//      SAMPLE_ARGV.push_back("-19");
+//  //  #endif
   
   SAMPLE_ARGV.push_back(SAMPLE_BIN);
   
-  //////////////////////////////
-  //////  SET UP PIPES /////////
-  // Before forking, set up the pipe;
-  //    if(!init_pipe(sc.PARENT_TO_CHILD[READ_INDEX],sc.PARENT_TO_CHILD[WRITE_INDEX], false )){
-  //      throw std::runtime_error("Could not open PARENT_TO_CHILD pipe to worker process.");
-  //    }
-  //
-  //    if(!init_pipe(sc.CHILD_TO_PARENT[READ_INDEX],sc.CHILD_TO_PARENT[WRITE_INDEX], false )){
-  //      throw std::runtime_error("Could not open CHILD_TO_PARENT pipe to worker process.");
-  //    }
-  //
-  if(!init_pipe(sc.PARENT_TO_CHILD, false )){
+  // Before anything else, register thread number with SampleConditions
+  sample_processes[thread_number] = SampleConditions();
+
+  if(!init_pipe(sample_processes[thread_number].PARENT_TO_CHILD, false )){
     throw std::runtime_error("Could not open PARENT_TO_CHILD pipe to worker process.");
   }
   
-  if(!init_pipe(sc.CHILD_TO_PARENT, false )){
+  if(!init_pipe(sample_processes[thread_number].CHILD_TO_PARENT, false )){
     throw std::runtime_error("Could not open CHILD_TO_PARENT pipe to worker process.");
   }
   
   
-  OUT_LOG(logDEBUG)  << "(CHILD) " << sc.CHILD_TO_PARENT[WRITE_INDEX] << " --> " << sc.CHILD_TO_PARENT[READ_INDEX] << " (PARENT)";
-  OUT_LOG(logDEBUG)  << "(PARENT) " << sc.PARENT_TO_CHILD[WRITE_INDEX] << " --> " << sc.PARENT_TO_CHILD[READ_INDEX] << " (CHILD)";
+  OUT_LOG(logDEBUG)  << "(CHILD) " << sample_processes[thread_number].CHILD_TO_PARENT[WRITE_INDEX] << " --> " << sample_processes[thread_number].CHILD_TO_PARENT[READ_INDEX] << " (PARENT)";
+  OUT_LOG(logDEBUG)  << "(PARENT) " << sample_processes[thread_number].PARENT_TO_CHILD[WRITE_INDEX] << " --> " << sample_processes[thread_number].PARENT_TO_CHILD[READ_INDEX] << " (CHILD)";
   OUT_LOG(logDEBUG) << "Forking Process!";
   
   // Run each sample as its own process
@@ -280,8 +268,8 @@ static void spawn_process(SampleConditions& sc, int thread_number){
     ////////////////////////////////////////////////////
     /// ---------- START CHILD PROCESS ------------- ///
     // Child process is write-only, closes receiving end of pipe
-    close(sc.PARENT_TO_CHILD[WRITE_INDEX]);
-    close(sc.CHILD_TO_PARENT[READ_INDEX]);
+    close(sample_processes[thread_number].PARENT_TO_CHILD[WRITE_INDEX]);
+    close(sample_processes[thread_number].CHILD_TO_PARENT[READ_INDEX]);
     
     pid = getpid();
     
@@ -317,13 +305,14 @@ static void spawn_process(SampleConditions& sc, int thread_number){
   ////////////////////////////////////////////////////////
   /// ---------- CONTINUE PARENT PROCESS ------------- ///
   // Parent is read-only, closing sending end of pipe
-  close(sc.PARENT_TO_CHILD[READ_INDEX]);
-  close(sc.CHILD_TO_PARENT[WRITE_INDEX]);
+  close(sample_processes[thread_number].PARENT_TO_CHILD[READ_INDEX]);
+  close(sample_processes[thread_number].CHILD_TO_PARENT[WRITE_INDEX]);
   
-  sc.pid = pid;
+  sample_processes[thread_number].pid = pid;
   
-  // Before anything else, register thread number with SampleConditions
-  sample_processes[thread_number] = sc;
+  sample_processes[thread_number].restart = false;
+  sample_processes[thread_number].inited = true;
+  sample_processes[thread_number].active = false;
   
   OUT_LOG(logINFO) << "Plugin sleeping to permit thread (" << thread_number << ") with PID ("<< pid <<") to start";
   struct timespec req,rem;
@@ -340,24 +329,26 @@ static void close_process(SampleConditions& sc){
 }
 
 static void process_spawner(){
-  for(std::map<pid_t, SampleConditions>::iterator it = sample_processes.begin();it != sample_processes.end();it++)
-  {
-    SampleConditions& sc = it->second;
+  for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
+    SampleConditions& sc = sample_processes[thread_number];
      if(sc.restart){
        if(sc.inited){
          close_process(sc);
        }
-       spawn_process(sc,it->first);
-       sc.restart = false;
-       sc.inited = true;
+       spawn_process(sc,thread_number);
      }
   }
 }
 
 static void *process_spawner_loop(void* data){
   while(1){
+#ifdef USE_THREADS
+    pthread_mutex_lock(&_sample_processes_mutex);
+#endif
     process_spawner();
-//    sleep_duration(0.5);
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&_sample_processes_mutex);
+#endif
     sleep(1);
   }
 }
@@ -372,16 +363,22 @@ static void start_process_spawner_thread(){
     }
 #endif
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// EXIT SIGNAL HANDLER /////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 #include <signal.h>
 void exit_sighandler( int signum, siginfo_t* info, void* context ) {
+  std::cout << "exit_sighandler entered, something crashed! " << info->si_pid << std::endl;
 #ifdef USE_THREADS
   pthread_mutex_lock(&_sample_processes_mutex);
 #endif
-  std::map<pid_t, SampleConditions>::iterator it = sample_processes.find(info->si_pid);
-  {
-    SampleConditions& sc = it->second;
-     if(sc.pid == info->si_pid){
-       sc.restart = true;
+  for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
+     if(sample_processes[thread_number].pid == info->si_pid){
+       OUT_LOG(logINFO) << "Process on thread (" << thread_number << ") with PID ("<< sample_processes[thread_number].pid <<") crashed!";
+       sample_processes[thread_number].restart = true;
+       sample_processes[thread_number].active = false;
      }
   }
 #ifdef USE_THREADS

@@ -798,7 +798,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   last_time = t;
   
   /// Moving average for command
-  const int queue_size = 1;
+  int queue_size = 1;
+  ctrl->get_data<int>(plugin_namespace+".command-smoother",queue_size);
+
   static std::deque<Origin3d> command_queue;
   static Origin3d sum_command = Origin3d(0,0,0);
   
@@ -817,14 +819,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   Origin3d command = sum_command / (double) command_queue.size();
   
   OUTLOG(command,"SE2_command",logERROR);
-  
-  /// Command velocity differential
-  //  static Origin3d command = Origin3d(0,0,0);
-  //
-  //  Origin3d dcommand = Origin3d(0,0,0);
-  //  ctrl->get_data<Origin3d>("SE2_command",dcommand);
-  //  command *= 0.999;
-  //  command += dcommand*dt;
+
   
   VectorNd go_to;
   go_to.set_zero(6);

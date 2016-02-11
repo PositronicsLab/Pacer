@@ -52,7 +52,7 @@ unsigned SAMPLE_NUMBER = 0;
 
 int CHILD_TO_PARENT_WRITE = 0;
 int PARENT_TO_CHILD_READ = 0;
-
+bool USE_PIPES = false;
 int pid = 0;
 double DURATION = 0;
 
@@ -617,7 +617,8 @@ void parse_command_line_options(int argc, char* argv[]){
   desc.add_options()
   ("help", "produce help message")
   ("readpipe", po::value<int>()->default_value(0),"PARENT_TO_CHILD_READ")
-  ("writepipe", po::value<int>()->default_value(0),"CHILD_TO_PARENT_WRITE");
+  ("writepipe", po::value<int>()->default_value(0),"CHILD_TO_PARENT_WRITE")
+  ("no-pipe","expect piped parameters?");
   
   logging << "Parsing Variable Map from command line" << std::endl;
   
@@ -630,18 +631,23 @@ void parse_command_line_options(int argc, char* argv[]){
   
   logging << "Parsed Variable Map from command line" << std::endl;
   
-  if (vm.count("readpipe")) {
-    PARENT_TO_CHILD_READ = vm["readpipe"].as<int>();
-    logging << "PID: "<<pid<<" input readpipe (PARENT_TO_CHILD_READ): " << PARENT_TO_CHILD_READ << std::endl;
+  if (vm.count("no-pipe")) {
+    USE_PIPES = false;
   } else {
-    fprintf(stderr,"Sample with PID: %d did not get a read pipe : PARENT_TO_CHILD_READ", pid);
-  }
-  
-  if (vm.count("writepipe")) {
-    CHILD_TO_PARENT_WRITE = vm["writepipe"].as<int>();
-    logging << "PID: "<<pid<<" output writepipe (CHILD_TO_PARENT_WRITE): " << CHILD_TO_PARENT_WRITE << std::endl;
-  } else {
-    fprintf(stderr,"Sample with PID: %d did not get a write pipe : CHILD_TO_PARENT_WRITE", pid);
+    USE_PIPES = true;
+    if (vm.count("readpipe")) {
+      PARENT_TO_CHILD_READ = vm["readpipe"].as<int>();
+      logging << "PID: "<<pid<<" input readpipe (PARENT_TO_CHILD_READ): " << PARENT_TO_CHILD_READ << std::endl;
+    } else {
+      fprintf(stderr,"Sample with PID: %d did not get a read pipe : PARENT_TO_CHILD_READ", pid);
+    }
+    
+    if (vm.count("writepipe")) {
+      CHILD_TO_PARENT_WRITE = vm["writepipe"].as<int>();
+      logging << "PID: "<<pid<<" output writepipe (CHILD_TO_PARENT_WRITE): " << CHILD_TO_PARENT_WRITE << std::endl;
+    } else {
+      fprintf(stderr,"Sample with PID: %d did not get a write pipe : CHILD_TO_PARENT_WRITE", pid);
+    }
   }
 }
 
@@ -661,36 +667,38 @@ int main(int argc_main, char* argv_main[]){
   // Cet this process's PID for debugging
   pid = getpid();
   
-  // Setup pipes
-  for(int i=0;i<argc_main;i++){
-    
-  }
   parse_command_line_options(argc_main,argv_main);
-  
-  std::cerr << " Sample with PID: "<< pid <<  " Started! waiting on piped parameters: "<< std::endl;
 
-  char message[MESSAGE_SIZE];
-  // Block on read until next simulation is scheduled
-  if( read(PARENT_TO_CHILD_READ, message, sizeof(message)) == -1 ) {
-    throw std::runtime_error("Could not read anything from pipe!");
+  int argc_sample;
+  char** argv_sample;
+  if(USE_PIPES){
+    std::cerr << " Sample with PID: "<< pid <<  " Started! waiting on piped parameters: "<< std::endl;
+    
+    char message[MESSAGE_SIZE];
+    // Block on read until next simulation is scheduled
+    if( read(PARENT_TO_CHILD_READ, message, sizeof(message)) == -1 ) {
+      throw std::runtime_error("Could not read anything from pipe!");
+    }
+    
+    std::cerr << "Sample with PID: "<< pid <<  " read message string: " << message << std::endl;
+    
+    std::vector<char*> messagev;
+    messagev.push_back("filler");
+    char* chars_array = strtok(message, " ");
+    while(chars_array)
+    {
+      messagev.push_back(chars_array);
+      chars_array = strtok(NULL, " ");
+    }
+    
+    argc_sample = messagev.size();
+    argv_sample = &messagev[0];
+    
+    logging << "Message vector: " << messagev << std::endl;
+  } else {
+    argc_sample = argc_main;
+    argv_sample = argv_main;
   }
-  
-  std::cerr << "Sample with PID: "<< pid <<  " read message string: " << message << std::endl;
-
-  std::vector<char*> messagev;
-  messagev.push_back("filler");
-  char* chars_array = strtok(message, " ");
-  while(chars_array)
-  {
-    messagev.push_back(chars_array);
-    chars_array = strtok(NULL, " ");
-  }
-
-  int argc_sample = messagev.size();
-  char** argv_sample = &messagev[0];
-  
-  logging << "Message vector: " << messagev << std::endl;
-  
   // Setup this instance of moby
   shared_ptr<Simulator> sim;
   logging << " -- Applying Simulator Options -- " << std::endl;
@@ -733,8 +741,8 @@ int main(int argc_main, char* argv_main[]){
   logging << " -- Applied State Uncertainty -- " << std::endl;
   
   if(EXPORT_XML){
-        Ravelin::VectorNd q0,q;
-        robot->get_generalized_coordinates_euler(q0);
+    Ravelin::VectorNd q0,q;
+    robot->get_generalized_coordinates_euler(q0);
     q = q0;
     q.segment(0,q.rows()-7) = Ravelin::VectorNd::zero(q.rows()-7);
     robot->set_generalized_coordinates_euler(q);
@@ -742,7 +750,8 @@ int main(int argc_main, char* argv_main[]){
     // write the file (fails silently)
     char buffer[128];
     sprintf(buffer, "model-%06u.xml", pid);
-    Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim);
+    boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
+    Moby::XMLWriter::serialize_to_xml(std::string(buffer), robot_moby);
     robot->set_generalized_coordinates_euler(q0);
   }
   
@@ -786,7 +795,9 @@ int main(int argc_main, char* argv_main[]){
 //#ifndef NDEBUG
   std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << str << std::endl;
 //#endif
-  execv( argv_main[0] , argv_main );
+  if (USE_PIPES) {
+    execv( argv_main[0] , argv_main );
+  }
   
   return 0;
 }

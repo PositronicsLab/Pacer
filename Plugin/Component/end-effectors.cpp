@@ -98,8 +98,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->set_model_state(local_q);
 
     for(unsigned i=0;i<NUM_FEET;i++){
-      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
-      x2[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
+//      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
+//      x2[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
 
       // write in maximum reach from limb base
       double reach = (x1[i]-x2[i]).norm();

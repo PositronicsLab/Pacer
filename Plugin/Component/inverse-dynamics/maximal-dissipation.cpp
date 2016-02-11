@@ -173,7 +173,7 @@ bool predict_contact_forces(const Ravelin::VectorNd& v, const Ravelin::MatrixNd&
  *  mu * f_N{i} >= 1' [f_S{i}; f_T{i}] for i=1:nc
  *  P' v+ = v + h qdd
  **/
-bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final,double elasticity = 1e-8){
+bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final,double damping = 0){
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2;
   
@@ -217,9 +217,9 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
   X.set_sub_mat(n,0,P);
   X.set_sub_mat(0,n,P,Ravelin::eTranspose);
   // Hard contact
-  Ravelin::MatrixNd ELAS = Ravelin::MatrixNd::identity(nq);
-  ELAS *= elasticity;
-  X.set_sub_mat(n,n,ELAS);
+  Ravelin::MatrixNd DampingMatrix = Ravelin::MatrixNd::identity(nq);
+  DampingMatrix *= damping;
+  X.set_sub_mat(n,n,DampingMatrix);
   
   /*
   // inv(X) matrix
@@ -422,7 +422,8 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
     }
     
     // DEBUGGING OUTPUT
-    if (LOG(logDEBUG1)) {
+    if (LOG(logDEBUG1))
+    {
       Ravelin::VectorNd f_vqstar(n+nq), vplus_tau;
       
       // [ Mv + Rz + hfext ; vq*]
@@ -446,10 +447,6 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
       OUTLOG(x.norm(),"||tau|| -- 1",logDEBUG1);
     }
     
-    OUT_LOG(logDEBUG) << "<< inverse_dynamics_two_stage_simple() exited" << std::endl;
-
-    return true;
-    
     /////////////////////////////////////////////////////////////////////////////
     ///////////////// Stage 2 optimization: command smoothing ///////////////////
     /////////////////////////////////////////////////////////////////////////////
@@ -458,7 +455,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
     Ravelin::MatrixNd Z;
     LA_.nullspace(G,Z);
     unsigned size_null_space = Z.columns();
-    if(size_null_space != 0)
+    if(size_null_space != 0 && Z.norm_inf() > NEAR_ZERO)
     {
       OUT_LOG(logDEBUG1)  << "Nullspace exists! solving stage 2...";
       

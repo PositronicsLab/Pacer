@@ -19,6 +19,13 @@
 
 #include <Moby/LCP.h>
 
+//#undef OUT_LOG
+//#define OUT_LOG(level) \
+//std::cout << std::endl << Logger::ToString(level) << " -- "
+//#undef OUTLOG
+//#define OUTLOG(x,name,level) \
+//std::cout << std::endl << Logger::ToString(level) << " -- " << name << " = \n" << x;
+
 //#define TIMING
 
 using namespace Pacer;
@@ -29,6 +36,7 @@ using Ravelin::VectorNd;
 using Ravelin::MatrixNd;
 using namespace Ravelin;
 
+const double grav = 9.8;
 Ravelin::LinAlgd _LA;
 Moby::LCP _lcp;
 
@@ -421,8 +429,15 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
         pos = c[j]->point;
         Ravelin::Vector3d cf(0,0,0);
         ctrl->get_data<Ravelin::Vector3d>(id+".contact-force",cf);
+        double mass = ctrl->get_data<double>("mass");
+        OUT_LOG(logDEBUG) << "contact force: " << cf;
+        OUT_LOG(logDEBUG) << "|contact force|: " << cf.norm();
+        OUT_LOG(logDEBUG) << "Robot mass (kg): " << mass;
+        OUT_LOG(logDEBUG) << "Robot weight (kg.m / s.s): " << (mass*grav);
         // Normal force > tolerance
-        if (cf[0] > 0.5) {
+        if (cf[0] > 0.1*(mass*grav)) {
+          OUT_LOG(logDEBUG) << "Is Active Contact";
+
 //        for (int k=0; k<num_added[i]; k++) {
           contacts.push_back(ctrl->create_contact(id,pos,c[j]->normal,c[j]->tangent,c[j]->impulse,c[j]->mu_coulomb,c[j]->mu_viscous,0,c[j]->compliant));
           indices.push_back((unsigned) i);
@@ -433,7 +448,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   }
   
   int NC = contacts.size();
-  
+  OUT_LOG(logDEBUG) << "Number Active Contacts: " << NC;
+
   // State
   
   Ravelin::VectorNd q,generalized_qd,qdd_des,generalized_fext;
@@ -633,7 +649,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
         } else if(name.compare("CFLCP") == 0){
           solve_flag = inverse_dynamics_ap(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
         }  else if(name.compare("SCFQP") == 0){
-          solve_flag = inverse_dynamics_two_stage_simple(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf);
+          double damping = 0;
+          ctrl->get_data<double>(plugin_namespace+".damping",damping);
+          solve_flag = inverse_dynamics_two_stage_simple(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf, damping);
         }
       } catch (std::exception e){
         solve_flag = false;

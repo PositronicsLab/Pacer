@@ -178,8 +178,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     }
   }
      */
-    /////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////// Apply Delay: /////////////////////////////////
     
 #endif
   
@@ -286,26 +284,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     OUT_LOG(logINFO) << "MOBY: control: " << control_force;
   }
   }
-//
-//  Ravelin::VectorNd base_control(6);
-//  if(false && robot_ptr->get_data<Ravelin::VectorNd>("base-control",base_control) ){
-//    for(int i=0;i<6;i++)
-//      control_force[num_joint_dof+i] = base_control[i];
-//    OUT_LOG(logINFO) << "MOBY: base control: " << control_force.segment(num_joint_dof,num_joint_dof+6);
-//  }
-//  
-//  Ravelin::VectorNd base_update(7);
-//  if(false && robot_ptr->get_data<Ravelin::VectorNd>("base-state",base_update) ){
-//    Ravelin::VectorNd generalized_q;
-//    abrobot->get_generalized_coordinates_euler(generalized_q);
-//    //static Ravelin::VectorNd first_generalized_q = generalized_q;
-////    for(int i=0;i<3;i++)
-////      generalized_q[num_joint_dof+i] = first_generalized_q[num_joint_dof+i] + base_update[i];
-//    for(int i=3;i<7;i++)
-//      generalized_q[num_joint_dof+i] = base_update[i];
-//    OUT_LOG(logINFO) << "MOBY: base state update: " << base_update;
-//    abrobot->set_generalized_coordinates_euler(generalized_q);
-//  }
+
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
   for(int i=0;i<eef_names.size();i++)
     robot_ptr->remove_data(eef_names[i]+".contact-force");
@@ -391,87 +370,6 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     }
   }
   OUT_LOG(logERROR) << "0, Sum normal force: " << normal_sum ;
-
-  /////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////// Get State: ///////////////////////////////////
-
-#ifdef COMPARE_SIM_STATE
-  int num_joint_dof;
-  
-  static std::vector<JointPtr> joints = abrobot->get_joints();
-  static std::map<std::string, JointPtr> joints_map;
-  if (joints_map.empty()) {
-    for (std::vector<JointPtr>::iterator it = joints.begin(); it != joints.end(); it++)
-      joints_map[(*it)->joint_id] = (*it);
-  }
-  
-  Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
-  
-  {
-    abrobot->get_generalized_coordinates_euler(generalized_q);
-    abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,generalized_qd);
-//    abrobot->get_generalized_forces(generalized_fext);
-  }
-  
-  {
-    // Re-map state simulation->robot joints
-    std::map<std::string, Ravelin::VectorNd> q,qd,fext;
-    Ravelin::VectorNd q_joints,qd_joints,fext_joints;
-    for (int i=0;i<joints.size();i++){
-      q[joints[i]->joint_id] = joints[i]->q;
-      qd[joints[i]->joint_id] = joints[i]->qd;
-//      Ravelin::VectorNd& dofs
-//      = (fext[joints[i]->joint_id] = Ravelin::VectorNd(joints[i]->num_dof()));
-//      for (int j=0;j<joints[i]->num_dof();j++)
-//        dofs[j] = generalized_fext[joints[i]->get_coord_index()+j];
-    }
-    
-    robot_ptr->convert_to_generalized(q,q_joints);
-    robot_ptr->convert_to_generalized(qd,qd_joints);
-//    robot_ptr->convert_to_generalized(fext,fext_joints);
-    
-    generalized_q.set_sub_vec(0,q_joints);
-    generalized_qd.set_sub_vec(0,qd_joints);
-//    generalized_fext.set_sub_vec(0,fext_joints);
-    
-    num_joint_dof = q_joints.size();
-  }
-  
-  OUT_LOG(logERROR) << "generalized_q (post-contact) " << generalized_q << normal_sum ;
-  OUT_LOG(logERROR) << "generalized_qd (post-contact) " << generalized_qd << normal_sum ;
-#endif
-}
-
-boost::shared_ptr<Moby::ContactParameters> get_contact_parameters(Moby::CollisionGeometryPtr geom1, Moby::CollisionGeometryPtr geom2){
-  
-
-  boost::shared_ptr<Moby::ContactParameters> e = boost::shared_ptr<Moby::ContactParameters>(new Moby::ContactParameters());
-
-#ifdef RANDOM_FRICTION
-  static std::default_random_engine generator;
-  static std::uniform_real_distribution<double> distribution(0.1,1.4);
-
-  e->mu_coulomb = distribution(generator);
-#endif
-  
-#ifdef LOW_FRICTION
-  Moby::SingleBodyPtr sb1 = geom1->get_single_body();
-  Moby::SingleBodyPtr sb2 = geom2->get_single_body();
-  
-  Ravelin::Vector3d point(0,0,0);
-  if(robot_ptr->is_end_effector(sb1->id)){
-    point = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,sb1->get_pose()));
-  } else if(robot_ptr->is_end_effector(sb2->id)){
-    point = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,sb2->get_pose()));
-  }
-  
-  if (point[0] > 1.0)
-    e->mu_coulomb = 0.2;
-  else
-    e->mu_coulomb = 1000;
-
-#endif
-  return e;
 }
 
 boost::weak_ptr<Moby::ArticulatedBody> abrobot_weak_ptr;
@@ -479,9 +377,18 @@ boost::weak_ptr<Moby::ArticulatedBody> abrobot_weak_ptr;
 void post_step_callback_fn(Moby::Simulator* s){
   boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
 
+  bool   display_moby_skeleton = false;
+  bool   display_pacer_skeleton = false;
+
+  robot_ptr->get_data<bool>("moby.display-moby-skeleton",display_moby_skeleton);
+  robot_ptr->get_data<bool>("moby.display-pacer-skeleton",display_pacer_skeleton);
 #ifndef NDEBUG
+  display_moby_skeleton = true;
+  display_pacer_skeleton = true;
+#endif
+
 #ifdef USE_OSG_DISPLAY
-  {
+  if(display_moby_skeleton){
   // display collision
   static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
 
@@ -540,7 +447,7 @@ void post_step_callback_fn(Moby::Simulator* s){
 #endif
   
 #ifdef USE_OSG_DISPLAY
-  {
+  if(display_pacer_skeleton){
   // display collision
   static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
   robot_ptr->set_model_state(robot_ptr->get_generalized_value(Pacer::Robot::position));
@@ -598,7 +505,6 @@ void post_step_callback_fn(Moby::Simulator* s){
   }
   }
 #endif
-#endif
   robot_ptr->reset_state();
   
   bool WAIT_TIMESTEP = false;
@@ -607,13 +513,6 @@ void post_step_callback_fn(Moby::Simulator* s){
     sleep_duration(0.001);
   }
   
-}
-
-/// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
-  for(int i=0;i< e.size();i++){
-    OUT_LOG(logDEBUG1) << e[i] ;
-  }
 }
 
 // ============================================================================
@@ -724,19 +623,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   //base
   gq.set_sub_vec(gq.size()-7,base_x);
   gqd.set_sub_vec(gqd.size()-6,base_xd);
-  // joints
-  /*
-  for(int i=0;i<joints.size();i++){
-    //      joints[i]->add_force(u[joints[i]->joint_id]);
-    int joint_index = joints[i]->get_coord_index();
-    int num_joint_dofs = joints[i]->num_dof();
-    std::string& joint_id = joints[i]->joint_id;
-    for(int joint_dof=0;joint_dof<num_joint_dofs;joint_dof++){
-      gq[joint_index+joint_dof] = q_start[joint_id][joint_dof];
-      gqd[joint_index+joint_dof] = qd_start[joint_id][joint_dof];
-    }
-  }
-  */
+
   // send to moby
   abrobot->set_generalized_coordinates_euler(gq);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);

@@ -85,9 +85,9 @@ void loop(){
     std::map<std::string, Ravelin::Origin3d > xd_des;
 //    std::map<std::string, Ravelin::Origin3d > xdd_des;
     
-    ctrl->get_foot_value(Pacer::Controller::position_goal,x_des);
-    ctrl->get_foot_value(Pacer::Controller::velocity_goal,xd_des);
-//    ctrl->get_foot_value(Pacer::Controller::acceleration_goal,xdd_des);
+    ctrl->get_end_effector_value(Pacer::Controller::position_goal,x_des);
+    ctrl->get_end_effector_value(Pacer::Controller::velocity_goal,xd_des);
+//    ctrl->get_end_effector_value(Pacer::Controller::acceleration_goal,xdd_des);
     
     // Save Delayed Value into deque
     x_queue.push_back(std::pair<double,std::map<std::string, Ravelin::Origin3d > >(t+delay_time,x_des));
@@ -115,9 +115,9 @@ void loop(){
 //    last_xdd_des = xdd_des;
     
     // send to robot
-    ctrl->set_foot_value(Pacer::Controller::position_goal,x_des);
-    ctrl->set_foot_value(Pacer::Controller::velocity_goal,xd_des);
-//    ctrl->set_foot_value(Pacer::Controller::acceleration_goal,xdd_des);
+    ctrl->set_end_effector_value(Pacer::Controller::position_goal,x_des);
+    ctrl->set_end_effector_value(Pacer::Controller::velocity_goal,xd_des);
+//    ctrl->set_end_effector_value(Pacer::Controller::acceleration_goal,xdd_des);
   }
   }
 }

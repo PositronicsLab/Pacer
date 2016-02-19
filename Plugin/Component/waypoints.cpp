@@ -20,7 +20,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     // World frame
     boost::shared_ptr<Ravelin::Pose3d>
         environment_frame(new Ravelin::Pose3d());
-    Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Pose(*environment_frame.get())));
+    VISUALIZE(POSE(*environment_frame.get(),0.1));
 
       boost::shared_ptr<Ravelin::Pose3d>
         base_horizontal_frame(new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_horizontal_frame")));
@@ -97,13 +97,13 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       OUT_LOG(logDEBUG1) << "num_wps = " << num_waypoints;
       OUT_LOG(logDEBUG1) << "distance_to_wp = " << distance_to_wp;
       OUT_LOG(logDEBUG1) << "waypoint_index = " << waypoint_index;
-      Utility::visualize.push_back(Pacer::VisualizablePtr(new Pacer::Ray(next_waypoint,com,Ravelin::Vector3d(1,0.5,0))));
+      VISUALIZE(RAY(next_waypoint,com,Ravelin::Vector3d(1,0.5,0),0.05));
       OUT_LOG(logDEBUG1) << "next_wp" << next_waypoint;
 
       for(int i=0;i<num_waypoints;i++){
           Ravelin::Vector3d wp(waypoints[i].first,waypoints[i].second,0,environment_frame);
           OUT_LOG(logDEBUG1) << "\twp" << wp;
-      Utility::visualize.push_back(Pacer::VisualizablePtr( new Pacer::Point(wp,Ravelin::Vector3d(1,0.5,0),0.1)));
+      VISUALIZE(POINT(wp,Ravelin::Vector3d(1,0.5,0),0.1));
       }
 
       goto_point = next_waypoint;

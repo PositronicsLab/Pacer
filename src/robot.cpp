@@ -30,7 +30,7 @@ void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::Matrix
 }
 
 void Robot::compile(){
-  check_phase(initialization);
+  check_phase_internal(initialization);
   NDOFS = _abrobot->num_generalized_coordinates(Ravelin::DynamicBodyd::eSpatial);
   NUM_JOINT_DOFS = NDOFS - NSPATIAL;
   
@@ -61,13 +61,12 @@ void Robot::compile(){
       OUT_LOG(logDEBUG1) << (*it)->body_id;
   }
   
-  _foot_ids.clear();
+  _end_effector_ids.clear();
   _root_link = links[0];
   for(unsigned i=0;i<links.size();i++){
     _id_link_map[links[i]->body_id] = links[i];
     if (links[i]->is_end_effector()) {
-      _id_foot_map[links[i]->body_id] = links[i];
-      _foot_ids.push_back(links[i]->body_id);
+      _end_effector_ids.push_back(links[i]->body_id);
     }
   }
   
@@ -80,7 +79,7 @@ void Robot::compile(){
   _link_ids = get_map_keys(_id_link_map);
   
   // NOTE: This data comes from the robot model now
-//  _foot_ids = get_data<std::vector<std::string> >("init.end-effector.id");
+//  _end_effector_ids = get_data<std::vector<std::string> >("init.end-effector.id");
   
   // initialize state data with name data
   init_state();
@@ -115,11 +114,11 @@ void Robot::compile(){
   // set up enbd effectors
   // TODO: (Depricated?)
   // Initialize end effectors
-  for(unsigned i=0;i<_foot_ids.size();i++){
+  for(unsigned i=0;i<_end_effector_ids.size();i++){
     boost::shared_ptr<end_effector_t> eef
     = boost::shared_ptr<end_effector_t>(new end_effector_t);
-    eef->link = _id_link_map[_foot_ids[i]];
-    OUT_LOG(logDEBUG1) << "eef link id = " << _foot_ids[i] << ", " << eef->link;
+    eef->link = _id_link_map[_end_effector_ids[i]];
+    OUT_LOG(logDEBUG1) << "eef link id = " << _end_effector_ids[i] << ", " << eef->link;
     
     eef->id = eef->link->body_id;
     
@@ -146,13 +145,14 @@ void Robot::compile(){
     }
     while (rb_ptr != _abrobot->get_base_link());
     
-    _id_end_effector_map[_foot_ids[i]] = eef;
+    _id_end_effector_map[_end_effector_ids[i]] = eef;
+    _id_end_effector_map[_end_effector_ids[i]] = eef;
     
   }
 }
 
 void Robot::update(){
-  check_phase(misc_sensor);
+  check_phase_internal(misc_sensor);
 
   // Propagate data set in _state into robot model
   Ravelin::VectorNd generalized_q = get_generalized_value(position);
@@ -197,7 +197,7 @@ void Robot::update(){
 }
 
 void Robot::update_poses(){
-  check_phase(misc_sensor);
+  check_phase_internal(misc_sensor);
 
   Ravelin::Pose3d base_link_frame(*(_root_link->get_pose().get()));
   
@@ -225,103 +225,19 @@ void Robot::update_poses(){
   set_data<Ravelin::Pose3d>("base_horizontal_frame",base_horizontal_frame);
   
   Ravelin::Pose3d GLOBAL_POSE;
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_link_frame,0.8)));
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(base_horizontal_frame,1.5)));
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pose(GLOBAL_POSE,1.0)));
+  VISUALIZE(POSE(base_link_frame,0.8));
+  VISUALIZE(POSE(base_horizontal_frame,1.5));
+  VISUALIZE(POSE(GLOBAL_POSE,1.0));
   
 }
 
 // ============================================================================
 // ===========================  BEGIN ROBOT INIT  =============================
 
-#include <stdlib.h>
-#include <Moby/SDFReader.h>
-#include <Moby/XMLReader.h>
-#include <Moby/ArticulatedBody.h>
 void Robot::init_robot(){
-  check_phase(initialization);
+  check_phase_internal(initialization);
   OUT_LOG(logDEBUG) << "> > Robot::init_robot(.)";
-  // ================= LOAD SCRIPT DATA ==========================
   
-  std::string robot_model_file = get_data<std::string>("robot-model");
-
-  std::string model_type;
-  
-  {
-    std::vector<std::string> strs;
-    boost::split(strs,robot_model_file,boost::is_any_of("."));
-    if (strs.size() < 1) {
-      OUT_LOG(logERROR) << robot_model_file << " has no file extension!";
-      throw std::runtime_error(robot_model_file + " has no file extension!");
-    }
-    model_type = strs.back();
-  }
-
-  if (robot_model_file[0] != '/') {
-    if (!getenv("PACER_MODEL_PATH"))
-      throw std::runtime_error("Environment variable PACER_MODEL_PATH not defined");
-    
-    std::string pPath(getenv ("PACER_MODEL_PATH"));
-    OUT_LOG(logDEBUG) << "PACER_MODEL_PATH = " << pPath;
-    robot_model_file = pPath+"/"+robot_model_file;
-  }
-  
-  
-  // ================= BUILD ROBOT ==========================
-  // Get Model type
-  
-  
-  OUT_LOG(logINFO) << "Using robot model : " << robot_model_file;
-  
-  /// The map of objects read from the simulation XML file
-  if(model_type.compare("sdf") == 0){
-    std::map<std::string, Moby::ControlledBodyPtr> READ_MAP = Moby::SDFReader::read_models(robot_model_file);
-    for (std::map<std::string, Moby::ControlledBodyPtr>::const_iterator i = READ_MAP.begin();
-         i !=READ_MAP.end(); i++)
-    {
-      OUT_LOG(logINFO) << "Checking: " << i->first;
-      // find the robot reference
-      if (!_abrobot)
-      {
-        _abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(i->second);
-      }
-      
-      if (_abrobot)
-      {
-        OUT_LOG(logINFO) << "Using robot: " << i->first;
-        break;
-      }
-    }
-    
-    if (!_abrobot){
-      throw std::runtime_error("could not find RCArticulatedBody for robot SDF: " + robot_model_file);
-    }
-  } else if(model_type.compare("xml") == 0){
-    std::cerr << "look for model: " << robot_model_file << std::endl;
-    
-    std::map<std::string, Moby::BasePtr> READ_MAP = Moby::XMLReader::read(std::string(robot_model_file));
-    for (std::map<std::string, Moby::BasePtr>::const_iterator i = READ_MAP.begin();
-         i !=READ_MAP.end(); i++)
-    {
-      // find the robot reference
-      if (!_abrobot)
-      {
-        _abrobot = boost::dynamic_pointer_cast<Ravelin::ArticulatedBodyd>(i->second);
-      }
-      
-      if (_abrobot)
-      {
-        OUT_LOG(logINFO) << "Using robot: " << i->first;
-        break;
-      }
-    }
-    
-    if (!_abrobot){
-      throw std::runtime_error("could not find RCArticulatedBody for robot XML: " + robot_model_file);
-    }
-  } else {
-    throw std::runtime_error("Robot model file ["+robot_model_file+"] has unknown extension : " + model_type);
-  }
   compile();
   
   // Initialized Joints
@@ -350,27 +266,34 @@ void Robot::init_robot(){
   // Initialize base
   std::vector<double>
   base_start = get_data<std::vector<double> >("init.base.x");
-  Ravelin::Quatd init_quat =
-  Ravelin::Quatd::rpy(base_start[3],base_start[4],base_start[5]);
+
+  if (base_start.size() == 0) {
+    FIXED_BASE = true;
+  }
   
-  Ravelin::VectorNd init_base(7);
-  init_base[0] = base_start[0];
-  init_base[1] = base_start[1];
-  init_base[2] = base_start[2];
-  init_base[3] = init_quat.x;
-  init_base[4] = init_quat.y;
-  init_base[5] = init_quat.z;
-  init_base[6] = init_quat.w;
-  
-  std::vector<double> base_startv(6);
-  std::fill(base_startv.begin(),base_startv.end(),0);
-  get_data<std::vector<double> >("init.base.xd",base_startv);
-  Ravelin::VectorNd init_basev(6,&base_startv[0]);
-  
-  set_joint_value(position,init_q);
-  set_base_value(position,init_base);
-  
-  set_joint_value(velocity,init_qd);
-  set_base_value(velocity,init_basev);
+  if(floating_base()){
+    Ravelin::Quatd init_quat =
+    Ravelin::Quatd::rpy(base_start[3],base_start[4],base_start[5]);
+    
+    Ravelin::VectorNd init_base(7);
+    init_base[0] = base_start[0];
+    init_base[1] = base_start[1];
+    init_base[2] = base_start[2];
+    init_base[3] = init_quat.x;
+    init_base[4] = init_quat.y;
+    init_base[5] = init_quat.z;
+    init_base[6] = init_quat.w;
+    
+    std::vector<double> base_startv(6);
+    std::fill(base_startv.begin(),base_startv.end(),0);
+    get_data<std::vector<double> >("init.base.xd",base_startv);
+    Ravelin::VectorNd init_basev(6,&base_startv[0]);
+    
+    set_joint_value(position,init_q);
+    set_base_value(position,init_base);
+    
+    set_joint_value(velocity,init_qd);
+    set_base_value(velocity,init_basev);
+  }
   OUT_LOG(logDEBUG) << "<< Robot::init_robot(.)";
 }

@@ -19,12 +19,12 @@
 
 #include <Moby/LCP.h>
 
-//#undef OUT_LOG
-//#define OUT_LOG(level) \
-//std::cout << std::endl << Logger::ToString(level) << " -- "
-//#undef OUTLOG
-//#define OUTLOG(x,name,level) \
-//std::cout << std::endl << Logger::ToString(level) << " -- " << name << " = \n" << x;
+#undef OUT_LOG
+#define OUT_LOG(level) \
+std::cout << std::endl << Logger::ToString(level) << " -- "
+#undef OUTLOG
+#define OUTLOG(x,name,level) \
+std::cout << std::endl << Logger::ToString(level) << " -- " << name << " = \n" << x;
 
 //#define TIMING
 
@@ -396,8 +396,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
         if(is_stance)
           active_feet.push_back(foot_names[i]);
     }
-  } else
+  } else {
     active_feet = foot_names;
+  }
   
   double mcpf = 1e2;
   ctrl->get_data<double>(plugin_namespace+".max-contacts-per-foot",mcpf);
@@ -413,7 +414,6 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   std::vector<unsigned> indices;
   std::vector< boost::shared_ptr<Pacer::Robot::contact_t> > contacts;
   boost::shared_ptr<Pose3d> base_link_frame = boost::shared_ptr<Pose3d>( new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
-
   
   for(int i=0;i<active_feet.size();i++){
     std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
@@ -446,6 +446,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       }
     }
   }
+  
+  
   
   int NC = contacts.size();
   OUT_LOG(logDEBUG) << "Number Active Contacts: " << NC;
@@ -652,10 +654,15 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
           double damping = 0;
           ctrl->get_data<double>(plugin_namespace+".damping",damping);
           solve_flag = inverse_dynamics_two_stage_simple(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf, damping);
+        } else if(name.compare("SNSQP") == 0){
+          double damping = 0;
+          ctrl->get_data<double>(plugin_namespace+".damping",damping);
+          solve_flag = inverse_dynamics_two_stage_simple_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,id,cf, damping);
         }
       } catch (std::exception e){
         solve_flag = false;
       }
+
   
     if(!std::isfinite(cf.norm()) || !std::isfinite(id.norm())){
       OUTLOG(DT,"DT",logDEBUG);

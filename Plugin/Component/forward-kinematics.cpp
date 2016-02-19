@@ -36,7 +36,7 @@ void loop(){
     
     Ravelin::Pose3d foot_pose(Ravelin::Matrix3d(link->get_pose()->q)*Ravelin::Matrix3d(0,0,-1, -1,0,0, 0,1,0),link->get_pose()->x,link->get_pose()->rpose);
     foot_pose.update_relative_pose(Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));
+    VISUALIZE(POSE(foot_pose,0.8));
     
     //    OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
     
@@ -49,9 +49,9 @@ void loop(){
 
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::position_goal,foot_pose.x);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::velocity_goal,xd);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::acceleration_goal,xdd);
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::position_goal,foot_pose.x);
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::velocity_goal,xd);
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::acceleration_goal,xdd);
   }
 }
 void setup(){

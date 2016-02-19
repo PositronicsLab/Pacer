@@ -73,12 +73,12 @@ public:
     for (int i=0; i< num_eefs; i++)
     {
       Ravelin::Origin3d
-      pos =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::position),
-      vel =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::velocity);
+      pos =  ctrl_ptr->get_end_effector_value(eef_names[i],Pacer::Robot::position),
+      vel =  ctrl_ptr->get_end_effector_value(eef_names[i],Pacer::Robot::velocity);
       
       Ravelin::Origin3d
-      pos_des =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::position_goal),
-      vel_des =  ctrl_ptr->get_foot_value(eef_names[i],Pacer::Robot::velocity_goal);
+      pos_des =  ctrl_ptr->get_end_effector_value(eef_names[i],Pacer::Robot::position_goal),
+      vel_des =  ctrl_ptr->get_end_effector_value(eef_names[i],Pacer::Robot::velocity_goal);
       
       Ravelin::Origin3d base_joint = ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".base");
       double max_reach = ctrl_ptr->get_data<double>(eef_names[i]+".reach");
@@ -97,10 +97,10 @@ public:
         Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(pos_des,base_link_frame));
         Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(pos,base_link_frame));
         //      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
-        Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p1,   Vector3d(0,1,0),0.01)));
-        Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  p2,   p1,   Vector3d(1,0,0),0.01)));
+        VISUALIZE(POINT( p1,   Vector3d(0,1,0),0.01));
+        VISUALIZE(RAY(  p2,   p1,   Vector3d(1,0,0),0.01));
         Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,vel_des)/10;
-        Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p1,   p1,   Vector3d(0,1,0),0.01)));
+        VISUALIZE(RAY(  v+p1,   p1,   Vector3d(0,1,0),0.01));
       }
 #endif
       

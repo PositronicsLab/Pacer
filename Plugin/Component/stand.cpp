@@ -28,9 +28,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     Ravelin::Origin3d x = ctrl->get_data<Ravelin::Origin3d>(foot_names[i]+".init.x"),
       xd(0,0,0),
       xdd(0,0,0);
-    ctrl->set_foot_value(foot_names[i],Pacer::Controller::position_goal,x);
-    ctrl->set_foot_value(foot_names[i],Pacer::Controller::velocity_goal,xd);
-    ctrl->set_foot_value(foot_names[i],Pacer::Controller::acceleration_goal,xdd);
+    ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::position_goal,x);
+    ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::velocity_goal,xd);
+    ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::acceleration_goal,xdd);
 //    ctrl->set_data<bool>(foot_names[i]+".stance",true);
   }
 }

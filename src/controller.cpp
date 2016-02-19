@@ -143,9 +143,14 @@ void Controller::init(){
   OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
   FILELog::ReportingLevel() =
   FILELog::FromString( (!LOG_TYPE.empty() ) ? LOG_TYPE : "INFO");
+  // ================= IMPORT CONTROLLED ROBOT =================
+  std::string robot_model_file = get_data<std::string>("robot-model");
+  
+  read_robot_from_file(robot_model_file,get_abrobot());
   // ================= INIT ROBOT ==========================
+  controller_phase = INITIALIZATION;
+
   init_robot();
-  // After Robot loads, load plugins
 }
 
 // ============================================================================

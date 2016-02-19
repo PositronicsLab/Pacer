@@ -630,6 +630,394 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
   return true;
 }
 
+/** Maximal Dissipation Model (contact + inverse dynamics) -- Simple setup
+ *  min{z}  v+' M v+
+ *  such that:
+ *  v+ = v + inv(M)([ N, ST+, ST- ] z + h fext + P tau)
+ *  N' v+ >= 0
+ *  f_N >= 0
+ *  mu * f_N{i} >= 1' [f_S{i}; f_T{i}] for i=1:nc
+ *  P' v+ = v + h qdd
+ **/
+bool inverse_dynamics_two_stage_simple_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N, const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final,double damping = 0){
+  Ravelin::MatrixNd workM1,workM2;
+  Ravelin::VectorNd workv1, workv2;
+  
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics_two_stage_simple_NO_SLIP() entered" << std::endl;
+  
+  // get number of degrees of freedom and number of contact points
+  int n = M.rows();
+  int nq = n - 6;
+  int nc = N.columns();
+  
+  OUTLOG(nc,"nc",logDEBUG1);
+  OUTLOG(nq,"nq",logDEBUG1);
+  OUTLOG(n,"n",logDEBUG1);
+  
+  Ravelin::VectorNd vq = v.segment(0,nq);
+  Ravelin::VectorNd vb = v.segment(nq,n);
+  
+  Ravelin::VectorNd vqstar;
+  ((vqstar = qdd) *= h) += vq;
+  
+  // Invert M
+  Ravelin::MatrixNd iM_chol;
+  iM_chol = M;
+  if(!LA_.factor_chol(iM_chol)){
+    OUTLOG(M,"M",logDEBUG1);
+    throw std::runtime_error("Chol Factorization Failed on M");
+  }
+  Ravelin::MatrixNd iM = Ravelin::MatrixNd::identity(n);
+  LA_.solve_chol_fast(iM_chol,iM);
+  
+  
+  // P selection matrix
+  Ravelin::MatrixNd P = Ravelin::MatrixNd::zero(nq,n);
+  P.block(0,nq,0,nq) = Ravelin::MatrixNd::identity(nq);
+  
+  // X matrix
+  // | M  P'|
+  // | P  0 |
+  Ravelin::MatrixNd X = Ravelin::MatrixNd::zero(n+nq,n+nq);
+  X.set_sub_mat(0,0,M);
+  X.set_sub_mat(n,0,P);
+  X.set_sub_mat(0,n,P,Ravelin::eTranspose);
+  // Hard contact
+  Ravelin::MatrixNd DampingMatrix = Ravelin::MatrixNd::identity(nq);
+  DampingMatrix *= damping;
+  X.set_sub_mat(n,n,DampingMatrix);
+  
+  /*
+   // inv(X) matrix
+   // | gamma        delta    |
+   // | delta'       epsilon  |
+   
+   Ravelin::MatrixNd delta, gamma, iMPT,PiMPT,epsilon;
+   // inv(M) P'
+   workM1 = P;
+   workM1.transpose();
+   LA_.solve_chol_fast(iM_chol,iMPT = workM1);
+   
+   // P inv(M) P'
+   P.mult(iMPT,PiMPT);
+   
+   // inv((P inv(M) P')')
+   epsilon = Ravelin::MatrixNd::identity(nq);
+   LA_.solve_fast(workM1 = PiMPT,epsilon);
+   
+   // delta = inv(M) P' inv((P inv(M) P')')
+   iMPT.mult(epsilon,delta);
+   
+   // epsilon = -inv((P inv(M) P')')
+   epsilon.negate();
+   
+   // gamma = inv(M) - delta P inv(M)
+   delta.mult_transpose(iMPT,gamma=iM,-1,1);
+   
+   // Rebuild
+   Ravelin::MatrixNd iX(n+nq,n+nq);
+   iX.set_sub_mat(0,0,gamma);
+   iX.set_sub_mat(n,0,delta,Ravelin::eTranspose);
+   iX.set_sub_mat(0,n,delta);
+   iX.set_sub_mat(n,n,epsilon);
+   #ifdef NDEBUG
+   // DEBUGGING OUTPUT
+   if (LOG(logDEBUG1)) {
+   // Solve Inversion Method
+   //  Ravelin::MatrixNd iX2 = Ravelin::MatrixNd::identity(n+nq);
+   //  LA_.solve_fast(X,iX2);
+   
+   // Symmetric inversion method
+   Ravelin::MatrixNd iX2 = X;
+   LA_.inverse_symmetric(iX2);
+   
+   OUTLOG((iX2-=iX).norm_inf(),"inversion accuracy: iX",logDEBUG1);
+   
+   OUTLOG(gamma,"gamma",logDEBUG1);
+   
+   //  OUTLOG(gamma.mult(M.mult(gamma,workM1),workM2),"gamma == gamma*M*gamma",logERROR);
+   OUTLOG(gamma.mult(M.mult(gamma,workM1),workM2 = gamma,-1,1).norm_inf(),"0 == gamma - gamma*M*gamma",logDEBUG1);
+   OUTLOG(gamma.mult(M.mult(delta,workM1),workM2).norm_inf(),"0 == gamma*M*delta",logDEBUG1);
+   }
+   #endif
+   */
+  
+  Ravelin::MatrixNd delta, gamma,epsilon;
+  Ravelin::MatrixNd iX = X;
+  LA_.inverse_symmetric(iX);
+  
+  OUTLOG(iX,"iX",logDEBUG1);
+  
+  gamma = iX.block(0,n,0,n);
+  delta = iX.block(0,n,n,n+nq);
+  epsilon = iX.block(n,n+nq,n,n+nq);
+  
+  OUTLOG(gamma,"gamma",logDEBUG1);
+  OUTLOG(delta,"delta",logDEBUG1);
+  OUTLOG(epsilon,"epsilon",logDEBUG1);
+  
+  
+  // Compute Jacobians
+  int nk = (nc == 0)? 0 : ST.columns()/nc;
+  int nvars = nc + nc*(nk);
+  
+  OUTLOG(nk,"nk",logDEBUG1);
+  OUTLOG(nvars,"nvars",logDEBUG1);
+  
+  // setup R
+  Ravelin::MatrixNd R(n, nc + (nc*nk) );
+  R.block(0,n,0,nc) = N;
+  R.block(0,n,nc,nc*nk+nc) = ST;
+  
+  // Calculate Mv + hFext
+  Ravelin::VectorNd Mv_fext;
+  M.mult(v,Mv_fext = fext,1,h);
+  
+  OUTLOG(Mv_fext,"v",logDEBUG1);
+  OUTLOG(N,"N",logDEBUG1);
+  OUTLOG(ST.block(0,n,0,nc*2),"D",logDEBUG1);
+  OUTLOG(M,"M",logDEBUG1);
+  OUTLOG(P,"P",logDEBUG1);
+  
+  if(nc > 0){
+    
+    /////////////////////////////////////////////////////////////////////////////
+    ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    
+    /////////////////////////////// OBJECTIVE ///////////////////////////////////
+    // MIN: [z]' R' gamma' M gamma R [z] + ( (v' M' + h fext) gamma')M gamma R [z]
+    // Matrix: G = R' gamma' M gamma R
+    //    --(gamma' M gamma  == gamma)-->
+    // G = R' gamma R
+    Ravelin::MatrixNd G, YR;
+    R.transpose_mult(gamma.mult(R,YR),G);
+    
+    // Vector: c = ( (v' M' + h fext)' gamma' + (vq*)' delta' )M gamma R
+    //    --(gamma' M gamma  == gamma)-->
+    // c = ( (v' M' + h fext) gamma R
+    
+    Ravelin::VectorNd c, vqstar_delta_M;
+    YR.transpose_mult(Mv_fext,c);
+    //    --(delta' M gamma  == 0)-->
+    //        R.transpose_mult( gamma.transpose_mult( M.mult(delta.mult(vqstar,vqstar_delta_M),workv1),workv2),c,1,1);
+    OUTLOG(G,"G",logDEBUG1);
+    OUTLOG(c,"c",logDEBUG1);
+    
+    ////////////////////////////// CONSTRAINTS ///////////////////////////////////
+    
+    // setup linear inequality constraints -- noninterpenetration
+    // N v+ >= 0
+    // N Y R z + NY(Mv + hfext)>=0
+    Ravelin::MatrixNd A1;
+    Ravelin::VectorNd b1;
+    N.transpose_mult(YR,A1);
+    N.transpose_mult(gamma.mult(Mv_fext,workv1),b1,-1,0);
+    N.transpose_mult(delta.mult(vqstar,workv1),b1,-1,1);
+    OUTLOG(A1,"A_noninterpen",logDEBUG1);
+    OUTLOG(b1,"b_noninterpen",logDEBUG1);
+    
+    // combine all linear inequality constraints
+    assert(A1.columns() == A2.columns());
+    Ravelin::MatrixNd A(A1.rows(),A1.columns());
+    Ravelin::VectorNd b(b1.rows());
+    A.block(0,A1.rows(),0,A1.columns()) = A1;
+    b.segment(0,b1.rows()) = b1;
+    
+    /// Stage 1 optimization energy minimization
+    Ravelin::VectorNd z(nvars);
+    
+    static Ravelin::VectorNd _v;
+    if(!Utility::solve_qp_pos(G,c,A,b,z,_v,false,true)){
+      OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!";
+      return false;
+    }
+    
+    OUTLOG(z,"Z_OP1",logDEBUG1);
+    // measure feasibility of solution
+    // qM z - qq >= 0
+    Ravelin::VectorNd feas;
+    A.mult(z,feas) -= b;
+    
+    OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)",logDEBUG1);
+    
+    if(feas.rows() > 0){
+      double min_elem = *std::min_element(feas.begin(), feas.end());
+      if(min_elem < -Pacer::NEAR_ZERO){
+        OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
+        return false;
+      } else {
+        cf_final = z;
+      }
+    }
+    
+    // DEBUGGING OUTPUT
+    if (LOG(logDEBUG1))
+    {
+      Ravelin::VectorNd f_vqstar(n+nq), vplus_tau;
+      
+      // [ Mv + Rz + hfext ; vq*]
+      Ravelin::VectorNd f = Mv_fext;
+      R.mult(cf_final,f,1,1);
+      f_vqstar.segment(0,n) = f;
+      f_vqstar.segment(n,n+nq) = vqstar;
+      OUTLOG(vqstar,"vq*",logDEBUG1);
+      
+      // [v+ ; tau]
+      iX.mult(f_vqstar,vplus_tau);
+      Ravelin::VectorNd vplus = vplus_tau.segment(0,n);
+      OUTLOG(vplus,"v+ (stage 1)",logERROR);
+      OUTLOG(0.5*M.mult(vplus,workv1).dot(vplus),"KE (after stage 1)",logERROR);
+      
+      OUTLOG(c.dot(z) + 0.5*G.mult(z,workv1).dot(z),"KE dissipation (stage 1)",logERROR);
+      
+      x = vplus_tau.segment(n,n+nq);
+      x /= -h;
+      OUTLOG(x,"tau",logDEBUG1);
+      OUTLOG(x.norm(),"||tau|| -- 1",logDEBUG1);
+    }
+    
+    /////////////////////////////////////////////////////////////////////////////
+    ///////////////// Stage 2 optimization: command smoothing ///////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    
+    // Z = null(G)
+    Ravelin::MatrixNd Z;
+    LA_.nullspace(G,Z);
+    unsigned size_null_space = Z.columns();
+    if(size_null_space != 0 && Z.norm_inf() > NEAR_ZERO)
+    {
+      OUT_LOG(logDEBUG1)  << "Nullspace exists! solving stage 2...";
+      
+      OUTLOG(Z,"null(G)",logDEBUG1);
+      OUTLOG(Z.norm_inf(),"|Z|_inf",logDEBUG1);
+      OUTLOG(R.mult(Z,workM1),"R*null(G)",logDEBUG1);
+      
+      OUTLOG(Z,"null(G)",logDEBUG1);
+      
+      /////////////////////////////// OBJECTIVE ///////////////////////////////////
+      // w'Z'R'Y'M Y R Z w
+      // Matrix: G = R' delta delta' R
+      Ravelin::MatrixNd G, DTR,DTRZ;
+      delta.transpose_mult(R,DTR);
+      DTR.mult(Z,DTRZ);
+      DTRZ.transpose_mult(DTRZ,G);
+      
+      Ravelin::MatrixNd Rz_Mv_fext;
+      R.mult(z,Rz_Mv_fext = Mv_fext,1,1);
+      
+      // Vector: c = ((z' R' + v' M' + h fext)' delta + (vq*') epsilon) delta' R Z w
+      Ravelin::VectorNd c;
+      DTRZ.transpose_mult(delta.transpose_mult(Rz_Mv_fext,
+                                               epsilon.mult(vqstar,workv1),1,1),c);
+      if (LOG(logDEBUG1)) {
+        OUTLOG(delta.mult(epsilon,workM1),"delta*epsilon",logDEBUG1);
+        OUTLOG(DTRZ.transpose_mult_transpose(delta,workM1),"D D' R Z",logDEBUG1);
+        OUTLOG(DTRZ.transpose_mult(epsilon,workM1),"E' D' R Z",logDEBUG1);
+      }
+      ////////////////////////////// CONSTRAINTS ///////////////////////////////////
+      // Non-negativity Constraint
+      // (Z w + z) >= 0:
+      Ravelin::MatrixNd A1;
+      Ravelin::VectorNd b1;
+      // Z w
+      A1 = Z;
+      
+      // z (contact impulses from Stage 1)
+      b1 = z;
+      b1.negate();
+      OUTLOG(b1,"b_positive",logDEBUG1);
+      OUTLOG(A1,"A_positive",logDEBUG1);
+      
+      // Non-Interpenetration:
+      Ravelin::MatrixNd A2;
+      Ravelin::VectorNd b2;
+      
+      // A = N gamma R Z
+      N.transpose_mult(YR.mult(Z,workM1),A2);
+      // b = -N gamma (Rz + Mv + h*fext)
+      N.transpose_mult(gamma.mult(Rz_Mv_fext,workv1),b2,-1,0);
+      N.transpose_mult(delta.mult(vqstar,workv1),b2,-1,1);
+      
+      OUTLOG(b2,"b_noninterpen",logDEBUG1);
+      OUTLOG(A2,"A_noninterpen",logDEBUG1);
+      
+      // combine all linear inequality constraints
+      //      assert(A1.columns() == A2.columns());
+      //      assert(A2.columns() == A3.columns());
+      Ravelin::MatrixNd A_OP2(A1.rows()+A2.rows(),A1.columns());
+      Ravelin::VectorNd b_OP2(b1.rows()+b2.rows());
+      A_OP2.block(0,A1.rows(),0,A1.columns()) = A1;
+      A_OP2.block(A1.rows(),A1.rows()+A2.rows(),0,A2.columns()) = A2;
+      b_OP2.segment(0,b1.rows()) = b1;
+      b_OP2.segment(b1.rows(),b1.rows()+b2.rows()) = b2;
+      
+      Ravelin::VectorNd w(size_null_space);
+      
+      if(!Utility::solve_qp(G,c,A_OP2,b_OP2,w)){
+        OUT_LOG(logERROR)  << "ERROR: Unable to solve stage 2!";
+      } else {
+        OUTLOG(w,"W_OP2",logDEBUG1);
+        Ravelin::VectorNd feas;
+        A_OP2.mult(w,feas) -= b_OP2;
+        OUTLOG(feas,"feas_w_OP2 =[ % (A*z-b >= 0)",logDEBUG1);
+        
+        // Add to contact force vector
+        Z.mult(w,z,1,1);
+        // check feasibility
+        OUTLOG(z,"Z_OP2",logDEBUG1);
+        // measure feasibility of solution
+        // qM z - qq >= 0
+        A.mult(z,feas) -= b;
+        OUTLOG(feas,"feas_z_OP2 =[ % (A*z-b >= 0)",logDEBUG1);
+        if(feas.rows() > 0){
+          double min_elem = *std::min_element(feas.begin(), feas.end());
+          if(min_elem < -Pacer::NEAR_ZERO){
+            OUT_LOG(logERROR)  << "ERROR: Optimization 2 produced an infeasible result!" << min_elem;
+          } else {
+            cf_final = z;
+          }
+        }
+      }
+    }
+  }
+  
+  // Retrieve inverse dynamics forces
+  // M*v+ = M*v + P'*tau + R*z + h*fext
+  //   x  = P*v + h*qdd
+  
+  Ravelin::VectorNd f_vqstar(n+nq), vplus_tau;
+  
+  // [ Mv + Rz + hfext ; vq*]
+  Ravelin::VectorNd f = Mv_fext;
+  if(nc > 0){
+    R.mult(cf_final,f,1,1);
+  }
+  f_vqstar.segment(0,n) = f;
+  f_vqstar.segment(n,n+nq) = vqstar;
+  OUTLOG(vqstar,"vq*",logDEBUG1);
+  
+  // [v+ ; tau]
+  iX.mult(f_vqstar,vplus_tau);
+  Ravelin::VectorNd vplus = vplus_tau.segment(0,n);
+  OUTLOG(vplus,"v+ (final)",logERROR);
+  //  OUTLOG(G.mult(z,workv1 = c,1,1).dot(z),"KE dissipation (final)",logERROR);
+  
+  OUTLOG(M.mult(vplus,workv1).dot(vplus),"KE (final)",logERROR);
+  
+  x = vplus_tau.segment(n,n+nq);
+  x /= -h;
+  OUTLOG(x,"tau",logDEBUG1);
+  OUTLOG(x.norm(),"||tau|| -- 2",logDEBUG1);
+  
+  
+  
+  // Some debugging dialogue
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics_two_stage_simple_NO_SLIP() exited" << std::endl;
+  return true;
+}
+
+
 /** Maximal Dissipation Model (contact + inverse dynamics) -- Algebraic setup -- 1 stage
  *  min{z}  v+' M v+
  *  such that:
@@ -1599,7 +1987,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   Ravelin::MatrixNd P;
   LA_.nullspace(H,P);
   unsigned size_null_space = P.columns();
-  if(size_null_space != 0)
+  if(size_null_space != 0 && P.norm_inf() > NEAR_ZERO && nc > 2)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0

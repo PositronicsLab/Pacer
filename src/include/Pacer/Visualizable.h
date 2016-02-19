@@ -6,6 +6,24 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
+
+#ifdef USE_DISPLAY
+#define VISUALIZE(x) \
+Utility::visualize.push_back \
+(Pacer::VisualizablePtr \
+(x))
+#else
+#define VISUALIZE(x) if(0){}
+#endif
+#define RAY(p,t,c,s) \
+new Pacer::Ray(p,t,c,s)
+
+#define POINT(p,c,s) \
+new Pacer::Point(p,c,s)
+
+#define POSE(p,s) \
+new Pacer::Pose(p,s)
+
 namespace Pacer{
 
 class Visualizable : public boost::enable_shared_from_this<Visualizable>{
@@ -27,7 +45,7 @@ public:
 class Ray : public Visualizable{
 public:
   Ravelin::Vector3d point1,point2;
-  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.001){
+  Ray(Ravelin::Vector3d p1,Ravelin::Vector3d p2,Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 0.01){
     eType = eRay;
     size = s;
     point2 = p2;

@@ -59,14 +59,9 @@ Pose3d end_state(Pose3d state,Origin3d planar_command, double t_max,double dt = 
   
   Origin3d dir = planar_robot(planar_state,Origin3d(0.1,0,0));
   
-  Utility::visualize.push_back
-  (Pacer::VisualizablePtr
-   (new Pacer::Ray
-    (Vector3d(planar_state[0],planar_state[1],0.01),
+  VISUALIZE(RAY(Vector3d(planar_state[0],planar_state[1],0.01),
      Vector3d(planar_state[0]+dir[0],planar_state[1]+dir[1],0.01),
-     Vector3d(0,0,0),0.05)
-    )
-   );
+     Vector3d(0,0,0),0.05));
   
   return state_t_max;
 }
@@ -100,9 +95,7 @@ Vector3d select_foothold(const std::vector<std::vector<double> >& footholds, Pos
       Vector3d dir(x_global - final_foothold);
       dir.normalize();
       final_foothold = final_foothold + dir*this_foothold[3];
-      Utility::visualize.push_back(Pacer::VisualizablePtr(new Pacer::Point(
-                                                                           Vector3d(final_foothold[0],final_foothold[1],final_foothold[2]),
-                                                                           Vector3d(1,1,1),0.05)));
+      VISUALIZE(POINT(Vector3d(final_foothold[0],final_foothold[1],final_foothold[2]),Vector3d(1,1,1),0.05));
       final_foothold[2] = this_foothold[2];
     } else {
       return Vector3d(x.data(),state_ptr);
@@ -266,6 +259,8 @@ void walk_toward(// PARAMETERS
   // Up is oriented wrt global up vector (+Z-axis for BASE_HORIZONTAL_FRAME)
   bool global_up = false;
   ctrl->get_data<bool>(plugin_namespace+".global-up",global_up);
+  double overstep = 0;
+  ctrl->get_data<double>(plugin_namespace+".overstep",overstep);
   Vector3d up =Vector3d(0,0,1,base_frame);
   if(global_up)
     up = Pose3d::transform_vector(base_frame,Vector3d(0,0,1,base_horizontal_frame));
@@ -310,8 +305,8 @@ void walk_toward(// PARAMETERS
     boost::shared_ptr< Pose3d> turning_frame(new Pose3d(Ravelin::Quatd::identity(),turn_origin,base_horizontal_frame));
     
     turning_frame->update_relative_pose(Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data())-Vector3d(0,0,1), Vector3d(turning_frame->x.data())+Vector3d(0,0,1),   Vector3d(0,1,0),0.05)));
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  Vector3d(turning_frame->x.data()), Vector3d(base_horizontal_frame->x.data()),   Vector3d(0,1,0),0.05)));
+    VISUALIZE(RAY(Vector3d(turning_frame->x.data())-Vector3d(0,0,1), Vector3d(turning_frame->x.data())+Vector3d(0,0,1),   Vector3d(0,1,0),0.05));
+    VISUALIZE(RAY(Vector3d(turning_frame->x.data()), Vector3d(base_horizontal_frame->x.data()),   Vector3d(0,1,0),0.05));
     
     turning_frame->update_relative_pose(base_horizontal_frame);
   }
@@ -395,7 +390,7 @@ void walk_toward(// PARAMETERS
     mid_of_next_step_state[i]
     = end_state(end_of_step_state[i],
                 Origin3d(command[0],command[1],command[5]),
-                fabs( (((this_phase == STANCE)? 1.0-duty_factor[i] : duty_factor[i])/2.0) *gait_duration));
+                fabs( (((this_phase == STANCE)? 1.0-duty_factor[i] : duty_factor[i]) / 2.0 ) * gait_duration));
     
     mid_of_next_step_state[i].update_relative_pose(Pacer::GLOBAL);
     
@@ -416,15 +411,15 @@ void walk_toward(// PARAMETERS
         color = Vector3d(0,0,0);
     }
     
-    Utility::visualize.push_back
-    (Pacer::VisualizablePtr
-     (new Pacer::Point
-      (Vector3d(end_of_step_state[i].x[0],
+    VISUALIZE(POINT(Vector3d(end_of_step_state[i].x[0],
                 end_of_step_state[i].x[1],
                 end_of_step_state[i].x[2]-0.05),
-       color,0.1)
-      )
-     );
+       color,0.1));
+    color = color / 2.0;
+    VISUALIZE(POINT(Vector3d(mid_of_next_step_state[i].x[0],
+                             mid_of_next_step_state[i].x[1],
+                             mid_of_next_step_state[i].x[2]-0.05),
+                    color,0.1));
 #endif
     
   }
@@ -509,7 +504,7 @@ void walk_toward(// PARAMETERS
 #ifdef DISPLAY
     Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
     Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd) * (left_in_phase*gait_duration);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(0,1,0),0.05)));
+    VISUALIZE(RAY(  v+p,   p,   Vector3d(0,1,0),0.05));
 #endif
     
     OUT_LOG(logDEBUG) << "x " << x;
@@ -596,14 +591,17 @@ void walk_toward(// PARAMETERS
       Vector3d foot_goal(origins[i],mid_of_next_step_state_ptr);
       foot_goal = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
       
-#ifdef DISPLAY
-      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,start_of_step_foothold[i]);
-      p1[2] = 0;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p1,   Vector3d(1,0,0),0.075)));
-      Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,foot_goal);
-      p2[2] = 0;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Point( p2,   Vector3d(0,1,0),0.075)));
-#endif
+//#ifdef DISPLAY
+//      // WRT global
+//      {
+//      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,start_of_step_foothold[i]);
+//      p1[2] = 0;
+//      VISUALIZE(POINT( p1,   Vector3d(1,0,0),0.1));
+//      Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,foot_goal);
+//      p2[2] = 0;
+//      VISUALIZE(POINT(  p2,   Vector3d(0,1,0),0.1));
+//      }
+//#endif
       
       // Generate control points for swing foot spline
       std::vector<Origin3d> control_points;
@@ -617,36 +615,52 @@ void walk_toward(// PARAMETERS
         x_start.pose = base_horizontal_frame;
         OUT_LOG(logDEBUG1) << "x_start local: " << x_start;
       }
+      
+#ifdef DISPLAY
+      // WRT robot local frame
+      {
+      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,x_start);
+//      p1[2] = 0;
+      VISUALIZE(POINT( p1,   Vector3d(1,0,0),0.1));
+//        Vector3d p2 = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
+        Vector3d p2 = foot_goal;
+      p2.pose = base_horizontal_frame;
+      p2 = Pose3d::transform_point(Pacer::GLOBAL,p2);
+//      p2[2] = 0;
+      VISUALIZE(POINT(  p2,   Vector3d(0,1,0),0.1));
+      }
+#endif
+      
       control_points.push_back(Origin3d(x_start));
       
       OUT_LOG(logDEBUG) << "Calculating step [" << i << "] : " << control_points[0] << " --> " << foot_goal;
-      
+
       Origin3d foot_destination = Origin3d(foot_goal);
       Origin3d foot_direction = foot_destination - Origin3d(x_start);
       
       // Perturb spline control point values to make them solvable
-      Origin3d spline_robustness = origins[i];
-      spline_robustness[2] = 0;
-      spline_robustness[1] = -spline_robustness[1] * sgn(foot_destination[1]);
-      spline_robustness[0] = fabs(spline_robustness[0]) * sgn(foot_destination[0]);
-      spline_robustness.normalize();
-      spline_robustness = spline_robustness * 1e-3;
-      spline_robustness[2] = 1e-3;
-      control_points.push_back(control_points[0] + up_step - spline_robustness);
+      Origin3d spline_robustness;// = origins[i];
+//      spline_robustness[2] = 0;
+//      spline_robustness[1] = -spline_robustness[1] * sgn(foot_destination[1]);
+//      spline_robustness[0] = fabs(spline_robustness[0]) * sgn(foot_destination[0]);
+//      spline_robustness.normalize();
+//      spline_robustness = spline_robustness * 1e-3;
+//      spline_robustness[2] = 1e-3;
+      control_points.push_back(Origin3d(x_start) + up_step - spline_robustness);
       
-      if(footholds.empty()){
-        control_points.push_back(foot_destination + up_step + 0.1*foot_direction + spline_robustness);
+//      if(footholds.empty()){
+        control_points.push_back(foot_destination + up_step + overstep*foot_direction + spline_robustness);
         control_points.push_back(foot_destination);
-      } else {
-        Vector3d x_fh = select_foothold(footholds, end_of_step_state[i], foot_destination);
-        
-        foot_destination = Origin3d(x_fh);
-        
-        // Reach new foothold, account for movement of robot during step
-        control_points.push_back(foot_destination + up_step);
-        control_points.push_back(foot_destination);
-      }
-      
+//      } else {
+//        Vector3d x_fh = select_foothold(footholds, end_of_step_state[i], foot_destination);
+//        
+//        foot_destination = Origin3d(x_fh);
+//        
+//        // Reach new foothold, account for movement of robot during step
+//        control_points.push_back(foot_destination + up_step);
+//        control_points.push_back(foot_destination);
+//      }
+//      
       // create spline using set of control points, place at back of history
       int n = control_points.size();
       std::vector<Origin3d> new_control_points;
@@ -713,9 +727,28 @@ void walk_toward(// PARAMETERS
       
       OUTLOG(xd_start,"xd1",logDEBUG);
       OUTLOG(xd,"xd2",logDEBUG);
+      
+      if(xd.norm() > 1.0){
+        xd.normalize();
+      }
 
       n = control_points.size();
-      
+#ifdef DISPLAY
+      { // plot control points (and vel)
+        Ravelin::Vector3d v1 = Pose3d::transform_vector(Pacer::GLOBAL,Vector3d(xd_start.data(),base_horizontal_frame));
+        Ravelin::Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,Vector3d(control_points.front().data(),base_horizontal_frame));
+        
+        Ravelin::Vector3d vN = Pose3d::transform_vector(Pacer::GLOBAL,Vector3d(xd.data(),base_horizontal_frame));
+        Ravelin::Vector3d pN = Pose3d::transform_point(Pacer::GLOBAL,Vector3d(control_points.back().data(),base_horizontal_frame));
+
+        VISUALIZE(RAY(  v1+p1,   p1,   Vector3d(1,1,1),0.1));
+        VISUALIZE(RAY(  vN+pN,   pN,   Vector3d(1,1,1),0.1));
+        for(int j=0;j<n;j++){
+          Ravelin::Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,Vector3d(control_points[j].data(),base_horizontal_frame));
+          VISUALIZE(POINT(  p,   Vector3d(1,1,1),0.1));
+        }
+      }
+#endif
       OUT_LOG(logDEBUG1) << "Calc Spline AND Eval first step: " << i << " @ time: " << t;
       OUTLOG(spline_t[i],"T",logDEBUG);
       for(int d=0;d<3;d++){
@@ -753,13 +786,9 @@ void walk_toward(// PARAMETERS
   
 #ifdef DISPLAY
   for(int i=0;i<footholds.size();i++){
-    Utility::visualize.push_back
-    (Pacer::VisualizablePtr
-     (new Pacer::Point
-      (Vector3d(footholds[i][0],footholds[i][1],footholds[i][2])
+    VISUALIZE(POINT( Vector3d(footholds[i][0],footholds[i][1],footholds[i][2])
        ,Vector3d(1,0,0)
        ,10.0*footholds[i][3])
-      )
      );
   }
   
@@ -767,6 +796,22 @@ void walk_toward(// PARAMETERS
     if(phase_vector[i] == STANCE)
       continue;
     VectorNd &T = spline_t[i];
+    
+    { // this command
+      Vector3d x,xd,xdd;
+      for(int d=0;d<3;d++){
+        Utility::eval_cubic_spline(spline_coef[i][d],spline_t[i],t,x[d],xd[d],xdd[d]);
+      }
+      x.pose = base_frame;
+      xd.pose = base_frame;
+      xdd.pose = base_frame;
+      Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
+      Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd)/10;
+      VISUALIZE(POINT(  p,   Vector3d(0,1,0),0.075));
+      VISUALIZE(RAY(  v+p,   p,   Vector3d(1,0,0),0.05));
+    }
+    
+    // Next commands
     double max_t = T[T.rows()-1];
     double min_t = T[0]+Pacer::NEAR_ZERO;
     for(double t=min_t ; t<=max_t ; t += (max_t-min_t)/20){
@@ -780,9 +825,9 @@ void walk_toward(// PARAMETERS
       Vector3d p = Pose3d::transform_point(Pacer::GLOBAL,x);
       Vector3d v = Pose3d::transform_vector(Pacer::GLOBAL,xd)/10;
       //      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point( p,   Vector3d(0,1,0),0.025)));
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(  v+p,   p,   Vector3d(1,0,0),0.005)));
-      //     Utility::visualize.push_back( Pacer::VisualizablePtr( new Ray(a+v+p, v+p, Vector3d(1,0.5,0)));
+      VISUALIZE(POINT(  p,   Vector3d(0,1,0),0.025));
+      VISUALIZE(RAY(  v+p,   p,   Vector3d(1,0,0),0.005));
+//      VISUALIZE(RAY(a+v+p, v+p, Vector3d(1,0.5,0),0.01));
     }
   }
 #endif
@@ -943,9 +988,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->set_data<Origin3d>(foot_names[i]+".goal.xd",Origin3d(foot_vel[i]));
     ctrl->set_data<Origin3d>(foot_names[i]+".goal.xdd",Origin3d(foot_acc[i]));
 
-    ctrl->set_foot_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
-    ctrl->set_foot_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
-    ctrl->set_foot_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));
+    ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
+    ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
+    ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));
   }
 }
 

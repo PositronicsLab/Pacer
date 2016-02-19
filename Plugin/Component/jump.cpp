@@ -29,7 +29,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
-  static std::vector<Origin3d> x_foot_goal(eef_names_.size());
+  static std::vector<Origin3d> x_end_effector_goal(eef_names_.size());
   
   // check the timing of the jump
   double duration = ctrl->get_data<double>(plugin_namespace + ".duration");
@@ -44,7 +44,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     for (int i=0; i<eef_names_.size(); i++) {
       double ratio = 0;
       
-      Origin3d pos_des = x_foot_goal[i];
+      Origin3d pos_des = x_end_effector_goal[i];
       Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".base");
       double max_reach = ctrl->get_data<double>(eef_names_[i]+".reach");
       
@@ -84,7 +84,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
 #ifndef USE_OSG_DISPLAY
   com_x.pose = Pacer::GLOBAL;
-  Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1)));
+  VISUALIZE(POINT(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1));
 #endif
   
   static Vector3d v_liftoff;
@@ -150,14 +150,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 #ifndef USE_OSG_DISPLAY
   Vector3d base_x(base_frame->x.data());
   
-  Utility::visualize.push_back
-  ( Pacer::VisualizablePtr
-   ( new Pacer::Ray
-    (base_x,base_x+Vector3d(vel.segment(0,3).data())*dt,Vector3d(1,0,0),0.02)));
-  Utility::visualize.push_back
-  ( Pacer::VisualizablePtr
-   ( new Pacer::Ray
-    (base_x+Vector3d(vel.segment(0,3).data())*dt,base_x+Vector3d(vel.segment(0,3).data())*dt+Vector3d(vel.segment(0,3).data())*dt*dt,Vector3d(1,0,0),0.02)));
+  VISUALIZE(RAY(base_x,base_x+Vector3d(vel.segment(0,3).data())*dt,Vector3d(1,0,0),0.02));
+  VISUALIZE(RAY(base_x+Vector3d(vel.segment(0,3).data())*dt,base_x+Vector3d(vel.segment(0,3).data())*dt+Vector3d(vel.segment(0,3).data())*dt*dt,Vector3d(1,0,0),0.02));
 #endif
   
   for(unsigned i=0;i<eef_names_.size();i++){
@@ -169,15 +163,15 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     
     // Now that model state is set ffrom jacobian calculation
     if(start_jump_time == t){
-      x_foot_goal[i] = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x");
+      x_end_effector_goal[i] = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x");
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(vel,xd_foot,-1,0);
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(acc,xdd_foot,-1,0);
     
-    x_foot_goal[i] += xd_foot*dt;
+    x_end_effector_goal[i] += xd_foot*dt;
     ctrl->set_data<bool>(eef_names_[i]+".stance",true);
-    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_end_effector_goal[i]);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }

@@ -123,7 +123,7 @@ void cpg_trot(
 
   static double last_t = 0;
   int NUM_EEFS = foot_origin.size();
-  static std::vector<Ravelin::Vector3d> last_foot_vel(NUM_EEFS);
+  static std::vector<Ravelin::Vector3d> last_end_effector_vel(NUM_EEFS);
   Ravelin::VectorNd Hs(NUM_EEFS);
   Ravelin::MatrixNd C(NUM_EEFS,NUM_EEFS);
 
@@ -173,7 +173,7 @@ void cpg_trot(
     Hs[i] = step_height;
 
     // SET EEF ORIGINS TO the ground below that EEF SHOULDER
-    last_foot_vel[i].pose = foot_vel[i].pose = base_frame;
+    last_end_effector_vel[i].pose = foot_vel[i].pose = base_frame;
   }
 
   // retrieve oscilator value
@@ -184,13 +184,13 @@ void cpg_trot(
   for(int i=0;i<NUM_EEFS;i++){
     foot_pos[i].pose = foot_vel[i].pose;
     foot_pos[i] = foot_pos[i] + foot_vel[i]*dt;
-    foot_acc[i] = (foot_vel[i] - last_foot_vel[i])/dt;
+    foot_acc[i] = (foot_vel[i] - last_end_effector_vel[i])/dt;
     if(foot_acc[i][2] > 0.0)
       ctrl->set_data<bool>(foot_names[i]+".stance",false);
   }
 
 
-  last_foot_vel = foot_vel;
+  last_end_effector_vel = foot_vel;
   last_t = t;
 }
 

@@ -95,7 +95,7 @@ void loop(){
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
-  static std::vector<Origin3d> x_foot_goal(eef_names_.size());
+  static std::vector<Origin3d> x_end_effector_goal(eef_names_.size());
   
   VectorNd x(3), xd(3), xdd(3);
   
@@ -142,15 +142,15 @@ void loop(){
     
     // Now that model state is set ffrom jacobian calculation
     if(start_jump_time == t){
-      x_foot_goal[i] = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x");
+      x_end_effector_goal[i] = ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x");
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xd,xd_foot,-1,0);
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xdd,xdd_foot,-1,0);
     
-    x_foot_goal[i] += xd_foot*dt;
+    x_end_effector_goal[i] += xd_foot*dt;
     ctrl->set_data<bool>(eef_names_[i]+".stance",true);
-    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
+    ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.x",x_end_effector_goal[i]);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xd",xd_foot);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }

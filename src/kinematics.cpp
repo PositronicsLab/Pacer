@@ -14,6 +14,10 @@ static Ravelin::Vector3d workv3_;
 static Ravelin::MatrixNd workM_;
 
 
+Ravelin::MatrixNd Pacer::Robot::calc_link_jacobian(const Ravelin::VectorNd& q, const std::string& link){
+  return calc_jacobian(q,link,Ravelin::Origin3d(0,0,0));
+}
+
 
 Ravelin::VectorNd& joint_state_to_vec(const std::vector<boost::shared_ptr<Ravelin::Jointd> >& joints, Ravelin::VectorNd& x ){
   for (int i=0, ii=0; i<joints.size(); i++) {
@@ -23,7 +27,8 @@ Ravelin::VectorNd& joint_state_to_vec(const std::vector<boost::shared_ptr<Raveli
   }
   return x;
 }
-std::vector<boost::shared_ptr<Ravelin::Jointd> >& vec_to_joint_state(const Ravelin::VectorNd& x, std::vector<boost::shared_ptr<Ravelin::Jointd> >& joints){
+
+std::vector< boost::shared_ptr<Ravelin::Jointd> >& vec_to_joint_state(const Ravelin::VectorNd& x, std::vector<boost::shared_ptr<Ravelin::Jointd> >& joints){
   for (int i=0, ii=0; i<joints.size(); i++) {
     for (int j=0; j<joints[i]->num_dof(); j++,ii++) {
       joints[i]->q[j] = x[ii];
@@ -34,15 +39,18 @@ std::vector<boost::shared_ptr<Ravelin::Jointd> >& vec_to_joint_state(const Ravel
   return joints;
 }
 
-
 Ravelin::MatrixNd& Robot::link_jacobian(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk){
   gk.resize(6,foot.chain.size());
-  boost::shared_ptr<Ravelin::Pose3d> jacobian_frame(
-                                                    new Ravelin::Pose3d(Ravelin::Quatd::identity(),
-                                                                        Ravelin::Pose3d::transform_point(
-                                                                                                         frame,
-                                                                                                         Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data(),
-                                                                        frame));
+  double * foot_origin;
+  foot_origin = Ravelin::Pose3d::transform_point(frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data();
+  boost::shared_ptr<Ravelin::Pose3d> jacobian_frame
+  (new Ravelin::Pose3d
+   (Ravelin::Quatd::identity(),
+    foot_origin,
+    frame
+   )
+  );
+  
   _abrobot->calc_jacobian(jacobian_frame,foot.link,workM_);
   
   for(int j=0;j<6;j++) {                                     // x,y,z
@@ -102,8 +110,7 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
   Ravelin::MatrixNd J;
   
   boost::shared_ptr<Ravelin::Pose3d>
-  //base_frame(new Ravelin::Pose3d(get_data<Ravelin::Pose3d>("base_link_frame")));
-  base_frame(new Ravelin::Pose3d);
+    base_frame(new Ravelin::Pose3d);
   base_frame->rpose = Pacer::GLOBAL;
   
   int N = 0;
@@ -157,7 +164,7 @@ void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Rav
         OUT_LOG(logDEBUG2) << "alpha -> beta : " << alpha << " -> " << beta;
         OUT_LOG(logDEBUG2) << "dist1 -> dist2 : " << dist1 << " -> " << dist2;
         OUT_LOG(logDEBUG2) << "err1 -> err2 : " << err1 << " -> " << err2;
-//        OUT_LOG(logDEBUG2) << "x1 -> x2 : " << workv1_ << " -> " << workv2_;
+        OUT_LOG(logDEBUG2) << "x1 -> x2 : " << workv1_ << " -> " << workv2_;
         
         alpha *= beta;
       } while (err1 > err2);
@@ -209,11 +216,19 @@ Ravelin::VectorNd& Robot::link_kinematics(const Ravelin::VectorNd& x,const end_e
    return fk;
 }
 
+namespace Pacer{
+  class UntestedException : public std::exception
+  {
+  public:
+    virtual char const * what() const _NOEXCEPT { return "This is untested code, if you still want to use it, catch 'Pacer::UntestedException'."; }
+  };
+}
 
 /// 6d IK
 void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des, double TOL){
   OUT_LOG(logDEBUG1) << "Robot::RMRC() -- 6D";
 
+  
   Ravelin::MatrixNd J;
   Ravelin::VectorNd x(foot.chain.size());
   Ravelin::VectorNd step(foot.chain.size());
@@ -418,6 +433,429 @@ void Robot::end_effector_inverse_kinematics(
     for(int j=0;j<foot.chain.size();j++){
       qd_des[foot.chain[j]] = qd_foot[j];
       qdd_des[foot.chain[j]] = qdd_foot[j];
+    }
+  }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// GET/SET STATE DATA ////////////////////////
+
+//////////////////////////////////////////////////////
+/// ------------ GET/SET JOINT value  ------------ ///
+
+double Pacer::Robot::get_joint_value(const std::string& id, unit_e u, int dof)
+{
+  OUT_LOG(logDEBUG) << "Get: "<< id << "_" << unit_enum_string(u) << "["<< dof << "] --> " << _state[u][id][dof];
+  return _state[u][id][dof];
+}
+
+Ravelin::VectorNd Pacer::Robot::get_joint_value(const std::string& id, unit_e u)
+{
+  OUT_LOG(logDEBUG) << "Get: "<< id << "_" << unit_enum_string(u) << " --> " << _state[u][id];
+  return _state[u][id];
+}
+
+void Pacer::Robot::get_joint_value(const std::string& id, unit_e u, Ravelin::VectorNd& dof_val)
+{
+  dof_val = _state[u][id];
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Get: "<< id << "_" << unit_enum_string(u) << " --> " << dof_val;
+#endif
+}
+
+void Pacer::Robot::get_joint_value(const std::string& id, unit_e u,std::vector<double>& dof_val)
+{
+  Ravelin::VectorNd& dof = _state[u][id];
+  dof_val.resize(dof.rows());
+  for(int i=0;i<dof.rows();i++)
+    dof_val[i] = dof[i];
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Get: "<< id << "_" << unit_enum_string(u) << " --> " << dof_val;
+#endif
+}
+
+void Pacer::Robot::set_joint_value(const std::string& id, unit_e u, int dof, double val)
+{
+  OUT_LOG(logDEBUG) << "Set: "<< id << "_" << unit_enum_string(u) << "["<< dof <<"] <-- " << val;
+  
+  check_phase_internal(u);
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  _state[u][id][dof] = val;
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+void Pacer::Robot::set_joint_value(const std::string& id, unit_e u, const Ravelin::VectorNd& dof_val)
+{
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Set: "<< id << "_" << unit_enum_string(u) << " <-- " << dof_val;
+#endif
+  check_phase_internal(u);
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  Ravelin::VectorNd& dof = _state[u][id];
+  if(dof.rows() != dof_val.rows())
+    throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
+  dof = dof_val;
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+void Pacer::Robot::set_joint_value(const std::string& id, unit_e u, const std::vector<double>& dof_val)
+{
+#ifdef LOG_TO_FILE
+  OUT_LOG(logDEBUG) << "Set: "<< id << "_" << unit_enum_string(u) << " <-- " << dof_val;
+#endif
+  
+  check_phase_internal(u);
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  Ravelin::VectorNd& dof = _state[u][id];
+  if(dof.rows() != dof_val.size())
+    throw std::runtime_error("Missized dofs in joint "+id+": internal="+boost::icl::to_string<double>::apply(dof.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
+  for(int i=0;i<dof.rows();i++)
+    dof[i] = dof_val[i];
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+void Pacer::Robot::get_joint_value(Pacer::Robot::unit_e u, std::map<std::string,std::vector<double> >& id_dof_val_map){
+  std::map<std::string,Ravelin::VectorNd>::iterator it;
+  for(it=_state[u].begin();it!=_state[u].end();it++){
+    const Ravelin::VectorNd& dof_val_internal = (*it).second;
+    std::vector<double>& dof_val = id_dof_val_map[(*it).first];
+    dof_val.resize(dof_val_internal.size());
+    for(int j=0;j<(*it).second.rows();j++){
+      dof_val[j] = dof_val_internal[j];
+    }
+#ifdef LOG_TO_FILE
+    OUT_LOG(logDEBUG) << "Get: "<< (*it).first << "_" << unit_enum_string(u) << " --> " << dof_val;
+#endif
+  }
+}
+
+void Pacer::Robot::get_joint_value(Pacer::Robot::unit_e u, std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
+  const std::vector<std::string>& keys = _joint_ids;
+  for(int i=0;i<keys.size();i++){
+    const Ravelin::VectorNd& dof_val_internal = _state[u][keys[i]];
+    id_dof_val_map[keys[i]] = dof_val_internal;
+#ifdef LOG_TO_FILE
+    OUT_LOG(logDEBUG) << "Get: "<< keys[i] << "_" << unit_enum_string(u) << " --> " << dof_val_internal;
+#endif
+  }
+}
+
+void Pacer::Robot::set_joint_value(Pacer::Robot::unit_e u,const std::map<std::string,std::vector<double> >& id_dof_val_map){
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  std::map<std::string,std::vector<double> >::const_iterator it;
+  
+  for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
+    Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
+    const std::vector<double>& dof_val = (*it).second;
+#ifdef LOG_TO_FILE
+    OUT_LOG(logDEBUG) << "Set: "<< (*it).first << "_" << unit_enum_string(u) << " <-- " << dof_val;
+#endif
+    if(dof_val_internal.rows() != dof_val.size()){
+      std::cerr << "Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()) << std::endl;
+      throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply(dof_val.size()));
+    }
+    for(int j=0;j<(*it).second.size();j++){
+      dof_val_internal[j] = dof_val[j];
+    }
+  }
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+void Pacer::Robot::set_joint_value(Pacer::Robot::unit_e u,const std::map<std::string,Ravelin::VectorNd >& id_dof_val_map){
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  std::map<std::string,Ravelin::VectorNd >::const_iterator it;
+  for(it=id_dof_val_map.begin();it!=id_dof_val_map.end();it++){
+    Ravelin::VectorNd& dof_val_internal = _state[u][(*it).first];
+    OUT_LOG(logDEBUG) << "Set: "<< (*it).first << "_" << unit_enum_string(u) << " <-- " << (*it).second;
+    if(dof_val_internal.rows() != (*it).second.rows())
+      throw std::runtime_error("Missized dofs in joint "+(*it).first+": internal="+boost::icl::to_string<double>::apply(dof_val_internal.rows())+" , provided="+boost::icl::to_string<double>::apply((*it).second.rows()));
+    dof_val_internal = (*it).second;
+  }
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+/// ------------ GET/SET JOINT GENERALIZED value  ------------ ///
+
+void Pacer::Robot::set_joint_generalized_value(Pacer::Robot::unit_e u, const Ravelin::VectorNd& generalized_vec)
+{
+  check_phase_internal(u);
+  if(generalized_vec.rows() != NUM_JOINT_DOFS)
+    throw std::runtime_error("Missized generalized vector: internal="+boost::icl::to_string<double>::apply(NUM_JOINT_DOFS)+" , provided="+boost::icl::to_string<double>::apply(generalized_vec.rows()));
+  
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  
+  // TODO: make this more efficient ITERATORS dont work
+  //      std::map<std::string,Ravelin::VectorNd>::iterator it;
+  const std::vector<std::string>& keys = _joint_ids;
+  
+  for(int i=0;i<keys.size();i++){
+    const std::vector<int>& dof = _id_dof_coord_map[keys[i]];
+    Ravelin::VectorNd& dof_val = _state[u][keys[i]];
+    if(dof.size() != dof_val.rows())
+      throw std::runtime_error("Missized dofs in joint "+keys[i]+": internal="+boost::icl::to_string<double>::apply(dof.size())+" , provided="+boost::icl::to_string<double>::apply(dof_val.rows()));
+    for(int j=0;j<dof.size();j++){
+      dof_val[j] = generalized_vec[dof[j]];
+    }
+  }
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+  OUT_LOG(logDEBUG) << "Set: joint_generalized_" << unit_enum_string(u) << " <-- " << generalized_vec;
+}
+
+void Pacer::Robot::get_joint_generalized_value(Pacer::Robot::unit_e u, Ravelin::VectorNd& generalized_vec){
+  generalized_vec.set_zero(NUM_JOINT_DOFS);
+  std::map<std::string,Ravelin::VectorNd>::iterator it;
+  for(it=_state[u].begin();it!=_state[u].end();it++){
+    const std::vector<int>& dof = _id_dof_coord_map[(*it).first];
+    const Ravelin::VectorNd& dof_val = (*it).second;
+    for(int j=0;j<(*it).second.size();j++){
+      generalized_vec[dof[j]] = dof_val[j];
+    }
+  }
+  OUT_LOG(logDEBUG) << "Get: joint_generalized_" << unit_enum_string(u) << " --> " << generalized_vec;
+}
+
+Ravelin::VectorNd Pacer::Robot::get_joint_generalized_value(Pacer::Robot::unit_e u){
+  Ravelin::VectorNd generalized_vec;
+  get_joint_generalized_value(u,generalized_vec);
+  return generalized_vec;
+}
+
+/// With Base
+void Pacer::Robot::set_generalized_value(Pacer::Robot::unit_e u,const Ravelin::VectorNd& generalized_vec){
+  check_phase_internal(u);
+  if (floating_base())
+  switch(u){
+    case(position_goal):
+    case(position):
+      set_base_value(u,generalized_vec.segment(NUM_JOINT_DOFS,NUM_JOINT_DOFS+NEULER));
+      break;
+    default:
+      set_base_value(u,generalized_vec.segment(NUM_JOINT_DOFS,NUM_JOINT_DOFS+NSPATIAL));
+      break;
+  }
+  set_joint_generalized_value(u,generalized_vec.segment(0,NUM_JOINT_DOFS));
+  OUT_LOG(logDEBUG) << "Set: generalized_" << unit_enum_string(u) << " <-- " << generalized_vec;
+}
+
+/// With Base
+void Pacer::Robot::get_generalized_value(Pacer::Robot::unit_e u, Ravelin::VectorNd& generalized_vec){
+  if (floating_base())
+  switch(u){
+    case(position_goal):
+    case(position):
+      generalized_vec.set_zero(NUM_JOINT_DOFS+NEULER);
+      break;
+    default:
+      generalized_vec.set_zero(NUM_JOINT_DOFS+NSPATIAL);
+      break;
+  }
+  generalized_vec.set_sub_vec(0,get_joint_generalized_value(u));
+  generalized_vec.set_sub_vec(NUM_JOINT_DOFS,get_base_value(u));
+  OUT_LOG(logDEBUG) << "Get: generalized_" << unit_enum_string(u) << " --> " << generalized_vec;
+}
+
+/// With Base
+Ravelin::VectorNd Pacer::Robot::get_generalized_value(Pacer::Robot::unit_e u){
+  Ravelin::VectorNd generalized_vec;
+  get_generalized_value(u,generalized_vec);
+  return generalized_vec;
+}
+
+void Pacer::Robot::set_base_value(Pacer::Robot::unit_e u,const Ravelin::VectorNd& vec){
+  OUT_LOG(logDEBUG) << "Set: base_" << unit_enum_string(u) << " <-- " << vec;
+  if (fixed_base())
+    throw std::runtime_error("This robot has a fixed (0 dof) base.");
+
+  check_phase_internal(u);
+  switch(u){
+    case(position_goal):
+    case(position):
+      if(vec.rows() != NEULER)
+        throw std::runtime_error("position vector should have 7 rows [lin(x y z), quat(x y z w)]");
+      break;
+    default:
+      if(vec.rows() != NSPATIAL)
+        throw std::runtime_error("spatial vector should have 6 rows [lin(x y z), ang(x y z)]");
+      break;
+  }
+  
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  _base_state[u] = vec;
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+  
+}
+
+void Pacer::Robot::get_base_value(Pacer::Robot::unit_e u, Ravelin::VectorNd& vec){
+  if (fixed_base())
+    throw std::runtime_error("This robot has a fixed (0 dof) base.");
+
+  vec = _base_state[u];
+  OUT_LOG(logDEBUG) << "Get: base_" << unit_enum_string(u) << " --> " << vec;
+}
+
+Ravelin::VectorNd Pacer::Robot::get_base_value(Pacer::Robot::unit_e u){
+  if (fixed_base())
+    throw std::runtime_error("This robot has a fixed (0 dof) base.");
+
+  Ravelin::VectorNd vec;
+  get_base_value(u,vec);
+  return vec;
+}
+
+void Pacer::Robot::set_end_effector_value(const std::string& id, unit_e u, const Ravelin::Origin3d& val)
+{
+  OUT_LOG(logDEBUG) << "Set: foot "<< id <<"_" << unit_enum_string(u) << " <-- " << val;
+  check_phase_internal(u);
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  _end_effector_state[u][id] = val;
+  _end_effector_is_set[id] = true;
+  
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+Ravelin::Origin3d& Pacer::Robot::get_end_effector_value(const std::string& id, unit_e u, Ravelin::Origin3d& val)
+{
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  val = _end_effector_state[u][id];
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+  OUT_LOG(logDEBUG) << "Get: foot "<< id <<"_" << unit_enum_string(u) << " --> " << val;
+  return val;
+}
+
+Ravelin::Origin3d Pacer::Robot::get_end_effector_value(const std::string& id, unit_e u)
+{
+  
+  Ravelin::Origin3d val;
+  get_end_effector_value(id,u,val);
+  return val;
+}
+
+void Pacer::Robot::set_end_effector_value(Pacer::Robot::unit_e u, const std::map<std::string,Ravelin::Origin3d>& val)
+{
+  check_phase_internal(u);
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  std::map<std::string, Ravelin::Origin3d >::const_iterator it;
+  for (it=val.begin(); it != val.end(); it++) {
+    std::map<std::string, Ravelin::Origin3d >::iterator jt = _end_effector_state[u].find((*it).first);
+    if(jt != _end_effector_state[u].end()){
+      OUT_LOG(logDEBUG) << "Set: foot "<< (*it).first << "_" << unit_enum_string(u) << " <-- " << (*it).second;
+      (*jt).second = (*it).second;
+      _end_effector_is_set[(*it).first] = true;
+    }
+  }
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+}
+
+std::map<std::string,Ravelin::Origin3d>& Pacer::Robot::get_end_effector_value(Pacer::Robot::unit_e u, std::map<std::string,Ravelin::Origin3d>& val)
+{
+#ifdef USE_THREADS
+  pthread_mutex_lock(&_state_mutex);
+#endif
+  std::map<std::string, Ravelin::Origin3d >::iterator it;
+  for (it=_end_effector_state[u].begin(); it != _end_effector_state[u].end(); it++) {
+    OUT_LOG(logDEBUG) << "Get: foot "<< (*it).first << "_" << unit_enum_string(u) << " --> " << (*it).second;
+    val[(*it).first] = (*it).second;
+  }
+#ifdef USE_THREADS
+  pthread_mutex_unlock(&_state_mutex);
+#endif
+  return val;
+}
+
+std::map<std::string,Ravelin::Origin3d> Pacer::Robot::get_end_effector_value(Pacer::Robot::unit_e u)
+{
+  std::map<std::string,Ravelin::Origin3d> val;
+  get_end_effector_value(u,val);
+  return val;
+}
+
+void Pacer::Robot::init_state(){
+  check_phase_internal(initialization);
+  reset_contact();
+  // TODO: make this more efficient ITERATORS dont work
+  //      std::map<std::string,Ravelin::VectorNd>::iterator it;
+  
+  const int num_state_units = 8;
+  unit_e state_units[num_state_units] = {position,position_goal,velocity,velocity_goal,acceleration,acceleration_goal,load, load_goal};
+  for(int j=0; j<num_state_units;j++){
+    unit_e& u = state_units[j];
+    _end_effector_state[u] = std::map<std::string, Ravelin::Origin3d >();
+    const std::vector<std::string>& foot_keys = _end_effector_ids;
+    for(int i=0;i<foot_keys.size();i++){
+      _end_effector_state[u][foot_keys[i]].set_zero();
+      _end_effector_is_set[foot_keys[i]] = false;
+    }
+    
+    _state[u] = std::map<std::string, Ravelin::VectorNd >();
+    const std::vector<std::string>& keys = _joint_ids;
+    for(int i=0;i<keys.size();i++){
+      const int N = get_joint_dofs(keys[i]);
+      _state[u][keys[i]].set_zero(N);
+    }
+  }
+}
+
+void Pacer::Robot::reset_state(){
+  check_phase_internal(clean_up);
+  reset_contact();
+  // TODO: make this more efficient ITERATORS dont work
+  //      std::map<std::string,Ravelin::VectorNd>::iterator it;
+  
+  const int num_state_units = 8;
+  unit_e state_units[num_state_units] = {position,position_goal,velocity,velocity_goal,acceleration,acceleration_goal,load, load_goal};
+  for(int j=0; j<num_state_units;j++){
+    unit_e& u = state_units[j];
+    const std::vector<std::string>& foot_keys = _end_effector_ids;
+    for(int i=0;i<foot_keys.size();i++){
+      _end_effector_state[u][foot_keys[i]].set_zero();
+      _end_effector_is_set[foot_keys[i]] = false;
+    }
+    
+    const std::vector<std::string>& keys = _joint_ids;
+    for(int i=0;i<keys.size();i++){
+      const int N = get_joint_dofs(keys[i]);
+      _state[u][keys[i]].set_zero(N);
     }
   }
 }

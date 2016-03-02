@@ -2,7 +2,7 @@
 <sdf version='1.5'>
   <model name='ARM'>
     <plugin name="PacerPlugin" filename="libPacerGazeboPlugin.so"/>
-    <pose>0 0 0.19 0 -0 0</pose>
+    <pose>0 0 0 0 0 0</pose>
     
     <!-- =============================== LF leg =============================== -->
     <joint name='X_1' type='revolute'>
@@ -303,7 +303,7 @@
           </sphere>
         </geometry>
       </visual>
-      
+      <!-- 
       <collision name='HAND_collision'>
         <pose>0 0 0 0 0 0</pose>
         <geometry>
@@ -328,6 +328,343 @@
         </contact>
         <update_rate>1000</update_rate>
       </sensor>
+      -->
     </link>
+    
+    <joint name='F_0' type='revolute'>
+      <pose>-0.05 0 0 0 0 0</pose>
+      <parent>HAND</parent>
+      <child>FINGER0</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
+        </limit>
+        <dynamics/>
+      </axis>
+    </joint>
+    <joint name='F_1' type='revolute'>
+      <pose>-0.05 0 0 0 0 0</pose>
+      <parent>HAND</parent>
+      <child>FINGER1</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
+        </limit>
+        <dynamics/>
+      </axis>
+    </joint>
+    <joint name='F_2' type='revolute'>
+      <pose>-0.05 0 0 0 0 0</pose>
+      <parent>HAND</parent>
+      <child>FINGER2</child>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
+        </limit>
+        <dynamics/>
+      </axis>
+    </joint>
+    <joint name='F_3' type='revolute'>
+      <pose>-0.05 0 0 0 0 0</pose>
+      <parent>HAND</parent>
+      <child>FINGER3</child>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-1e6</lower>
+          <upper>1e6</upper>
+        </limit>
+        <dynamics/>
+      </axis>
+    </joint>
+    
+    <link name='FINGER0'>
+      <pose>0.70 -0.02 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.10</mass>
+        <inertia>
+          <ixx>3.358e-5</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>3.358e-5</iyy>
+          <iyz>0</iyz>
+          <izz>3.358e-5</izz>
+        </inertia>
+      </inertial>
+      
+      <visual name='FINGER_tip_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 1.0 0</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+
+      <visual name='FINGER_visual'>
+        <pose>-0.025 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+      
+      <collision name='FINGER_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='FINGER_contact' type='contact'>
+        <contact>
+          <collision>FINGER_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
+    </link>
+    <link name='FINGER1'>
+      <pose>0.70 0.02 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.10</mass>
+        <inertia>
+          <ixx>3.358e-5</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>3.358e-5</iyy>
+          <iyz>0</iyz>
+          <izz>3.358e-5</izz>
+        </inertia>
+      </inertial>
+      
+      <visual name='FINGER_tip_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 1.0 0</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+
+      <visual name='FINGER_visual'>
+        <pose>-0.025 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+      
+      <collision name='FINGER_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='FINGER_contact' type='contact'>
+        <contact>
+          <collision>FINGER_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
+    </link>
+    <link name='FINGER2'>
+      <pose>0.70 -0.02 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.10</mass>
+        <inertia>
+          <ixx>3.358e-5</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>3.358e-5</iyy>
+          <iyz>0</iyz>
+          <izz>3.358e-5</izz>
+        </inertia>
+      </inertial>
+      
+      <visual name='FINGER_tip_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 1.0 0</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+
+      <visual name='FINGER_visual'>
+        <pose>-0.025 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+      
+      <collision name='FINGER_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='FINGER_contact' type='contact'>
+        <contact>
+          <collision>FINGER_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
+    </link>
+    <link name='FINGER3'>
+      <pose>0.70 0.02 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.10</mass>
+        <inertia>
+          <ixx>3.358e-5</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>3.358e-5</iyy>
+          <iyz>0</iyz>
+          <izz>3.358e-5</izz>
+        </inertia>
+      </inertial>
+      
+      <visual name='FINGER_tip_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 1.0 0</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+
+      <visual name='FINGER_visual'>
+        <pose>-0.025 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient> 0.2 0.2 0.2 1</ambient>
+          <diffuse> 0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+      
+      <collision name='FINGER_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='FINGER_contact' type='contact'>
+        <contact>
+          <collision>FINGER_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
+    </link>
+  
+  
   </model>
 </sdf>

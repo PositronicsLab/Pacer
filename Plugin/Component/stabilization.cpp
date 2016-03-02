@@ -107,8 +107,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     Ravelin::Origin3d roll_pitch_yaw;
     Ravelin::Quatd(center_of_mass_x[3],center_of_mass_x[4],center_of_mass_x[5],center_of_mass_x[6]).to_rpy(roll_pitch_yaw[0],roll_pitch_yaw[1],roll_pitch_yaw[2]);
     
-    int NDOFS = generalized_qd.rows();
-    int NUM_JOINT_DOFS = NDOFS - NSPATIAL;
+    int NDOFS = ctrl->num_total_dof();;
+    int NUM_JOINT_DOFS = ctrl->num_joint_dof();
     
     Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);// ctrl->get_base_value(Pacer::Controller::velocity);
                                                                              //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");

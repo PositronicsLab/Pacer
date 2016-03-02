@@ -63,15 +63,29 @@ inline std::ostringstream& Logger::Get(TLogLevel level)
 #include <sys/types.h>
 inline Logger::~Logger()
 {
-#ifdef LOG_TO_FILE
-    os << std::endl;
+  static std::string name;
+
+  if (name.empty()) {
     FILE * pFile;
     static int pid = getpid();
     char buffer[9];
     sprintf(buffer,"%06d",pid);
-    static std::string name("out-"+std::string(buffer)+".log");
+    name = std::string("out-"+std::string(buffer)+".log");
+    pFile = fopen (name.c_str(),"w");
+    fprintf(pFile, "INITED LOGGER\n");
+    fflush(pFile);
+    fclose (pFile);
+  }
+#ifdef LOG_TO_FILE
+    os << std::endl;
+    FILE * pFile;
+//    static int pid = getpid();
+//    char buffer[9];
+//    sprintf(buffer,"%06d",pid);
+//    static std::string name("out-"+std::string(buffer)+".log");
     pFile = fopen(name.c_str(),"a");
     fprintf(pFile, "%s", os.str().c_str());
+    fflush(pFile);
     fclose (pFile);
 //#else
 //    fprintf(stdout, "%s", os.str().c_str());
@@ -81,7 +95,7 @@ inline Logger::~Logger()
 
 inline TLogLevel& Logger::ReportingLevel()
 {
-    static TLogLevel reportingLevel;
+    static TLogLevel reportingLevel = logDEBUG4;
     return reportingLevel;
 }
 

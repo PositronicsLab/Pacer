@@ -142,7 +142,7 @@ bool predict_contact_forces(const Ravelin::VectorNd& v, const Ravelin::MatrixNd&
     
     if(feas.rows() > 0){
       double min_elem = *std::min_element(feas.begin(), feas.end());
-      if(min_elem < -Pacer::NEAR_ZERO){
+      if(min_elem < -::NEAR_ZERO){
         OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
         return false;
       }
@@ -413,7 +413,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
     
     if(feas.rows() > 0){
       double min_elem = *std::min_element(feas.begin(), feas.end());
-      if(min_elem < -Pacer::NEAR_ZERO){
+      if(min_elem < -::NEAR_ZERO){
         OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
         return false;
       } else {
@@ -585,7 +585,7 @@ bool inverse_dynamics_two_stage_simple(const Ravelin::VectorNd& v, const Ravelin
         OUTLOG(feas,"feas_z_OP2 =[ % (A*z-b >= 0)",logDEBUG1);
         if(feas.rows() > 0){
           double min_elem = *std::min_element(feas.begin(), feas.end());
-          if(min_elem < -Pacer::NEAR_ZERO){
+          if(min_elem < -::NEAR_ZERO){
             OUT_LOG(logERROR)  << "ERROR: Optimization 2 produced an infeasible result!" << min_elem;
           } else {
             cf_final = z;
@@ -818,7 +818,6 @@ bool inverse_dynamics_two_stage_simple_no_slip(const Ravelin::VectorNd& v, const
     OUTLOG(b1,"b_noninterpen",logDEBUG1);
     
     // combine all linear inequality constraints
-    assert(A1.columns() == A2.columns());
     Ravelin::MatrixNd A(A1.rows(),A1.columns());
     Ravelin::VectorNd b(b1.rows());
     A.block(0,A1.rows(),0,A1.columns()) = A1;
@@ -843,7 +842,7 @@ bool inverse_dynamics_two_stage_simple_no_slip(const Ravelin::VectorNd& v, const
     
     if(feas.rows() > 0){
       double min_elem = *std::min_element(feas.begin(), feas.end());
-      if(min_elem < -Pacer::NEAR_ZERO){
+      if(min_elem < -::NEAR_ZERO){
         OUT_LOG(logERROR)  << "ERROR: Optimization 1 produced an infeasible result!" << min_elem;
         return false;
       } else {
@@ -972,7 +971,7 @@ bool inverse_dynamics_two_stage_simple_no_slip(const Ravelin::VectorNd& v, const
         OUTLOG(feas,"feas_z_OP2 =[ % (A*z-b >= 0)",logDEBUG1);
         if(feas.rows() > 0){
           double min_elem = *std::min_element(feas.begin(), feas.end());
-          if(min_elem < -Pacer::NEAR_ZERO){
+          if(min_elem < -::NEAR_ZERO){
             OUT_LOG(logERROR)  << "ERROR: Optimization 2 produced an infeasible result!" << min_elem;
           } else {
             cf_final = z;

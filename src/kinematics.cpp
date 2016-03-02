@@ -664,7 +664,6 @@ void Pacer::Robot::set_generalized_value(Pacer::Robot::unit_e u,const Ravelin::V
 
 /// With Base
 void Pacer::Robot::get_generalized_value(Pacer::Robot::unit_e u, Ravelin::VectorNd& generalized_vec){
-  if (floating_base())
   switch(u){
     case(position_goal):
     case(position):
@@ -688,9 +687,10 @@ Ravelin::VectorNd Pacer::Robot::get_generalized_value(Pacer::Robot::unit_e u){
 
 void Pacer::Robot::set_base_value(Pacer::Robot::unit_e u,const Ravelin::VectorNd& vec){
   OUT_LOG(logDEBUG) << "Set: base_" << unit_enum_string(u) << " <-- " << vec;
-  if (fixed_base())
+  if (fixed_base()){
     throw std::runtime_error("This robot has a fixed (0 dof) base.");
-
+  }
+  
   check_phase_internal(u);
   switch(u){
     case(position_goal):
@@ -715,17 +715,16 @@ void Pacer::Robot::set_base_value(Pacer::Robot::unit_e u,const Ravelin::VectorNd
 }
 
 void Pacer::Robot::get_base_value(Pacer::Robot::unit_e u, Ravelin::VectorNd& vec){
-  if (fixed_base())
-    throw std::runtime_error("This robot has a fixed (0 dof) base.");
+  if (fixed_base()){
+    vec.set_zero(0);
+    return;
+  }
 
   vec = _base_state[u];
   OUT_LOG(logDEBUG) << "Get: base_" << unit_enum_string(u) << " --> " << vec;
 }
 
 Ravelin::VectorNd Pacer::Robot::get_base_value(Pacer::Robot::unit_e u){
-  if (fixed_base())
-    throw std::runtime_error("This robot has a fixed (0 dof) base.");
-
   Ravelin::VectorNd vec;
   get_base_value(u,vec);
   return vec;

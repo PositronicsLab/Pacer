@@ -32,6 +32,15 @@ void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::Matrix
 void Robot::compile(){
   check_phase_internal(initialization);
   NDOFS = _abrobot->num_generalized_coordinates(Ravelin::DynamicBodyd::eSpatial);
+
+  if(floating_base()){
+    OUT_LOG(logDEBUG1) << NDOFS << " Dimensional robot has a FLOATING (6 dof) base";
+  } else {
+    NSPATIAL = 0;
+    NEULER   = 0;
+    OUT_LOG(logDEBUG1) << NDOFS << " Dimensional robot has a FIXED (0 dof) base";
+  }
+  
   NUM_JOINT_DOFS = NDOFS - NSPATIAL;
   
   // Find Joint Names
@@ -124,7 +133,11 @@ void Robot::compile(){
     
     boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = eef->link;
     OUT_LOG(logDEBUG) << eef->id ;
-    eef->chain_bool.resize(NUM_JOINT_DOFS+6);
+    if(floating_base()){
+      eef->chain_bool.resize(NUM_JOINT_DOFS+6);
+    } else {
+      eef->chain_bool.resize(NUM_JOINT_DOFS);
+    }
     std:fill(eef->chain_bool.begin(),eef->chain_bool.end(),false);
     do {
       OUT_LOG(logDEBUG) << "  " << rb_ptr->body_id;
@@ -170,6 +183,7 @@ void Robot::update(){
   set_generalized_value(load_goal,Ravelin::VectorNd::zero(generalized_fext.rows()));
 
   Ravelin::Vector3d workv;
+  if(floating_base()){
   set_data<Ravelin::Vector3d>("base.state.x",Ravelin::Vector3d(generalized_q.segment(NUM_JOINT_DOFS, NUM_JOINT_DOFS+3).data(), _abrobot->get_gc_pose()));
   set_data<Ravelin::Quatd>("base.state.q",Ravelin::Quatd(generalized_q[NUM_JOINT_DOFS+3],generalized_q[NUM_JOINT_DOFS+4],generalized_q[NUM_JOINT_DOFS+5],generalized_q[NUM_JOINT_DOFS+6]));
 
@@ -181,7 +195,7 @@ void Robot::update(){
   set_data<Ravelin::Vector3d>("base.state.xdd", workv);
   workv = Ravelin::Vector3d(generalized_qdd.segment(NUM_JOINT_DOFS+3, NUM_JOINT_DOFS+NSPATIAL).data(), _abrobot->get_gc_pose());
   set_data<Ravelin::Vector3d>("base.state.alpha", workv);
-  
+  }
   Ravelin::VectorNd q = generalized_q.segment(0,NUM_JOINT_DOFS);
   Ravelin::VectorNd qd = generalized_qd.segment(0,NUM_JOINT_DOFS);
   Ravelin::VectorNd qdd = generalized_qdd.segment(0,NUM_JOINT_DOFS);
@@ -262,14 +276,12 @@ void Robot::init_robot(){
     OUTLOG(init_qd[joint_names[i]],joint_names[i]+"_qd (start)",logINFO);
   }
   
-  
+  set_joint_value(position,init_q);
+  set_joint_value(velocity,init_qd);
+
   // Initialize base
   std::vector<double>
   base_start = get_data<std::vector<double> >("init.base.x");
-
-  if (base_start.size() == 0) {
-    FIXED_BASE = true;
-  }
   
   if(floating_base()){
     Ravelin::Quatd init_quat =
@@ -289,11 +301,10 @@ void Robot::init_robot(){
     get_data<std::vector<double> >("init.base.xd",base_startv);
     Ravelin::VectorNd init_basev(6,&base_startv[0]);
     
-    set_joint_value(position,init_q);
     set_base_value(position,init_base);
     
-    set_joint_value(velocity,init_qd);
     set_base_value(velocity,init_basev);
   }
+
   OUT_LOG(logDEBUG) << "<< Robot::init_robot(.)";
 }

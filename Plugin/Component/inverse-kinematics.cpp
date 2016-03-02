@@ -57,7 +57,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   Ravelin::VectorNd q;
   ctrl->get_generalized_value(Pacer::Controller::position,q);
-  int N = q.size() - Pacer::NEULER;
+  int N = ctrl->num_joint_dof();
   q[N] = 0;
   q[N+1] = 0;
   q[N+2] = 0;

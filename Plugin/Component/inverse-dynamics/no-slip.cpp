@@ -3,7 +3,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Pacer::NEAR_ZERO;
+  const double NEAR_ZERO = ::NEAR_ZERO;
   Ravelin::MatrixNd NT = nT;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip_fast() entered" << std::endl;
   
@@ -65,7 +65,7 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   iM.mult(fext,v,dt,1);
   
   Ravelin::VectorNd vqstar;
-  ((vqstar = qdd) *= dt) += v.segment(0,nq);
+  ((vqstar = qdd) *= dt) += vel.segment(0,nq);
   
   //////////////////////////////////////////////////////////////
   Ravelin::MatrixNd P;
@@ -477,28 +477,30 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   if(_v.size() != _qq.size() || !SAME_AS_LAST_CONTACTS)
     _v.resize(0);
   
-  // attempt to solve the LCP using the fast method
-  if(active_eefs > 2){
-    OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
-    OUTLOG(_v,"warm_start_v",logDEBUG1);
-    
-    if (!Utility::lcp_fast(_MM, _qq,indices, _v,Pacer::NEAR_ZERO))
-    {
-      OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+  if (active_eefs > 0) {
+    // attempt to solve the LCP using the fast method
+    if(active_eefs > 2){
+      OUT_LOG(logERROR) << "-- using: lcp_fast" << std::endl;
+      OUTLOG(_v,"warm_start_v",logDEBUG1);
       
-      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
-        throw std::runtime_error("Unable to solve constraint LCP!");
-    }
-    
-  } else {
-    OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
-    
-    if (!_lcp.lcp_fast(_MM, _qq, _v))
-    {
-      OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+      if (!Utility::lcp_fast(_MM, _qq,indices, _v,::NEAR_ZERO))
+      {
+        OUT_LOG(logERROR) << "-- Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+        
+        if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+          throw std::runtime_error("Unable to solve constraint LCP!");
+      }
       
-      if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
-        throw std::runtime_error("Unable to solve constraint LCP!");
+    } else {
+      OUT_LOG(logERROR) << "-- using: Moby::LCP::lcp_fast" << std::endl;
+      
+      if (!_lcp.lcp_fast(_MM, _qq, _v))
+      {
+        OUT_LOG(logERROR) << "Principal pivoting method LCP solver failed; falling back to regularized lemke solver" << std::endl;
+        
+        if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
+          throw std::runtime_error("Unable to solve constraint LCP!");
+      }
     }
   }
   OUTLOG(_v,"v",logERROR);
@@ -506,11 +508,15 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   Ravelin::VectorNd _cs_ct_tau, _v_plus;
   
   // u = inv(A)*(Q'*[cn])  [b/c we don't care about new velocity]
+  
   _cs_ct_tau = _YXv;
   _cs_ct_tau -= _Yvqstar;
-  _Q_iM_XT.transpose_mult(_v, _workv);
-  LA_.solve_chol_fast(_Y, _workv);
-  _cs_ct_tau += _workv;
+
+  if (active_eefs > 0) {
+    _Q_iM_XT.transpose_mult(_v, _workv);
+    LA_.solve_chol_fast(_Y, _workv);
+    _cs_ct_tau += _workv;
+  }
   _cs_ct_tau.negate();
   
   OUTLOG(_cs_ct_tau,"cs_ct_tau",logDEBUG1);
@@ -577,5 +583,13 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   
   
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip_fast() exited" << std::endl;
+  return true;
+}
+
+bool inverse_dynamics_no_contact(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M, const Ravelin::VectorNd& fext, double dt, Ravelin::VectorNd& x){
+  Ravelin::MatrixNd nT(vel.rows(),0),D(vel.rows(),0);
+  std::vector<unsigned> indices;
+  Ravelin::VectorNd cf;
+  inverse_dynamics_no_slip_fast(vel,qdd,M,nT,D,fext, dt,x, cf, false, indices, 0, false);
   return true;
 }

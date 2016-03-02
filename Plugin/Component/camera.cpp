@@ -14,7 +14,6 @@ void loop(){
   ctrl->get_data<Ravelin::Vector3d>("base.state.x",base_state_x);
   ctrl->get_data<Ravelin::Quatd>("base.state.q",base_state_q);
   
-  
   std::vector<double> camera_x, camera_rpy;
   ctrl->get_data< std::vector<double> >(plugin_namespace+".xyz",camera_x);
 
@@ -29,7 +28,7 @@ void loop(){
      )
     );
 
-  Ravelin::Vector3d camera_position(-0.6,0,0.1,camera_pose);
+  Ravelin::Vector3d camera_position(0,0,0,camera_pose);
 
   Ravelin::Vector3d camera_position_global = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,camera_position);
 
@@ -67,5 +66,4 @@ void setup(){
   sprintf(buffer,"%06d",pid);
   target_file = std::string("target-"+std::string(buffer)+".log");
   camera_file = std::string("camera-"+std::string(buffer)+".log");
-
 }

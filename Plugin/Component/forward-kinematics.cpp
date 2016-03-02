@@ -19,8 +19,8 @@ void loop(){
   ctrl->get_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->get_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
   
-  int N = qd_goal.size();
-  local_q.set_zero(N+Pacer::NEULER);
+  int N = ctrl->num_joint_dof();
+  local_q.set_zero(ctrl->num_total_dof_euler());
   local_q.segment(0,N) = q_goal;
   local_q[N+6] = 1;
   

@@ -168,10 +168,10 @@ namespace gazebo
         OUT_LOG(logERROR) << "**Starting controller**";
         
         Ravelin::VectorNd
-        base_q(Pacer::NEULER),
-        base_qd(Pacer::NSPATIAL),
-        base_qdd(Pacer::NSPATIAL),
-        base_fext(Pacer::NSPATIAL);
+        base_q(robot_ptr->num_base_dof_euler()),
+        base_qd(robot_ptr->num_base_dof()),
+        base_qdd(robot_ptr->num_base_dof()),
+        base_fext(robot_ptr->num_base_dof());
         
         // Re-map state simulation->robot joints
         {

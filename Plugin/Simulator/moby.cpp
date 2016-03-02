@@ -9,6 +9,16 @@
 #include <Pacer/controller.h>
 #include <Pacer/utilities.h>
 
+#ifdef USE_OSG_DISPLAY
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+#include <osg/Geode>
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+#include <osgGA/TrackballManipulator>
+#include <osgGA/StateSetManipulator>
+#endif
+
 #include <Pacer/Random.h>
 
 #include <time.h>
@@ -49,9 +59,9 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
 //     void (*controller)(boost::shared_ptr<ControlledBody>, double, void*);
 
 // implements a controller callback for Moby
-Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> cbp,Ravelin::VectorNd& control_force, double t, void*)
+Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> cbp,Ravelin::VectorNd& cf, double t, void*)
 {
-
+  static Ravelin::VectorNd control_force = cf;
   boost::shared_ptr<Moby::RCArticulatedBody>
     abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(cbp);
 
@@ -63,16 +73,26 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       joints_map[(*it)->joint_id] = (*it);
   }
 
-  static unsigned long long ITER = 0;
+  static unsigned long long ITER = -1;
   static double last_time = -0.001;
+
+  std::cout << "controller: time=" << t << " (dt="<< t - last_time << ")" << std::endl;
+
+  if (t - last_time < 0.001*0.75) {
+    cf = control_force;
+    cf.set_zero();
+    return cf;
+  }
+  
+  ITER++;
+  std::cout << "controller: iteration=" << ITER << " , time=" << t << " (dt="<< t - last_time << ")" << std::endl;
+
   double dt = t - last_time;
   last_time = t;
 
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Get State: ///////////////////////////////////
-
-  if (ITER%1 == 0) {
-    
+  
   Ravelin::VectorNd generalized_q,generalized_qd,generalized_qdd, generalized_fext;
 
   {
@@ -104,82 +124,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 
     num_joint_dof = q_joints.size();
   }
-  
-  /////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////// Simulate Uncertainty /////////////////////////
-#ifdef SIMULATE_UNCERTAINTY
-    /*
-  /////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////// Apply Noise: /////////////////////////////////
-  static std::vector<std::string> noise_variables,joint_names;
-  bool apply_noise = robot_ptr->get_data< std::vector<std::string> >("noise.variables",noise_variables);
-  
-  if(joint_names.empty())
-    robot_ptr->get_data< std::vector<std::string> >("init.joint.id",joint_names);
-  
-  static
-  std::map< std::string , std::vector< boost::shared_ptr<Generator> > >
-  noise_generator;
-  
-  if (apply_noise) {
-    if(noise_generator.empty()){
-      for (std::vector<std::string>::iterator it = noise_variables.begin(); it != noise_variables.end(); it++) {
-        std::string& name = (*it);
-        
-        std::vector<double> mu,sigma,xmin, xmax;
-        
-        bool use_mu_sigma = true;
-        if(!robot_ptr->get_data<std::vector<double> >("noise."+name+".mu",mu))
-          use_mu_sigma = false;
-        if(!robot_ptr->get_data<std::vector<double> >("noise."+name+".sigma",sigma))
-          use_mu_sigma = false;
-        
-        robot_ptr->get_data<std::vector<double> >("noise."+name+".min",xmin);
-        robot_ptr->get_data<std::vector<double> >("noise."+name+".max",xmax);
-        
-        std::vector< boost::shared_ptr<Generator> > noise_vec;
-        for (int i=0; i<xmin.size(); i++) {
-          if(use_mu_sigma)
-            noise_vec.push_back(boost::shared_ptr<Generator>(new Generator(mu[i],sigma[i],xmin[i],xmax[i])));
-          else
-            noise_vec.push_back(boost::shared_ptr<Generator>(new Generator(xmin[i],xmax[i])));
-        }
-        noise_generator[name] = noise_vec;
-      }
-    }
-    
-    for (std::vector<std::string>::iterator it = noise_variables.begin(); it != noise_variables.end(); it++) {
-      std::string& name = (*it);
-      std::vector< boost::shared_ptr<Generator> >& generator = noise_generator[name];
-      Ravelin::VectorNd noise_vector = Ravelin::VectorNd(generator.size());
-      for (int i=0; i<generator.size(); i++) {
-        noise_vector[i] = generator[i]->generate();
-      }
-      
-      OUTLOG(noise_vector,name+"_perturbation",logERROR);
-      
-      if (name.compare("q") == 0) {
-        assert(generator.size() == num_joint_dof);
-        generalized_q.segment(0,num_joint_dof) += noise_vector;
-      } else if (name.compare("qd") == 0) {
-        assert(generator.size() == num_joint_dof);
-        generalized_qd.segment(0,num_joint_dof) += noise_vector;
-      } else if (name.compare("position") == 0) {
-        generalized_q.segment(num_joint_dof,num_joint_dof+6) += noise_vector;
-      } else if (name.compare("velocity") == 0) {
-        generalized_q.segment(num_joint_dof,num_joint_dof+6) += noise_vector;
-      } else if ("u") {
-        for (int i = 0; i<noise_vector.rows(); i++) {
-          Ravelin::VectorNd U(1);
-          U[0] = noise_vector[i];
-          joints_map[joint_names[i]]->add_force(U);
-        }
-      }
-    }
-  }
-     */
-    
-#endif
   
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Apply State: /////////////////////////////////
@@ -221,27 +165,22 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       bool compliant =
       (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
       
-      
       OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
       OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
       OUT_LOG(logDEBUG) << "MOBY: normal: " << normal;
       OUT_LOG(logDEBUG) << "MOBY: tangent: " << tangent;
       OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
+      
+      boost::shared_ptr<Pacer::Robot::contact_t> new_contact;
       if(robot_ptr->is_end_effector(sb1->body_id)){
-        robot_ptr->add_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
-        //robot_ptr->set_data<Ravelin::Vector3d>
-        //(sb1->body_id+".contact-force",
-        // Ravelin::Vector3d
-        // (impulse.dot(normal),impulse.dot(e[i].contact_tan1),impulse.dot(e[i].contact_tan2)));
+        new_contact = robot_ptr->create_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else if(robot_ptr->is_end_effector(sb2->body_id)){
-        robot_ptr->add_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
-        //robot_ptr->set_data<Ravelin::Vector3d>
-        //(sb2->body_id+".contact-force",
-        // Ravelin::Vector3d
-        // (impulse.dot(-normal),impulse.dot(e[i].contact_tan1),impulse.dot(-e[i].contact_tan2)));
+        new_contact = robot_ptr->create_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
       } else {
         continue;  // Contact doesn't include an end-effector
       }
+      
+      robot_ptr->add_contact(new_contact);
       
 #ifdef USE_OSG_DISPLAY
       Utility::visualize.push_back(  Pacer::VisualizablePtr( new Pacer::Ray(e[i].contact_point,
@@ -261,7 +200,26 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Visualize: ///////////////////////////////////
   render(Utility::visualize);
+  
+  static osg::Group * MAIN_GROUP;
+  if (!MAIN_GROUP) {
+    MAIN_GROUP = new osg::Group;
+    MAIN_GROUP->addChild(sim->get_persistent_vdata());
+    MAIN_GROUP->addChild(sim->get_transient_vdata());
+  }
+  
+  if (ITER % 10 == 0) {
+    // write the file (fails silently)
+    char buffer[128];
+    sprintf(buffer, "driver.out-%08llu.osg", ITER, t);
+    osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
+  }
+  
+  std::cout << "Pacer called: iteration: " << ITER << " , time :" << t << " (dt="<< dt << ")" << std::endl;
+
+
 #endif
+
   /////////////////////////////////////////////////////////////////////////////
   /////////////////////// Send forces to Simulation: //////////////////////////
   {
@@ -269,8 +227,13 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
     robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
     robot_ptr->get_joint_value(Pacer::Robot::load_goal, u);
-        
-    control_force.set_zero(num_joint_dof+6);
+    
+    if (robot_ptr->floating_base()) {
+      control_force.set_zero(num_joint_dof+6);
+    } else {
+      control_force.set_zero(num_joint_dof);
+    }
+    
     for(int i=0;i<joints.size();i++){
 //      joints[i]->add_force(u[joints[i]->joint_id]);
       int joint_index = joints[i]->get_coord_index();
@@ -283,12 +246,12 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     }
     OUT_LOG(logINFO) << "MOBY: control: " << control_force;
   }
-  }
 
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
   for(int i=0;i<eef_names.size();i++)
     robot_ptr->remove_data(eef_names[i]+".contact-force");
-  return control_force;
+  cf = control_force;
+  return cf;
 }
 
 // ============================================================================
@@ -584,63 +547,61 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   controlled_body->controller                     = &controller_callback;
   
   // ================= INIT ROBOT STATE ==========================
-  
-//  robot_ptr->control(0);
+  boost::shared_ptr<Moby::ArticulatedBody>
+  abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(controlled_body);
+  boost::shared_ptr<Moby::RCArticulatedBody>
+  rcabrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(abrobot);
 
+  std::vector<boost::shared_ptr<Ravelin::Jointd> > joints = abrobot->get_joints();
+  
+  // get generalized data from Moby
+  Ravelin::VectorNd gq, gqd;
+  abrobot->get_generalized_coordinates_euler(gq);
+  abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
+  
+  // set values into vectors
+  gq.set_zero();
+  gqd.set_zero();
+
+  // Get joint values
   std::map<std::string,Ravelin::VectorNd > q_start, qd_start;
   robot_ptr->get_joint_value(Pacer::Robot::position,q_start);
-//  robot_ptr->get_joint_value(Pacer::Robot::position_goal, q_start);
-//  robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd_start);
-
-  // get pacer data
-  Ravelin::VectorNd base_x, base_xd;
-  robot_ptr->get_base_value(Pacer::Robot::position,base_x);
-  robot_ptr->get_base_value(Pacer::Robot::velocity,base_xd);
-  OUTLOG(base_x,"Initial base Coords",logERROR);
-  OUTLOG(base_xd,"Initial base Vel",logERROR);
+  robot_ptr->get_joint_value(Pacer::Robot::velocity,qd_start);
   
   OUTLOG(q_start,"Initial joint Coords",logERROR);
   OUTLOG(qd_start,"Initial joint Vel",logERROR);
-
-  //update pacer
-//  robot_ptr->reset_state();
-
   // Push robot data to Moby
-  boost::shared_ptr<Moby::ArticulatedBody>
-  abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(controlled_body);
-  std::vector<boost::shared_ptr<Ravelin::Jointd> > joints = abrobot->get_joints();
-
-
-  // get generalized data from Moby
-  Ravelin::VectorNd gq, gqd;
-  abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
-  abrobot->get_generalized_coordinates_euler(gq);
-
-  // set values into vectors
-  gqd.set_zero();
-  gq.set_zero();
-
-  //base
-  gq.set_sub_vec(gq.size()-7,base_x);
-  gqd.set_sub_vec(gqd.size()-6,base_xd);
+  
+  for(unsigned i=0;i<joints.size();i++){
+//    if(joints[i]->num_dof() != 0){
+//      assert(joints[i]->num_dof() == q_start[joints[i]->joint_id].rows());
+//      joints[i]->q = q_start[joints[i]->joint_id];
+//    }
+    gq.segment(joints[i]->get_coord_index(),joints[i]->get_coord_index()+joints[i]->num_dof()) = q_start[joints[i]->joint_id];
+//    gqd.segment(joints[i]->get_coord_index(),joints[i]->get_coord_index()+joints[i]->num_dof()) = qd_start[joints[i]->joint_id];
+  }
+  // update moby
+//  rcabrobot->update_link_poses();
+  
+  if (robot_ptr->floating_base()) {
+    // get pacer data
+    Ravelin::VectorNd base_x, base_xd;
+    robot_ptr->get_base_value(Pacer::Robot::position,base_x);
+    robot_ptr->get_base_value(Pacer::Robot::velocity,base_xd);
+    OUTLOG(base_x,"Initial base Coords",logERROR);
+    OUTLOG(base_xd,"Initial base Vel",logERROR);
+    
+    //base
+    gq.set_sub_vec(gq.size()-7,base_x);
+    gqd.set_sub_vec(gqd.size()-6,base_xd);
+  }
+  
+  OUTLOG(gq,"Initial Coords",logERROR);
+  OUTLOG(gqd,"Initial Vels",logERROR);
 
   // send to moby
   abrobot->set_generalized_coordinates_euler(gq);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
-  
-  
-  ///*
-  for(unsigned i=0;i<joints.size();i++){
-    if(joints[i]->num_dof() != 0){
-      assert(joints[i]->num_dof() == q_start[joints[i]->joint_id].rows());
-      joints[i]->q = q_start[joints[i]->joint_id];
-    }
-  }
-  // update moby
-  boost::shared_ptr<Moby::RCArticulatedBody>
-  rcabrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(abrobot);
-  rcabrobot->update_link_poses();
-  //*/
 }
 } // end extern C
 

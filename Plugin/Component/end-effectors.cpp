@@ -34,7 +34,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 #endif
 
   // q w/o base position
-  local_q.set_sub_vec(NUM_JOINT_DOFS,Utility::pose_to_vec(Ravelin::Pose3d()));
+  if(ctrl->floating_base())
+    local_q.set_sub_vec(NUM_JOINT_DOFS,Utility::pose_to_vec(Ravelin::Pose3d()));
   ctrl->set_model_state(local_q);
   for(unsigned i=0;i<NUM_FEET;i++){
     Ravelin::Origin3d xd,xdd;

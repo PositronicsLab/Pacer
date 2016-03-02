@@ -50,7 +50,7 @@ boost::shared_ptr<Pacer::Robot::contact_t> Pacer::Robot::create_contact(
   return c;
 }
 
-void Pacer::Robot::add_contact(boost::shared_ptr<const Pacer::Robot::contact_t>& c)
+void Pacer::Robot::add_contact(boost::shared_ptr<Pacer::Robot::contact_t>& c)
 {
   check_phase_internal(misc_sensor);
   _id_contacts_map[c->id].push_back(c);

@@ -254,7 +254,7 @@ void walk_toward(// PARAMETERS
   boost::shared_ptr<Pacer::Controller> ctrl = ctrl_weak_ptr.lock();
   
   const int NUM_FEET = origins.size(),
-  NUM_JOINT_DOFS = q.size() - Pacer::NEULER;
+  NUM_JOINT_DOFS = q.size() - ctrl->num_base_dof_euler();
   
   // Up is oriented wrt global up vector (+Z-axis for BASE_HORIZONTAL_FRAME)
   bool global_up = false;
@@ -447,7 +447,7 @@ void walk_toward(// PARAMETERS
     }
 
     VectorNd zero_base_generalized_q;
-    zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
+    zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+ctrl->num_base_dof_euler());
     zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
     /// STANCE FEET ARE IN GAIT POSE
     // Put goal in gait pose
@@ -708,15 +708,15 @@ void walk_toward(// PARAMETERS
       // Get touchdown and takeoff vel;
       {
         VectorNd zero_base_generalized_q;
-        zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+Pacer::NEULER);
-        zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
+        zero_base_generalized_q.set_zero(ctrl->num_total_dof_euler());
+        zero_base_generalized_q.set_sub_vec(0,q.segment(0,ctrl->num_joint_dof()));
         /// STANCE FEET ARE IN GAIT POSE
         // Put goal in gait pose
         VectorNd gait_pose_vec = Utility::pose_to_vec(gait_pose);
         zero_base_generalized_q.set_sub_vec(NUM_JOINT_DOFS,gait_pose_vec);
         Ravelin::MatrixNd J = ctrl->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
         
-        J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+Pacer::NSPATIAL).mult(command,workv3_,-1.0,0);
+        J.block(0,3,ctrl->num_joint_dof(),ctrl->num_total_dof()).mult(command,workv3_,-1.0,0);
         //        OUTLOG(J,"J",logDEBUG);
         xd = workv3_;
         xd.pose = base_frame;

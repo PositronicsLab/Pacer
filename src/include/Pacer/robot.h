@@ -35,9 +35,6 @@ namespace Pacer{
   
   class Robot;
   
-  static const unsigned NSPATIAL = 6;
-  static const unsigned NEULER = 7;
-  
   class Robot{
   public:
     
@@ -194,7 +191,7 @@ namespace Pacer{
                                                 double mu_coulomb = 0,double mu_viscous = 0,double restitution = 0, bool compliant = false);
     
     /// @brief This is a 'misc_sensor' operation.  Adds contact 'c' to list of known contacts on the robot
-    void add_contact(boost::shared_ptr<const contact_t>& c);
+    void add_contact(boost::shared_ptr<contact_t>& c);
     
     /// @brief collects all contact information into (link name, contact) key,value pairs in map 'id_contacts_map'
     void get_contacts(std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > >& id_contacts_map);
@@ -529,10 +526,14 @@ namespace Pacer{
       return _abrobot;
     };
     
-  protected:
-    bool fixed_base(){return FIXED_BASE;}
-    bool floating_base(){return !FIXED_BASE;}
-
+  public:
+    bool fixed_base() const {return !floating_base();}
+    bool floating_base() const {return _abrobot->is_floating_base();}
+    unsigned  num_base_dof_euler() const {return NEULER; }
+    unsigned  num_base_dof() const {return NSPATIAL; }
+    unsigned  num_joint_dof() const {return NUM_JOINT_DOFS; };
+    unsigned  num_total_dof() const {return (NUM_JOINT_DOFS+NSPATIAL); };
+    unsigned  num_total_dof_euler() const {return (NUM_JOINT_DOFS+NEULER); };
   private:
     /// @brief N x (3/6)d kinematics for RMRC
     Ravelin::VectorNd& contact_kinematics(const Ravelin::VectorNd& x,const end_effector_t& foot, Ravelin::VectorNd& fk, Ravelin::MatrixNd& gk);
@@ -549,8 +550,8 @@ namespace Pacer{
     
     // NDFOFS for forces, accel, & velocities
     unsigned NDOFS, NUM_JOINT_DOFS;
-    
-    bool FIXED_BASE = false;
+    unsigned NSPATIAL = 6;
+    unsigned NEULER = 7;
 
     std::vector<bool> _disabled_dofs;
     

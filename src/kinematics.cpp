@@ -216,13 +216,13 @@ Ravelin::VectorNd& Robot::link_kinematics(const Ravelin::VectorNd& x,const end_e
    return fk;
 }
 
-namespace Pacer{
-  class UntestedException : public std::exception
-  {
-  public:
-    virtual char const * what() const _NOEXCEPT { return "This is untested code, if you still want to use it, catch 'Pacer::UntestedException'."; }
-  };
-}
+//namespace Pacer{
+//  class UntestedException : public std::exception
+//  {
+//  public:
+//    virtual char const * what() const _NOEXCEPT { return "This is untested code, if you still want to use it, catch 'Pacer::UntestedException'."; }
+//  };
+//}
 
 /// 6d IK
 void Robot::RMRC(const end_effector_t& foot,const Ravelin::VectorNd& q,const Ravelin::VectorNd& goal,Ravelin::VectorNd& q_des, double TOL){

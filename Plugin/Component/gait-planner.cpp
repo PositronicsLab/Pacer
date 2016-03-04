@@ -894,13 +894,6 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   foot_names = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".feet");
   
-  double width = -1;
-  ctrl->get_data<double>(plugin_namespace+".width",width);
-  double length = -1;
-  ctrl->get_data<double>(plugin_namespace+".length",length);
-  double height = -1;
-  ctrl->get_data<double>(plugin_namespace+".height",height);
-  
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
                                                      ctrl->get_data<Pose3d>("base_link_frame")));
   base_horizontal_frame = boost::shared_ptr<Pose3d>( new Pose3d(
@@ -910,26 +903,30 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   // Set up output vectors for gait planner
   int NUM_FEET = foot_names.size();
-  std::vector<Vector3d>
-  foot_vel(NUM_FEET),
-  foot_pos(NUM_FEET),
-  foot_acc(NUM_FEET),
-  foot_init(NUM_FEET);
+  std::vector<Vector3d> foot_vel(NUM_FEET),
+                        foot_pos(NUM_FEET),
+                        foot_acc(NUM_FEET);
   q = ctrl->get_generalized_value(Pacer::Robot::position);
   qd_base = ctrl->get_base_value(Pacer::Robot::velocity);
   
   //  ctrl->set_model_state(q);
   double min_reach = INFINITY;
   for(int i=0;i<NUM_FEET;i++){
-    min_reach = std::min(min_reach, ctrl->get_data<double>(foot_names[i]+".reach"));
-    foot_init[i] = Vector3d(ctrl->get_data<Origin3d>(foot_names[i]+".init.x"),base_frame);
-    foot_pos[i] = foot_init[i];
+    double reach = ctrl->get_data<double>(foot_names[i]+".reach");
+    min_reach = std::min(min_reach,reach);
+    
     Origin3d workv;
-    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.x",workv))
+    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.x",workv)){
       foot_pos[i] = Vector3d(workv,base_frame);
+    } else {
+      ctrl->get_data<Origin3d>(foot_names[i]+".state.x",workv);
+      foot_pos[i] = Vector3d(workv,base_frame);
+    }
+    
     foot_vel[i] = Vector3d(0,0,0,base_frame);
     if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.xd",workv))
       foot_vel[i] = Vector3d(workv,base_frame);
+    
     foot_acc[i] = Vector3d(0,0,0,base_frame);
   }
   
@@ -943,33 +940,41 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   // Assign foot origins (ideal foot placemenet at rest)
   std::vector<Origin3d> origins;
+  std::vector<Vector3d> origins_visualize(NUM_FEET);
   if(origins.empty()){
     origins.resize(NUM_FEET);
+    double width = 1.0;
+    ctrl->get_data<double>(plugin_namespace+".width",width);
+    double length = 1.0;
+    ctrl->get_data<double>(plugin_namespace+".length",length);
+    double height = 1.0;
+    ctrl->get_data<double>(plugin_namespace+".height",height);
+    
     for(int i=0;i<NUM_FEET;i++){
-      Vector3d origin = foot_init[i];
-      if(length >= 0)
-        origin[0] = Utility::sign<double>(foot_init[i][0])*length/2.0;
-      if(width >= 0)
-        origin[1] = Utility::sign<double>(foot_init[i][1])*width/2.0;
-      if(height >= 0)
-        origin[2] = -std::min(height,min_reach);
-      origin.pose = base_frame;
+      Vector3d origin(ctrl->get_data<Origin3d>(foot_names[i]+".base"),gait_pose);
+      origin[0] *= length;
+      origin[1] *= width;
+      origin[2] = -min_reach * height;
+      
       OUT_LOG(logDEBUG1) << "Length is " << origin[0];
       OUT_LOG(logDEBUG1) << "Width is " << origin[1];
       OUT_LOG(logDEBUG1) << "Height is " << origin[2];
 
+      origins_visualize[i] = Pose3d::transform_point(gait_pose,origin);
       origins[i] = Pose3d::transform_point(gait_pose,origin);
-      
     }
   }
   
+  for(int i=0;i<NUM_FEET;i++)
+    VISUALIZE(POINT(Pose3d::transform_point(Pacer::GLOBAL,origins_visualize[i]),Vector3d(0,0,0),0.1));
+
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
   
   bool STANCE_ON_CONTACT = ctrl->get_data<bool>(plugin_namespace+".stance-on-contact");
   
   for(int i=0;i<foot_names.size();i++){
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(foot_names[i],c);
     if(!c.empty())
       active_feet[foot_names[i]] = true;

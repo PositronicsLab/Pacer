@@ -56,26 +56,26 @@ void Pacer::Robot::add_contact(boost::shared_ptr<Pacer::Robot::contact_t>& c)
   _id_contacts_map[c->id].push_back(c);
 }
 
-void Pacer::Robot::get_contacts(std::map<std::string,std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> > >& id_contacts_map){
+void Pacer::Robot::get_contacts(std::map<std::string,std::vector< boost::shared_ptr<Pacer::Robot::contact_t> > >& id_contacts_map){
   id_contacts_map.insert(_id_contacts_map.begin(), _id_contacts_map.end());
 }
 
-int Pacer::Robot::get_all_contacts(std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> >& contacts){
+int Pacer::Robot::get_all_contacts(std::vector< boost::shared_ptr<Pacer::Robot::contact_t> >& contacts){
   for(int i=0;i<_link_ids.size();i++){
-    std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> >& c = _id_contacts_map[_link_ids[i]];
+    std::vector< boost::shared_ptr<Pacer::Robot::contact_t> >& c = _id_contacts_map[_link_ids[i]];
     contacts.insert(contacts.end(), c.begin(), c.end());
   }
   return contacts.size();
 }
 
-int Pacer::Robot::get_link_contacts(const std::string& link_id, std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> >& contacts){
+int Pacer::Robot::get_link_contacts(const std::string& link_id, std::vector< boost::shared_ptr<Pacer::Robot::contact_t> >& contacts){
   contacts = _id_contacts_map[link_id];
   return contacts.size();
 }
 
-void Pacer::Robot::get_link_contacts(const std::vector<std::string> link_id,std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> >& contacts){
+void Pacer::Robot::get_link_contacts(const std::vector<std::string> link_id,std::vector< boost::shared_ptr<Pacer::Robot::contact_t> >& contacts){
   for(int i=0;i<link_id.size();i++){
-    std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> >& c = _id_contacts_map[link_id[i]];
+    std::vector< boost::shared_ptr<Pacer::Robot::contact_t> >& c = _id_contacts_map[link_id[i]];
     contacts.insert(contacts.end(), c.begin(), c.end());
   }
 }

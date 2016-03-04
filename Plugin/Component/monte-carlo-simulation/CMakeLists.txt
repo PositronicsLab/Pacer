@@ -10,7 +10,9 @@ set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
 find_package(Boost COMPONENTS program_options REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
+
   add_executable(sample.bin Sample.cpp)
+
   target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
   IF(USE_OSG_DISPLAY)
     #find OSG

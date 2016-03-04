@@ -320,7 +320,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   OUTLOG(duty_factor,"duty_factor",logINFO);
     
   for(int i=0;i<foot_names.size();i++){
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(foot_names[i],c);
     if(!c.empty())
       active_feet[foot_names[i]] = true;

@@ -76,9 +76,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   double activation_tol = 0;
   ctrl->get_data<double>(plugin_namespace+".min-allowed-friction",activation_tol);
   
-  std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
+  std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > contacts;
   for(int i=0;i<active_feet.size();i++){
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(active_feet[i],c);
     if(!c.empty())
       if(c[0]->mu_coulomb >= activation_tol)

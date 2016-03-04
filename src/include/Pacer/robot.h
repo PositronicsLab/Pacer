@@ -128,7 +128,6 @@ namespace Pacer{
     };
     
     
-  private:
     /**
      * @brief The end_effector_t struct
      *
@@ -150,10 +149,12 @@ namespace Pacer{
       bool                   stance;
     };
     
-    std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > > _id_contacts_map;
+  private:
+    std::map<std::string,std::vector< boost::shared_ptr<contact_t> > > _id_contacts_map;
     std::map<std::string,boost::shared_ptr<end_effector_t> > _id_end_effector_map;
     
   public:
+    std::map<std::string,boost::shared_ptr<end_effector_t> >& get_end_effectors() { return _id_end_effector_map;}
     
     /// @brief Returns true if the link with name 'id' is in the list of designanted end effectors.
     bool is_end_effector(const std::string& id);
@@ -194,16 +195,16 @@ namespace Pacer{
     void add_contact(boost::shared_ptr<contact_t>& c);
     
     /// @brief collects all contact information into (link name, contact) key,value pairs in map 'id_contacts_map'
-    void get_contacts(std::map<std::string,std::vector< boost::shared_ptr<const contact_t> > >& id_contacts_map);
+    void get_contacts(std::map<std::string,std::vector< boost::shared_ptr<contact_t> > >& id_contacts_map);
     
     /// @brief collects all contact information into vector 'contacts'
-    int get_all_contacts(std::vector< boost::shared_ptr<const contact_t> >& contacts);
+    int get_all_contacts(std::vector< boost::shared_ptr<contact_t> >& contacts);
     
     /// @brief collects all contact information for link name: 'link_id' into vector 'contacts'
-    int get_link_contacts(const std::string& link_id, std::vector< boost::shared_ptr<const contact_t> >& contacts);
+    int get_link_contacts(const std::string& link_id, std::vector< boost::shared_ptr<contact_t> >& contacts);
     
     /// @brief collects all contact information for link names listed in 'link_ids' into vector 'contacts'
-    void get_link_contacts(const std::vector<std::string> link_ids,std::vector< boost::shared_ptr<const contact_t> >& contacts);
+    void get_link_contacts(const std::vector<std::string> link_ids,std::vector< boost::shared_ptr<contact_t> >& contacts);
     
     /// @brief This is a 'clean_up' operation. Clears: _id_contacts_map
     void reset_contact();
@@ -478,11 +479,8 @@ namespace Pacer{
     void set_model_state(const Ravelin::VectorNd& q,const Ravelin::VectorNd& qd = Ravelin::VectorNd::zero(0));
     
     /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
-    void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<const contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
-    
-    /// @brief Calculate N (normal), S (1st tangent), T (2nd tangent) contact jacobians
     void calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost::shared_ptr<contact_t> > c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T);
-    
+        
     /// @brief Calculate 6x(N+6) jacobian for point(in frame) on link at state q
     Ravelin::MatrixNd calc_jacobian(const Ravelin::VectorNd& q, const std::string& link, Ravelin::Origin3d point);
     

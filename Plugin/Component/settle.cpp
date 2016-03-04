@@ -15,7 +15,7 @@ void loop(){
   last_time = t;
   
   for(int i=0;i<eef_names_.size();i++){
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(eef_names_[i],c);
     
     OUT_LOG(logERROR) << "Foot " << eef_names_[i] << " has " << c.size() << " contacts";

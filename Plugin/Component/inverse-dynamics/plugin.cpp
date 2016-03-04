@@ -79,7 +79,7 @@ void loop(){
   boost::shared_ptr<Pose3d> base_link_frame = boost::shared_ptr<Pose3d>( new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));
   
   for(int i=0;i<active_feet.size();i++){
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(active_feet[i],c);
     Vector3d pos;
     if(!c.empty()){

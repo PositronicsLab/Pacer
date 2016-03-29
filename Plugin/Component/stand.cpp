@@ -31,7 +31,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::position_goal,x);
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::velocity_goal,xd);
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::acceleration_goal,xdd);
-//    ctrl->set_data<bool>(foot_names[i]+".stance",true);
+    ctrl->set_data<bool>(foot_names[i]+".stance",true);
   }
 }
 

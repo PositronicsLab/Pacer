@@ -17,12 +17,12 @@
 #include <Pacer/controller.h>
 #include "../plugin.h"
 
-#undef OUT_LOG
-#define OUT_LOG(level) \
-std::cout << std::endl << Logger::ToString(level) << " -- "
-#undef OUTLOG
-#define OUTLOG(x,name,level) \
-std::cout << std::endl << Logger::ToString(level) << " -- " << name << " = \n" << x;
+//#undef OUT_LOG
+//#define OUT_LOG(level) \
+//std::cout << std::endl << Logger::ToString(level) << " -- "
+//#undef OUTLOG
+//#define OUTLOG(x,name,level) \
+//std::cout << std::endl << Logger::ToString(level) << " -- " << name << " = \n" << x;
 
 //#define TIMING
 
@@ -42,8 +42,8 @@ void loop(){
   bool USE_DES_CONTACT = ctrl->get_data<bool>(plugin_namespace+".des-contact");
   bool USE_LAST_CFS = ctrl->get_data<bool>(plugin_namespace+".last-cfs");
   
-  double DT = (dt_idyn == 0)? dt : dt_idyn;
-  if(DT == 0) DT = 0.001;
+  double DT = dt;//(dt_idyn == 0)? dt : dt_idyn;
+//  if(DT == 0) DT = 0.001;
   
   static std::vector<std::string>
   foot_names = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
@@ -98,14 +98,14 @@ void loop(){
         OUT_LOG(logDEBUG) << "Robot mass (kg): " << mass;
         OUT_LOG(logDEBUG) << "Robot weight (kg.m / s.s): " << (mass*grav);
         // Normal force > tolerance
-        if (cf[0] > 0.1*(mass*grav)) {
+//        if (cf[0] > 0.1*(mass*grav)) {
           OUT_LOG(logDEBUG) << "Is Active Contact";
-          
+        
           //        for (int k=0; k<num_added[i]; k++) {
           contacts.push_back(ctrl->create_contact(id,pos,c[j]->normal,c[j]->tangent,c[j]->impulse,c[j]->mu_coulomb,c[j]->mu_viscous,0,c[j]->compliant));
           indices.push_back((unsigned) i);
-          //        }
-        }
+//                  }
+//        }
       }
     }
   }
@@ -158,6 +158,11 @@ void loop(){
   
   ctrl->calc_contact_jacobians(q,contacts,N,S,T);
   
+  OUTLOG(N,"N",logDEBUG);
+//  OUTLOG(S,"S",logDEBUG);
+//  OUTLOG(T,"T",logDEBUG);
+  OUTLOG(M,"M",logDEBUG);
+
   D.set_zero(NDOFS,NC*4);
   D.set_sub_mat(0,0,S);
   D.set_sub_mat(0,NC,T);
@@ -226,7 +231,7 @@ void loop(){
     
     Ravelin::SharedConstVectorNd cf_normal = cf_init.segment(0,NC);
     double sum = std::accumulate(cf_normal.begin(),cf_normal.end(),0.0);
-    //    OUT_LOG(logDEBUG) << "0, Sum normal force: " << sum ;
+        OUT_LOG(logNONE) << "0, Sum normal force: " << sum ;
     
     if(USE_LAST_CFS){
       static std::queue<Ravelin::VectorNd>
@@ -275,11 +280,10 @@ void loop(){
   for (std::vector<std::string>::iterator it=controller_name.begin();
        it!=controller_name.end(); it++) {
     
-    const double h_dt = DT/dt;
     bool solve_flag = false;
     
     Ravelin::VectorNd id = Ravelin::VectorNd::zero(NUM_JOINT_DOFS);
-    Ravelin::VectorNd cf;// = Ravelin::VectorNd::zero(NC*5);
+    Ravelin::VectorNd cf = Ravelin::VectorNd::zero(NC*5);
     
     std::string& name = (*it);
     
@@ -288,13 +292,11 @@ void loop(){
     //
     if (NC == 0) {
       solve_flag = inverse_dynamics_no_contact(generalized_qd,qdd_des,M,generalized_fext,dt,id);
-      cf /= dt;
       cf_map[name] = cf;
       uff_map[name] = id;
     }
     else if(USE_LAST_CFS){
       cf = cf_init;
-      cf *= dt;
       OUT_LOG(logDEBUG) << "USING LAST CFS: " << cf;
       //      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,DT,id,cf);
       solve_flag = inverse_dynamics_one_stage(generalized_qd,qdd_des,M,N,D,generalized_fext,DT,MU,id,cf,indices,active_feet.size(),SAME_INDICES);
@@ -350,25 +352,24 @@ void loop(){
 #endif
     }
     
-    //// Check for Normal direction torque chatter
-    if (NC > 0 && solve_flag){
-      static std::map<std::string,Ravelin::VectorNd> last_cf;
-      std::map<std::string,Ravelin::VectorNd>::iterator it = last_cf.find(name);
-      if(it != last_cf.end()){
-        if(last_cf[name].rows() == NC){
-          Ravelin::VectorNd diff_cf  = (*it).second;
-          diff_cf -= cf.segment(0,NC);
-          if(diff_cf.norm() > 0.01)
-            OUT_LOG(logDEBUG) << "-- Torque chatter detected " << t;
-        }
-      } else {
-        last_cf[name] = cf.segment(0,NC);
-      }
-    }
+//    //// Check for Normal direction torque chatter
+//    if (NC > 0 && solve_flag){
+//      static std::map<std::string,Ravelin::VectorNd> last_cf;
+//      std::map<std::string,Ravelin::VectorNd>::iterator it = last_cf.find(name);
+//      if(it != last_cf.end()){
+//        if(last_cf[name].rows() == NC){
+//          Ravelin::VectorNd diff_cf  = (*it).second;
+//          diff_cf -= cf.segment(0,NC);
+//          if(diff_cf.norm() > 0.01)
+//            OUT_LOG(logDEBUG) << "-- Torque chatter detected " << t;
+//        }
+//      } else {
+//        last_cf[name] = cf.segment(0,NC);
+//      }
+//    }
+//    
+//    double normal_sum = 0;
     
-    double normal_sum = 0;
-    
-    cf /= DT;
     cf_map[name] = cf;
     uff_map[name] = id;
   }
@@ -377,19 +378,49 @@ void loop(){
   for (int i=0;i<controller_name.size();i++){
     std::string& name = controller_name[i];//(*it);
     Ravelin::VectorNd& cf = cf_map[name];
-    OUTLOG(uff_map[name],"uff_"+boost::icl::to_string<double>::apply(i+1),logDEBUG);
-    OUTLOG(cf,"cf_"+boost::icl::to_string<double>::apply(i+1),logDEBUG);
+    Ravelin::VectorNd& uff = uff_map[name];
+    OUTLOG(uff,"uff_"+name,logNONE);
+    OUTLOG(cf,"cf_"+name,logNONE);
+    
+    Ravelin::MatrixNd iM_chol = M;
+    bool pass = LA_.factor_chol(iM_chol);
+    assert(pass);
+
+    Ravelin::VectorNd qdd_fd = forward_dynamics(iM_chol,N,D,generalized_fext,dt, uff, cf);
+    OUTLOG(qdd_fd,"qdd_fd",logNONE);
+    OUTLOG(qdd_des,"qdd_des",logNONE);
+    if( (qdd_fd.segment(0,NUM_JOINT_DOFS) -= qdd_des).norm() > Pacer::NEAR_ZERO)
+      OUTLOG(qdd_fd.segment(0,NUM_JOINT_DOFS),"**qdd_error**",logNONE);
+
+    
+    for(int j=0;j<contacts.size();j++){
+      Vector3d
+      normal  = contacts[j]->normal,
+      tan1 = contacts[j]->tangent,
+      tan2 = Ravelin::Vector3d::cross(contacts[j]->normal,contacts[j]->tangent);
+      tan2.normalize();
+      if(cf.rows() == 0)
+        cf.set_zero(NC*5);
+      Ravelin::Origin3d force = Ravelin::Origin3d(normal)*cf[j]
+      + Ravelin::Origin3d(tan1)*( cf[j + NC] + cf[j + NC*3] )
+      + Ravelin::Origin3d(tan2)*( cf[j + NC*2] + cf[j + NC*4] );
+      if(i == 0){
+        OUTLOG(force,"used_force_"+contacts[j]->id,logNONE);
+      } else {
+        OUTLOG(force,"sample_force_"+contacts[j]->id,logNONE);
+      }
+    }
   }
   
   Ravelin::VectorNd uff = uff_map[controller_name.front()];
   uff*=alpha;
   
   Ravelin::VectorNd u = ctrl->get_joint_generalized_value(Pacer::Controller::load_goal);
-  OUTLOG(uff,"idyn_U",logDEBUG);
+  OUTLOG(uff,"idyn_U",logNONE);
   if(u.rows() == uff.rows()){
     u += uff;
     ctrl->set_joint_generalized_value(Pacer::Controller::load_goal,u);
-    OUTLOG(u,"FINAL_U",logDEBUG);
+    OUTLOG(u,"FINAL_U",logNONE);
   }
 }
 

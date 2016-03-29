@@ -5,7 +5,8 @@
 #include <Moby/CollisionGeometry.h>
 
 #include <Ravelin/RCArticulatedBodyd.h>
-#include <Ravelin/Jointd.h>
+#include <Ravelin/RevoluteJointd.h>
+
 #include <Ravelin/Transform3d.h>
 #include <Ravelin/Vector3d.h>
 
@@ -26,6 +27,7 @@
 
 #include <Pacer/utilities.h>
 
+#define DEBUG_OUTPUT
 #ifndef DEBUG_OUTPUT
 #define logging \
 if (1) ; \
@@ -177,6 +179,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     logging << "applying state uncertainty to base (velocity)" << std::endl;
     
     std::vector<double> velocity = vm["BODY0.xd"].as<std::vector<double> >();
+
     // Get robot velocity
     Ravelin::VectorNd qd;
     robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
@@ -209,6 +212,20 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   desc.add_options()
   ("help", "produce help message");
   
+  // Joints
+  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
+    std::string name,help;
+
+    if (jp->num_dof() == 1) {
+      name = std::string(jp->joint_id+".axis");
+      help = std::string("Axis vector in model (base link) frame of REVOLUTE Joint: "+jp->joint_id);
+      
+      desc.add_options()
+      (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
+    }
+  }
+
+  
   BOOST_FOREACH(shared_ptr<RigidBodyd> rb, robot->get_links()){
     std::string name,help;
     { // Density
@@ -217,10 +234,22 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       
       desc.add_options()
       (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
+      
+      name = std::string(rb->body_id+".mass");
+      help = std::string("Mass [kg] applied to link: "+rb->body_id);
+      
+      desc.add_options()
+      (name.c_str(), po::value<double>(),help.c_str());
+
     }
     
-    if(rb->is_base())
-      continue;
+    if(rb->is_base()){
+      name = std::string(rb->body_id+".size");
+      help = std::string("Body box geometry dimensions (length, width, height) [m] of base link: " +rb->body_id);
+      
+      desc.add_options()
+      (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
+    }
     
     {  // Length & radius of cylindrical link
       name = std::string(rb->body_id+".length");
@@ -248,6 +277,11 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       desc.add_options()
       (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
       
+      name = std::string(rb->body_id+".foot.mass");
+      help = std::string("Mass [kg] applied to link's spherical end effector: "+rb->body_id);
+      
+      desc.add_options()
+      (name.c_str(), po::value<double>(),help.c_str());
     }
   }
   
@@ -266,6 +300,27 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
    *  Parameter Application
    */
   
+//  shared_ptr<RigidBodyd> base_link_ptr = robot->get_base_link();
+//  shared_ptr<const Pose3d> model_pose = base_link_ptr->get_pose();
+  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
+    shared_ptr<RevoluteJointd> rjp = boost::dynamic_pointer_cast<RevoluteJointd>(jp);
+    if(vm.count(jp->joint_id+".axis")){
+      std::vector<double> axis = vm[jp->joint_id+".axis"].as<std::vector<double> >();
+      
+      const Vector3d joint_axis = rjp->get_axis();
+      logging << "joint_axis" << joint_axis << std::endl;
+      Vector3d new_joint_axis(&axis[0],joint_axis.pose);
+      new_joint_axis.normalize();
+      logging << "new_joint_axis" << new_joint_axis << std::endl;
+//      Vector3d new_joint_axis_inner_fame = Pose3d::transform_vector(joint_axis.pose,new_joint_axis);
+//      logging << "new_joint_axis_inner_fame" << new_joint_axis_inner_fame << std::endl;
+      rjp->set_axis(new_joint_axis);
+      rjp->update_spatial_axes();
+      robot->update_link_poses();
+    }
+  }
+  
+  
   // Perturb mass of robot link by scaling by parameter
   BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
     shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
@@ -279,12 +334,19 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     bool LINK_IS_BASE = rb->is_base();
     bool LINK_IS_LIMB = !LINK_IS_BASE;
     //////////////// LINK DATA /////////////////
-    double density = vm[rb->body_id+".density"].as<double>();
-    double length = (LINK_IS_LIMB)? vm[rb->body_id+".length"].as<double>() : 0;
-    double radius = (LINK_IS_LIMB)? vm[rb->body_id+".radius"].as<double>() : 0;
+    double mass     = -1;
+    if (vm.count(rb->body_id+".mass")) mass = vm[rb->body_id+".mass"].as<double>();
+    
+    double density  =                 vm[rb->body_id+".density"].as<double>();
+    double length   = (LINK_IS_LIMB)? vm[rb->body_id+".length"].as<double>() : 0;
+    double radius   = (LINK_IS_LIMB)? vm[rb->body_id+".radius"].as<double>() : 0;
+    
     //////////////// FOOT DATA /////////////////
+    double foot_mass    = -1;
+    if (vm.count(rb->body_id+".foot.mass")) foot_mass = vm[rb->body_id+".foot.mass"].as<double>();
+    
     double foot_density = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.density"].as<double>() : 0;
-    double foot_radius = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.radius"].as<double>() : 0;
+    double foot_radius  = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.radius"].as<double>() : 0;
     Moby::CollisionGeometryPtr foot_geometry;
     shared_ptr<Moby::SpherePrimitive> foot_primitive;
     
@@ -320,7 +382,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
         Moby::PrimitivePtr primitive = cg->get_geometry();
         base_primitive = boost::dynamic_pointer_cast<Moby::BoxPrimitive>(primitive);
-        if(foot_primitive){
+        if(base_primitive){
           base_geometry = cg;
           break;
         }
@@ -394,7 +456,9 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
                          // cylinder V = pi*h*r^2
         double volume = M_PI*length*sqr(radius);
         // m = d*V
-        double mass = density * volume;
+        if (mass <= 0) {
+          mass = density * volume;
+        }
         // cylinder J =
         // (m*r^2)/2          0                   0
         //    0      (m/12)(3r^2 + h^2)           0
@@ -409,22 +473,17 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
                                      0,J[1],0,
                                      0,0,J[2]);
         
-        //#ifdef USE_OSG_DISPLAY
-        //        osg::Group* group_root = new osg::Group();
-        //        {
-        //          Ravelin::Pose3d display_pose(J_link.pose->q,J_link.pose->x,J_link.pose->rpose);
-        //          display_pose.update_relative_pose(GLOBAL);
-        //          group_root->addChild(visualize_cylinder(radius,length,display_pose));
-        //        }
-        //#endif
         if(LINK_IS_END_EFFECTOR){ // sphere foot
           foot_primitive->set_radius(foot_radius);
           
           // sphere V = 4/3 pi*r^3
           double volume = (4.0/3.0)*M_PI*(foot_radius*foot_radius*foot_radius);
           
+          double mass = foot_mass;
           // m = d*V
-          double mass = foot_density * volume;
+          if (mass <= 0) {
+            mass = density * volume;
+          }
           
           // sphere J =
           // (2*r^2)/5     0         0
@@ -453,26 +512,67 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
           Ravelin::SpatialRBInertiad J_foot_new = foot_link_transform.transform(J_foot);
           J_foot_new.pose = J_link.pose;
           J_link += J_foot_new;
-          //#ifdef USE_OSG_DISPLAY
-          //          {
-          //            Ravelin::Pose3d display_pose(foot_relative_to_link.q,foot_relative_to_link.x,foot_relative_to_link.rpose);
-          //            display_pose.update_relative_pose(GLOBAL);
-          //            group_root->addChild(visualize_sphere(radius,display_pose));
-          //            rb->set_visualization_data(group_root);
-          //          }
-          //#endif
         }
-        //#ifdef USE_OSG_DISPLAY
-        //        rb->set_visualization_data(group_root);
-        //#endif
+
       } else if (LINK_IS_BASE) {
-        // cylinder V = pi*h*r^2
+        if (vm.count(rb->body_id+".size")) {
+          std::vector<double> size = vm[rb->body_id+".size"].as<std::vector<double> >();
+          double x = size[0],
+                 y = size[1],
+                 z = size[2];
+          
+          // Adjust collision and weight affecting values
+          base_primitive->set_size(x,y,z);
+        }
+
+        
+        // Box V = x * y * z
         double x = base_primitive->get_x_len(),
-        y = base_primitive->get_y_len(),
-        z = base_primitive->get_z_len();
+               y = base_primitive->get_y_len(),
+               z = base_primitive->get_z_len();
+        
+        const std::set<shared_ptr<Jointd> >& outers = rb->get_outer_joints();
+        // Adjust kinematics
+        BOOST_FOREACH( shared_ptr<Jointd> outer_joint, outers){
+          boost::shared_ptr<const Ravelin::Pose3d> inner_joint_pose = rb->get_pose();
+#ifndef NDEBUG
+          logging << "Interior link: " << rb->body_id << std::endl;
+#endif
+          
+          // assumes one outer joint
+          // pose of the outer joint
+          outer_pose = outer_joint->get_pose();
+          
+          boost::shared_ptr<Ravelin::Pose3d> outer_joint_wrt_inner(new Ravelin::Pose3d(outer_pose->q,outer_pose->x,outer_pose->rpose));
+          
+          // pose of the outer joint defined wrt inner joint
+#ifndef NDEBUG
+          logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" length = " << length << std::endl;
+#endif
+          
+          outer_joint_wrt_inner->update_relative_pose(inner_joint_pose);
+          logging << "Before: " << *outer_joint_wrt_inner << std::endl;
+          // Update transform in link's quadrant
+          Origin3d dir = outer_joint_wrt_inner->x;
+          dir.normalize();
+          outer_joint_wrt_inner->x = Origin3d(Utility::sign(dir[0])*x*0.5,Utility::sign(dir[1])*y*0.5,-z*0.5);
+          logging << "After: " <<  *outer_joint_wrt_inner << std::endl;
+          
+          // Update transforms
+          try{
+            outer_joint->Ravelin::Jointd::set_location(Ravelin::Vector3d(0,0,0,outer_joint_wrt_inner),outer_joint->get_inboard_link(),outer_joint->get_outboard_link());
+          } catch (...) {}
+          // Apply new transform to all children (recursive)
+          // NOTE: Doesnt seem to be necessary
+          //          apply_transform(T,rb->get_outer_joints());
+          robot->update_link_poses();
+        }
+        
         double volume = x*y*z;
         // m = d*V
-        double mass = density * volume;
+        if (mass <= 0) {
+          mass = density * volume;
+        }
         // cylinder J =
         // (m*r^2)/2          0                   0
         //    0      (m/12)(3r^2 + h^2)           0
@@ -486,18 +586,9 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
         J_link.J = Ravelin::Matrix3d(J[0],0,0,
                                      0,J[1],0,
                                      0,0,J[2]);
-        //#ifdef USE_OSG_DISPLAY
-        //        {
-        //          Ravelin::Pose3d display_pose(J_link.pose->q,J_link.pose->x,J_link.pose->rpose);
-        //          display_pose.update_relative_pose(GLOBAL);
-        //          osg::Group* group_root = new osg::Group();
-        //          group_root->addChild(visualize_box(x,y,z,display_pose));
-        //          rb->set_visualization_data(group_root);
-        //        }
-        //#endif
       }
-      logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" mass = " << J_link.m << std::endl;
-      logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" inertia = " << J_link.J << std::endl;
+      logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" mass = " << J_link.m << std::endl
+        <<" inertia = " << J_link.J << std::endl;
       rb->set_inertia(J_link);
     }
   }

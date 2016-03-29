@@ -342,7 +342,7 @@ Ravelin::VectorNd forward_dynamics(const Ravelin::MatrixNd& iM_chol,const  Ravel
   Ravelin::VectorNd F_contact;
 
   // add contact forces to FD
-  R.mult(cf,F_contact,1.0/h,0);
+  R.mult(cf,F_contact);
   
   LA_.solve_chol_fast(iM_chol,F_contact);
   

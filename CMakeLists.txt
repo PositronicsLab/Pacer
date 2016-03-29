@@ -8,8 +8,8 @@ include (CheckLibraryExists)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 # force Pacer to build with C++0x
-SET(CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -g")
-SET(CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -g")
+SET(CMAKE_C_FLAGS_DEBUG "-g")
+SET(CMAKE_CXX_FLAGS_DEBUG "-g")
 add_definitions(-std=c++0x)
 ###############################################################################
 ###############################  SETUP LIBS ###################################

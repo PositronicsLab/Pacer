@@ -639,13 +639,13 @@ void walk_toward(// PARAMETERS
       Origin3d foot_direction = foot_destination - Origin3d(x_start);
       
       // Perturb spline control point values to make them solvable
-      Origin3d spline_robustness;// = origins[i];
-//      spline_robustness[2] = 0;
-//      spline_robustness[1] = -spline_robustness[1] * sgn(foot_destination[1]);
-//      spline_robustness[0] = fabs(spline_robustness[0]) * sgn(foot_destination[0]);
-//      spline_robustness.normalize();
-//      spline_robustness = spline_robustness * 1e-3;
-//      spline_robustness[2] = 1e-3;
+      Origin3d spline_robustness = origins[i];
+      spline_robustness[2] = 0;
+      spline_robustness[1] = -spline_robustness[1] * sgn(foot_destination[1]);
+      spline_robustness[0] = fabs(spline_robustness[0]) * sgn(foot_destination[0]);
+      spline_robustness.normalize();
+      spline_robustness = spline_robustness * 1e-3;
+      spline_robustness[2] = 1e-3;
       control_points.push_back(Origin3d(x_start) + up_step - spline_robustness);
       
 //      if(footholds.empty()){

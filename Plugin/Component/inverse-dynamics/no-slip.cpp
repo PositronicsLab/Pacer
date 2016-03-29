@@ -551,7 +551,8 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
     else
       cf[nc+i+nc*3] = -ct[i];
   }
-  
+  cf /= dt;
+
   //   IDYN MLCP
   //            A             C      x         g
   //       | M −S' -T' -P'   -N' | | v+ |   |-M v |    | 0 |
@@ -580,7 +581,6 @@ bool inverse_dynamics_no_slip_fast(const Ravelin::VectorNd& vel, const Ravelin::
   // Using M(dv) - z = tau
   x = tau;
   x /= dt;
-  
   
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip_fast() exited" << std::endl;
   return true;

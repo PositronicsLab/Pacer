@@ -3,7 +3,7 @@
  * This library is distributed under the terms of the Apache V2.0
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
-#define LOG_TO_FILE
+//#undef LOG_TO_FILE
 #include <Pacer/output.h>
 
 //#undef OUT_LOG
@@ -19,6 +19,15 @@
 #include <Moby/RCArticulatedBody.h>
 #include <Moby/ConstraintSimulator.h>
 
+#ifdef USE_OSG_DISPLAY
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+#include <osg/Geode>
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+#include <osgGA/TrackballManipulator>
+#include <osgGA/StateSetManipulator>
+#endif
 
 typedef boost::shared_ptr<Ravelin::Jointd> JointPtr;
 
@@ -32,6 +41,11 @@ boost::weak_ptr<Moby::RCArticulatedBody> rcabrobot_weak_ptr;
 boost::weak_ptr<Moby::RigidBody> object_weak_ptr;
 
 int NDOFS = 0;
+
+Ravelin::VectorNd initial_robot_q;
+Ravelin::VectorNd desired_robot_q;
+Ravelin::VectorNd desired_robot_qd;
+Ravelin::VectorNd desired_robot_qdd;
 
 ///////////////////////////////////////////////////////////////////////////////
 ////////////////////////// JACOBIANS //////////////////////////////////////////
@@ -141,43 +155,109 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   double dt = t - last_time;
   last_time = t;
   
+  boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
+  static osg::Group * MAIN_GROUP;
+  if (!MAIN_GROUP) {
+    MAIN_GROUP = new osg::Group;
+    MAIN_GROUP->addChild(sim->get_persistent_vdata());
+    MAIN_GROUP->addChild(sim->get_transient_vdata());
+  }
+  
+  if (ITER % 10 == 0) {
+    // write the file (fails silently)
+    char buffer[128];
+    sprintf(buffer, "driver.out-%08llu.osg", ITER, t);
+    osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
+  }
+
+  ITER++;
+
+  desired_robot_q = initial_robot_q;
+  desired_robot_qd.set_zero(NDOFS);
+  desired_robot_qdd.set_zero(NDOFS);
+  double a = 0.1, b = 10.0;
+  for(int i=0;i<NDOFS-4;i++){
+    desired_robot_q[i] += a*cos(b*t) - a;
+    desired_robot_qd[i] = -b*a*sin(b*t);
+    desired_robot_qdd[i] = -b*b*a*cos(b*t);
+  }
+  for(int i=0;i<4;i++){
+    desired_robot_q[NDOFS-4+i] += -0.01;
+  }
+
+  OUTLOG(desired_robot_q,"desired_robot_q",logDEBUG);
+  OUTLOG(desired_robot_qd,"desired_robot_qd",logDEBUG);
+  OUTLOG(desired_robot_qdd,"desired_robot_qdd",logDEBUG);
+
+
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Get State: ///////////////////////////////////
   
 //  Ravelin::VectorNd generalized_q(NDOFS+6);
   Ravelin::VectorNd generalized_qd(NDOFS+6), generalized_fext(NDOFS+6);
+  Ravelin::VectorNd robot_q(NDOFS), robot_qd(NDOFS);
   
-    {
-//      // Arm
-//      abrobot->get_generalized_coordinates_euler(WORKV);
-//      generalized_q.segment(0,NDOFS) = WORKV;
-      
-      abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,WORKV);
-      generalized_qd.segment(0,NDOFS) = WORKV;
-      
-      abrobot->get_generalized_forces(WORKV);
-      generalized_fext.segment(0,NDOFS) = WORKV;
-      
-      // Object
-//      object->get_generalized_coordinates_euler(WORKV);
-//      generalized_q.segment(NDOFS,NDOFS+7) = WORKV;
-      
-      object->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,WORKV);
-      generalized_qd.segment(NDOFS,NDOFS+6) = WORKV;
-      
-      object->get_generalized_forces(WORKV);
-      generalized_fext.segment(NDOFS,NDOFS+6) = WORKV;
-    }
+  {
+    abrobot->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,robot_qd);
+
+    generalized_qd.segment(0,NDOFS) = robot_qd;
+    generalized_qd[NDOFS-4] = 0;
+    generalized_qd[NDOFS-3] = 0;
+    generalized_qd[NDOFS-2] = 0;
+    generalized_qd[NDOFS-1] = 0;
+    
+    abrobot->get_generalized_coordinates_euler(robot_q);
+    
+    abrobot->get_generalized_forces(WORKV);
+    generalized_fext.segment(0,NDOFS) = WORKV;
+    
+    object->get_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,WORKV);
+    generalized_qd.segment(NDOFS,NDOFS+6) = WORKV;
+    
+    object->get_generalized_forces(WORKV);
+    generalized_fext.segment(NDOFS,NDOFS+6) = WORKV;
+  }
   
   OUTLOG(generalized_fext,"generalized_fext",logDEBUG);
   OUTLOG(generalized_qd,"generalized_qd",logDEBUG);
+  OUTLOG(robot_q,"robot_q",logDEBUG);
+
+  
+  Ravelin::VectorNd error_robot_q;
+  Ravelin::VectorNd error_robot_qd;
+    (error_robot_q  = robot_q)  -= desired_robot_q;
+    (error_robot_qd = robot_qd) -= desired_robot_qd;
+  
+  OUTLOG(error_robot_q,"error_robot_q",logDEBUG);
+  OUTLOG(error_robot_qd,"error_robot_qd",logDEBUG);
+  
+  Ravelin::VectorNd feedback_force, feedback_force_p, feedback_force_v;
+  (feedback_force_p = error_robot_q) *= -10.0;
+  (feedback_force_v = error_robot_qd) *= -0.1;
+  (feedback_force = feedback_force_p ) += feedback_force_v;
+
+  OUTLOG(feedback_force_p,"feedback_force_p",logDEBUG);
+  OUTLOG(feedback_force_v,"feedback_force_v",logDEBUG);
+
+  OUTLOG(feedback_force,"feedback_force",logDEBUG);
+  
+  Ravelin::VectorNd feedback_accel, feedback_accel_p, feedback_accel_v;
+  (feedback_accel_p = error_robot_q) *= -1.0e3;
+  (feedback_accel_v = error_robot_qd) *= -1.0e1;
+  (feedback_accel = feedback_accel_p ) += feedback_accel_v;
+
+  
+  OUTLOG(feedback_force_p,"feedback_accel_p",logDEBUG);
+  OUTLOG(feedback_force_v,"feedback_accel_v",logDEBUG);
+  
+  OUTLOG(feedback_force,"feedback_accel",logDEBUG);
+
+  desired_robot_qdd += feedback_accel;
+  OUTLOG(desired_robot_qdd,"desired_robot_qdd+feedback",logDEBUG);
 
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Get contacts: ///////////////////////////////////
-
-    // pointer to the simulator
-    boost::shared_ptr<Moby::Simulator> sim = sim_weak_ptr.lock();
-    
+  
     boost::shared_ptr<Moby::ConstraintSimulator> csim;
     csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
     
@@ -185,41 +265,38 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     std::vector<Moby::UnilateralConstraint>& compliant_constraints = csim->get_compliant_constraints();
     std::vector<Moby::UnilateralConstraint> e;
     std::map<std::string, Moby::UnilateralConstraint> contacts;
-
+  std::map<std::string, Ravelin::SMomentumd> contact_impulses;
     e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
     e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
-    for(unsigned i=0;i<e.size();i++){
-      if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
-      {
-        boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
-        boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
-        
-        Ravelin::Vector3d
-        normal = e[i].contact_normal,
-        tangent = e[i].contact_tan1,
-        impulse = Ravelin::Vector3d(0,0,0);//e[i].contact_impulse.get_linear();
-        impulse.pose = e[i].contact_point.pose;
-        tangent.normalize();
-        normal.normalize();
-        
-        bool compliant =
-        (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-        
-        
-        OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
-        OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
-        OUT_LOG(logDEBUG) << "MOBY: normal: " << normal;
-        OUT_LOG(logDEBUG) << "MOBY: tangent: " << tangent;
-        OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
-        
-        if(sb2->body_id.compare("BLOCK") == 0){
-          continue;
-//          throw std::runtime_error("sb2 nees to be a FINGER_, not the BLOCK");
-        }
+  for(unsigned i=0;i<e.size();i++){
+    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    {
+      boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
+      boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
+      
+      bool compliant =
+      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
+      
+      OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
+      OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
+      OUT_LOG(logDEBUG) << "MOBY: normal: " << e[i].contact_normal;
+      OUT_LOG(logDEBUG) << "MOBY: tan1: " << e[i].contact_tan1;
+      OUT_LOG(logDEBUG) << "MOBY: tan2: " << e[i].contact_tan2;
+      OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
+//      OUT_LOG(logDEBUG) << "MOBY: impulse " <<  sb2->body_id << " : " << e[i].contact_impulse;
+      boost::shared_ptr<Ravelin::Pose3d> contact_pose(new Ravelin::Pose3d(Ravelin::Quatd::identity(),Ravelin::Origin3d(e[i].contact_point.data()),Moby::GLOBAL));
+      Ravelin::SMomentumd contact_impulse = Ravelin::Pose3d::transform(contact_pose,e[i].contact_impulse);
+      OUT_LOG(logDEBUG) << "MOBY: impulse " <<  sb2->body_id << " : " << contact_impulse << " at: " << e[i].contact_point << " in frame: " << e[i].contact_point.pose;
 
-        contacts[sb2->body_id] = e[i];
-        }
+      if(sb2->body_id.compare("BLOCK") == 0){
+        continue;
+        //          throw std::runtime_error("sb2 nees to be a FINGER_, not the BLOCK");
+      }
+      
+      contacts[sb2->body_id] = e[i];
+      contact_impulses[sb2->body_id] = contact_impulse;
     }
+  }
   
   std::map<std::string, unsigned> finger_index;
   finger_index["FINGER_0"] = 0;
@@ -228,8 +305,11 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   finger_index["FINGER_3"] = 3;
 
   // Create active contacts vector
+  static std::map<std::string, Ravelin::Origin3d> finger_force_idyn;
+  
   std::vector<Moby::UnilateralConstraint> c;
   std::vector<unsigned> indices;
+  std::vector<Ravelin::Origin3d> finger_force_moby_vec;
   for( std::map<std::string, Moby::UnilateralConstraint>::iterator it = contacts.begin(); it != contacts.end(); ++it ) {
     
     boost::shared_ptr<Ravelin::SingleBodyd> sb1 = it->second.contact_geom1->get_single_body();
@@ -242,6 +322,19 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     
     c.push_back( it->second );
     indices.push_back(finger_index[sb2->body_id]);
+    OUTLOG(sb2->body_id,"FINGER_NAME",logDEBUG);
+    
+    Ravelin::Origin3d finger_force_moby(contact_impulses[it->first].get_linear().data());
+    finger_force_moby_vec.push_back(finger_force_moby);
+    if(!finger_force_idyn.empty()){
+      Ravelin::Origin3d force_idyn = finger_force_idyn[sb2->body_id] /= dt;
+      finger_force_moby /= dt;
+      
+      OUTLOG(finger_force_moby,"finger_force_moby_"+sb2->body_id,logDEBUG);
+      OUTLOG(force_idyn,"finger_force_idyn_"+sb2->body_id,logDEBUG);
+      OUTLOG(force_idyn-finger_force_moby,"finger_force_error_"+sb2->body_id,logDEBUG);
+
+    }
   }
   
   /////////////////////////////////////////////////////////////////////////////
@@ -250,7 +343,33 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   int NC = c.size();
 
   OUTLOG(NC,"NC",logDEBUG);
-
+  
+  Ravelin::VectorNd cf_init;
+  // setup sensed force vector
+  bool USE_LAST_CFS = false;
+  if (USE_LAST_CFS) {
+    cf_init.set_zero(NC*5);
+    for (int i=0;i<NC;i++) {
+      cf_init[i] = Ravelin::Origin3d(c[i].contact_normal).dot(finger_force_moby_vec[i]);
+      
+      // Tangent 1 (s)
+      double t1 = Ravelin::Origin3d(c[i].contact_tan1).dot(finger_force_moby_vec[i]);
+      if(t1>=0){
+        cf_init[NC+i] = t1;
+      } else {
+        cf_init[NC*3+i] = t1;
+      }
+      
+      //Tangent 2 (t)
+      double t2 = Ravelin::Origin3d(c[i].contact_tan2).dot(finger_force_moby_vec[i]);
+      if(t2>=0){
+        cf_init[NC*2+i] = t2;
+      } else {
+        cf_init[NC*4+i] = t2;
+      }
+    }
+  }
+  
   // Make Jacobians
   Ravelin::MatrixNd N,S,T,D,MU;
   calc_contact_jacobians(c,N,S,T);
@@ -262,8 +381,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     std::fill(MU.row(i).begin(),MU.row(i).end(),c[i].contact_mu_coulomb);
   }
   OUTLOG(MU,"MU",logDEBUG);
-
-  Ravelin::VectorNd qdd_des = Ravelin::VectorNd::zero(NDOFS);
 
   Ravelin::MatrixNd M = Ravelin::MatrixNd::zero(NDOFS+6,NDOFS+6);
   
@@ -289,12 +406,15 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   std::vector<std::string> controller_name;
 //  controller_name.push_back("CFQP1");
 //  controller_name.push_back("SCFQP");
-  controller_name.push_back("CFLCP");
-  controller_name.push_back("NSQP");
+//  controller_name.push_back("CFLCP");
+//  controller_name.push_back("NSQP");
 //  controller_name.push_back("SNSQP");
-  controller_name.push_back("NSLCP");
+  if (USE_LAST_CFS) {
+    controller_name.push_back("SENSED");
+  }
   controller_name.push_back("CFQP");
-  controller_name.push_back("NOCP");
+//  controller_name.push_back("NSLCP");
+//  controller_name.push_back("NOCP");
 
   std::map<std::string,Ravelin::VectorNd> cf_map,uff_map;
   
@@ -317,7 +437,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   last_indices = indices;
 
   int NUM_JOINT_DOFS = NDOFS;
-  bool USE_LAST_CFS = false;
   
   for (std::vector<std::string>::iterator it=controller_name.begin();
        it!=controller_name.end(); it++) {
@@ -330,24 +449,12 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     std::string& name = (*it);
     
     OUT_LOG(logDEBUG) << "CONTROLLER: " << name;
-    OUT_LOG(logDEBUG) << "USE_LAST_CFS: " << USE_LAST_CFS;
     //
     if (NC == 0) {
-      solve_flag = inverse_dynamics_no_contact(generalized_qd,qdd_des,M,generalized_fext,dt,id);
-      cf /= dt;
+      solve_flag = inverse_dynamics_no_contact(generalized_qd,desired_robot_qdd,M,generalized_fext,dt,id);
       cf_map[name] = cf;
       uff_map[name] = id;
-      control_force = id;
-      return control_force;
     }
-//    else if(USE_LAST_CFS){
-//      cf = cf_init;
-//      cf *= dt;
-//      OUT_LOG(logDEBUG) << "USING LAST CFS: " << cf;
-//      //      solve_flag = inverse_dynamics(qdd_des,M,N,D,generalized_fext,dt,id,cf);
-//      solve_flag = inverse_dynamics_one_stage(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf,indices,NC,SAME_INDICES);
-//      OUT_LOG(logDEBUG) << "SAME: " << cf;
-//    }
     else {
 #ifdef TIMING
       struct timeval start_t;
@@ -356,24 +463,38 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 #endif
       try{
         if(name.compare("NSQP") == 0){
-          solve_flag = inverse_dynamics_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf,indices,NC,SAME_INDICES);
+          solve_flag = inverse_dynamics_no_slip(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,id,cf,indices,NC,SAME_INDICES);
         } else if(name.compare("NSLCP") == 0){
-          solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf,false,indices,NC,SAME_INDICES);
+          solve_flag = inverse_dynamics_no_slip_fast(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,id,cf,false,indices,NC,SAME_INDICES);
+          id.segment(id.rows()-4,id.rows()) = Ravelin::VectorNd::one(4);
+          id *= dt;
         } else if(name.compare("CFQP") == 0){    // IDYN QP
-          solve_flag = inverse_dynamics_two_stage(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf,indices,NC,SAME_INDICES);
-        } else if(name.compare("CFQP1") == 0){    // IDYN QP
-          solve_flag = inverse_dynamics_one_stage(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf,indices,NC,SAME_INDICES);
-        } else if(name.compare("CFLCP") == 0){
-          solve_flag = inverse_dynamics_ap(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf);
-        }  else if(name.compare("SCFQP") == 0){
-          double damping = 0;
-          solve_flag = inverse_dynamics_two_stage_simple(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,MU,id,cf, damping);
-        } else if(name.compare("SNSQP") == 0){
-          double damping = 0;
-          solve_flag = inverse_dynamics_two_stage_simple_no_slip(generalized_qd,qdd_des,M,N,D,generalized_fext,dt,id,cf, damping);
-        } else {
-          solve_flag = inverse_dynamics_no_contact(generalized_qd,qdd_des,M,generalized_fext,dt,id);
-          control_force = id;
+          solve_flag = inverse_dynamics_two_stage(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,MU,id,cf,indices,NC,SAME_INDICES);
+        }
+        else if(name.compare("CFQP1") == 0){    // IDYN QP
+          solve_flag = inverse_dynamics_one_stage(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,MU,id,cf,indices,NC,SAME_INDICES);
+        }
+        else if(name.compare("CFLCP") == 0){
+          solve_flag = inverse_dynamics_ap(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,MU,id,cf);
+        }
+//        else if(name.compare("SCFQP") == 0)
+//        {
+//          double damping = 0;
+//          solve_flag = inverse_dynamics_two_stage_simple(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,MU,id,cf, damping);
+//        }
+//        else if(name.compare("SNSQP") == 0)
+//        {
+//          double damping = 0;
+//          solve_flag = inverse_dynamics_two_stage_simple_no_slip(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,id,cf, damping);
+//        }
+        else if(name.compare("SENSED") == 0){
+          cf = cf_init;
+          OUT_LOG(logDEBUG) << "USING LAST CFS: " << cf;
+          solve_flag = inverse_dynamics_sensed_forces(generalized_qd,desired_robot_qdd,M,N,D,generalized_fext,dt,MU,id,cf);
+        }
+        else {
+          solve_flag = inverse_dynamics_no_contact(generalized_qd,desired_robot_qdd,M,generalized_fext,dt,id);
+//          (control_force = id) += feedback_force;
         }
       } catch (std::exception e){
         solve_flag = false;
@@ -421,7 +542,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     double normal_sum = 0;
     */
     
-    cf /= dt;
     cf_map[name] = cf;
     uff_map[name] = id;
   }
@@ -430,10 +550,57 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   for (std::map<std::string,Ravelin::VectorNd>::iterator it=uff_map.begin();it!=uff_map.end();it++){
     std::string name = it->first;
     Ravelin::VectorNd& cf = cf_map[name];
-    OUTLOG(uff_map[name],"uff_"+name,logDEBUG);
+    Ravelin::VectorNd& uff = uff_map[name];
+    OUTLOG(uff,"uff_"+name,logDEBUG);
     OUTLOG(cf,"cf_"+name,logDEBUG);
-//    control_force = uff_map[name];
+    if (cf.rows() == 0) {
+      cf.set_zero(NC*5);
+      cf_map[name] = cf;
+    }
+    
+    Ravelin::MatrixNd iM_chol = M;
+    bool pass = LA_.factor_chol(iM_chol);
+    assert(pass);
+    
+    Ravelin::VectorNd qdd_fd = forward_dynamics(iM_chol,N,D,generalized_fext,dt, uff, cf);
+    OUTLOG(qdd_fd,"qdd_fd",logNONE);
+    OUTLOG(desired_robot_qdd,"qdd_des",logNONE);
+    if( (qdd_fd.segment(0,NUM_JOINT_DOFS) -= desired_robot_qdd).norm() > NEAR_ZERO)
+      OUTLOG(qdd_fd.segment(0,NUM_JOINT_DOFS),"**qdd_error**",logNONE);
+
+//    (control_force = uff_map[name]) += feedback_force;
   }
+  
+  
+  std::string USE_CONTROLLER(controller_name[0]);
+  control_force = uff_map[USE_CONTROLLER];
+  OUTLOG(uff_map[USE_CONTROLLER],"idyn_force",logDEBUG);
+  
+  for( int i = 0 ; i < c.size() ; i++ ) {
+    boost::shared_ptr<Ravelin::SingleBodyd> sb1 = c[i].contact_geom1->get_single_body();
+    boost::shared_ptr<Ravelin::SingleBodyd> sb2 = c[i].contact_geom2->get_single_body();
+    Ravelin::VectorNd& cf = cf_map[USE_CONTROLLER];
+
+    finger_force_idyn[sb2->body_id] = Ravelin::Origin3d(c[i].contact_normal)*cf[i]
+      + Ravelin::Origin3d(c[i].contact_tan1)*( cf[i + NC] + cf[i + NC*3] )
+      + Ravelin::Origin3d(c[i].contact_tan2)*( cf[i + NC*2] + cf[i + NC*4] );
+  }
+
+  double alpha = 1.0;// std::min(t*10.0,1.0);
+  OUTLOG(alpha,"alpha",logDEBUG);
+  control_force *= alpha;
+  OUTLOG(control_force,"idyn_force",logDEBUG);
+
+  OUTLOG(feedback_force,"feedback_force",logDEBUG);
+//  double beta = 1.0-alpha;// std::min(t*50.0,1.0);
+//  OUTLOG(beta,"beta",logDEBUG);
+//  feedback_force *= beta;
+//  OUTLOG(feedback_force,"feedback_force*beta",logDEBUG);
+
+  control_force += feedback_force;
+
+  // TODO: REMOVE
+//    control_force = feedback_force;
 
   OUTLOG(control_force,"final_control_force",logDEBUG);
 
@@ -509,6 +676,7 @@ extern "C" {
     boost::shared_ptr<Moby::RigidBody> object;
     
     OUT_LOG(logINFO) << "STARTING MOBY PLUGIN" ;
+    Logger::ReportingLevel() = logDEBUG2;
     
     // If use robot is active also init dynamixel controllers
     // get a reference to the Simulator instance
@@ -578,12 +746,12 @@ extern "C" {
 //    gq.set_zero();
     std::fill(gq.begin(),gq.end(),1.5708);
     for(int i=0;i<4;i++)
-      gq[gq.rows()-4+i] = 1.5708 * 0.5;
+      gq[gq.rows()-4+i] = M_PI/4.0; //(0.785398)
+    
+    initial_robot_q = gq;
     
     gqd.set_zero();
-    
-    
-    
+
     abrobot->set_generalized_coordinates_euler(gq);
     abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
   }

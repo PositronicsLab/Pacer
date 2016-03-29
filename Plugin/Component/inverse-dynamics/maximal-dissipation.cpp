@@ -1016,19 +1016,9 @@ bool inverse_dynamics_two_stage_simple_no_slip(const Ravelin::VectorNd& v, const
   return true;
 }
 
-
-/** Maximal Dissipation Model (contact + inverse dynamics) -- Algebraic setup -- 1 stage
- *  min{z}  v+' M v+
- *  such that:
- *  v+ = v + inv(M)([ N, ST+, ST- ] z + h fext + P tau)
- *  N' v+ >= 0
- *  f_N >= 0
- *  mu * f_N{i} >= 1' [f_S{i}; f_T{i}] for i=1:nc
- *  P' v+ = v + h qdd
- **/
-bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
-                               const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
-  OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
+bool inverse_dynamics_sensed_forces(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                                const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, const Ravelin::VectorNd& cf){
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics_two_stage() entered" << std::endl;
   
   Ravelin::VectorNd fext = fext_;
   // get number of degrees of freedom and number of contact points
@@ -1093,10 +1083,11 @@ bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   
   // if in mid-air only return ID forces solution
   // fID + fext = M qdd  ==> fID = M qdd - fext
-  C.mult((workv1 = qdd),fID) -= fext.get_sub_vec(0,nq,workv2);
+  C.mult((workv1 = qdd),fID) -= fext.segment(0,nq);
   
   int nk = (nc == 0)? 0 : ST.columns()/nc;
   int nvars = nc + nc*(nk);
+  
   // setup R
   Ravelin::MatrixNd R(n, nc + (nc*nk) );
   R.block(0,n,0,nc) = N;
@@ -1119,10 +1110,7 @@ bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  fext.segment(0,nq) += fID;
-  
-  /// Stage 1 optimization energy minimization
-  Ravelin::VectorNd z(nvars),cf(nvars);
+  fext.segment(0,nq) += fID; //TODO: Check if necessary
   
   // j and k
   
@@ -1162,144 +1150,16 @@ bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
   
-  if(cf_final.rows() != 0){
-    // return the inverse dynamics forces
-    // x = iF*(vqstar - k - FET*R*(cf))/h
-    (x = vqstar) -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf_final,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
-    x += fID;
-    return true;
-  }
+  assert(cf.rows() != 0);
   
-  /////////////////////////////////////////////////////////////////////////////
-  ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////
-  /////////////////////////////////////////////////////////////////////////////
-  
-  /////////////////////////////// OBJECTIVE ///////////////////////////////////
-  // set Hessian:
-  // qG = Z'A Z = [H]
-  //  OUTLOG(H,"H = [ % = Z'A Z");
-  Ravelin::MatrixNd qG = H;
-  // set Gradient:
-  // qc = Z'A p + Z'B vq*;
-  Ravelin::VectorNd qc(Z.columns());
-  // HINT: workM1 = Z'*A
-  
-  // qc = Z'A p
-  workM1.mult(p,qc);
-  
-  Z.transpose_mult(B,workM2);
-  // HINT: workM2 = Z'B
-  
-  // qc += Z'B vqstar
-  workM2.mult(vqstar,qc,1,1);
-  
-  ////////////////////////////// CONSTRAINTS ///////////////////////////////////
-  
-  // setup linear inequality constraints -- noninterpenetration
-  // N'[zeros(nq,:) ; Z] z + N'[vq* ; p] >= 0
-  
-  // [zeros(nq,:) ; Z]
-  workM1.set_zero(n,Z.columns());
-  workM1.set_sub_mat(nq,0,Z);
-  // constraint Jacobain 1:
-  // qM1 = N'[zeros(nq,:) ; Z]
-  Ravelin::MatrixNd qM1(N.columns(),Z.columns());
-  N.transpose_mult(workM1,qM1);
-  OUTLOG(qM1,"M_IP",logDEBUG1);
-  // [vq* ; p]
-  Ravelin::VectorNd vqstar_p(n);
-  vqstar_p.set_sub_vec(0,vqstar);
-  vqstar_p.set_sub_vec(nq,p);
-  
-  // constraint vector 1
-  // qq1 = -N'[vq* ; p]
-  Ravelin::VectorNd qq1(N.columns());
-  N.transpose_mult(vqstar_p,qq1);
-  qq1.negate();
-  OUTLOG(qq1,"q_IP",logDEBUG1);
-  
-  // setup linear inequality constraints -- coulomb friction
-  // where : z = [cN  cS cT  -cS -cT]'
-  // mu_i cN_i - cS_i - cT_i >= 0
-  
-  Ravelin::MatrixNd qM2;
-  Ravelin::VectorNd qq2;
-  // rhs ia zero
-  
-  
-  // inscribe friction polygon in friction cone (scale by cos(pi/nk))
-  if(nk == 4){
-    qM2.set_zero(nc, nvars);
-    qq2.set_zero(nc);
-    for (int ii=0;ii < nc;ii++){
-      // normal force
-      qM2(ii,ii) = MU(ii,0);
-      // tangent forces [polygonal]
-      for(int kk=nc+ii;kk<nc+nk*nc;kk+=nc)
-        qM2(ii,kk) = -1.0;
-    }
-  } else {
-    qM2.set_zero(nc*nk/2, nvars);
-    qq2.set_zero(nc*nk/2);
-    double polygon_rad = cos(M_PI/nk);
-    // for each Contact
-    for (int ii=0;ii < nc;ii++){
-      // for each Friction Direction
-      for(int k=0;k<nk/2;k++){
-        // normal force
-        qM2(ii*nk/2+k,ii) = MU(ii,k)*polygon_rad;
-        // tangent forces [polygonal]
-        for(int kk=nc+ii+nc*k;kk<nc+nk*nc;kk+=nc*nk/2)
-          qM2(ii*nk/2+k,kk) = -1.0;
-      }
-    }
-  }
-  //  OUTLOG(qM2,"CF");
-  
-  // combine all linear inequality constraints
-  assert(qM1.columns() == qM2.columns());
-  Ravelin::MatrixNd qM(qM1.rows()+qM2.rows(),qM1.columns());
-  Ravelin::VectorNd qq(qq1.rows()+qq2.rows());
-  qM.set_sub_mat(0,0,qM1);
-  qM.set_sub_mat(qM1.rows(),0,qM2);
-  qq.set_sub_vec(0,qq1);
-  qq.set_sub_vec(qq1.rows(),qq2);
-  
-  static Ravelin::VectorNd _v;
-  bool warm_start = true;
-//  if(_v.rows() != (qq.rows() + z.rows()) || !SAME_AS_LAST_CONTACTS)
-    warm_start = false;
-  
-  if(!Utility::solve_qp_pos(qG,qc,qM,qq,z,_v,warm_start)){
-    OUT_LOG(logERROR)  << "%ERROR: Unable to solve stage 1!";
-    return false;
-  }
-  
-  OUTLOG(z,"Z_OP1",logDEBUG1);
-  // measure feasibility of solution
-  // qM z - qq >= 0
-  Ravelin::VectorNd feas;
-  qM.mult(z,feas) -= qq;
-  
-  OUTLOG(feas,"feas_OP1 =[ % (A*z-b >= 0)",logDEBUG1);
-  
-  // push z into output vector
-  cf_final = z;
   // return the inverse dynamics forces
   // x = iF*(vqstar - k - FET*R*(cf))/h
   (x = vqstar) -= k;
   FET.mult(R,workM1);
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
-  x /= h;
+  //    x /= h;
   x += fID;
-  
-  // Some debugging dialogue
-  OUT_LOG(logDEBUG) << "<< inverse_dynamics() exited" << std::endl;
   return true;
 }
 
@@ -1313,18 +1173,14 @@ bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
  *  P' v+ = v + h qdd
  **/
 bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
-                       const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
-  OUT_LOG(logDEBUG) << ">> inverse_dynamics() entered" << std::endl;
+                       const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS, bool two_stage = true){
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics_two_stage() entered" << std::endl;
   
   Ravelin::VectorNd fext = fext_;
   // get number of degrees of freedom and number of contact points
   int n = M.rows();
   int nq = n - 6;
   int nc = N.columns();
-  
-  //  if (nc==0) {
-  //    return false;
-  //  }
   
   Ravelin::MatrixNd workM1,workM2;
   Ravelin::VectorNd workv1, workv2,fID;
@@ -1379,7 +1235,7 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   
   // if in mid-air only return ID forces solution
   // fID + fext = M qdd  ==> fID = M qdd - fext
-  C.mult((workv1 = qdd),fID) -= fext.get_sub_vec(0,nq,workv2);
+  C.mult((workv1 = qdd),fID) -= fext.segment(0,nq);
   
   int nk = (nc == 0)? 0 : ST.columns()/nc;
   int nvars = nc + nc*(nk);
@@ -1406,7 +1262,7 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   
   // Predict Contact forces
   // Incorporate fID into acting forces on robot, then find contact forces
-  fext.segment(0,nq) += fID;
+  fext.segment(0,nq) += fID; //TODO: Check if necessary
   
   /// Stage 1 optimization energy minimization
   Ravelin::VectorNd z(nvars),cf(nvars);
@@ -1448,18 +1304,6 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   // compute objective function
   Z.transpose_mult(A,workM1);
   workM1.mult(Z,H);
-  
-  if(cf_final.rows() != 0){
-    // return the inverse dynamics forces
-    // x = iF*(vqstar - k - FET*R*(cf))/h
-    (x = vqstar) -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf_final,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
-    x += fID;
-    return true;
-  }
   
   /////////////////////////////////////////////////////////////////////////////
   ///////////////// Stage 1 optimization:  IDYN Energy Min ////////////////////
@@ -1585,7 +1429,7 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   Ravelin::MatrixNd P;
   LA_.nullspace(H,P);
   unsigned size_null_space = P.columns();
-  if(size_null_space != 0)
+  if(size_null_space != 0 && two_stage)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
@@ -1733,14 +1577,30 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   FET.mult(R,workM1);
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
-  x /= h;
+//  x /= h; // TODO: PUT BACK
   x += fID;
   
   // Some debugging dialogue
-  OUT_LOG(logDEBUG) << "<< inverse_dynamics() exited" << std::endl;
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics_two_stage() exited" << std::endl;
   return true;
 }
 
+/** Maximal Dissipation Model (contact + inverse dynamics) -- Algebraic setup -- 1 stage
+ *  min{z}  v+' M v+
+ *  such that:
+ *  v+ = v + inv(M)([ N, ST+, ST- ] z + h fext + P tau)
+ *  N' v+ >= 0
+ *  f_N >= 0
+ *  mu * f_N{i} >= 1' [f_S{i}; f_T{i}] for i=1:nc
+ *  P' v+ = v + h qdd
+ **/
+bool inverse_dynamics_one_stage(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                                const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, const Ravelin::MatrixNd& MU, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
+  OUT_LOG(logDEBUG) << ">> inverse_dynamics_one_stage() entered" << std::endl;
+  bool return_flag = inverse_dynamics_two_stage(v,  qdd,  M, N, ST, fext_, h,  MU,  x,  cf_final,  indices,  active_eefs, SAME_AS_LAST_CONTACTS, false);
+  OUT_LOG(logDEBUG) << "<< inverse_dynamics_one_stage() exited" << std::endl;
+  return return_flag;
+}
 
 /** Maximal Dissipation Model (contact + inverse dynamics) -- no-slip -- 2 stage
  *  min{z}  v+' M v+
@@ -1751,7 +1611,7 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
  *  P' v+ = v + h qdd
  **/
 bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
-                              const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
+                              const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS, bool two_stage){
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_no_slip() entered" << std::endl;
   
   Ravelin::VectorNd fext = fext_;
@@ -1865,20 +1725,6 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   // k = [F,E']*fext*h  +  vq
   Ravelin::VectorNd k;
   FET.mult(fext,(k = vq),h,1);
-  //  OUTLOG(k,"k = [ % = [F,E']*fext*h  +  vq");
-  
-  // Use Sensed contact forces
-  if(cf_final.rows() != 0){
-    
-    (x = vqstar) -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf_final,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
-    x += fID;
-    
-    return true;
-  }
   
   // compute Z and p
   // Z = ( [E,D] - E inv(F) [F,E'] ) R
@@ -1986,7 +1832,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   Ravelin::MatrixNd P;
   LA_.nullspace(H,P);
   unsigned size_null_space = P.columns();
-  if(size_null_space != 0 && P.norm_inf() > NEAR_ZERO && nc > 2)
+  if(size_null_space != 0 && P.norm_inf() > NEAR_ZERO && two_stage)
   {
     // second optimization is necessary if the previous Hessian was PSD:
     // size_null_space > 0
@@ -2086,15 +1932,7 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
       OUTLOG(cf,"z_OP2 =[ % (P*w + z)",logDEBUG);
       
     }
-  } else {
-    cf_final = cf;
-    (x = vqstar) -= k;
-    FET.mult(R,workM1);
-    workM1.mult(cf_final,x,-1,1);
-    LA_.solve_chol_fast(iF,x);
-    x /= h;
   }
-  
   
   //  OUTLOG(cf,"final_contact_force");
   //  Note compare contact force prediction to Moby contact force
@@ -2106,10 +1944,21 @@ bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorN
   FET.mult(R,workM1);
   workM1.mult(cf_final,x,-1,1);
   LA_.solve_chol_fast(iF,x);
-  x /= h;
   x += fID;
   
   // Some debugging dialogue
   OUT_LOG(logDEBUG) << "<< inverse_dynamics_no_slip() exited" << std::endl;
   return true;
+}
+
+bool inverse_dynamics_no_slip_one_stage(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                              const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
+  bool solve_flag = inverse_dynamics_no_slip(v,qdd,M,N,ST,fext_,h,x,cf_final,indices,active_eefs,SAME_AS_LAST_CONTACTS,false);
+  return solve_flag;
+}
+
+bool inverse_dynamics_no_slip(const Ravelin::VectorNd& v, const Ravelin::VectorNd& qdd, const Ravelin::MatrixNd& M,const  Ravelin::MatrixNd& N,
+                                        const Ravelin::MatrixNd& ST, const Ravelin::VectorNd& fext_, double h, Ravelin::VectorNd& x, Ravelin::VectorNd& cf_final, std::vector<unsigned>& indices, int active_eefs,bool SAME_AS_LAST_CONTACTS){
+  bool solve_flag = inverse_dynamics_no_slip(v,qdd,M,N,ST,fext_,h,x,cf_final,indices,active_eefs,SAME_AS_LAST_CONTACTS,true);
+  return solve_flag;
 }

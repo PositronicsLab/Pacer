@@ -403,7 +403,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <sphere>
-            <radius>0.005</radius>
+            <radius>0.01</radius>
           </sphere>
         </geometry>
         <material>
@@ -473,7 +473,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <sphere>
-            <radius>0.005</radius>
+            <radius>0.01</radius>
           </sphere>
         </geometry>
         <material>
@@ -543,7 +543,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <sphere>
-            <radius>0.005</radius>
+            <radius>0.01</radius>
           </sphere>
         </geometry>
         <material>
@@ -613,7 +613,7 @@
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <sphere>
-            <radius>0.005</radius>
+            <radius>0.01</radius>
           </sphere>
         </geometry>
         <material>

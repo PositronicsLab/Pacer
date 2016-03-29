@@ -823,6 +823,13 @@ int main(int argc_main, char* argv_main[]){
   
   //  logging << " -- Found Environment -- " << std::endl;
   
+  // Reset robot state to adjust robot model
+  Ravelin::VectorNd q_starting_position,q_current_position;
+  robot->get_generalized_coordinates_euler(q_starting_position);
+  q_current_position = q_starting_position;
+  q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
+  robot->set_generalized_coordinates_euler(q_current_position);
+  
   // Apply uncertainty to robot model
   apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
   
@@ -832,23 +839,19 @@ int main(int argc_main, char* argv_main[]){
   logging << " -- Applied State Uncertainty -- " << std::endl;
   
   if(EXPORT_XML){
-    Ravelin::VectorNd q0,q;
-    robot->get_generalized_coordinates_euler(q0);
-    q = q0;
-    q.segment(0,q.rows()-7) = Ravelin::VectorNd::zero(q.rows()-7);
-    robot->set_generalized_coordinates_euler(q);
     
     // write the file (fails silently)
     char buffer[128];
     sprintf(buffer, "model-%06u.xml", pid);
     boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
     Moby::XMLWriter::serialize_to_xml(std::string(buffer), robot_moby);
-    robot->set_generalized_coordinates_euler(q0);
   }
-  
+
   /*
    *  Running experiment
    */
+  robot->set_generalized_coordinates_euler(q_starting_position);
+
 //#ifndef NDEBUG
   std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
 //#endif

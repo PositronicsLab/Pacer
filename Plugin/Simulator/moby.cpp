@@ -78,11 +78,13 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 
   std::cout << "controller: time=" << t << " (dt="<< t - last_time << ")" << std::endl;
 
-  if (t - last_time < 0.001*0.75) {
+  if ((t - last_time) < 0.001-Moby::NEAR_ZERO) {
     cf = control_force;
     cf.set_zero();
     return cf;
   }
+  robot_ptr->reset_state();
+
   
   ITER++;
   std::cout << "controller: iteration=" << ITER << " , time=" << t << " (dt="<< t - last_time << ")" << std::endl;
@@ -197,10 +199,6 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   ////////////////////////////// Control Robot: ///////////////////////////////
   robot_ptr->control(t);
 #ifdef USE_OSG_DISPLAY
-  /////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////// Visualize: ///////////////////////////////////
-  render(Utility::visualize);
-  
   static osg::Group * MAIN_GROUP;
   if (!MAIN_GROUP) {
     MAIN_GROUP = new osg::Group;
@@ -275,7 +273,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   
   std::vector<boost::shared_ptr<Pacer::Robot::contact_t> > contacts;
   // PROCESS CONTACTS
-  OUT_LOG(logERROR) << "Events (post_event_callback_fn): " << e.size();
+  OUT_LOG(logDEBUG) << "Events (post_event_callback_fn): " << e.size();
   double normal_sum = 0;
 
   for(unsigned i=0;i<e.size();i++){
@@ -292,19 +290,19 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       tangent.normalize();
       normal.normalize();
     
-      OUTLOG(impulse,"MOBY_force_"+sb1->body_id,logNONE);
+      OUTLOG(impulse,"MOBY_force_"+sb1->body_id,logDEBUG);
       
       bool compliant =
         (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
 
-//      OUT_LOG(logERROR) << "compliant: " << compliant;
-      OUT_LOG(logERROR) << "SIMULATOR CONTACT FORCE : ";
-      OUT_LOG(logERROR) << "t: " << t << " " << sb1->body_id << " <-- " << sb2->body_id;
+//      OUT_LOG(logDEBUG) << "compliant: " << compliant;
+      OUT_LOG(logDEBUG) << "SIMULATOR CONTACT FORCE : ";
+      OUT_LOG(logDEBUG) << "t: " << t << " " << sb1->body_id << " <-- " << sb2->body_id;
       if(compliant)
-        OUT_LOG(logERROR) << "force: " << impulse;
+        OUT_LOG(logDEBUG) << "force: " << impulse;
       else{
         impulse/=dt;
-        OUT_LOG(logERROR) << "force: " << impulse;
+        OUT_LOG(logDEBUG) << "force: " << impulse;
       }
 
       if(robot_ptr->is_end_effector(sb1->body_id)){
@@ -334,7 +332,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   #endif
     }
   }
-  OUT_LOG(logERROR) << "0, Sum normal force: " << normal_sum ;
+  OUT_LOG(logDEBUG) << "0, Sum normal force: " << normal_sum ;
 }
 
 boost::weak_ptr<Moby::ArticulatedBody> abrobot_weak_ptr;
@@ -450,16 +448,16 @@ void post_step_callback_fn(Moby::Simulator* s){
             {
               Ravelin::Pose3d link_pose = (is_foot)? *foot_pose : *(rb_ptr->get_pose());
               link_pose.update_relative_pose(Pacer::GLOBAL);
-              visualize_ray(Ravelin::Vector3d(joint_pose.x.data()),Ravelin::Vector3d(link_pose.x.data()),Ravelin::Vector3d(1,0,0),sim);
+              VISUALIZE(RAY(  joint_pose.x.data(),   link_pose.x.data(),   Ravelin::Vector3d(1,1,1),0.1));
             }
             
             rb_ptr = joint_ptr->get_inboard_link();
-            
-            {
-              Ravelin::Pose3d link_pose = *(rb_ptr->get_pose());
-              link_pose.update_relative_pose(Pacer::GLOBAL);
-              visualize_ray(Ravelin::Vector3d(joint_pose.x.data()),Ravelin::Vector3d(link_pose.x.data()),Ravelin::Vector3d(1,0,0),sim);
-            }
+//
+//            {
+//              Ravelin::Pose3d link_pose = *(rb_ptr->get_pose());
+//              link_pose.update_relative_pose(Pacer::GLOBAL);
+//              visualize_ray(Ravelin::Vector3d(joint_pose.x.data()),Ravelin::Vector3d(link_pose.x.data()),Ravelin::Vector3d(1,0,0),sim);
+//            }
           }
           is_foot = false;
         }
@@ -470,14 +468,15 @@ void post_step_callback_fn(Moby::Simulator* s){
   }
   }
 #endif
-  robot_ptr->reset_state();
-  
-  bool WAIT_TIMESTEP = false;
-  robot_ptr->get_data<bool>("moby.wait-timestep",WAIT_TIMESTEP);
-  if (WAIT_TIMESTEP) {
-    sleep_duration(0.001);
-  }
-  
+//  bool WAIT_TIMESTEP = false;
+//  robot_ptr->get_data<bool>("moby.wait-timestep",WAIT_TIMESTEP);
+//  if (WAIT_TIMESTEP) {
+//    sleep_duration(0.001);
+//  }
+/////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Visualize: ///////////////////////////////////
+  render(Utility::visualize);
+
 }
 
 // ============================================================================

@@ -77,7 +77,7 @@ void calc_contact_jacobians(const std::vector<Moby::UnilateralConstraint>& c ,Ra
     Ravelin::Vector3d tan1 = c[i].contact_tan1;
     Ravelin::Vector3d tan2 = c[i].contact_tan2;
 
-    abrobot->calc_jacobian(impulse_frame,sb2,workM_);
+    abrobot->calc_jacobian(abrobot->get_gc_pose(),impulse_frame,sb2,workM_);
 
     OUTLOG(workM_,"J_arm",logERROR);
 
@@ -96,7 +96,7 @@ void calc_contact_jacobians(const std::vector<Moby::UnilateralConstraint>& c ,Ra
     T.column(i).segment(0,NDOFS) = workv_;
     
     // Rigid Body
-    object->calc_jacobian(impulse_frame,Moby::GLOBAL,sb1,workM_);
+    object->calc_jacobian(object->get_gc_pose(),impulse_frame,sb1,workM_);
     OUTLOG(workM_,"J_object",logERROR);
 
     workM_.get_sub_mat(0,3,0,6,J);

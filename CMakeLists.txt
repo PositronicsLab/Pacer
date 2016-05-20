@@ -24,7 +24,7 @@ set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
 find_package(Boost REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
-set (LIBS ${LIBS} ${BOOST_LIBRARIES} boost_system-mt)
+set (LIBS ${LIBS} ${BOOST_LIBRARIES} boost_system)
 
 # add Ravelin
 find_package(Ravelin REQUIRED)

@@ -590,18 +590,20 @@ void walk_toward(// PARAMETERS
       boost::shared_ptr<Pose3d> end_of_step_state_ptr(new Pose3d(end_of_step_state[i]));
       Vector3d foot_goal(origins[i],mid_of_next_step_state_ptr);
       foot_goal = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
-      
-//#ifdef DISPLAY
-//      // WRT global
-//      {
-//      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,start_of_step_foothold[i]);
-//      p1[2] = 0;
-//      VISUALIZE(POINT( p1,   Vector3d(1,0,0),0.1));
-//      Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,foot_goal);
-//      p2[2] = 0;
-//      VISUALIZE(POINT(  p2,   Vector3d(0,1,0),0.1));
-//      }
-//#endif
+      if(fabs(foot_goal[1]) < fabs(origins[i][1])){
+        foot_goal[1] = origins[i][1];
+      }
+#ifdef DISPLAY
+      // WRT global
+      {
+        Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,start_of_step_foothold[i]);
+        p1[2] = 0;
+        VISUALIZE(POINT( p1,   Vector3d(1,0,0),0.1));
+        Vector3d p2 = Pose3d::transform_point(Pacer::GLOBAL,foot_goal);
+        p2[2] = 0;
+        VISUALIZE(POINT(  p2,   Vector3d(0,1,0),0.1));
+      }
+#endif
       
       // Generate control points for swing foot spline
       std::vector<Origin3d> control_points;

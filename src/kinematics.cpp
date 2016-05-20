@@ -51,7 +51,7 @@ Ravelin::MatrixNd& Robot::link_jacobian(const Ravelin::VectorNd& x,const end_eff
    )
   );
   
-  _abrobot->calc_jacobian(jacobian_frame,foot.link,workM_);
+  _abrobot->calc_jacobian(_abrobot->get_gc_pose(),jacobian_frame,foot.link,workM_);
   
   for(int j=0;j<6;j++) {                                     // x,y,z
     for(int k=0;k<foot.chain.size();k++){
@@ -73,7 +73,7 @@ Ravelin::MatrixNd Robot::calc_jacobian(const Ravelin::VectorNd& q,const std::str
                                      Ravelin::Origin3d(Ravelin::Pose3d::transform_point(GLOBAL,Ravelin::Vector3d(point.data(),_id_link_map[link]->get_pose())).data())
                                      ,GLOBAL));
   
-  _abrobot->calc_jacobian(_root_link->get_mixed_pose(),jacobian_frame,_id_link_map[link],J);
+  _abrobot->calc_jacobian(_abrobot->get_gc_pose(),jacobian_frame,_id_link_map[link],J);
   
 //  OUTLOG(_root_link->get_mixed_pose(),"base_frame",logERROR);
 //  OUTLOG(jacobian_frame,"jacobian_frame",logERROR);
@@ -311,7 +311,7 @@ void Robot::calc_contact_jacobians(const Ravelin::VectorNd& q, std::vector<boost
     boost::shared_ptr<const Ravelin::Pose3d>
     impulse_frame(new Ravelin::Pose3d(Ravelin::Quatd::identity(),c[i]->point.data(),GLOBAL));
     
-    _abrobot->calc_jacobian(impulse_frame,_id_link_map[c[i]->id],workM_);
+    _abrobot->calc_jacobian(_abrobot->get_gc_pose(),impulse_frame,_id_link_map[c[i]->id],workM_);
     workM_.get_sub_mat(0,3,0,NDOFS,J);
     
     Vector3d

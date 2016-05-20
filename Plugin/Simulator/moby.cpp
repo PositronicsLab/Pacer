@@ -201,13 +201,11 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   boost::shared_ptr<Moby::ConstraintSimulator> csim;
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
 
-  std::vector<Moby::UnilateralConstraint>& rigid_constraints = csim->get_rigid_constraints();
-  std::vector<Moby::UnilateralConstraint>& compliant_constraints = csim->get_compliant_constraints();
-  std::vector<Moby::UnilateralConstraint> e;
+  std::vector<Moby::Constraint>& rigid_constraints = csim->get_rigid_constraints();
+  std::vector<Moby::Constraint> e;
   e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
-  e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -220,23 +218,19 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       tangent.normalize();
       normal.normalize();
       
-      bool compliant =
-      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-      
-      
+     
       OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
-      OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
       OUT_LOG(logDEBUG) << "MOBY: normal: " << normal;
       OUT_LOG(logDEBUG) << "MOBY: tangent: " << tangent;
       OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
       if(robot_ptr->is_end_effector(sb1->body_id)){
-        robot_ptr->add_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
+        robot_ptr->add_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,false);
         //robot_ptr->set_data<Ravelin::Vector3d>
         //(sb1->body_id+".contact-force",
         // Ravelin::Vector3d
         // (impulse.dot(normal),impulse.dot(e[i].contact_tan1),impulse.dot(e[i].contact_tan2)));
       } else if(robot_ptr->is_end_effector(sb2->body_id)){
-        robot_ptr->add_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
+        robot_ptr->add_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,false);
         //robot_ptr->set_data<Ravelin::Vector3d>
         //(sb2->body_id+".contact-force",
         // Ravelin::Vector3d
@@ -317,7 +311,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 // ============================================================================
 
 // examines contact events (after they have been handled in Moby)
-void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
+void post_event_callback_fn(const std::vector<Moby::Constraint>& e,
                             boost::shared_ptr<void> empty)
 {
   
@@ -337,7 +331,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   double normal_sum = 0;
 
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -350,8 +344,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       tangent.normalize();
       normal.normalize();
       
-      bool compliant = 
-        (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
+      bool compliant = false; 
 
 //      OUT_LOG(logERROR) << "compliant: " << compliant;
       OUT_LOG(logERROR) << "SIMULATOR CONTACT FORCE : ";
@@ -610,7 +603,7 @@ void post_step_callback_fn(Moby::Simulator* s){
 }
 
 /// Event callback function for setting friction vars pre-event
-void pre_event_callback_fn(std::vector<Moby::UnilateralConstraint>& e, boost::shared_ptr<void> empty){
+void pre_event_callback_fn(std::vector<Moby::Constraint>& e, boost::shared_ptr<void> empty){
   for(int i=0;i< e.size();i++){
     OUT_LOG(logDEBUG1) << e[i] ;
   }

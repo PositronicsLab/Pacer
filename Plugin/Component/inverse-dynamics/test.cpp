@@ -49,7 +49,7 @@ Ravelin::VectorNd desired_robot_qdd;
 
 ///////////////////////////////////////////////////////////////////////////////
 ////////////////////////// JACOBIANS //////////////////////////////////////////
-void calc_contact_jacobians(const std::vector<Moby::UnilateralConstraint>& c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T){
+void calc_contact_jacobians(const std::vector<Moby::Constraint>& c ,Ravelin::MatrixNd& N,Ravelin::MatrixNd& S,Ravelin::MatrixNd& T){
   static Ravelin::VectorNd workv_;
   static Ravelin::MatrixNd workM_;
   
@@ -261,24 +261,18 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     boost::shared_ptr<Moby::ConstraintSimulator> csim;
     csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
     
-    std::vector<Moby::UnilateralConstraint>& rigid_constraints = csim->get_rigid_constraints();
-    std::vector<Moby::UnilateralConstraint>& compliant_constraints = csim->get_compliant_constraints();
-    std::vector<Moby::UnilateralConstraint> e;
-    std::map<std::string, Moby::UnilateralConstraint> contacts;
+    std::vector<Moby::Constraint>& rigid_constraints = csim->get_rigid_constraints();
+    std::vector<Moby::Constraint> e;
+    std::map<std::string, Moby::Constraint> contacts;
   std::map<std::string, Ravelin::SMomentumd> contact_impulses;
     e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
-    e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
       
-      bool compliant =
-      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-      
       OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
-      OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
       OUT_LOG(logDEBUG) << "MOBY: normal: " << e[i].contact_normal;
       OUT_LOG(logDEBUG) << "MOBY: tan1: " << e[i].contact_tan1;
       OUT_LOG(logDEBUG) << "MOBY: tan2: " << e[i].contact_tan2;
@@ -307,10 +301,10 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   // Create active contacts vector
   static std::map<std::string, Ravelin::Origin3d> finger_force_idyn;
   
-  std::vector<Moby::UnilateralConstraint> c;
+  std::vector<Moby::Constraint> c;
   std::vector<unsigned> indices;
   std::vector<Ravelin::Origin3d> finger_force_moby_vec;
-  for( std::map<std::string, Moby::UnilateralConstraint>::iterator it = contacts.begin(); it != contacts.end(); ++it ) {
+  for( std::map<std::string, Moby::Constraint>::iterator it = contacts.begin(); it != contacts.end(); ++it ) {
     
     boost::shared_ptr<Ravelin::SingleBodyd> sb1 = it->second.contact_geom1->get_single_body();
     boost::shared_ptr<Ravelin::SingleBodyd> sb2 = it->second.contact_geom2->get_single_body();
@@ -612,7 +606,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 // ============================================================================
 
 // examines contact events (after they have been handled in Moby)
-void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
+void post_event_callback_fn(const std::vector<Moby::Constraint>& e,
                             boost::shared_ptr<void> empty)
 {
   
@@ -631,7 +625,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   double normal_sum = 0;
   
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -644,18 +638,10 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
       tangent.normalize();
       normal.normalize();
       
-      bool compliant =
-      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-      
-      //      OUT_LOG(logERROR) << "compliant: " << compliant;
       OUT_LOG(logERROR) << "SIMULATOR CONTACT FORCE : ";
       OUT_LOG(logERROR) << "t: " << t << " " << sb1->body_id << " <-- " << sb2->body_id;
-      if(compliant)
-        OUT_LOG(logERROR) << "force: " << impulse;
-      else{
         impulse/=dt;
         OUT_LOG(logERROR) << "force: " << impulse;
-      }
     }
   }
 }

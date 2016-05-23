@@ -2,10 +2,20 @@
 #include <Pacer/utilities.h>
 #include "../plugin.h"
 
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <errno.h>
+
+#define handle_error_en(en, msg) \
+do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+
 #include "common.h"
 
 #ifndef USE_GSL
-#error Failing This plugin should be buit with randomization support from GSL please set 'USE_GSL' to ON.
+#error Failing build: This plugin should be built with randomization support from GSL. Set 'USE_GSL' to ON to correct build.
 #endif
 
 #include <Pacer/Random.h>
@@ -99,7 +109,7 @@ long long unsigned int sample_idx=0;
 
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  std::cout << "NUM end poses: " << completed_poses.size() << " , t = "<< t <<  std::endl;
+  std::cout << "NUM end poses: " << completed_poses.size() << " , t = "<< t << " samples: " << sample_idx << std::endl;
 
   for (int i=0; i<completed_poses.size(); i++) {
     std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
@@ -127,7 +137,7 @@ void loop(){
 #endif
     for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
       SampleConditions& sc = sample_processes[thread_number];
-      if(sc.active)
+      if(sc.active || sc.restart)
         continue;
       
       std::vector<std::string> SAMPLE_ARGV = get_sample_options();
@@ -161,10 +171,24 @@ void loop(){
       OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
                      << "\nHas simulator options:\n" << SAMPLE_ARGV;
       
-      std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl;
-
+      std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl <<
+      " message (main thread): " << message << std::endl;
       
-      write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,sizeof(message));
+      
+      {  // write to child
+        
+        write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,message_size);
+        
+//        siginfo_t info;
+//        timespec timeout;
+//        timeout.tv_sec = 0;
+//        timeout.tv_usec = 0;
+//        s = sigtimedwait(&set,&info,&timeout);
+//        if (s != 0)
+//          handle_error_en(s, "sigtimedwait");
+
+      }
+      
       sc.start_time = t;
       sc.sample_number = sample_idx++;
       sc.active = true;
@@ -240,6 +264,20 @@ void setup(){
   std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
 
   
+  {
+    /* Block SIGPIPE; other threads created by main()
+     will inherit a copy of the signal mask. */
+    
+    pthread_t thread;
+    sigset_t set;
+    int s;
+    
+    sigemptyset(&set);
+    sigaddset(&set, SIGPIPE);
+    s = pthread_sigmask(SIG_BLOCK, &set, NULL);
+    if (s != 0)
+      handle_error_en(s, "pthread_sigmask");
+  }
 
   // wait for all new forked processes to start;
   

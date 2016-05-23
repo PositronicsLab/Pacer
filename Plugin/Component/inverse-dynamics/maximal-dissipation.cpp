@@ -1158,7 +1158,7 @@ bool inverse_dynamics_sensed_forces(const Ravelin::VectorNd& v, const Ravelin::V
   FET.mult(R,workM1);
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
-  //    x /= h;
+      x /= h;
   x += fID;
   return true;
 }
@@ -1577,7 +1577,7 @@ bool inverse_dynamics_two_stage(const Ravelin::VectorNd& v, const Ravelin::Vecto
   FET.mult(R,workM1);
   workM1.mult(cf,x,-1,1);
   LA_.solve_chol_fast(iF,x);
-//  x /= h; // TODO: PUT BACK
+  x /= h; // TODO: PUT BACK
   x += fID;
   
   // Some debugging dialogue

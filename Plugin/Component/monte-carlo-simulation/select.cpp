@@ -15,7 +15,6 @@
 
 char spstr[512];
 
-
 ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// PIPE READING  /////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -170,6 +169,7 @@ void listen_for_child_return() {
         sc.active = false;
         sc.restart = true;
 //        throw std::runtime_error("Recieved bad message from child.");
+        continue;
       }
       
       double time_elapsed = atof(values[0].c_str());
@@ -372,6 +372,7 @@ static void start_process_spawner_thread(){
 void exit_sighandler( int signum, siginfo_t* info, void* context ) {
   std::cout << "exit_sighandler entered, something crashed! " << info->si_pid << std::endl;
 #ifdef USE_THREADS
+  pthread_mutex_unlock(&_sample_processes_mutex);
   pthread_mutex_lock(&_sample_processes_mutex);
 #endif
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){

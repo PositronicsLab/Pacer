@@ -39,7 +39,7 @@ static std::string SSTR(T x)
 }
 
 
-static int MESSAGE_SIZE = 4096;
+static int MESSAGE_SIZE = 32768;
 
 //#include <deque>
 //static char** param_array_noconst( std::deque< std::string >& params ) {

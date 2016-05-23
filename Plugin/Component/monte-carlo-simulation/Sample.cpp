@@ -58,6 +58,8 @@ bool USE_PIPES = false;
 int pid = 0;
 double DURATION = 0;
 
+using namespace Ravelin;
+
 namespace Moby {
   extern void close();
   extern bool init(int argc, char** argv, boost::shared_ptr<Simulator>& s);
@@ -628,8 +630,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   }
   
   logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
-  std::cerr << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
-  
   
   if (vm.count("xml")) {
     EXPORT_XML = true;
@@ -838,14 +838,15 @@ int main(int argc_main, char* argv_main[]){
   apply_state_uncertainty(argc_sample,argv_sample,robot);
   logging << " -- Applied State Uncertainty -- " << std::endl;
   
-  if(EXPORT_XML){
-    
+//  if(EXPORT_XML){
     // write the file (fails silently)
+  logging << " -- Exporting robot model file -- " << std::endl;
+
     char buffer[128];
     sprintf(buffer, "model-%06u.xml", pid);
     boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
     Moby::XMLWriter::serialize_to_xml(std::string(buffer), robot_moby);
-  }
+//  }
 
   /*
    *  Running experiment
@@ -892,6 +893,9 @@ int main(int argc_main, char* argv_main[]){
   if (USE_PIPES) {
     execv( argv_main[0] , argv_main );
   }
+  
+  // Quit like this because quitting normally leads to weird deconstructor errors.
+  throw std::runtime_error("Sample exited!");
   
   return 0;
 }

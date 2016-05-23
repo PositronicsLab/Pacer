@@ -10,6 +10,7 @@
 #include <Pacer/utilities.h>
 
 #ifdef USE_OSG_DISPLAY
+#warning "USE_OSG_DISPLAY turned on in moby.cpp"
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/Geode>
@@ -22,6 +23,7 @@
 #include <Pacer/Random.h>
 
 #include <time.h>
+bool control_kinematics = false;
 
 static double sleep_duration(double duration){
   timespec req,rem;
@@ -145,13 +147,9 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   boost::shared_ptr<Moby::ConstraintSimulator> csim;
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
 
-  std::vector<Moby::UnilateralConstraint>& rigid_constraints = csim->get_rigid_constraints();
-  std::vector<Moby::UnilateralConstraint>& compliant_constraints = csim->get_compliant_constraints();
-  std::vector<Moby::UnilateralConstraint> e;
-  e.insert(e.end(), rigid_constraints.begin(), rigid_constraints.end());
-  e.insert(e.end(), compliant_constraints.begin(), compliant_constraints.end());
+  std::vector<Moby::Constraint>& e = csim->get_rigid_constraints();
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -164,20 +162,16 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       tangent.normalize();
       normal.normalize();
       
-      bool compliant =
-      (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-      
       OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
-      OUT_LOG(logDEBUG) << "MOBY: compliant: " << compliant;
       OUT_LOG(logDEBUG) << "MOBY: normal: " << normal;
       OUT_LOG(logDEBUG) << "MOBY: tangent: " << tangent;
       OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
       
       boost::shared_ptr<Pacer::Robot::contact_t> new_contact;
       if(robot_ptr->is_end_effector(sb1->body_id)){
-        new_contact = robot_ptr->create_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
+        new_contact = robot_ptr->create_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0);
       } else if(robot_ptr->is_end_effector(sb2->body_id)){
-        new_contact = robot_ptr->create_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant);
+        new_contact = robot_ptr->create_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0);
       } else {
         continue;  // Contact doesn't include an end-effector
       }
@@ -232,6 +226,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
       control_force.set_zero(num_joint_dof);
     }
     
+    if(!control_kinematics){
     for(int i=0;i<joints.size();i++){
 //      joints[i]->add_force(u[joints[i]->joint_id]);
       int joint_index = joints[i]->get_coord_index();
@@ -242,7 +237,11 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
         OUT_LOG(logDEBUG) << joint_index << " " << joint_id << " " << joint_dof<< "/"<< num_joint_dofs<< "=" << u[joint_id][joint_dof];
       }
     }
-    OUT_LOG(logINFO) << "MOBY: control: " << control_force;
+      OUT_LOG(logINFO) << "MOBY: control: " << control_force;
+    } else {
+      OUT_LOG(logINFO) << "MOBY is controlled kinematically ";
+      assert(control_force.norm_inf() == 0);
+    }
   }
 
   std::vector<std::string> eef_names = robot_ptr->get_data<std::vector<std::string> >("init.end-effector.id");
@@ -257,7 +256,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 // ============================================================================
 
 // examines contact events (after they have been handled in Moby)
-void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
+void post_event_callback_fn(const std::vector<Moby::Constraint>& e,
                             boost::shared_ptr<void> empty)
 {
   
@@ -277,7 +276,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   double normal_sum = 0;
 
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -292,29 +291,21 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
     
       OUTLOG(impulse,"MOBY_force_"+sb1->body_id,logDEBUG);
       
-      bool compliant =
-        (e[i].compliance == Moby::UnilateralConstraint::eCompliant)? true : false;
-
-//      OUT_LOG(logDEBUG) << "compliant: " << compliant;
       OUT_LOG(logDEBUG) << "SIMULATOR CONTACT FORCE : ";
       OUT_LOG(logDEBUG) << "t: " << t << " " << sb1->body_id << " <-- " << sb2->body_id;
-      if(compliant)
-        OUT_LOG(logDEBUG) << "force: " << impulse;
-      else{
         impulse/=dt;
         OUT_LOG(logDEBUG) << "force: " << impulse;
-      }
 
       if(robot_ptr->is_end_effector(sb1->body_id)){
         normal_sum += impulse.dot(normal);
-        contacts.push_back(robot_ptr->create_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant));
+        contacts.push_back(robot_ptr->create_contact(sb1->body_id,e[i].contact_point,normal,tangent,impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0));
         robot_ptr->set_data<Ravelin::Vector3d>(sb1->body_id+".contact-force",
         Ravelin::Vector3d(impulse.dot(normal),impulse.dot(e[i].contact_tan1),impulse.dot(e[i].contact_tan2))
                                                );
 
       } else if(robot_ptr->is_end_effector(sb2->body_id)){
         normal_sum -= impulse.dot(normal);
-        contacts.push_back(robot_ptr->create_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0,compliant));
+        contacts.push_back(robot_ptr->create_contact(sb2->body_id,e[i].contact_point,-normal,tangent,-impulse,e[i].contact_mu_coulomb,e[i].contact_mu_viscous,0));
         robot_ptr->set_data<Ravelin::Vector3d>(sb2->body_id+".contact-force",Ravelin::Vector3d(impulse.dot(-normal),impulse.dot(e[i].contact_tan1),impulse.dot(-e[i].contact_tan2)));
       } else {
         continue;  // Contact doesn't include an end-effector  
@@ -479,6 +470,38 @@ void post_step_callback_fn(Moby::Simulator* s){
 
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+//////// This is how we control in the kinematic only simulator /////////////////
+
+//void (*constraint_callback_fn)(std::vector<Constraint>&, boost::shared_ptr<void>);
+void constraint_callback_fn(std::vector<Moby::Constraint>& constraints, boost::shared_ptr<void> data){
+  if(control_kinematics){
+  boost::shared_ptr<Moby::ControlledBody> cbp = controlled_weak_ptr.lock();
+  boost::shared_ptr<Moby::RCArticulatedBody>
+    abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(cbp);
+  
+  static std::vector<JointPtr> joints = abrobot->get_joints();
+  static std::map<std::string, boost::shared_ptr<Moby::Joint> > joints_map;
+  if (joints_map.empty()) {
+    for (std::vector<JointPtr>::iterator it = joints.begin(); it != joints.end(); it++){
+      boost::shared_ptr<Ravelin::Jointd> jp = boost::const_pointer_cast<Ravelin::Jointd>(*it);
+      boost::shared_ptr<Moby::Joint> mjp = boost::dynamic_pointer_cast<Moby::Joint>(jp);
+      joints_map[(*it)->joint_id] = mjp;
+    }
+  }
+  std::map<std::string, Ravelin::VectorNd > q, qd; 
+  robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
+  robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
+  for(std::map<std::string, Ravelin::VectorNd >::iterator it = qd.begin() ; it!=qd.end() ; it++){
+    Moby::Constraint c;
+    c.constraint_type = Moby::Constraint::eInverseDynamics;
+    c.qdot_des = (*it).second;
+    c.inv_dyn_joint = joints_map[(*it).first];
+    constraints.push_back(c);
+  }
+  }
+}
+
 // ============================================================================
 // ================================ INIT ======================================
 // ============================================================================
@@ -542,6 +565,8 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
   if (csim){
     csim->constraint_post_callback_fn        = &post_event_callback_fn;
+    csim->constraint_callback_fn        = &constraint_callback_fn;
+    robot_ptr->get_data<bool>("init.control-kinematics",control_kinematics);
   }
   sim->post_step_callback_fn = &post_step_callback_fn;
   // CONTROLLER CALLBACK

@@ -147,9 +147,9 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   boost::shared_ptr<Moby::ConstraintSimulator> csim;
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
 
-  std::vector<Moby::Constraint>& e = csim->get_rigid_constraints();
+  std::vector<Moby::UnilateralConstraint>& e = csim->get_rigid_constraints();
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::Constraint::eContact)
+    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -256,7 +256,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 // ============================================================================
 
 // examines contact events (after they have been handled in Moby)
-void post_event_callback_fn(const std::vector<Moby::Constraint>& e,
+void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
                             boost::shared_ptr<void> empty)
 {
   
@@ -276,7 +276,7 @@ void post_event_callback_fn(const std::vector<Moby::Constraint>& e,
   double normal_sum = 0;
 
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::Constraint::eContact)
+    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -470,38 +470,6 @@ void post_step_callback_fn(Moby::Simulator* s){
 
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//////// This is how we control in the kinematic only simulator /////////////////
-
-//void (*constraint_callback_fn)(std::vector<Constraint>&, boost::shared_ptr<void>);
-void constraint_callback_fn(std::vector<Moby::Constraint>& constraints, boost::shared_ptr<void> data){
-  if(control_kinematics){
-  boost::shared_ptr<Moby::ControlledBody> cbp = controlled_weak_ptr.lock();
-  boost::shared_ptr<Moby::RCArticulatedBody>
-    abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(cbp);
-  
-  static std::vector<JointPtr> joints = abrobot->get_joints();
-  static std::map<std::string, boost::shared_ptr<Moby::Joint> > joints_map;
-  if (joints_map.empty()) {
-    for (std::vector<JointPtr>::iterator it = joints.begin(); it != joints.end(); it++){
-      boost::shared_ptr<Ravelin::Jointd> jp = boost::const_pointer_cast<Ravelin::Jointd>(*it);
-      boost::shared_ptr<Moby::Joint> mjp = boost::dynamic_pointer_cast<Moby::Joint>(jp);
-      joints_map[(*it)->joint_id] = mjp;
-    }
-  }
-  std::map<std::string, Ravelin::VectorNd > q, qd; 
-  robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
-  robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
-  for(std::map<std::string, Ravelin::VectorNd >::iterator it = qd.begin() ; it!=qd.end() ; it++){
-    Moby::Constraint c;
-    c.constraint_type = Moby::Constraint::eInverseDynamics;
-    c.qdot_des = (*it).second;
-    c.inv_dyn_joint = joints_map[(*it).first];
-    constraints.push_back(c);
-  }
-  }
-}
-
 // ============================================================================
 // ================================ INIT ======================================
 // ============================================================================
@@ -565,7 +533,6 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
   if (csim){
     csim->constraint_post_callback_fn        = &post_event_callback_fn;
-    csim->constraint_callback_fn        = &constraint_callback_fn;
     robot_ptr->get_data<bool>("init.control-kinematics",control_kinematics);
   }
   sim->post_step_callback_fn = &post_step_callback_fn;

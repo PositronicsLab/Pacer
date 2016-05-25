@@ -605,6 +605,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::Simulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::Simulator> sim ) ;
 void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> sim,double lightness = 1, double size=0.1);
+void draw_text(std::string& text_str, const Ravelin::Vector3d& point, const Ravelin::Quatd& quat, const Ravelin::Vector3d& c, boost::shared_ptr<Moby::Simulator> sim, double size);
 
 void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
   for (std::vector<boost::shared_ptr<Pacer::Visualizable> >::iterator it = viz_vect.begin() ; it != viz_vect.end(); ++it)
@@ -632,6 +633,13 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
         if (!std::isfinite(v->pose.x.norm())) break;
         //        if (!std::isfinite(v->pose.q.norm())) break;
         draw_pose(v->pose,sim,v->shade,v->size);
+        break;
+      }
+      case Pacer::Visualizable::eText:{
+        Pacer::Text * v = static_cast<Pacer::Text*>((it)->get());
+        if (!std::isfinite(v->point.norm())) break;
+        //        if (!std::isfinite(v->pose.q.norm())) break;
+        draw_text(v->text_string,v->point,v->quat,v->color,sim,v->size);
         break;
       }
       default:   OUT_LOG(logINFO) << "UNKNOWN VISUAL: " << (*it)->eType ; break;

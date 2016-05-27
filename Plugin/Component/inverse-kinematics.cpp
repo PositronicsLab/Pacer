@@ -25,11 +25,11 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     OUT_LOG(logDEBUG1) << foot_name ;
 
     Ravelin::Origin3d x,xd,xdd;
-    ctrl->get_foot_value(foot_name,Pacer::Controller::position_goal,x);
+    ctrl->get_end_effector_value(foot_name,Pacer::Controller::position_goal,x);
     if(x.norm() < Pacer::NEAR_ZERO)
       continue;
-    ctrl->get_foot_value(foot_name,Pacer::Controller::velocity_goal,xd);
-    ctrl->get_foot_value(foot_name,Pacer::Controller::acceleration_goal,xdd);
+    ctrl->get_end_effector_value(foot_name,Pacer::Controller::velocity_goal,xd);
+    ctrl->get_end_effector_value(foot_name,Pacer::Controller::acceleration_goal,xdd);
 
     ////// enforce maximum reach on legs ////////////
     Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(foot_name+".base");
@@ -57,7 +57,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   Ravelin::VectorNd q;
   ctrl->get_generalized_value(Pacer::Controller::position,q);
-  int N = q.size() - Pacer::NEULER;
+  int N = ctrl->num_joint_dof();
   q[N] = 0;
   q[N+1] = 0;
   q[N+2] = 0;

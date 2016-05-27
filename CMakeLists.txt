@@ -8,10 +8,9 @@ include (CheckLibraryExists)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 
 # force Pacer to build with C++0x
-SET(CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -g")
-SET(CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -g")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-
+SET(CMAKE_C_FLAGS_DEBUG "-g")
+SET(CMAKE_CXX_FLAGS_DEBUG "-g")
+add_definitions(-std=c++0x)
 ###############################################################################
 ###############################  SETUP LIBS ###################################
 ###############################################################################
@@ -52,6 +51,11 @@ find_package( DL REQUIRED )
 set (LIBS ${LIBS} ${DL_LIBRARIES})
 
 ###############################  OPTIONAL  ####################################
+
+option(USE_DISPLAY "Display Visualizations?" OFF)
+IF(USE_DISPLAY)
+  add_definitions( -DUSE_DISPLAY )
+ENDIF(USE_DISPLAY)
 
 option(USE_REALTIME "Use Realtime libraries?" OFF)
 IF(USE_REALTIME)

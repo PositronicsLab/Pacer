@@ -22,12 +22,12 @@
 template < class T >
 std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
 {
-  os << "("<< v.size() <<")[";
+  os << "("<< v.size() <<"){";
   for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
   {
-    os << " " << *ii;
+    os << " [" << *ii << "] ";
   }
-  os << "]";
+  os << "}";
   return os;
 }
 

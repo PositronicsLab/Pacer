@@ -24,7 +24,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   if(up[2] < 0)
     throw std::runtime_error("Robot flipped over!");
     
-  std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+  std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
   ctrl->get_link_contacts("BODY0",c);
   if(c.size() != 0)
     throw std::runtime_error("Robot body contacted ground!");

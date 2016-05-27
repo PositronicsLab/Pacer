@@ -1,16 +1,4 @@
 #Pacer Project Repository
-
-## Check out this project:
-To avoid downloading the entire project's history, `git clone` just the master branch:
-
-    git clone -b master --single-branch https://github.com/PositronicsLab/Pacer.git
-
-**For more information, check out the [wiki].**
-
-[wiki]: https://github.com/PositronicsLab/Pacer/wiki
-
-## Info
-
 by Sam Zapolsky @ the [Positronics Lab]
 
 [Positronics Lab]: http://robotics.gwu.edu/positronics/
@@ -18,6 +6,10 @@ by Sam Zapolsky @ the [Positronics Lab]
 This repository hosts code for [Pacer] an open source robot locomotion library for simulated and physical legged robots.
 
 [Pacer]: https://github.com/PositronicsLab/Pacer
+
+**For more information, check out the [wiki].**
+
+[wiki]: https://github.com/PositronicsLab/Pacer/wiki
 
 ##Dependencies 
 

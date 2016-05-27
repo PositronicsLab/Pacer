@@ -28,13 +28,14 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   for(unsigned i=0;i<NUM_FEET;i++){
     Ravelin::Pose3d foot_pose(Ravelin::Matrix3d(link->get_pose()->q)*Ravelin::Matrix3d(0,0,-1, -1,0,0, 0,1,0),link->get_pose()->x,link->get_pose()->rpose);
     foot_pose.update_relative_pose(Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));    
+    VISUALIZE(POSE(foot_pose,0.8));
     OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
   }
 #endif
 
   // q w/o base position
-  local_q.set_sub_vec(NUM_JOINT_DOFS,Utility::pose_to_vec(Ravelin::Pose3d()));
+  if(ctrl->floating_base())
+    local_q.set_sub_vec(NUM_JOINT_DOFS,Utility::pose_to_vec(Ravelin::Pose3d()));
   ctrl->set_model_state(local_q);
   for(unsigned i=0;i<NUM_FEET;i++){
     Ravelin::Origin3d xd,xdd;
@@ -64,10 +65,10 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xd",xd);
     ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".state.xdd",xdd);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::position,foot_pose.x);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::velocity,xd);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::acceleration,xdd);
-    ctrl->set_foot_value(eef_names_[i],Pacer::Controller::load,Ravelin::Origin3d(0,0,0));
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::position,foot_pose.x);
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::velocity,xd);
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::acceleration,xdd);
+    ctrl->set_end_effector_value(eef_names_[i],Pacer::Controller::load,Ravelin::Origin3d(0,0,0));
 
     if(new_var){
       ctrl->set_data<Ravelin::Quatd>(eef_names_[i]+".init.q",foot_pose.q);
@@ -79,30 +80,27 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   }
   
   if(start_time == t){
-    local_q.segment(0,qd.rows()) = Ravelin::VectorNd::zero(qd.rows());
+    local_q.segment(0,ctrl->num_joint_dof()) = Ravelin::VectorNd::zero(ctrl->num_joint_dof());
     ctrl->set_model_state(local_q);
-    std::vector<Ravelin::Origin3d> x1(NUM_FEET) ,x2(NUM_FEET);
-
-    for(unsigned i=0;i<NUM_FEET;i++){
-      Ravelin::Origin3d x,base_x;
-      ctrl->get_data<Ravelin::Origin3d>(eef_names_[i]+".init.x",x);
-      base_x = x;
-      base_x[2] = 0;
-      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".base",base_x);
-      x2[i] = base_x;
-      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
-      x1[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
-    }
     
-    std::fill(local_q.segment(0,qd.rows()).begin(),local_q.segment(0,qd.rows()).end(),M_PI);
-    ctrl->set_model_state(local_q);
-
+    std::map<std::string,boost::shared_ptr<Pacer::Robot::end_effector_t> >
+    end_effectors = ctrl->get_end_effectors();
+    
     for(unsigned i=0;i<NUM_FEET;i++){
-      const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
-      x2[i] = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose())).data());
+      Ravelin::Origin3d x_foot, x_base;
+      
+      boost::shared_ptr<Ravelin::RigidBodyd> branch_base_link = end_effectors[eef_names_[i]]->chain_links.back();
+      x_base = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,branch_base_link->get_pose())).data());
 
-      // write in maximum reach from limb base
-      double reach = (x1[i]-x2[i]).norm();
+      ctrl->set_data<Ravelin::Origin3d>(eef_names_[i]+".base",x_base);
+      ctrl->set_data<std::string>(eef_names_[i]+".base.name",branch_base_link->body_id);
+
+//      const boost::shared_ptr<Ravelin::RigidBodyd>  foot_link = ctrl->get_link(eef_names_[i]);
+      boost::shared_ptr<Ravelin::RigidBodyd> foot_link = end_effectors[eef_names_[i]]->chain_links.front();
+
+      x_foot = Ravelin::Origin3d(Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,foot_link->get_pose())).data());
+
+      double reach = (x_foot-x_base).norm();
       ctrl->set_data<double>(eef_names_[i]+".reach",reach*0.95);
     }
   }

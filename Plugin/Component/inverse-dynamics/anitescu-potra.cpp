@@ -4,7 +4,7 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   Ravelin::MatrixNd _workM, _workM2;
   Ravelin::VectorNd _workv, _workv2;
   
-  const double NEAR_ZERO = Pacer::NEAR_ZERO;
+  const double NEAR_ZERO = ::NEAR_ZERO;
   OUT_LOG(logDEBUG) << ">> inverse_dynamics_ap() entered" << std::endl;
   
   // get number of degrees of freedom and number of contact points
@@ -323,7 +323,10 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
     if (!_lcp.lcp_lemke_regularized(_MM, _qq, _v,-20,4,1))
       throw std::runtime_error("Unable to solve constraint LCP!");
   }
+  _MM.mult(_v,_workv = _qq,1,1);
+
   OUTLOG(_v,"v",logDEBUG1);
+  OUTLOG(_workv,"M*v+q >= 0)",logDEBUG1);
   
   Ravelin::VectorNd tau;
   
@@ -353,7 +356,7 @@ bool inverse_dynamics_ap(const Ravelin::VectorNd& vel, const Ravelin::VectorNd& 
   cf.set_zero(nc*(nk+1));
   cf.set_sub_vec(0,cn);
   cf.set_sub_vec(nc,cd);
-  
+  cf /= dt;
   //   IDYN MLCP
   //            A             C      x         g
   //       | M −S' -T' -P'   -N' | | v+ |   |-M v |    | 0 |

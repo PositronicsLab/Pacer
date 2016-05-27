@@ -8,7 +8,7 @@ void loop(){
   {
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     
-    std::vector< boost::shared_ptr<const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr<Pacer::Robot::contact_t> > c;
     num_contacts = ctrl->get_all_contacts(c);
     if(num_contacts != 0)
       ctrl->get_base_value(Pacer::Robot::position,position);

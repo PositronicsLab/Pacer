@@ -76,9 +76,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   double activation_tol = 0;
   ctrl->get_data<double>(plugin_namespace+".min-allowed-friction",activation_tol);
   
-  std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > contacts;
+  std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > contacts;
   for(int i=0;i<active_feet.size();i++){
-    std::vector< boost::shared_ptr< const Pacer::Robot::contact_t> > c;
+    std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > c;
     ctrl->get_link_contacts(active_feet[i],c);
     if(!c.empty())
       if(c[0]->mu_coulomb >= activation_tol)
@@ -107,8 +107,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     Ravelin::Origin3d roll_pitch_yaw;
     Ravelin::Quatd(center_of_mass_x[3],center_of_mass_x[4],center_of_mass_x[5],center_of_mass_x[6]).to_rpy(roll_pitch_yaw[0],roll_pitch_yaw[1],roll_pitch_yaw[2]);
     
-    int NDOFS = generalized_qd.rows();
-    int NUM_JOINT_DOFS = NDOFS - NSPATIAL;
+    int NDOFS = ctrl->num_total_dof();;
+    int NUM_JOINT_DOFS = ctrl->num_joint_dof();
     
     Ravelin::VectorNd base_qd = generalized_qd.segment(NUM_JOINT_DOFS,NDOFS);// ctrl->get_base_value(Pacer::Controller::velocity);
                                                                              //Ravelin::Vector3d center_of_mass_x = ctrl->get_data<Ravelin::Vector3d>("center_of_mass.x");

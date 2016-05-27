@@ -1,8 +1,9 @@
 # Moby Interface
 add_library(PacerMobyPlugin MODULE ${CMAKE_CURRENT_SOURCE_DIR}/moby.cpp)
 # osg
-option(USE_OSG_DISPLAY "Display Visualizations?" OFF)
-IF(USE_OSG_DISPLAY)
+option(USE_DISPLAY "Display Visualizations?" OFF)
+IF(USE_DISPLAY)
+    add_definitions (-DUSE_OSG_DISPLAY)
 #find OSG
   find_package (osg)
   find_package (osgViewer)
@@ -10,6 +11,7 @@ IF(USE_OSG_DISPLAY)
   find_package (osgGA)
   find_package (osgFX)
   find_package (osgUtil)
+  find_package (osgText)
   find_package (OpenThreads)
   link_directories(${OSG_LIBRARY_DIRS})
   include_directories(${OSG_INCLUDE_DIR})
@@ -20,11 +22,11 @@ IF(USE_OSG_DISPLAY)
     target_link_libraries (PacerMobyPlugin ${OSGGA_LIBRARIES})
     target_link_libraries (PacerMobyPlugin ${OPENTHREADS_LIBRARY})
     target_link_libraries (PacerMobyPlugin ${OSGUTIL_LIBRARIES})
+    target_link_libraries (PacerMobyPlugin ${OSGTEXT_LIBRARIES})
     target_link_libraries (PacerMobyPlugin ${OSGMANIPULATOR_LIBRARIES})
     target_link_libraries (PacerMobyPlugin OpenThreads)
-    add_definitions (-DUSE_OSG_DISPLAY)
   ENDIF(OSG_FOUND)
-ENDIF(USE_OSG_DISPLAY)
+ENDIF(USE_DISPLAY)
 target_link_libraries (PacerMobyPlugin ${REQLIBS})
 
 # Gazebo Interface

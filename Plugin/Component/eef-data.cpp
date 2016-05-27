@@ -37,7 +37,7 @@ void loop(){
     // Pose of foot
     Ravelin::Pose3d foot_pose(Ravelin::Matrix3d(link->get_pose()->q)*Ravelin::Matrix3d(0,0,-1, -1,0,0, 0,1,0),link->get_pose()->x,link->get_pose()->rpose);
     foot_pose.update_relative_pose(Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(foot_pose,0.8)));
+    VISUALIZE(POSE(foot_pose,0.8));
     
     OUT_LOG(logERROR) << eef_names_[i] << "-orientation: " << t << " " << foot_pose.q;
     OUTLOG(foot_pose.q,eef_names_[i]+".state.q",logINFO);

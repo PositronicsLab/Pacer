@@ -1,18 +1,123 @@
 <XML>
   <uncertainty>
-    <id type="string vector">construction</id>
+    <id type="string vector">construction state</id>
   <construction>
-    <id type="string vector">links</id>
+    <id type="string vector">joints links</id>
+    <joints>
+      <id type="string vector">LF_X_1 LF_Y_2 LF_Y_3 RF_X_1 RF_Y_2 RF_Y_3 LH_X_1 LH_Y_2 LH_Y_3 RH_X_1 RH_Y_2 RH_Y_3</id>
+      <LF_X_1>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">1 0 0</mu>
+          <sigma type="double vector">0 0.01 0.01</sigma>
+        </axis>
+      </LF_X_1>
+      <LF_Y_2>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </LF_Y_2>
+      <LF_Y_3>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </LF_Y_3>
+      <RF_X_1>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">1 0 0</mu>
+          <sigma type="double vector">0 0.01 0.01</sigma>
+        </axis>
+      </RF_X_1>
+      <RF_Y_2>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 -1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </RF_Y_2>
+      <RF_Y_3>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 -1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </RF_Y_3>
+      <LH_X_1>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">-1 0 0</mu>
+          <sigma type="double vector">0 0.01 0.01</sigma>
+        </axis>
+      </LH_X_1>
+      <LH_Y_2>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </LH_Y_2>
+      <LH_Y_3>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </LH_Y_3>
+      <RH_X_1>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">-1 0 0</mu>
+          <sigma type="double vector">0 0.01 0.01</sigma>
+        </axis>
+      </RH_X_1>
+      <RH_Y_2>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 -1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </RH_Y_2>
+      <RH_Y_3>
+        <id type="string vector">axis</id>
+        <axis>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0 -1 0</mu>
+          <sigma type="double vector">0.01 0 0.01</sigma>
+        </axis>
+      </RH_Y_3>
+    </joints>
     <links>
       <id type="string vector">BODY0 LF_LEG_1 LF_LEG_2 LF_FOOT RF_LEG_1 RF_LEG_2 RF_FOOT LH_LEG_1 LH_LEG_2 LH_FOOT RH_LEG_1 RH_LEG_2 RH_FOOT</id>
       <BODY0>
-        <id type="string vector">density</id>
+        <id type="string vector">density size</id>
         <!-- Steel: 7850, Aluminum: 2712, Polycarbonate: 1200 -->
         <density>
           <distribution type="string">uniform</distribution>
           <min    type="double vector">600</min>
           <max    type="double vector">2712</max>
         </density>
+        
+        <size>
+          <distribution type="string">gaussian</distribution>
+          <mu type="double vector">0.15 0.08 0.05</mu>
+          <sigma type="double vector">0.001 0.001 0.001</sigma>
+        </size>
       </BODY0>
       
       <!-- LOWER LEGS + FOOT -->
@@ -26,7 +131,7 @@
         </density>
           <length>:
             <distribution type="string">gaussian</distribution>
-            <mu    type="double vector">0.100</mu>
+            <mu    type="double vector">0.1</mu>
             <sigma type="double vector">0.005</sigma>
           </length>
           <radius>
@@ -313,13 +418,8 @@
       <links>
         <id type="string vector">BODY0</id>
         <BODY0>
-          <id type="string vector">xd</id>
-          <x>
-            <distribution type="string">gaussian</distribution>
-            <unit   type="string vector">absolute</unit>
-            <min    type="double vector">-0.01 -0.01 -0.01 -0.15 -0.15 -0.15</min>
-            <max    type="double vector"> 0.01  0.01  0.01  0.15  0.15  0.15</max>
-          </x>
+          <id type="string vector"> x xd </id>
+          <x    type="double vector">0 0 0 0 0 0</x>
           <xd>
             <distribution type="string">gaussian</distribution>
             <unit   type="string vector">proportional</unit>
@@ -332,7 +432,7 @@
         <id type="string">LF_X_1 LF_Y_2 LF_Y_3  RF_X_1 RF_Y_2 RF_Y_3   LH_X_1 LH_Y_2 LH_Y_3   RH_X_1 RH_Y_2 RH_Y_3</id>
         <!-- KNEE: Y_3 -->
         <LF_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
             <distribution type="string">gaussian</distribution>
@@ -351,7 +451,7 @@
           </xd>
         </LF_Y_3>
         <RF_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -372,7 +472,7 @@
           </xd>
         </RF_Y_3>
         <LH_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
             <distribution type="string">gaussian</distribution>
@@ -391,7 +491,7 @@
           </xd>
         </LH_Y_3>
         <RH_Y_3>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
             <distribution type="string">gaussian</distribution>
@@ -412,7 +512,7 @@
         
         <!-- HIP: Y_2 -->
         <LF_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -433,7 +533,7 @@
           </xd>
         </LF_Y_2>
         <RF_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -454,7 +554,7 @@
           </xd>
         </RF_Y_2>
         <LH_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -475,7 +575,7 @@
           </xd>
         </LH_Y_2>
         <RH_Y_2>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -498,7 +598,7 @@
         
         <!-- HIP (AB/AD)DUCTION: X_1 -->
         <LF_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -519,7 +619,7 @@
           </xd>
         </LF_X_1>
         <RF_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -540,7 +640,7 @@
           </xd>
         </RF_X_1>
         <LH_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           <x>
           
@@ -560,7 +660,7 @@
           </xd>
         </LH_X_1>
         <RH_X_1>
-          <id type="string vector">xd</id>
+          <id type="string vector"> x xd </id>
           
           
           <x>

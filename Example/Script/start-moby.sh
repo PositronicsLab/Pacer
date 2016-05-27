@@ -1,1 +1,1 @@
-moby-driver -r -p=${PACER_SIMULATOR_PATH}/libPacerMobyPlugin.so model.xml
+moby-driver $@ -p=${PACER_SIMULATOR_PATH}/libPacerMobyPlugin.so model.xml

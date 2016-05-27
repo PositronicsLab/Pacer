@@ -128,7 +128,7 @@ void loop(){
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   
-  static std::vector<Vector3d> x_foot_goal(eef_names_.size());
+  static std::vector<Vector3d> x_end_effector_goal(eef_names_.size());
   
   VectorNd x(3), xd(3), xdd(3);
   
@@ -170,12 +170,12 @@ void loop(){
       double heading = ctrl->get_data<double>(plugin_namespace + ".heading");
       double range = ctrl->get_data<double>(plugin_namespace + ".range");
       
-      Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Point(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1)));
+      VISUALIZE(POINT(  Vector3d(cos(heading)*range,sin(heading)*range,0) + com_x,   Vector3d(1,0,1),0.1));
       
       for(double i=start_jump_time;i<start_jump_time+duration;i+=0.01){
         VectorNd x(3), xd(3), xdd(3);
         if(eval_Nd_cubic_spline(leap_spline,i,x,xd,xdd)){
-          Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Ray(  Vector3d(x[0],x[1],x[2]) + com_x, Vector3d(x[0],x[1],x[2]) + com_x + Vector3d(xd[0],xd[1],xd[2])*0.01,   Vector3d(1,0,0),0.02)));
+          VISUALIZE(RAY(  Vector3d(x[0],x[1],x[2]) + com_x, Vector3d(x[0],x[1],x[2]) + com_x + Vector3d(xd[0],xd[1],xd[2])*0.01,   Vector3d(1,0,0),0.02));
           //      OUTLOG(x,"x",logERROR);
         }
       }
@@ -210,17 +210,17 @@ void loop(){
     // Now that model state is set ffrom jacobian calculation
     if(first_step){
       const boost::shared_ptr<Ravelin::RigidBodyd>  link = ctrl->get_link(eef_names_[i]);
-      x_foot_goal[i] = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
+      x_end_effector_goal[i] = Ravelin::Pose3d::transform_point(Pacer::GLOBAL,Ravelin::Vector3d(0,0,0,link->get_pose()));
     }
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xd,xd_foot,-1,0);
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+3).mult(xdd,xdd_foot,-1,0);
     
-    x_foot_goal[i].pose = base_frame;
+    x_end_effector_goal[i].pose = base_frame;
     xd_foot.pose = base_frame;
     xdd_foot.pose = base_frame;
-    x_foot_goal[i] += xd_foot*dt;
-    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_foot_goal[i]);
+    x_end_effector_goal[i] += xd_foot*dt;
+    ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.x",x_end_effector_goal[i]);
     ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xd",xd_foot);
     ctrl->set_data<Ravelin::Vector3d>(eef_names_[i]+".goal.xdd",xdd_foot);
   }

@@ -124,17 +124,6 @@ bool Controller::init_all_plugins(){
 void Controller::init(){
   // ================= INIT LOGGING ==========================
   FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
-#ifdef LOG_TO_FILE
-  FILE * pFile;
-  static int pid = getpid();
-  char buffer[9];
-  sprintf(buffer,"%06d",pid);
-  static std::string name("out-"+std::string(buffer)+".log");
-  pFile = fopen (name.c_str(),"w");
-  fprintf(pFile, "INITED LOGGER\n");
-  fflush(pFile);
-  fclose (pFile);
-#endif
   // ================= LOAD VARS ==========================
   PARAMS_FILE = std::string("vars.xml");
   load_variables(PARAMS_FILE,"");
@@ -143,9 +132,14 @@ void Controller::init(){
   OUT_LOG(logDEBUG1) << "Log Type : " << LOG_TYPE;
   FILELog::ReportingLevel() =
   FILELog::FromString( (!LOG_TYPE.empty() ) ? LOG_TYPE : "INFO");
+  // ================= IMPORT CONTROLLED ROBOT =================
+  std::string robot_model_file = get_data<std::string>("robot-model");
+  
+  read_robot_from_file(robot_model_file,get_abrobot());
   // ================= INIT ROBOT ==========================
+  controller_phase = INITIALIZATION;
+
   init_robot();
-  // After Robot loads, load plugins
 }
 
 // ============================================================================

@@ -7,8 +7,6 @@
 #define CONTROL_H
 
 #include <Pacer/robot.h>
-#include <Moby/XMLTree.h>
-#include <Moby/XMLReader.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,12 +39,12 @@ namespace Pacer{
     Controller();
     virtual ~Controller();
     void init();
-    
+    void load_variables(std::string xml_file, std::string root);
+
   private:
     std::string PARAMS_FILE;
-    void load_variables(std::string xml_file, std::string root);
-    void process_tag(std::string tag,boost::shared_ptr<const Moby::XMLTree> node);
-    
+    void read_robot_from_file(std::string robot_model_file,boost::shared_ptr<Ravelin::ArticulatedBodyd>& abrobot);
+
     // call Pacer at time t
   public:
     void control(double t);
@@ -115,6 +113,164 @@ namespace Pacer{
     bool init_all_plugins();
     
     bool update_plugins(double t);
+    
+    //////////////////////////////////////////////////////////////////////////
+    //////////////////////  PHASE CHECKING ///////////////////////////////////
+  public:
+    
+    enum ControllerPhase{
+      INITIALIZATION = 0,
+      PERCEPTION     = 1,
+      PLANNING       = 2,
+      CONTROL        = 3,
+      WAITING        = 4,
+      INCREMENT      = 5
+    };
+
+    ControllerPhase get_current_phase(){ return controller_phase; }
+    std::string get_current_phase_name(){ return std::string(enum_string(controller_phase)); }
+    
+  private:
+    ControllerPhase controller_phase;
+    const char * enum_string(const ControllerPhase& e){
+      int i = static_cast<int>(e);
+      return (const char *[]) {
+        "INITIALIZATION",
+        "PERCEPTION",
+        "PLANNING",
+        "CONTROL",
+        "WAITING",
+        "INCREMENT"
+      }[i];
+    }
+    
+    // Enforce that values are only being assigned during the correct phase
+    bool check_phase(const unit_e& u, bool internal_call){
+      OUT_LOG(logDEBUG) << "-- SCHEDULER -- " << "check unit: " << unit_enum_string(u) << " against phase: " << enum_string(controller_phase);
+      switch (u) {
+        case initialization:
+          if (controller_phase != INITIALIZATION && controller_phase != WAITING)
+          {
+            if(internal_call)
+            {
+              throw std::runtime_error("controller must be in INITIALIZATION phase to set Pacer internal parameters.");
+            }
+            return false;
+          }
+          return true;
+        case misc_sensor:
+        case position:
+        case velocity:
+        case acceleration:
+        case load:
+          if (controller_phase != PERCEPTION && controller_phase != INITIALIZATION  && controller_phase != WAITING )
+          {
+            if(internal_call)
+            {
+              throw std::runtime_error("controller must be in PERCEPTION, INITIALIZATION or WAITING phase to set state information: {misc_sensor,position,velocity,acceleration,load}");
+            }
+            return false;
+          }
+          return true;
+        case misc_planner:
+        case position_goal:
+        case velocity_goal:
+        case acceleration_goal:
+          if (controller_phase != PLANNING && controller_phase != INITIALIZATION && controller_phase != WAITING)
+          {
+            // NOTE: if this is the first PLANNING call and we were in PERCEPTION phase, increment to PLANNING phase
+            if(internal_call)
+            {
+              if(controller_phase == PERCEPTION)
+              {
+                increment_phase(PLANNING);
+                return true;
+              }
+              throw std::runtime_error("controller must be in PLANNING phase to set goal state information: {misc_planner,position_goal,velocity_goal,acceleration_goal}");
+            }
+            return false;
+          }
+          return true;
+        case misc_controller:
+        case load_goal:
+          if (controller_phase != CONTROL && controller_phase != INITIALIZATION && controller_phase != WAITING){
+            // NOTE: if this is the first CONTROL call and we were in PLANNING phase, increment to CONTROL phase
+            if(internal_call)
+            {
+              if(controller_phase == PLANNING)
+              {
+                increment_phase(CONTROL);
+                return true;
+              }
+              
+              if(controller_phase == PERCEPTION)
+              {
+                increment_phase(CONTROL);
+                return true;
+              }
+              throw std::runtime_error("controller must be in CONTROL phase to set commands: {misc_controller,load_goal}");
+            }
+            return false;
+          }
+          return true;
+        case clean_up:
+          if (controller_phase != WAITING && controller_phase != INITIALIZATION )
+          {
+            if(internal_call)
+            {
+              throw std::runtime_error("controller must be in WAITING or INITIALIZATION phase to perform clean_up duties.");
+            }
+            return false;
+          }
+          return true;
+        default:
+          throw std::runtime_error("unknown unit being set in state data");
+          return false;
+      }
+    }
+    
+    void reset_phase(){
+      controller_phase = PERCEPTION;
+      OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase reset: ==> PLANNING";
+    }
+    
+    void increment_phase(ControllerPhase phase){
+      if (phase == INCREMENT) {
+        switch (controller_phase) {
+          case INITIALIZATION:
+            controller_phase = PERCEPTION;
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: *INITIALIZATION* ==> PERCEPTION";
+            break;
+          case WAITING:
+            throw std::runtime_error("Cannot increment waiting controller. call reset_phase()");
+            break;
+          case PERCEPTION:
+            controller_phase = PLANNING;
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: PERCEPTION ==> PLANNING";
+            break;
+          case PLANNING:
+            controller_phase = CONTROL;
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: PLANNING ==> CONTROL";
+            break;
+          case CONTROL:
+            controller_phase = WAITING;
+            OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: CONTROL ==> *WAITING*";
+            break;
+          default:
+            throw std::runtime_error("controller state dropped off list of valid states");
+            break;
+        }
+      } else {
+        OUT_LOG(logINFO) << "-- SCHEDULER -- " << "Controller Phase change: " << enum_string(controller_phase) << " ==> " << enum_string(phase);
+        controller_phase =phase;
+      }
+    }
+    
+    bool check_phase_internal(const unit_e& u){return check_phase( u, true);}
+
+  public:
+    bool check_phase(const unit_e& u){ return check_phase( u, false); }
+
   };
 }
 #endif // CONTROL_H

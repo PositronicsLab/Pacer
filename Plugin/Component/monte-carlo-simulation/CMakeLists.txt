@@ -37,3 +37,6 @@ include_directories(${BOOST_INCLUDE_DIR})
       add_definitions (-DUSE_OSG_DISPLAY)
     ENDIF(OSG_FOUND)
   ENDIF(USE_DISPLAY)
+  
+  add_library(test-probability MODULE pendulum/pendulum-init.cpp)
+  target_link_libraries(test-probability ${REQLIBS})

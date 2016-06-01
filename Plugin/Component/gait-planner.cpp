@@ -295,8 +295,11 @@ void walk_toward(// PARAMETERS
   
   // Check if this method has been called recently,
   // reset if no call has been made for dt > 1 phase
-  if(dt > gait_duration * (*std::min_element(duty_factor.begin(),duty_factor.end())) )
+  if(dt > gait_duration * (*std::min_element(duty_factor.begin(),duty_factor.end())) || dt < 0){
     last_phase.clear();
+    t = 0;
+    last_time = 0;
+  }
   
   if(last_phase.empty()){
     for(int i=0;i<NUM_FEET;i++){

@@ -145,22 +145,12 @@ void loop(){
       SAMPLE_ARGV.push_back("--sample");
       SAMPLE_ARGV.push_back(SSTR(sample_idx));
       
-      SAMPLE_ARGV.push_back("--duration");
-      SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".duration")));
-      
       bool EXPORT_XML = false;
       ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
       if(EXPORT_XML){
         SAMPLE_ARGV.push_back("--xml");
       }
-      
-      SAMPLE_ARGV.push_back("--stepsize");
-      SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
-      
-      if(ctrl->get_data<bool>(plugin_namespace+".display")){
-        SAMPLE_ARGV.push_back("--display");
-      }
-      
+
       char message[MESSAGE_SIZE];
       int message_size = 0;
       for(int i=0;i<SAMPLE_ARGV.size();i++){
@@ -212,9 +202,9 @@ void loop(){
 //      ctrl->close_plugin(plugin_namespace);
   }
   
-  if(sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
+  if(/* sample_idx == NUM_SAMPLES && */ available_threads == NUM_THREADS){
     OUT_LOG(logINFO) << "Experiment Complete";
-//    ctrl->close_plugin(plugin_namespace);
+    ctrl->close_plugin(plugin_namespace);
   }
   
   return;
@@ -252,17 +242,19 @@ void setup(){
 
   ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
   if (GET_DATA_ONLINE){
+    OUT_LOG(logINFO) << "INIT: start_listener_thread";
     start_listener_thread();
+  } else {
+    OUT_LOG(logINFO) << "INIT: NOT - GET_DATA_ONLINE";
   }
   
+  OUT_LOG(logINFO) << "INIT: register_exit_sighandler";
+
   register_exit_sighandler();
   
+  OUT_LOG(logINFO) << "INIT: start_process_spawner_thread";
+
   start_process_spawner_thread();
-
-  std::cout << "Sleeping before actually starting anything" << t << std::endl;
-  sleep(5);
-  std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
-
   
   {
     /* Block SIGPIPE; other threads created by main()
@@ -281,6 +273,11 @@ void setup(){
 
   // wait for all new forked processes to start;
   
+  
+  std::cout << "Sleeping before actually starting anything" << t << std::endl;
+  sleep(5);
+  std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
+
   return;
 }
 

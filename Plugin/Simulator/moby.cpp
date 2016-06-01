@@ -192,25 +192,25 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   /////////////////////////////////////////////////////////////////////////////
   ////////////////////////////// Control Robot: ///////////////////////////////
   robot_ptr->control(t);
-#ifdef USE_OSG_DISPLAY
-  static osg::Group * MAIN_GROUP;
-  if (!MAIN_GROUP) {
-    MAIN_GROUP = new osg::Group;
-    MAIN_GROUP->addChild(sim->get_persistent_vdata());
-    MAIN_GROUP->addChild(sim->get_transient_vdata());
-  }
-  
-  if (ITER % 10 == 0) {
-    // write the file (fails silently)
-    char buffer[128];
-    sprintf(buffer, "driver.out-%08llu.osg", ITER, t);
-    osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
-  }
-  
-  std::cout << "Pacer called: iteration: " << ITER << " , time :" << t << " (dt="<< dt << ")" << std::endl;
-
-
-#endif
+//#ifdef USE_OSG_DISPLAY
+//  static osg::Group * MAIN_GROUP;
+//  if (!MAIN_GROUP) {
+//    MAIN_GROUP = new osg::Group;
+//    MAIN_GROUP->addChild(sim->get_persistent_vdata());
+//    MAIN_GROUP->addChild(sim->get_transient_vdata());
+//  }
+//  
+//  if (ITER % 10 == 0) {
+//    // write the file (fails silently)
+//    char buffer[128];
+//    sprintf(buffer, "driver.out-%08llu.osg", ITER, t);
+//    osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
+//  }
+//  
+//  std::cout << "Pacer called: iteration: " << ITER << " , time :" << t << " (dt="<< dt << ")" << std::endl;
+//
+//
+//#endif
 
   /////////////////////////////////////////////////////////////////////////////
   /////////////////////// Send forces to Simulation: //////////////////////////

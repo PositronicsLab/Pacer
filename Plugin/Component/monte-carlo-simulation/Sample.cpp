@@ -50,7 +50,7 @@ using boost::shared_ptr;
 
 
 bool EXPORT_XML = false;
-unsigned SAMPLE_NUMBER = 0;
+int SAMPLE_NUMBER = 0;
 
 int CHILD_TO_PARENT_WRITE = 0;
 int PARENT_TO_CHILD_READ = 0;
@@ -126,11 +126,11 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     std::vector<double> position = vm["BODY0.x"].as<std::vector<double> >();
     logging << "applying state uncertainty to base (position): "<< position << std::endl;
     
-    // Get robot velocity
+    // Get robot positon
     Ravelin::VectorNd q;
     robot->get_generalized_coordinates_euler(q);
     int N_JOINT_DOFS = q.rows()-7;
-    // update base velocity
+    // update base position
     for (int i=0;i<3; i++) {
       q[N_JOINT_DOFS+i] = position[i];
     }
@@ -176,12 +176,60 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   
   // Update robot state
   robot->update_link_poses();
+
+  double lowest_point_z = 0;
+  
+  ///////// Project robot up to standing on plane //////////////
+  BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
+    shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
+    if(rb->is_end_effector()){ // radius of spherical link
+      boost::shared_ptr<Ravelin::Pose3d> foot_pose(new Ravelin::Pose3d(*(rb->get_pose().get())));
+      foot_pose->update_relative_pose(robot->get_base_link()->get_pose());
+      
+      // get foot geometry
+      Moby::CollisionGeometryPtr foot_geometry;
+      shared_ptr<Moby::SpherePrimitive> foot_primitive;
+
+      BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
+        Moby::PrimitivePtr primitive = cg->get_geometry();
+        foot_primitive = boost::dynamic_pointer_cast<Moby::SpherePrimitive>(primitive);
+        if(foot_primitive){
+          foot_geometry = cg;
+          break;
+        }
+      }
+      
+      Vector3d foot_radius(0,0,-foot_primitive->get_radius(),Moby::GLOBAL);
+      Vector3d lowest_point = Ravelin::Pose3d::transform_vector(robot->get_base_link()->get_pose(),foot_radius);
+      lowest_point += Vector3d(foot_pose->x,robot->get_base_link()->get_pose());
+      lowest_point_z = std::min(lowest_point_z,lowest_point[2]);
+    }
+  }
+  
+  {
+    logging << "moving robot to just above the ground: "<< lowest_point_z << std::endl;
+    
+    // Get robot velocity
+    Ravelin::VectorNd q;
+    robot->get_generalized_coordinates_euler(q);
+    int N_JOINT_DOFS = q.rows()-7;
+    // update base position
+      q[N_JOINT_DOFS+2] = -lowest_point_z;
+    
+    // apply changes
+    robot->set_generalized_coordinates_euler(q);
+    logging << "Set coords to : " << q << std::endl;
+    
+  }
+  
+  // Update robot state
+  robot->update_link_poses();
   
   if(vm.count("BODY0.xd")){
     logging << "applying state uncertainty to base (velocity)" << std::endl;
     
     std::vector<double> velocity = vm["BODY0.xd"].as<std::vector<double> >();
-
+    
     // Get robot velocity
     Ravelin::VectorNd qd;
     robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
@@ -206,6 +254,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   
   // Update robot state
   robot->update_link_velocities();
+
 }
 
 void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd>& robot){
@@ -327,10 +376,10 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
     shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
     // Link Length Adjustment
-#ifdef USE_OSG_DISPLAY
-    osg::Group* no_viz_data = new osg::Group();
-    rb->set_visualization_data(no_viz_data);
-#endif
+//#ifdef USE_OSG_DISPLAY
+//    osg::Group* no_viz_data = new osg::Group();
+//    rb->set_visualization_data(no_viz_data);
+//#endif
     
     bool LINK_IS_END_EFFECTOR = rb->is_end_effector();
     bool LINK_IS_BASE = rb->is_base();
@@ -596,7 +645,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   }
 }
 
-void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim){
+void parse_sample_options(int argc, char* argv[]){
   // Declare the supported options.
   po::options_description desc("Moby initialization options");
   desc.add_options()
@@ -604,10 +653,7 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   // INPUT BY EXPERIMENT
   ("xml,y","Output XML model file for robot")
   // INPUT BY USER
-  ("duration", po::value<std::string>()->default_value("1"), "set duration (virtual time) of each sample")
-  ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
-  ("display,r","visualize in moby")
-  ("sample", po::value<unsigned>(),"Sample Number");
+  ("sample", po::value<int>(),"Sample Number");
  
   logging << "Parsing Variable Map from command line" << std::endl;
   
@@ -623,13 +669,49 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   
   // Get sample number for output
   if (vm.count("sample")) {
-    SAMPLE_NUMBER = vm["sample"].as<unsigned>();
+    SAMPLE_NUMBER = vm["sample"].as<int>();
   } else {
     fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
     throw std::runtime_error("Sample did not get a sample number, likely parent quit or pipe was closed.  Exiting this simulation.");
   }
   
   logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
+  
+  if (vm.count("xml")) {
+    EXPORT_XML = true;
+  }
+  
+  if ( vm.count("help")  )
+  {
+    logging << "Available options: " << std::endl
+    << desc << std::endl;
+  }
+  
+  return;
+}
+
+void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
+  // Declare the supported options.
+  po::options_description desc("Moby initialization options (preload)");
+  desc.add_options()
+  ("help", "produce help message")
+  ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
+  ("display,r","visualize in moby")
+  ("duration", po::value<std::string>()->default_value("0"),"Duration of simulation.")
+  ("sample", po::value<unsigned>(),"Sample Number");
+  
+  logging << "Parsing Variable Map from command line" << std::endl;
+  
+  po::variables_map vm;
+  //  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::parsed_options parsed
+  = po::command_line_parser(argc, argv).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).options(desc).allow_unregistered().run();
+  po::store(parsed, vm);
+  //  po::notify(vm);
+  
+  logging << "Parsed Variable Map from command line" << std::endl;
+  
+  logging << "Worker has PID: "<< pid << std::endl;
   
   if (vm.count("xml")) {
     EXPORT_XML = true;
@@ -659,7 +741,6 @@ void apply_simulator_options(int argc, char* argv[], shared_ptr<Simulator>& sim)
   std::vector<std::string> argvs;
   argvs.push_back("montecarlo-moby-sample");
   // Max time is 0.3 seconds
-//  argvs.push_back("-mt="+duration);
   argvs.push_back("-s="+step_size);
   // XML output last frame
   //  argvs.push_back("-w=0");
@@ -760,6 +841,40 @@ int main(int argc_main, char* argv_main[]){
   
   parse_command_line_options(argc_main,argv_main);
 
+  
+  // Setup this instance of moby
+  shared_ptr<Simulator> sim;
+  
+  logging << " -- Starting Simulator -- " << std::endl;
+  preload_simulation(argc_main,argv_main, sim);
+  logging << " -- Started Simulator -- " << std::endl;
+  
+  if(!sim)
+    throw std::runtime_error("Could not start Moby");
+  
+  logging << " -- Created Simulator -- " << std::endl;
+  
+  // get event driven simulation and dynamics bodies
+  shared_ptr<RCArticulatedBodyd> robot;
+  shared_ptr<RigidBodyd> environment;
+  
+  BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
+    if(!robot)
+      robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
+    if(!environment)
+      environment = boost::dynamic_pointer_cast<RigidBodyd>(db);
+  }
+  
+  // Fail if moby was inited wrong
+  if(!robot)
+    throw std::runtime_error("Could not find robot");
+  
+  logging << " -- Found Robot -- " << std::endl;
+
+simulation_start:
+
+  std::string message_str;
+  {
   int argc_sample;
   char** argv_sample;
   if(USE_PIPES){
@@ -791,32 +906,10 @@ int main(int argc_main, char* argv_main[]){
     argv_sample = argv_main;
   }
   // Setup this instance of moby
-  shared_ptr<Simulator> sim;
-  logging << " -- Applying Simulator Options -- " << std::endl;
-  apply_simulator_options(argc_sample,argv_sample,sim);
-  logging << " -- Applied Simulator Options -- " << std::endl;
-  
-  if(!sim)
-    throw std::runtime_error("Could not start Moby");
-  
-  logging << " -- Created Simulator -- " << std::endl;
-  
-  // get event driven simulation and dynamics bodies
-  shared_ptr<RCArticulatedBodyd> robot;
-  shared_ptr<RigidBodyd> environment;
-  
-  BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
-    if(!robot)
-      robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
-    if(!environment)
-      environment = boost::dynamic_pointer_cast<RigidBodyd>(db);
-  }
-  
-  // Fail if moby was inited wrong
-  if(!robot)
-    throw std::runtime_error("Could not find robot");
-  
-  logging << " -- Found Robot -- " << std::endl;
+  logging << " -- parse_sample_options -- " << std::endl;
+  parse_sample_options(argc_sample,argv_sample);
+  logging << " -- parse_sample_options -- " << std::endl;
+  sim->current_time = 0;
   
   //  if(!environment)
   //    throw std::runtime_error("Could not find environment");
@@ -824,54 +917,76 @@ int main(int argc_main, char* argv_main[]){
   //  logging << " -- Found Environment -- " << std::endl;
   
   // Reset robot state to adjust robot model
-  Ravelin::VectorNd q_starting_position,q_current_position;
-  robot->get_generalized_coordinates_euler(q_starting_position);
-  q_current_position = q_starting_position;
-  q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
-  robot->set_generalized_coordinates_euler(q_current_position);
-  
+//  Ravelin::VectorNd q_starting_position,q_current_position;
+//  robot->get_generalized_coordinates_euler(q_starting_position);
+//  q_current_position = q_starting_position;
+//  q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
+//  robot->set_generalized_coordinates_euler(q_current_position);
+//  
   // Apply uncertainty to robot model
   apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
+  
+  if(EXPORT_XML){
+    // write the file (fails silently)
+    logging << " -- Exporting robot model file -- " << std::endl;
+    
+    char buffer[128];
+    sprintf(buffer, "model-%06u.xml", pid);
+    boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
+    Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim );
+  }
   
   // Apply uncertainty to robot initial conditions
   logging << " -- Applying State Uncertainty -- " << std::endl;
   apply_state_uncertainty(argc_sample,argv_sample,robot);
   logging << " -- Applied State Uncertainty -- " << std::endl;
-  
-//  if(EXPORT_XML){
-    // write the file (fails silently)
-  logging << " -- Exporting robot model file -- " << std::endl;
-
-    char buffer[128];
-    sprintf(buffer, "model-%06u.xml", pid);
-    boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
-    Moby::XMLWriter::serialize_to_xml(std::string(buffer), robot_moby);
-//  }
 
   /*
    *  Running experiment
    */
-  robot->set_generalized_coordinates_euler(q_starting_position);
+//  robot->set_generalized_coordinates_euler(q_starting_position);
 
+#ifdef USE_OSG_DISPLAY
+    sim->update_visualization();
+  osg::Group * MAIN_GROUP;
+//  if (!MAIN_GROUP) {
+    MAIN_GROUP = new osg::Group;
+    MAIN_GROUP->addChild(sim->get_persistent_vdata());
+//    MAIN_GROUP->addChild(sim->get_transient_vdata());
+//  }
+#endif
+  
 //#ifndef NDEBUG
   std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
 //#endif
   bool stop_sim = false;
+  unsigned long long ITER = 0;
+    
   while (!stop_sim &&  sim->current_time < DURATION) {
+#ifdef USE_OSG_DISPLAY
+    if (ITER % 10 == 0) {
+      // write the file (fails silently)
+      char buffer[128];
+      sprintf(buffer, "frame-%08llu-%d%d.osg", ITER ,pid,SAMPLE_NUMBER);
+      osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
+    }
+#endif
     //    logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc_sample,argv_sample,robot);
     try {
       stop_sim = !Moby::step(sim);
-    } catch (...) {
+    } catch (std::exception& e) {
+      std::cerr << "There was an error that forced the simulation to stop: "<< e.what() << std::endl;
       stop_sim = true;
     }
 //#ifndef NDEBUG
-//    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time <<  std::endl;
+    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER <<  std::endl;
 //#endif
+    ITER++;
   }
 //#ifndef NDEBUG
-  std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time << " Ended!" << std::endl;
+  std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
 //#endif
   /*
    *  Collecting final data
@@ -885,13 +1000,16 @@ int main(int argc_main, char* argv_main[]){
   for (int i=q.rows()-7; i<q.rows() ;i++) {
     oss << " " << q[i] ;
   }
-  std::string str = oss.str();
-  write(CHILD_TO_PARENT_WRITE, str.c_str(), str.length());
-//#ifndef NDEBUG
-  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << str << std::endl;
-//#endif
+    message_str = oss.str();
+  }
+  
+  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << message_str << std::endl;
   if (USE_PIPES) {
-    execv( argv_main[0] , argv_main );
+  }
+  if (USE_PIPES) {
+    write(CHILD_TO_PARENT_WRITE, message_str.c_str(), message_str.length());
+//    execv( argv_main[0] , argv_main );
+    goto simulation_start;
   }
   
   // Quit like this because quitting normally leads to weird deconstructor errors.

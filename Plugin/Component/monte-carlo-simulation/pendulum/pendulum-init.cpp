@@ -11,10 +11,6 @@
 #include <stdlib.h>
 #include <stdexcept>
 
-#ifndef USE_GSL
-#error Failing build: This plugin should be built with randomization support from GSL. Set 'USE_GSL' to ON to correct build.
-#endif
-
 //#define RECORD_EACH_STEP
 
 /////////////////////////////////////
@@ -25,9 +21,10 @@
   #define SOBOL_SEQUENCE_SEARCH 1
   #define GRID_SEARCH 0
   #define AT_POINT 1
+  #define MONTE_CARLO 0
+#else
+#define MONTE_CARLO 1
 #endif
-
-#define MONTE_CARLO 0
 
 /////////////////////////////////////
 /////// SET THESE PARAMETERS ////////
@@ -35,15 +32,21 @@
 double max_angle = M_PI;
 double max_speed = 15.0;
 // safety_factor is 1 stddev of search
-double safety_factor = 1.0 / 20.0;
+double safety_factor = 1.0 / 100.0;
 double num_stddevs   = 3.0;
 const int RESOLUTION = 25;
 
 /////////////////////////////////////
 /////////////////////////////////////
 
+#if MONTE_CARLO == 1
+#ifndef USE_GSL
+#error Failing build: This plugin should be built with randomization support from GSL. Set 'USE_GSL' to ON to correct build.
+#endif
+#include <Pacer/Random.h>
+#endif
 
-#ifdef SOBOL_SEQUENCE_SEARCH
+#if SOBOL_SEQUENCE_SEARCH == 1
 #include "nrutil.h"
 #define MAXBIT 30
 #define MAXDIM 6
@@ -107,7 +110,6 @@ void sobseq(int *n, double * x)
 }
 #endif
 
-#include <Pacer/Random.h>
 
 using boost::shared_ptr;
 using namespace Ravelin;
@@ -158,11 +160,11 @@ void output_final_state(std::string& outfile,bool append = true){
 #endif
 
   out.close();
-#if MONTE_CARLO == 1
-  if (event_detected == 1) {
-    throw std::runtime_error("Experiment complete");
-  }
-#endif
+//#if MONTE_CARLO == 1
+//  if (event_detected == 1) {
+//    throw std::runtime_error("Experiment complete");
+//  }
+//#endif
   event_detected = 0;
 }
 

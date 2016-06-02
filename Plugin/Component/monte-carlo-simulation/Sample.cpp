@@ -88,7 +88,8 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   
   po::options_description desc("Monte Carlo Method state (applied at simulator start) uncertainty options");
   desc.add_options()
-  ("help", "produce help message")
+  ("help", "produce help message")  
+  ("stand", "put robot on ground")
   ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
   ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
   
@@ -180,6 +181,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   double lowest_point_z = 0;
   
   ///////// Project robot up to standing on plane //////////////
+  if(vm.count("stand")){
   BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
     shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
     if(rb->is_end_effector()){ // radius of spherical link
@@ -219,12 +221,27 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     // apply changes
     robot->set_generalized_coordinates_euler(q);
     logging << "Set coords to : " << q << std::endl;
-    
   }
+} else {
+	  {
+    logging << "moving robot to not touch the ground: "<< lowest_point_z << std::endl;
+    
+    // Get robot velocity
+    Ravelin::VectorNd q;
+    robot->get_generalized_coordinates_euler(q);
+    int N_JOINT_DOFS = q.rows()-7;
+    // update base position
+      q[N_JOINT_DOFS+2] = 1;
+    
+    // apply changes
+    robot->set_generalized_coordinates_euler(q);
+    logging << "Set coords to : " << q << std::endl;
+  }
+}
   
   // Update robot state
   robot->update_link_poses();
-  
+
   if(vm.count("BODY0.xd")){
     logging << "applying state uncertainty to base (velocity)" << std::endl;
     
@@ -747,12 +764,12 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   if (vm.count("display")) {
     argvs.push_back("-r");
   } else {
-    argvs.push_back("-y=osg");
+    //argvs.push_back("-y=osg");
     //    double capture_step = 0.01;
     //    int rate = capture_step / atof(step_size.c_str());
     //    rate = std::max(1,rate);
     //    argvs.push_back("-v="+SSTR(rate));
-    argvs.push_back("-v=0");
+    //argvs.push_back("-v=0");
   }
   argvs.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
   argvs.push_back("model.xml");
@@ -952,7 +969,7 @@ simulation_start:
 //  if (!MAIN_GROUP) {
     MAIN_GROUP = new osg::Group;
     MAIN_GROUP->addChild(sim->get_persistent_vdata());
-//    MAIN_GROUP->addChild(sim->get_transient_vdata());
+    MAIN_GROUP->addChild(sim->get_transient_vdata());
 //  }
 #endif
   

@@ -371,7 +371,7 @@ void post_step_callback(Simulator* sim)
   }
 }
 
-void pre_event_callback(std::vector<Moby::UnilateralConstraint>& e,
+void pre_event_callback(std::vector<Moby::Constraint>& e,
                          boost::shared_ptr<void> empty)
 {
   total_events += 1;

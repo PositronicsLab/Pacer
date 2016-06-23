@@ -101,7 +101,7 @@ public:
   double generate() {
     if (first_sample) {
       first_sample = false;
-      return mu;
+//      return mu;
     }
     double number;
     switch(distribution_type) {

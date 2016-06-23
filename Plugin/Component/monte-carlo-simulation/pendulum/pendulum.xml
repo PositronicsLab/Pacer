@@ -34,7 +34,7 @@
   <CollisionGeometry id="bob_collision" primitive-id="c-bob" relative-origin="0 0 0" relative-quat="1 0 0 0" />
 </RigidBody>
 <!-- JOINTS -->
-<RevoluteJoint axis="0 1 0" coulomb-friction-coeff="0" id="hinge1" inboard-link-id="base" location="0 0 -0" lower-limits="-1e+06"   outboard-link-id="bob" q="-0.04283" q-tare="0" qd="1.451" restitution-coeff="0" upper-limits="1e+06" viscous-friction-coeff="0" visualization-id="c1" />
+<RevoluteJoint axis="0 1 0" coulomb-friction-coeff="0" id="hinge1" inboard-link-id="base" location="0 0 -0" lower-limits="-1e+06"   outboard-link-id="bob" q="-0.04383" q-tare="0" qd="1.451" restitution-coeff="0" upper-limits="1e+06" viscous-friction-coeff="0" visualization-id="c1" />
 </RCArticulatedBody>
 
 <RCArticulatedBody fdyn-algorithm="crb" fdyn-algorithm-frame="linkcom" floating-base="false" id="piston">

@@ -16,14 +16,14 @@
 /////////////////////////////////////
 /////// CHOOSE WHICH MODE ////////
 
-#define ORDERED_SEARCH 1
+#define ORDERED_SEARCH 0
 #if ORDERED_SEARCH == 1
   #define SOBOL_SEQUENCE_SEARCH 1
   #define GRID_SEARCH 0
   #define AT_POINT 1
   #define MONTE_CARLO 0
 #else
-#define MONTE_CARLO 1
+  #define MONTE_CARLO 1
 #endif
 
 /////////////////////////////////////
@@ -35,6 +35,8 @@ double max_speed = 15.0;
 double safety_factor = 1.0 / 100.0;
 double num_stddevs   = 3.0;
 const int RESOLUTION = 25;
+double maxtime = 0.2;
+long int max_trials = 1;
 
 /////////////////////////////////////
 /////////////////////////////////////
@@ -108,6 +110,27 @@ void sobseq(int *n, double * x)
     }
   }
 }
+
+#include <sstream>
+#include <string>
+#include <fstream>
+
+void sobseq_12d(int *n, double * x){
+  if(*n != 12) throw std::runtime_error("only use sobseq_12d for 12 Dims!");
+  static std::ifstream infile("sobol-12d.mat");
+
+  std::string line;
+  if(!std::getline(infile, line)){
+    throw std::runtime_error("Ran out of lines!");
+  }
+    else
+  {
+    std::istringstream iss(line);
+    for (int i=1;i<=12; i++) {
+      if (!(iss >> x[i])) { throw std::runtime_error("line too short!"); } // error
+    }
+  }
+}
 #endif
 
 
@@ -126,9 +149,8 @@ Ravelin::VectorNd q_initial,qd_initial;
 Ravelin::VectorNd q_pendulum_start,qd_pendulum_start;
 
 double init_time = 0.0;
-double maxtime = 0.2;
-int total_events = 0;
-int total_trials = 0;
+long int total_events = 0;
+long int total_trials = 0;
 int event_detected = 0;
 
 void output_final_state(std::string& outfile,bool append = true){
@@ -154,7 +176,7 @@ void output_final_state(std::string& outfile,bool append = true){
   }
   std::cout << " ] , qd = [ ";
   for (int i = 0; i<N; i++) {
-    std::cout << qd_initial[i] << " ";
+    std::cout << qd_initial[-1] << " ";
   }
   std::cout << " ] , N = " << N << std::endl;
 #endif
@@ -194,7 +216,9 @@ void reset(){
     // output initial state and if there was an event detected
     output_final_state(init_file_name);
   }
-  
+  if(total_trials == max_trials)
+    throw std::runtime_error("Experiment complete [max trials]");
+
   // perturb initial state
   
   static int N = qd_pendulum_start.rows();
@@ -209,14 +233,21 @@ void reset(){
   
 #if SOBOL_SEQUENCE_SEARCH == 1
   assert(GRID_SEARCH == 0);
-  assert(N*2 <= MAXDIM);
   static int n = -1;
-  static double sobol_q_qd[MAXDIM+1];
-  if (total_trials == 0) {
+  static double sobol_q_qd[12+1];
+  
+  if (N*2 == 12) {
+    assert(N*2 == 12);
+    n = 12;
+    sobseq_12d(&n,sobol_q_qd);
+  }else {
+    assert(N*2 <= MAXDIM);
+    if (total_trials == 0) {
+      sobseq(&n,sobol_q_qd);
+      n = N*2;
+    }
     sobseq(&n,sobol_q_qd);
-    n = N*2;
   }
-  sobseq(&n,sobol_q_qd);
 
   Ravelin::VectorNd sobol_x_vec(N*2);
   for (int i=0; i<N*2; i++) {

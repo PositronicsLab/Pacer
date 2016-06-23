@@ -10,7 +10,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules)
 # force Pacer to build with C++0x
 SET(CMAKE_C_FLAGS_DEBUG "-g")
 SET(CMAKE_CXX_FLAGS_DEBUG "-g")
-add_definitions(-std=c++0x)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+
+# build protobuf messages
+add_subdirectory( src/include/Pacer/messages )
+
 ###############################################################################
 ###############################  SETUP LIBS ###################################
 ###############################################################################
@@ -119,22 +123,22 @@ add_executable(pacer-driver ${SOURCES}  ${MAIN_SOURCES})
 target_link_libraries(pacer-driver ${LIBS})
 # install Pacer binary
 set_target_properties(pacer-driver PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-install(TARGETS pacer-driver DESTINATION bin)
+#install(TARGETS pacer-driver DESTINATION bin)
 
 add_library(Pacer ${SOURCES})
 target_link_libraries(Pacer ${LIBS})
 # install Pacer library
 set_target_properties(Pacer PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-install(TARGETS Pacer DESTINATION lib)
+#install(TARGETS Pacer DESTINATION lib)
 
 # install include dirs
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/include/Pacer DESTINATION include)
+#install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/include/Pacer DESTINATION include)
 
 # Setup configuration file
 configure_file(${CMAKE_SOURCE_DIR}/CMakeModules/setup.sh.in ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
 
 # install setup file
-install (FILES ${CMAKE_BINARY_DIR}/setup.sh DESTINATION share/Pacer)
+#install (FILES ${CMAKE_BINARY_DIR}/setup.sh DESTINATION share/Pacer)
 
 set(REQLIBS ${LIBS} Pacer)
 
@@ -158,5 +162,5 @@ configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
-add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+#add_custom_target(uninstall
+#    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)

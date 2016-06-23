@@ -109,7 +109,7 @@
         <!-- Steel: 7850, Aluminum: 2712, Polycarbonate: 1200 -->
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1200</min>
           <max    type="double vector">2712</max>
         </density>
         
@@ -126,29 +126,29 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <length>:
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.1</mu>
-            <sigma type="double vector">0.005</sigma>
+            <sigma type="double vector">0.0025</sigma>
           </length>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.012</max>
           </radius>
         
         <foot> 
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.010</max>
           </radius>
         </foot>
@@ -158,34 +158,34 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.1</mu>
-            <sigma type="double vector">0.005</sigma>
+            <sigma type="double vector">0.0025</sigma>
           </length>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.012</max>
           </radius>
         
         <foot> 
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.1</mu>
-            <sigma type="double vector">0.005</sigma>
+            <sigma type="double vector">0.0025</sigma>
           </length>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.010</max>
           </radius>
         </foot>
@@ -195,17 +195,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.1</mu>
-            <sigma type="double vector">0.005</sigma>
+            <sigma type="double vector">0.0025</sigma>
           </length>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.012</max>
           </radius>
         
@@ -213,12 +213,12 @@
         <foot> 
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.010</max>
           </radius>
         </foot>
@@ -228,29 +228,29 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <length>
             <distribution type="string">gaussian</distribution>
             <mu    type="double vector">0.1</mu>
-            <sigma type="double vector">0.005</sigma>
+            <sigma type="double vector">0.0025</sigma>
           </length>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.012</max>
           </radius>
         
         <foot> 
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
           <radius>
             <distribution type="string">gaussian</distribution>
-            <min    type="double vector">0.01</min>
+            <min    type="double vector">0.007</min>
             <max    type="double vector">0.012</max>
           </radius>
         </foot>
@@ -263,17 +263,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.077</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </LF_LEG_2>
@@ -282,17 +282,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.077</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </RF_LEG_2>
@@ -301,17 +301,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.077</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </LH_LEG_2>
@@ -320,17 +320,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.077</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </RH_LEG_2>
@@ -340,17 +340,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.025</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </LF_LEG_1>
@@ -359,17 +359,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.025</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </RF_LEG_1>
@@ -378,17 +378,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.025</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </LH_LEG_1>
@@ -397,17 +397,17 @@
         
         <density>
           <distribution type="string">uniform</distribution>
-          <min    type="double vector">600</min>
+          <min    type="double vector">1000</min>
           <max    type="double vector">1200</max>
         </density>
         <length>
           <distribution type="string">gaussian</distribution>
           <mu    type="double vector">0.025</mu>
-          <sigma type="double vector">0.005</sigma>
+          <sigma type="double vector">0.0025</sigma>
         </length>
         <radius>
           <distribution type="string">gaussian</distribution>
-          <min    type="double vector">0.01</min>
+          <min    type="double vector">0.007</min>
           <max    type="double vector">0.012</max>
         </radius>
       </RH_LEG_1>

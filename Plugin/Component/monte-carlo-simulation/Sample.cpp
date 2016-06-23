@@ -30,7 +30,7 @@
 #define DEBUG_OUTPUT
 #ifndef DEBUG_OUTPUT
 #define logging \
-if (1) ; \
+if (0) ; \
 else std::cout
 #else
 #define logging \
@@ -222,22 +222,23 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     robot->set_generalized_coordinates_euler(q);
     logging << "Set coords to : " << q << std::endl;
   }
-} else {
-	  {
-    logging << "moving robot to not touch the ground: "<< lowest_point_z << std::endl;
-    
-    // Get robot velocity
-    Ravelin::VectorNd q;
-    robot->get_generalized_coordinates_euler(q);
-    int N_JOINT_DOFS = q.rows()-7;
-    // update base position
-      q[N_JOINT_DOFS+2] = 1;
-    
-    // apply changes
-    robot->set_generalized_coordinates_euler(q);
-    logging << "Set coords to : " << q << std::endl;
-  }
 }
+//  else {
+//	  {
+//    logging << "moving robot to not touch the ground: "<< lowest_point_z << std::endl;
+//    
+//    // Get robot velocity
+//    Ravelin::VectorNd q;
+//    robot->get_generalized_coordinates_euler(q);
+//    int N_JOINT_DOFS = q.rows()-7;
+//    // update base position
+//      q[N_JOINT_DOFS+2] = 1;
+//    
+//    // apply changes
+//    robot->set_generalized_coordinates_euler(q);
+//    logging << "Set coords to : " << q << std::endl;
+//  }
+//}
   
   // Update robot state
   robot->update_link_poses();
@@ -668,9 +669,9 @@ void parse_sample_options(int argc, char* argv[]){
   desc.add_options()
   ("help", "produce help message")
   // INPUT BY EXPERIMENT
-  ("xml,y","Output XML model file for robot")
+  ("xml,y","Output XML model file for robot");
   // INPUT BY USER
-  ("sample", po::value<int>(),"Sample Number");
+//  ("sample", po::value<int>(),"Sample Number");
  
   logging << "Parsing Variable Map from command line" << std::endl;
   
@@ -685,12 +686,12 @@ void parse_sample_options(int argc, char* argv[]){
   
   
   // Get sample number for output
-  if (vm.count("sample")) {
-    SAMPLE_NUMBER = vm["sample"].as<int>();
-  } else {
-    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
-    throw std::runtime_error("Sample did not get a sample number, likely parent quit or pipe was closed.  Exiting this simulation.");
-  }
+//  if (vm.count("sample")) {
+//    SAMPLE_NUMBER = vm["sample"].as<int>();
+//  } else {
+//    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
+//    throw std::runtime_error("Sample did not get a sample number, likely parent quit or pipe was closed.  Exiting this simulation.");
+//  }
   
   logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
   
@@ -714,8 +715,8 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   ("help", "produce help message")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
   ("display,r","visualize in moby")
-  ("duration", po::value<std::string>()->default_value("0"),"Duration of simulation.")
-  ("sample", po::value<unsigned>(),"Sample Number");
+  ("duration", po::value<std::string>()->default_value("0"),"Duration of simulation.");
+//  ("sample", po::value<unsigned>(),"Sample Number");
   
   logging << "Parsing Variable Map from command line" << std::endl;
   
@@ -891,7 +892,7 @@ int main(int argc_main, char* argv_main[]){
 simulation_start:
 
   std::string message_str;
-  {
+  
   int argc_sample;
   char** argv_sample;
   if(USE_PIPES){
@@ -913,7 +914,6 @@ simulation_start:
       messagev.push_back(chars_array);
       chars_array = strtok(NULL, " ");
     }
-    
     argc_sample = messagev.size();
     argv_sample = &messagev[0];
     
@@ -933,13 +933,7 @@ simulation_start:
   
   //  logging << " -- Found Environment -- " << std::endl;
   
-  // Reset robot state to adjust robot model
-//  Ravelin::VectorNd q_starting_position,q_current_position;
-//  robot->get_generalized_coordinates_euler(q_starting_position);
-//  q_current_position = q_starting_position;
-//  q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
-//  robot->set_generalized_coordinates_euler(q_current_position);
-//  
+//
   // Apply uncertainty to robot model
   apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
   
@@ -947,10 +941,18 @@ simulation_start:
     // write the file (fails silently)
     logging << " -- Exporting robot model file -- " << std::endl;
     
+//     Reset robot state to adjust robot model
+      Ravelin::VectorNd q_starting_position,q_current_position;
+      robot->get_generalized_coordinates_euler(q_starting_position);
+      q_current_position = q_starting_position;
+      q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
+      robot->set_generalized_coordinates_euler(q_current_position);
+
     char buffer[128];
     sprintf(buffer, "model-%06u.xml", pid);
     boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
     Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim );
+    robot->set_generalized_coordinates_euler(q_starting_position);
   }
   
   // Apply uncertainty to robot initial conditions
@@ -969,7 +971,7 @@ simulation_start:
 //  if (!MAIN_GROUP) {
     MAIN_GROUP = new osg::Group;
     MAIN_GROUP->addChild(sim->get_persistent_vdata());
-    MAIN_GROUP->addChild(sim->get_transient_vdata());
+//    MAIN_GROUP->addChild(sim->get_transient_vdata());
 //  }
 #endif
   
@@ -982,9 +984,10 @@ simulation_start:
   while (!stop_sim &&  sim->current_time < DURATION) {
 #ifdef USE_OSG_DISPLAY
     if (ITER % 10 == 0) {
+      sim->update_visualization();
       // write the file (fails silently)
       char buffer[128];
-      sprintf(buffer, "frame-%08llu-%d%d.osg", ITER ,pid,SAMPLE_NUMBER);
+      sprintf(buffer, "frame-%08llu-%d-%d.osg", ITER ,pid,SAMPLE_NUMBER);
       osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
     }
 #endif
@@ -1002,6 +1005,15 @@ simulation_start:
 //#endif
     ITER++;
   }
+  
+  {
+    sim->update_visualization();
+
+    char buffer[128];
+    sprintf(buffer, "last-%d-%d.osg",pid,SAMPLE_NUMBER);
+    osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
+  }
+  
 //#ifndef NDEBUG
   std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
 //#endif
@@ -1018,14 +1030,12 @@ simulation_start:
     oss << " " << q[i] ;
   }
     message_str = oss.str();
-  }
   
   std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << message_str << std::endl;
   if (USE_PIPES) {
-  }
-  if (USE_PIPES) {
     write(CHILD_TO_PARENT_WRITE, message_str.c_str(), message_str.length());
 //    execv( argv_main[0] , argv_main );
+    SAMPLE_NUMBER++;
     goto simulation_start;
   }
   

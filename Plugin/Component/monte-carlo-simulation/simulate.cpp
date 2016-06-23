@@ -105,7 +105,7 @@ std::vector<SampleConditions> sample_processes;
 
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
 std::string TASK_PATH = "./";
-long long unsigned int sample_idx=0;
+long long unsigned int sample_idx=1;
 
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
@@ -131,7 +131,7 @@ void loop(){
   OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
   std::cout << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes." << std::endl;
   
-  if ( available_threads > 0 && sample_idx < NUM_SAMPLES ){
+  if ( available_threads > 0 && sample_idx <= NUM_SAMPLES ){
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
@@ -142,6 +142,8 @@ void loop(){
       
       std::vector<std::string> SAMPLE_ARGV = get_sample_options();
       
+      SAMPLE_ARGV.push_back("--stand");
+
       SAMPLE_ARGV.push_back("--sample");
       SAMPLE_ARGV.push_back(SSTR(sample_idx));
       
@@ -197,7 +199,7 @@ void loop(){
 //    if (!GET_DATA_ONLINE)
 //      ctrl->close_plugin(plugin_namespace);
   } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "Not threads are working but all samples have been started.";
+    OUT_LOG(logINFO) << "Not all threads are working but all samples have been started.";
 //    if (!GET_DATA_ONLINE)
 //      ctrl->close_plugin(plugin_namespace);
   }

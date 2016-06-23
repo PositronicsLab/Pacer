@@ -261,32 +261,45 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 
 //void (*constraint_callback_fn)(std::vector<Constraint>&, boost::shared_ptr<void>);
 void constraint_callback_fn(std::vector<Moby::Constraint>& constraints, boost::shared_ptr<void> data){
-    if(control_kinematics){
-      boost::shared_ptr<Moby::ControlledBody> cbp = controlled_weak_ptr.lock();
-      boost::shared_ptr<Moby::RCArticulatedBody>
-        abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(cbp);
+  if(control_kinematics){
+    boost::shared_ptr<Moby::ControlledBody> cbp = controlled_weak_ptr.lock();
+    boost::shared_ptr<Moby::RCArticulatedBody>
+    abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(cbp);
     
-      static std::vector<JointPtr> joints = abrobot->get_joints();
-      static std::map<std::string, boost::shared_ptr<Moby::Joint> > joints_map;
-      if (joints_map.empty()) {
-          for (std::vector<JointPtr>::iterator it = joints.begin(); it != joints.end(); it++){
-              boost::shared_ptr<Ravelin::Jointd> jp = boost::const_pointer_cast<Ravelin::Jointd>(*it);
-              boost::shared_ptr<Moby::Joint> mjp = boost::dynamic_pointer_cast<Moby::Joint>(jp);
-              joints_map[(*it)->joint_id] = mjp;
-            }
-        }
-      std::map<std::string, Ravelin::VectorNd > q, qd;
-      robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
-      robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
-      for(std::map<std::string, Ravelin::VectorNd >::iterator it = qd.begin() ; it!=qd.end() ; it++){
-          Moby::Constraint c;
-          c.constraint_type = Moby::Constraint::eInverseDynamics;
-          c.qdot_des = (*it).second;
-          c.inv_dyn_joint = joints_map[(*it).first];
-          constraints.push_back(c);
-        }
+    static std::vector<JointPtr> joints = abrobot->get_joints();
+    static std::map<std::string, boost::shared_ptr<Moby::Joint> > joints_map;
+    if (joints_map.empty()) {
+      for (std::vector<JointPtr>::iterator it = joints.begin(); it != joints.end(); it++){
+        boost::shared_ptr<Ravelin::Jointd> jp = boost::const_pointer_cast<Ravelin::Jointd>(*it);
+        boost::shared_ptr<Moby::Joint> mjp = boost::dynamic_pointer_cast<Moby::Joint>(jp);
+        joints_map[(*it)->joint_id] = mjp;
       }
+    }
+    
+    double Kp = 0;
+    robot_ptr->get_data<double>("init.control-kinematics-feedback",Kp);
+    
+    std::map<std::string, Ravelin::VectorNd > q, qd,q_current;
+    robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
+    robot_ptr->get_joint_value(Pacer::Robot::position, q_current);
+    robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
+    for(std::map<std::string, Ravelin::VectorNd >::iterator it = qd.begin() ; it!=qd.end() ; it++){
+      Moby::Constraint c;
+      c.constraint_type = Moby::Constraint::eInverseDynamics;
+      Ravelin::VectorNd q_des = q[(*it).first];
+      Ravelin::VectorNd q_val = q_current[(*it).first];
+      Ravelin::VectorNd v_des = (*it).second;
+      std::cout << "q_des = " << q_des << std::endl;
+      std::cout << "q = " << q_val << std::endl;
+      std::cout << "qd_des = " <<  v_des << std::endl;
+
+      (c.qdot_des = v_des) += ((q_des -= q_val) *= Kp);
+      std::cout << c.qdot_des << std::endl;
+      c.inv_dyn_joint = joints_map[(*it).first];
+      constraints.push_back(c);
+    }
   }
+}
 
 // examines contact events (after they have been handled in Moby)
 void post_event_callback_fn(const std::vector<Moby::Constraint>& e,

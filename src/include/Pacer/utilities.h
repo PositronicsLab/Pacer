@@ -29,6 +29,8 @@ static const double _TWO_PI= M_PI*2.0;
 
 #include <Pacer/Visualizable.h>
 #include <Pacer/output.h>
+#include <Pacer/Random.h>
+#include <Pacer/Controller.h>
 
 #include <Ravelin/LinAlgd.h>
 
@@ -261,4 +263,148 @@ static double decimal_part(double val){
   
 }
 
-#endif // UTILITIES_H
+namespace Random{
+
+  typedef std::pair<std::vector<boost::shared_ptr<Random::Generator> >, std::vector<double> > ParamDefaultPair;
+  typedef std::map<std::string, ParamDefaultPair > ParamMap;
+  typedef std::map<std::string, std::vector<double> > ParamValueMap;
+  
+  static void parse_distribution(const std::string& parameters,const boost::shared_ptr<Pacer::Controller> ctrl,std::vector<boost::shared_ptr<Random::Generator> >& generator){
+    std::vector<double> min, max, mu, sigma;
+    int N = 0;
+    bool has_min = false, has_max = false, has_mu = false, has_sigma = false;
+    
+    std::string distribution_type;
+    if(!ctrl->get_data<std::string>(parameters+".distribution", distribution_type))
+      throw std::runtime_error("there is no default value OR distribution params for this!");
+    
+    OUT_LOG(logDEBUG) << parameters << " has a distribution of type: " << distribution_type;
+    
+    if ((has_min = ctrl->get_data<std::vector<double> >(parameters+".min", min))){
+      OUT_LOG(logDEBUG) << "min = " << min;
+      N = min.size();
+    }
+    if ((has_max = ctrl->get_data<std::vector<double> >(parameters+".max", max))){
+      OUT_LOG(logDEBUG) << "max = " << max;
+      N = max.size();
+    }
+    if ((has_mu = ctrl->get_data<std::vector<double> >(parameters+".mu", mu))){
+      OUT_LOG(logDEBUG) << "mu = " << mu;
+      N = mu.size();
+    }
+    if ((has_sigma = ctrl->get_data<std::vector<double> >(parameters+".sigma", sigma))){
+      OUT_LOG(logDEBUG) << "sigma = " << sigma;
+      N = sigma.size();
+    }
+    
+    generator.resize(N);
+    for (int i=0;i<N;i++) {
+      generator[i] = boost::shared_ptr<Random::Generator>(new Random::Generator());
+      if(distribution_type.compare("gaussian") == 0){
+        if (has_max && has_min && has_mu && has_sigma) {
+          generator[i]->set_gaussian(mu[i],sigma[i],min[i],max[i]);
+        } else if (has_max && has_min && !has_mu && !has_sigma) {
+          generator[i]->set_gaussian_from_limits(min[i],max[i]);
+        } else if (has_max && !has_min && !has_mu && !has_sigma) {
+          generator[i]->set_gaussian_from_limits(-max[i],max[i]);
+        } else if (!has_max && !has_min && has_mu && has_sigma) {
+          generator[i]->set_gaussian(mu[i],sigma[i]);
+        } else {
+          throw std::runtime_error("Not a valid set of params for a GAUSSIAN distribution!");
+        }
+      } else if(distribution_type.compare("uniform") == 0){
+        if (has_max && has_min) {
+          generator[i]->set_uniform(min[i],max[i]);
+        } else if (has_max && !has_min){
+          generator[i]->set_uniform(-max[i],max[i]);
+        } else {
+          throw std::runtime_error("Not a valid set of params for a UNIFORM distribution!");
+        }
+      } else {
+        throw std::runtime_error("Not a valid distribution!");
+      }
+    }
+  }
+  
+  // create distribution map
+  static void create_distributions(std::string name,const boost::shared_ptr<Pacer::Controller> ctrl,ParamMap& parameter_generator, bool verbose_name = false){
+    // Initialize Parameter distributions
+    
+    // FOR EACH UNCERTAINTY (manufacturing ,state)
+    std::vector<std::string> uncertainty_names;
+    if(ctrl->get_data<std::vector<std::string> >(name+".id",uncertainty_names)){
+      for (int i=0; i<uncertainty_names.size();i++) {
+        std::string& uncertainty_name = uncertainty_names[i];
+        
+        // FOR EACH TYPE (joint, link)
+        std::vector<std::string> type_names;
+        if(ctrl->get_data<std::vector<std::string> >(name+"."+uncertainty_name+".id",type_names)){
+          for (int j=0; j<type_names.size();j++) {
+            std::string& type_name = type_names[j];
+            
+            // FOR EACH OBJECT (joint name, link name)
+            std::vector<std::string> object_names;
+            if(ctrl->get_data<std::vector<std::string> >(name+"."+uncertainty_name+"."+type_name+".id",object_names)){
+              for (int k=0; k<object_names.size();k++) {
+                std::string& object_name = object_names[k];
+                
+                std::vector<std::string> value_names;
+                if(ctrl->get_data<std::vector<std::string> >(name+"."+uncertainty_name+"."+type_name+"."+object_name+".id",value_names)){
+                  for (int l=0; l<value_names.size();l++) {
+                    std::string& value_name = value_names[l];
+                    
+                    // Create vector of generators and default values
+                    std::vector<boost::shared_ptr<Random::Generator> > generator;
+                    std::vector<double>                        default_value;
+                    // try to use default value
+                    if(!ctrl->get_data<std::vector<double> >(name+"."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name,default_value)){
+                      // if we're here then there are sub-tags to this parameter (generator params)
+                      parse_distribution(name+"."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name,ctrl,generator);
+                      
+                      OUT_LOG(logDEBUG) << "Created generator for uncertain parameter: "<< object_name << "." << value_name;
+                      OUT_LOG(logDEBUG) << "\t FROM: uncertainty."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name;
+                    } else {
+                      OUT_LOG(logDEBUG) << "Used default for uncertain parameter: "<< object_name << "." << value_name;
+                      OUT_LOG(logDEBUG) << "\t FROM: uncertainty."+uncertainty_name+"."+type_name+"."+object_name+"."+value_name;
+                      OUT_LOG(logDEBUG) << "\t default: " << default_value;
+                    }
+                    
+                    // error check
+                    if( (generator.empty() && default_value.empty()) || (!generator.empty() && !default_value.empty()))
+                      throw std::runtime_error("there are default values AND distribution params for this value!");
+                    
+                    OUT_LOG(logDEBUG) << "parameter: "<< object_name << "." << value_name << " pushed to map.";
+                    if(verbose_name){
+                      parameter_generator[uncertainty_name+"."+type_name+"."+object_name+"."+value_name] = ParamDefaultPair(generator,default_value);
+                    } else {
+                      parameter_generator[object_name+"."+value_name] = ParamDefaultPair(generator,default_value);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  static void generate_parameters(const ParamMap& parameter_generator,const boost::shared_ptr<Pacer::Controller> ctrl, ParamValueMap& generated_params){
+    for(ParamMap::const_iterator it = parameter_generator.begin(); it != parameter_generator.end(); it++){
+      if (it->second.first.empty()) {
+        for (int i=0;i<it->second.second.size(); i++) {
+          double value = it->second.second[i];
+          OUT_LOG(logDEBUG) << " " << value;
+          generated_params[it->first].push_back(value);
+        }
+      } else { // Generators created for variable
+        for (int i=0;i<it->second.first.size(); i++) {
+          double value = it->second.first[i]->generate();
+          generated_params[it->first].push_back(value);
+        }
+      }
+    }
+  }
+
+}
+#endif

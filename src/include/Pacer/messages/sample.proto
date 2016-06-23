@@ -1,0 +1,50 @@
+import "data.proto";
+
+package Pacer.Messages.Sample;
+
+message Message {
+
+enum Type {
+RESPONSE = 0;
+REQUEST = 1;
+COMMAND = 2;
+}
+
+enum Command {
+START     = 1;
+WAIT      = 2;
+RESET     = 3;
+EXIT      = 4;
+}
+
+enum Request {
+DATA      = 0;
+TIME      = 1;
+}
+
+enum Response {
+ISSUED     = 0;
+DENIED     = 1;
+}
+
+enum Origin {
+UNDEFINED      = 0;
+ADMIN          = 1;
+WORKER         = 2;
+}
+
+
+message Header {
+required Origin origin = 1;
+required Type type = 2;
+optional Response response = 3;
+optional Request request = 4;
+optional Command command = 5;
+optional uint32 pid = 6;
+optional uint32 blocks = 7;
+}
+
+required Header header = 1;
+optional Pacer.Messages.Data.TimeSeries series = 2;
+
+}

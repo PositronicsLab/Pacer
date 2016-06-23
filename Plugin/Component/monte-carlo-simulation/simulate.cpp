@@ -105,7 +105,7 @@ std::vector<SampleConditions> sample_processes;
 
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
 std::string TASK_PATH = "./";
-long long unsigned int sample_idx=0;
+long long unsigned int sample_idx=1;
 
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
@@ -131,7 +131,7 @@ void loop(){
   OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
   std::cout << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes." << std::endl;
   
-  if ( available_threads > 0 && sample_idx < NUM_SAMPLES ){
+  if ( available_threads > 0 && sample_idx <= NUM_SAMPLES ){
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
 #endif
@@ -142,25 +142,17 @@ void loop(){
       
       std::vector<std::string> SAMPLE_ARGV = get_sample_options();
       
+      SAMPLE_ARGV.push_back("--stand");
+
       SAMPLE_ARGV.push_back("--sample");
       SAMPLE_ARGV.push_back(SSTR(sample_idx));
-      
-      SAMPLE_ARGV.push_back("--duration");
-      SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".duration")));
       
       bool EXPORT_XML = false;
       ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
       if(EXPORT_XML){
         SAMPLE_ARGV.push_back("--xml");
       }
-      
-      SAMPLE_ARGV.push_back("--stepsize");
-      SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
-      
-      if(ctrl->get_data<bool>(plugin_namespace+".display")){
-        SAMPLE_ARGV.push_back("--display");
-      }
-      
+
       char message[MESSAGE_SIZE];
       int message_size = 0;
       for(int i=0;i<SAMPLE_ARGV.size();i++){
@@ -207,14 +199,14 @@ void loop(){
 //    if (!GET_DATA_ONLINE)
 //      ctrl->close_plugin(plugin_namespace);
   } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "Not threads are working but all samples have been started.";
+    OUT_LOG(logINFO) << "Not all threads are working but all samples have been started.";
 //    if (!GET_DATA_ONLINE)
 //      ctrl->close_plugin(plugin_namespace);
   }
   
-  if(sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
+  if(/* sample_idx == NUM_SAMPLES && */ available_threads == NUM_THREADS){
     OUT_LOG(logINFO) << "Experiment Complete";
-//    ctrl->close_plugin(plugin_namespace);
+    ctrl->close_plugin(plugin_namespace);
   }
   
   return;
@@ -252,17 +244,19 @@ void setup(){
 
   ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
   if (GET_DATA_ONLINE){
+    OUT_LOG(logINFO) << "INIT: start_listener_thread";
     start_listener_thread();
+  } else {
+    OUT_LOG(logINFO) << "INIT: NOT - GET_DATA_ONLINE";
   }
   
+  OUT_LOG(logINFO) << "INIT: register_exit_sighandler";
+
   register_exit_sighandler();
   
+  OUT_LOG(logINFO) << "INIT: start_process_spawner_thread";
+
   start_process_spawner_thread();
-
-  std::cout << "Sleeping before actually starting anything" << t << std::endl;
-  sleep(5);
-  std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
-
   
   {
     /* Block SIGPIPE; other threads created by main()
@@ -281,6 +275,11 @@ void setup(){
 
   // wait for all new forked processes to start;
   
+  
+  std::cout << "Sleeping before actually starting anything" << t << std::endl;
+  sleep(5);
+  std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
+
   return;
 }
 

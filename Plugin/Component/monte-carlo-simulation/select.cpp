@@ -32,10 +32,10 @@ bool select( const std::vector<int>& checked_fds , fd_set& pending_fds ) {
     max_fd = std::max( max_fd, checked_fds[i] );
     FD_SET( checked_fds[i] , &pending_fds );
     num_fds += 1;
-    OUT_LOG(logINFO) << "LISTENER: checking -- fd: " << checked_fds[i];
+    OUT_LOG(logINFO) << "SELECT: checking -- fd: " << checked_fds[i];
   }
 
-  OUT_LOG(logINFO) << "LISTENER: max_fd: " << max_fd ;
+  OUT_LOG(logINFO) << "SELECT: max_fd: " << max_fd ;
 
   if( select( max_fd + 1, &pending_fds, NULL, NULL, NULL ) == -1 ) {
 
@@ -52,7 +52,7 @@ bool select( const std::vector<int>& checked_fds , fd_set& pending_fds ) {
       else 
         sprintf( buf, "UNKNOWN" );
 
-      sprintf( spstr, "ERROR : LISTENER: (select.cpp) select() failed calling __select(...) : errno[%s]", buf );
+      sprintf( spstr, "ERROR : SELECT: (select.cpp) select() failed calling __select(...) : errno[%s]", buf );
       OUT_LOG(logINFO) << spstr;
     }
 
@@ -68,6 +68,8 @@ int read_notifications( const std::vector<int>& checked_threads ,  const std::ve
     char message[MESSAGE_SIZE];
     int fd;
     // predator controller
+    OUT_LOG(logINFO) << "LISTENER: Checking for return message ";
+
     if( FD_ISSET( checked_fds[i], &pending_fds ) != 0 ) {
       if( read(checked_fds[i], message, sizeof(message)) == -1 ) {
         message[0] = '\0';
@@ -116,8 +118,11 @@ void listen_for_child_return() {
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
     SampleConditions& sc = sample_processes[thread_number];
     if(sc.restart || !sc.inited || !sc.active){
+      OUT_LOG(logINFO) << "LISTENER: #" << thread_number << ", Restart: " << sc.restart << ", sc.active: " << sc.active << ", sc.inited: " << sc.inited;
       continue;
     }
+    OUT_LOG(logINFO) << "LISTENER: checking to : " << thread_number;
+
     checked_fds.push_back(sc.CHILD_TO_PARENT[READ_INDEX]);
     checked_threads.push_back(thread_number);
   }
@@ -128,7 +133,11 @@ void listen_for_child_return() {
     return;
   }
 
-  if(select(checked_fds,pending_fds)){
+  OUT_LOG(logINFO) << "LISTENER: listening to : " << checked_threads;
+  OUT_LOG(logINFO) << "LISTENER: with CHILD_TO_PARENT read ends : " << checked_fds;
+
+  OUT_LOG(logINFO) << "LISTENER: Stopping to wait on return messages";
+  if(select(checked_fds,pending_fds)){  /// THIS IS A BLOCKING CALL
     std::vector<std::string> messages;
     std::vector<int> completed_threads;
     std::vector<int> error_threads;
@@ -185,6 +194,7 @@ void listen_for_child_return() {
 }
 
 static void *listen_for_child_return_loop(void* data){
+  OUT_LOG(logINFO) << "LISTENER: listen_for_child_return_loop()";
   while(1){
     listen_for_child_return();
   }
@@ -197,6 +207,8 @@ pthread_t process_spawner_thread;
 #endif
 
 static void start_listener_thread(){
+  OUT_LOG(logINFO) << "LISTENER: start_listener_thread()";
+
     static int iret = pthread_create( &listener_thread, NULL,&listen_for_child_return_loop,(void*)NULL);
     if(iret)
     {
@@ -212,6 +224,8 @@ static void start_listener_thread(){
 
 
 static void spawn_process(SampleConditions& sc, int thread_number){
+  OUT_LOG(logINFO) << "PROCESS SPAWNER: spawn_process(.)";
+
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   std::string SAMPLE_BIN("sample.bin");
@@ -281,6 +295,16 @@ static void spawn_process(SampleConditions& sc, int thread_number){
     SAMPLE_ARGV.push_back("--writepipe");
     SAMPLE_ARGV.push_back(SSTR(sc.CHILD_TO_PARENT[WRITE_INDEX]));
     
+    SAMPLE_ARGV.push_back("--duration");
+    SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".duration")));
+    
+    SAMPLE_ARGV.push_back("--stepsize");
+    SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
+    
+    if(ctrl->get_data<bool>(plugin_namespace+".display")){
+      SAMPLE_ARGV.push_back("--display");
+    }
+    
     char* const* exec_argv = param_array(SAMPLE_ARGV);
     OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
     OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_ARGV << std::endl;
@@ -329,6 +353,8 @@ static void close_process(SampleConditions& sc){
 }
 
 static void process_spawner(){
+  OUT_LOG(logINFO) << "PROCESS SPAWNER: process_spawner()";
+
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
     SampleConditions& sc = sample_processes[thread_number];
      if(sc.restart){
@@ -341,6 +367,8 @@ static void process_spawner(){
 }
 
 static void *process_spawner_loop(void* data){
+  OUT_LOG(logINFO) << "PROCESS SPAWNER: process_spawner_loop(.)";
+
   while(1){
 #ifdef USE_THREADS
     pthread_mutex_lock(&_sample_processes_mutex);
@@ -354,6 +382,8 @@ static void *process_spawner_loop(void* data){
 }
 
 static void start_process_spawner_thread(){
+  OUT_LOG(logINFO) << "PROCESS SPAWNER: start_process_spawner_thread(.)";
+
 #ifdef USE_THREADS
     static int iret = pthread_create( &process_spawner_thread, NULL,&process_spawner_loop,(void*)NULL);
     if(iret)

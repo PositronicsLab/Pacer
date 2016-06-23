@@ -17,8 +17,8 @@ static VectorNd workv_;
 #define DISPLAY
 
 enum FOOT_PHASE {
-  STANCE,
-  SWING,
+  SWING  = 0,
+  STANCE = 1,
   NONE
 };
 
@@ -117,6 +117,15 @@ bool in_interval(double t,double t0,double tF){
   return false;
 }
 
+double interval_duration(double t0,double tF){
+  if (tF < t0){
+    // with wrap around
+    return (1.0-t0 + tF);
+  }
+  // no wrap around
+  return (tF-t0);
+}
+
 FOOT_PHASE gait_phase(double touchdown,double duty_factor,double gait_progress){
   double liftoff = decimal_part(touchdown + duty_factor),
   left_in_phase = 0;
@@ -161,55 +170,60 @@ double gait_phase(double touchdown,double duty_factor,double gait_progress,FOOT_
 
 bool next_flight_phase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double initial_time,
                        double& time_until_takeoff,double& flight_phase_duration){
-  double gait_progress = initial_time;
-  
-  double one_cycle = 1;
-  
-  double this_liftoff = 0;
-  while(one_cycle>0){
+  for (double t = 0; t<1.0;) {
+    double gait_progress = decimal_part(initial_time + t);
+    OUT_LOG(logERROR) << "Checking time: " << gait_progress << ", t = " << t << std::endl;
+
     bool all_swing_phase = true;
     double next_touchdown = std::numeric_limits<double>::max();
     double next_liftoff = std::numeric_limits<double>::max();
     // Check the next phase change for each foot
-    for (int i=0; i<foot_names.size(); i++) {
+    for (int i=0; i<touchdown.size(); i++) {
       FOOT_PHASE phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
+      OUT_LOG(logERROR) << "Foot: " << i << ", Phase: " << phase << std::endl;
       if(phase == SWING){
-        double next_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,phase)+NEAR_ZERO;
+        double next_phase = interval_duration(gait_progress,touchdown[i]);
         next_touchdown = std::min(next_touchdown,next_phase);
+        OUT_LOG(logERROR) << "SWING: next_touchdown: " << next_touchdown << std::endl;
       }else{
         all_swing_phase = false;
-        double next_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,phase)+NEAR_ZERO;
+        double liftoff_time = decimal_part(touchdown[i] + duty_factor[i]);
+        double next_phase = interval_duration(gait_progress,liftoff_time);
         next_liftoff = std::min(next_liftoff,next_phase);
+        OUT_LOG(logERROR) << "STANCE: next_liftoff: " << next_liftoff << std::endl;
       }
     }
+    
     // if looking at a flight phase, then exit
     if(all_swing_phase == true){
-      time_until_takeoff = this_liftoff;
+      if(gait_progress == initial_time)
+        time_until_takeoff = -1.0;
+      else
+        time_until_takeoff = interval_duration(initial_time,gait_progress);
+      
       flight_phase_duration = next_touchdown;
-      break;
+      
+      OUT_LOG(logERROR) << "Next flight phase was found at: " << gait_progress << std::endl
+      << "\tWith duration: " << flight_phase_duration << std::endl
+      << "\toccuring in: " << time_until_takeoff <<" * (gait-duration) seconds";
+      return true;
     }
+    
+    OUT_LOG(logERROR) << "Not found yet: " << std::endl;
+    OUT_LOG(logERROR) << "next_liftoff: " << next_liftoff<< std::endl;
+    OUT_LOG(logERROR) << "next_touchdown: " << next_touchdown << std::endl;
+
     // increment checking point
-    this_liftoff += next_liftoff;
-    gait_progress += next_liftoff+NEAR_ZERO;
-    gait_progress = decimal_part(gait_progress);
-    if(gait_progress >= 1.0) gait_progress = NEAR_ZERO;
-    one_cycle -= next_liftoff;
+//    t += 0.001;
+    t += next_liftoff;
     // and loop
   }
+
+  OUT_LOG(logERROR) << "No flight phase in gait";
   
-  if (one_cycle <= 0) {
-    OUT_LOG(logDEBUG1) << "No flight phase in gait";
-    
-    time_until_takeoff = std::numeric_limits<double>::max();
-    flight_phase_duration = 0;
-    return false;
-  }
-  
-  OUT_LOG(logDEBUG1) << "Next flight phase was found at: " << gait_progress << std::endl
-  << "\tWith duration: " << flight_phase_duration << std::endl
-  << "\toccuring in: " << time_until_takeoff <<" * (gait-duration) seconds";
-  
-  return true;
+  time_until_takeoff = std::numeric_limits<double>::max();
+  flight_phase_duration = 0;
+  return false;
 }
 
 /**
@@ -281,8 +295,11 @@ void walk_toward(// PARAMETERS
   
   // Check if this method has been called recently,
   // reset if no call has been made for dt > 1 phase
-  if(dt > gait_duration * (*std::min_element(duty_factor.begin(),duty_factor.end())) )
+  if(dt > gait_duration * (*std::min_element(duty_factor.begin(),duty_factor.end())) || dt < 0){
     last_phase.clear();
+    t = 0;
+    last_time = 0;
+  }
   
   if(last_phase.empty()){
     for(int i=0;i<NUM_FEET;i++){
@@ -320,8 +337,7 @@ void walk_toward(// PARAMETERS
   // Check for flight phase
   double flight_phase_duration;
   double until_takeoff;
-  bool has_flight_phase = next_flight_phase(touchdown,duty_factor,gait_progress,
-                                            until_takeoff,flight_phase_duration);
+  bool has_flight_phase = next_flight_phase(touchdown,duty_factor,gait_progress,until_takeoff,flight_phase_duration);
   
   // Figure out the phase of each foot
   std::vector<FOOT_PHASE> phase_vector(NUM_FEET);
@@ -423,11 +439,80 @@ void walk_toward(// PARAMETERS
 #endif
     
   }
+
+  VISUALIZE(POINT(Vector3d(base_horizontal_frame->x[0],
+                           base_horizontal_frame->x[1],
+                           base_horizontal_frame->x[2]-0.05),
+                  Vector3d(0,0,0),0.1));
   
+//  VISUALIZE(TEXT("THIS IS A TEST",Vector3d(0,0,0),Ravelin::Quatd(0,0,0,1),Vector3d(0,0,0),0.24));
+
+  //////////////////////////////////////////////////////////////////////
+  /////////////////////// DETERMINE DESIRED BASE VELOCITY //////////////
+  // For stance feet only (affects only desired z-axis base velocity)
   
+  Ravelin::VectorNd base_command = command;
+  OUTLOG(touchdown,"touchdown",logERROR);
+  OUTLOG(liftoff,"liftoff",logERROR);
+  OUTLOG(duty_factor,"duty_factor",logERROR);
+  OUTLOG(gait_progress,"gait_progress",logERROR);
+  OUTLOG(until_takeoff,"until_takeoff",logERROR);
+  OUTLOG(flight_phase_duration,"flight_phase_duration",logERROR);
+
+  // add forces to propel robot over upcoming flight phase
+  if(has_flight_phase){
+    // Duration of flight
+    double flight_phase_seconds = flight_phase_duration * gait_duration;
+    OUTLOG(flight_phase_seconds,"flight_phase_seconds",logERROR);
+
+    // upward velocity we must reach to return to ground after flight_phase_seconds
+    double gravity = 9.8;// m / s*s
+    
+     // go up then come back down, we only need enough initial velocity
+     // to reach 0 velocity against the pull of gravity after 1/2 the flight time
+    double upward_velocity = gravity * flight_phase_seconds * 0.5;
+    
+    // Note: This can be tuned to give the proper compliance
+    // to the compression phase of flighted running
+    double compression_start_velocity = -upward_velocity;
+    
+    // smoothly propel the robot over the available time toward the jumping velocity
+    static double z_axis_command = 0;
+    static double init_until_takeoff = -1;
+    if(until_takeoff >= 0){
+      if( init_until_takeoff < 0 ) init_until_takeoff = until_takeoff;
+      double interpolation_alpha = 1.0 - until_takeoff/init_until_takeoff;
+      OUTLOG(until_takeoff,"until_takeoff",logERROR);
+      OUTLOG(init_until_takeoff,"init_until_takeoff",logERROR);
+      OUTLOG(interpolation_alpha,"interpolation_alpha (0..1)",logERROR);
+
+      z_axis_command = sigmoid_interp(compression_start_velocity,upward_velocity,interpolation_alpha);
+      OUTLOG(compression_start_velocity,"compression_start_velocity",logERROR);
+      OUTLOG(upward_velocity,"upward_velocity",logERROR);
+      OUTLOG(z_axis_command,"z_axis_command for flight",logERROR);
+    } else {
+      init_until_takeoff = -1;
+      z_axis_command -= gravity*dt;
+    }
+    base_command[2] += z_axis_command;
+  }
+  
+  Ravelin::VectorNd base_velocity = base_command;
+
+  
+  OUTLOG(base_command,"base_command(with flight factored in)",logERROR);
+  ctrl->set_data<Ravelin::VectorNd>("base-command",base_command);
+  ctrl->set_data<double>("gait-time",gait_progress*gait_duration);
+  OUTLOG(gait_progress*gait_duration,"gait_progress*gait_duration",logERROR);
+  ctrl->set_data<double>("gait-proportion",gait_progress);
+  OUTLOG(gait_progress,"gait_progress",logERROR);
+  ctrl->set_data<std::vector<FOOT_PHASE> >("active-feet",phase_vector);
+  OUT_LOG(logERROR) << "phase_vector: " << phase_vector;
+
   ///////////////////////////////////////////////////////////////////////
   //////////////////////// FOOT PHASE PLANNING //////////////////////////
   ///////////////////////////////////////////////////////////////////////
+  
   
   //////////////////////// PLANNING STANCE PHASE /////////////////////////
   for(int i=0;i<NUM_FEET;i++){
@@ -458,32 +543,6 @@ void walk_toward(// PARAMETERS
     OUTLOG(zero_base_generalized_q,"zero_base_generalized_q",logDEBUG);
     
     Ravelin::MatrixNd J = ctrl->calc_link_jacobian(zero_base_generalized_q,foot_names[i]);
-    
-    Ravelin::VectorNd base_command = command;
-    
-    // add forces to propel robot over upcoming flight phase
-    if(has_flight_phase){
-      // Duration of flight
-      double flight_phase_seconds = flight_phase_duration * gait_duration;
-      // upward velocity we must reach to return to ground after flight_phase_seconds
-      double gravity = 9.8;// m / s*s
-      double upward_velocity = gravity * flight_phase_seconds * 0.5;
-      
-      static double last_until_takeoff = -1;
-      if (until_takeoff > last_until_takeoff)
-        last_until_takeoff = until_takeoff;
-      
-      double duration_until_flight = 1.0 - until_takeoff/last_until_takeoff;
-      OUTLOG(duration_until_flight,"duration_until_flight",logDEBUG);
-
-      double z_axis_command = sigmoid_interp(0.0,upward_velocity,duration_until_flight);
-      OUTLOG(upward_velocity,"upward_velocity for flight",logDEBUG);
-      OUTLOG(z_axis_command,"z_axis_command for flight",logDEBUG);
-      base_command[2] += z_axis_command;
-    }
-    
-    OUTLOG(base_command,"base_command(with flight factored in)",logDEBUG);
-    
     
     J.block(0,3,NUM_JOINT_DOFS,NUM_JOINT_DOFS+6).mult(base_command,workv3_,-1.0,0);
     

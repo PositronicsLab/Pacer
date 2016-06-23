@@ -1,0 +1,54 @@
+<!-- A pendulum modeled using contact constraints -->
+
+<XML>
+  <DRIVER>
+    <camera position="-0.25 0.5 -0.9" target="0 0 -1" up="0 0 1" />
+    <window location="0 0" size="640 480" />
+  </DRIVER>
+
+  <MOBY>
+    <GravityForce id="gravity" accel="0 0 -9.81" />
+    
+    <Cylinder id="c1" height="0.01" radius="0.02" density="1.0" rpy="0 1.57079632679 0" />
+    <Cylinder id="c-bob" height="0.01" radius="0.01" density="1.0" rpy="0 1.57079632679 0" />
+    <Box id="b1" xlen="0.01" ylen="0.01" zlen="1.0" density="1.0" />
+    <Box id="b3" xlen="0.1" ylen="0.1" zlen="0.02"  density="1.0" />
+
+  <TimeSteppingSimulator constraint-stabilization-max-iterations="0">
+    <RecurrentForce recurrent-force-id="gravity" /> 
+    <DynamicBody dynamic-body-id="pendulum" />
+    <DynamicBody dynamic-body-id="piston" />
+    <ContactParameters object1-id="pendulum" object2-id="piston" epsilon="0" mu-coulomb="0" />
+  </TimeSteppingSimulator>
+
+<RCArticulatedBody fdyn-algorithm="crb" fdyn-algorithm-frame="linkcom" floating-base="false" id="pendulum">
+<RigidBody angular-velocity="0 0 0" articulated-body-id="pendulum" compliant="false" enabled="true" id="base" linear-velocity="0 0 0" position="0 0 0" quat="1 0 0 0">
+  <InertiaFromPrimitive primitive-id="b3" inertial-relative-com="0 0 0" inertial-relative-quat="1 0 0 0"/>
+  <Visualization visualization-id="b3" visualization-rel-origin="0 0 0" />
+</RigidBody>
+<!-- BOB -->
+<RigidBody angular-velocity="0 0 0" articulated-body-id="pendulum" compliant="false" enabled="true" id="bob" linear-velocity="0 0 0" position="0 0 -1" quat="1 0 0 0">
+  <InertiaFromPrimitive primitive-id="c-bob" inertial-relative-com="0 0 0" inertial-relative-quat="1 0 0 0"/>
+  <Visualization visualization-id="c-bob" visualization-rel-origin="0 0 0" />
+  <Visualization visualization-id="b1" visualization-rel-origin="0 0 0.5" />
+  <CollisionGeometry id="bob_collision" primitive-id="c-bob" relative-origin="0 0 0" relative-quat="1 0 0 0" />
+</RigidBody>
+<!-- JOINTS -->
+<RevoluteJoint axis="0 1 0" coulomb-friction-coeff="0" id="hinge1" inboard-link-id="base" location="0 0 -0" lower-limits="-1e+06"   outboard-link-id="bob" q="-0.04383" q-tare="0" qd="1.451" restitution-coeff="0" upper-limits="1e+06" viscous-friction-coeff="0" visualization-id="c1" />
+</RCArticulatedBody>
+
+<RCArticulatedBody fdyn-algorithm="crb" fdyn-algorithm-frame="linkcom" floating-base="false" id="piston">
+<RigidBody angular-velocity="0 0 0" articulated-body-id="piston" compliant="false" enabled="true" id="cylinder" linear-velocity="0 0 0" position="0 -0.01 -1" quat="1 0 0 0">
+  <InertiaFromPrimitive primitive-id="c1" inertial-relative-com="0 0 -1" inertial-relative-quat="1 0 0 0"/>
+</RigidBody>
+<RigidBody angular-velocity="0 0 0" articulated-body-id="piston" compliant="false" enabled="true" id="plunger" linear-velocity="0 0 0" position="0 0 -1" quat="1 0 0 0">
+  <InertiaFromPrimitive primitive-id="c-bob" inertial-relative-com="0 0 0" inertial-relative-quat="1 0 0 0"/>
+  <Visualization visualization-id="c-bob" visualization-rel-origin="0 0 0" />
+  <CollisionGeometry id="piston_collision" primitive-id="c-bob" relative-origin="0 0 0" relative-quat="1 0 0 0" />
+</RigidBody>
+<PrismaticJoint axis="0 1 0" coulomb-friction-coeff="0" id="pris" inboard-link-id="cylinder" location="0 -0.02 -1" lower-limits="-1e+06" outboard-link-id="plunger" q="-0.05" q-tare="0" qd="10" restitution-coeff="0" upper-limits="1e+06" viscous-friction-coeff="0" visualization-id="c1" />
+</RCArticulatedBody>
+
+  </MOBY>
+</XML>
+

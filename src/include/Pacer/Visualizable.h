@@ -24,6 +24,10 @@ new Pacer::Point(p,c,s)
 #define POSE(p,s) \
 new Pacer::Pose(p,s)
 
+#define TEXT(t,p,q,c,s) \
+new Pacer::Text(t,p,q,c,s)
+
+
 namespace Pacer{
 
 class Visualizable : public boost::enable_shared_from_this<Visualizable>{
@@ -36,7 +40,8 @@ public:
     eUnknown = 0,
     ePoint = 1,
     eRay = 2,
-    ePose = 3
+    ePose = 3,
+    eText = 4
   } eType;
   double size;
   Ravelin::Vector3d color;
@@ -54,6 +59,22 @@ public:
   }
 };
 
+  class Text : public Visualizable{
+  public:
+    Ravelin::Vector3d point;
+    Ravelin::Quatd quat;
+    std::string text_string;
+    Text(std::string t, Ravelin::Vector3d p,Ravelin::Quatd q, Ravelin::Vector3d c = Ravelin::Vector3d(1.0,1.0,1.0),double s = 24){
+      eType = eText;
+      text_string = t;
+      size = s;
+      point = p;
+      quat = q;
+      color = c;
+    }
+  };
+
+  
 class Point : public Visualizable{
 public:
   Ravelin::Vector3d point;

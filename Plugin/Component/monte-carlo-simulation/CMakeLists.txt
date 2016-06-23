@@ -1,8 +1,13 @@
 
+find_package(reveal REQUIRED)
+link_directories(${REVEAL_LIBRARY_DIRS})
+include_directories(${REVEAL_INCLUDE_DIR})
+
+
 option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
-  add_library(monte-carlo-simulation MODULE simulate.cpp)
-  target_link_libraries(monte-carlo-simulation ${REQLIBS})
+  add_library(monte-carlo-simulation MODULE simulate.cpp exchange.cpp)
+  target_link_libraries(monte-carlo-simulation ${REQLIBS} reveal_core)
 endif(BUILD_MONTECARLO)
 
 #find BOOST libraries
@@ -14,7 +19,7 @@ include_directories(${BOOST_INCLUDE_DIR})
   add_executable(sample.bin Sample.cpp)
 
   target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
-  IF(USE_OSG_DISPLAY)
+  IF(USE_DISPLAY)
     #find OSG
     find_package (osg)
     find_package (osgViewer)
@@ -36,4 +41,9 @@ include_directories(${BOOST_INCLUDE_DIR})
       target_link_libraries (sample.bin OpenThreads)
       add_definitions (-DUSE_OSG_DISPLAY)
     ENDIF(OSG_FOUND)
-  ENDIF(USE_OSG_DISPLAY)
+  ENDIF(USE_DISPLAY)
+  
+  add_library(test-probability MODULE pendulum/pendulum-init.cpp)
+  target_link_libraries(test-probability ${REQLIBS})
+
+

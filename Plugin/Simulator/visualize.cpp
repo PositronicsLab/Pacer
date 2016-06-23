@@ -14,6 +14,7 @@
 #include <osg/Plane>
 #include <osg/LineSegment>
 #include <osg/LineWidth>
+#include <osgText/Text>
 
 using namespace Moby;
 using namespace Ravelin;
@@ -322,6 +323,7 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   point_transform->setPosition( osg::Vec3( point[0], point[1], point[2] ) );
   point_transform->setScale( osg::Vec3( point_scale, point_scale, point_scale ) );
   
+  
   // add the geode to the transform
   point_transform->addChild( point_geode );
   
@@ -387,3 +389,51 @@ void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<Simulator> sim ,doubl
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),size,sim);
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),size,sim);
 }
+
+void draw_text(std::string& text_str, const Ravelin::Vector3d& point, const Ravelin::Quatd& quat, const Ravelin::Vector3d& c, boost::shared_ptr<Simulator> sim, double size){
+  
+  osg::Group* 	group_root 	= new osg::Group();
+  osg::Billboard* billboard = new osg::Billboard();
+  osgText::Text* text   	= new osgText::Text();
+  
+  osgViewer::Viewer viewer;
+  
+  double r = c[0] * VIBRANCY;
+  double g = c[1] * VIBRANCY;
+  double b = c[2] * VIBRANCY;
+  osg::Vec4 color = osg::Vec4( r, g, b, 1.0 );
+  
+//  osgText::Font font = new osgText::readFontFile( "fonts/arial.ttf" );
+  
+//  osg::Vec4 white( 1.f, 1.f, 1.f, 1.f );
+  
+  { //top right
+    osg::ref_ptr<osgText::Text> text = new osgText::Text;
+//    text->setFont( font.get() );
+    text->setColor( color );
+    text->setCharacterSize( .15f );
+    text->setPosition( osg::Vec3( 0.f, 0.f, 0.f ) );
+    text->setAxisAlignment( osgText::Text::SCREEN );
+    text->setText( text_str.c_str() );
+  }
+
+  // a geode for the visualization geometry
+  osg::Geode* point_geode = new osg::Geode();
+  
+  osg::PositionAttitudeTransform* point_transform;
+  point_transform = new osg::PositionAttitudeTransform();
+  point_transform->setPosition( osg::Vec3( point[0], point[1], point[2] ) );
+  //point_transform->setScale( osg::Vec3( point_scale, point_scale, point_scale ) );
+  
+  
+  // add the geode to the transform
+  point_transform->addChild( point_geode );
+  point_geode->addDrawable( text );
+  
+  // add the transform to the root
+  group_root->addChild( point_transform );
+  
+  // add the root to the transient data scene graph
+  sim->add_transient_vdata( group_root );
+}
+

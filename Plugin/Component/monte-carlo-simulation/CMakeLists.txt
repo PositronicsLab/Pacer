@@ -1,13 +1,15 @@
 
-find_package(reveal REQUIRED)
-link_directories(${REVEAL_LIBRARY_DIRS})
-include_directories(${REVEAL_INCLUDE_DIR})
 
 
 option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
   add_library(monte-carlo-simulation MODULE simulate.cpp exchange.cpp)
   target_link_libraries(monte-carlo-simulation ${REQLIBS} reveal_core)
+
+
+  find_package(reveal REQUIRED)
+  link_directories(${REVEAL_LIBRARY_DIRS})
+  include_directories(${REVEAL_INCLUDE_DIR})
 endif(BUILD_MONTECARLO)
 
 #find BOOST libraries
@@ -17,6 +19,10 @@ link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
   add_executable(sample.bin Sample.cpp)
+
+if(BUILD_MONTECARLO)
+  target_link_libraries(sample.bin reveal_core)
+endif(BUILD_MONTECARLO)
 
   target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
   IF(USE_DISPLAY)

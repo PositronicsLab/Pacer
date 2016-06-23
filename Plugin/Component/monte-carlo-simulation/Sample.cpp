@@ -1006,6 +1006,7 @@ simulation_start:
     ITER++;
   }
   
+#ifdef USE_OSG_DISPLAY
   {
     sim->update_visualization();
 
@@ -1013,6 +1014,7 @@ simulation_start:
     sprintf(buffer, "last-%d-%d.osg",pid,SAMPLE_NUMBER);
     osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
   }
+#endif
   
 //#ifndef NDEBUG
   std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;

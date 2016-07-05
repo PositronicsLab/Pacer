@@ -225,7 +225,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     }
   }
   else if(vm.count("float")){
-    logging << "moving robot to not touch the ground: "<< lowest_point_z << std::endl;
+    logging << "moving robot to not touch the ground" << std::endl;
     
     // Get robot velocity
     Ravelin::VectorNd q;

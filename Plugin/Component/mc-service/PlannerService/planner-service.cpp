@@ -14,15 +14,15 @@ do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
 #include "common.h"
 
-bool GET_DATA_ONLINE = false;
-
-#ifdef USE_GSL
-#include "Random.h"
-Random::ParamMap parameter_generator;
-#else
+#ifndef USE_GSL
 #error Failing build: This plugin should be built with randomization support from GSL. Set 'USE_GSL' to ON to correct build.
 #endif
 
+#include <Pacer/Random.h>
+
+bool GET_DATA_ONLINE = false;
+
+Random::ParamMap parameter_generator;
 
 //                NAME                  DOF                 RANDOM VALUE        DEFAULT
 std::vector<std::string> get_sample_options(){
@@ -49,7 +49,6 @@ std::vector<std::string> get_sample_options(){
   
   std::vector<std::string> PARAMETER_ARGV;
   // NOTE: parallelize this loop
-#ifdef USE_GSL
   Random::ParamValueMap generated_params;
   
   OUT_LOG(logDEBUG)  << ">> Random::generate_parameters";
@@ -73,9 +72,6 @@ std::vector<std::string> get_sample_options(){
       PARAMETER_ARGV.push_back(SSTR(value));
     }
   }
-#else 
-  OUT_LOG(logDEBUG)  << ">> no random generator used";
-#endif
   return PARAMETER_ARGV;
 }
 
@@ -227,9 +223,8 @@ void setup(){
   // install sighandler to detect when gazebo finishes
   
   OUT_LOG(logDEBUG) << "Importing sources of uncertainty";
-#ifdef USE_GSL
   Random::create_distributions("uncertainty",ctrl,parameter_generator);
-#endif
+  
   ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
   ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
 
@@ -293,3 +288,108 @@ void destruct(){
 //-      action.sa_sigaction = NULL;  // might not be SIG_DFL
 //-      sigaction( SIGCHLD, &action, NULL );
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#include <stdio.h>
+#include <reveal/core/connection.h>
+#include <boost/shared_ptr.hpp>
+
+template <typename T>
+static std::string SSTR(T x)
+{
+  std::ostringstream oss;
+  oss << std::dec << x;
+  return oss.str();
+}
+
+//-----------------------------------------------------------------------------
+namespace Reveal {
+  //-----------------------------------------------------------------------------
+  namespace Core {
+    //-----------------------------------------------------------------------------
+    typedef boost::shared_ptr<connection_c> connection_ptr;
+    //-----------------------------------------------------------------------------
+  } // namespace Core
+    //-----------------------------------------------------------------------------
+} // namespace Reveal
+  //-----------------------------------------------------------------------------
+
+int planner_to_simulation( int child_pid ) {
+  Reveal::Core::connection_ptr connection;  //< a connection to the simulator
+    
+  // Note: before creating the following new pointer, generate a random string
+  // as the ipc connection identifier and replace the string "insert-rando-id"
+  // in the call to the constructor.  You can then store connection pointers
+  // in a map so that you are guaranteed to talk to the expected worker.  Your
+  // connection-id generator should generate a string with something like the
+  // following syntax <appname>-XXXXXX, e.g. pacer-145681
+  std::string port_id = "pacer-planner-" + SSTR(child_pid);
+  
+  connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c(Reveal::Core::connection_c::IPC_SERVER, port_id ) );
+  
+  if( connection->open() != Reveal::Core::connection_c::ERROR_NONE ) {
+    printf( "planner failed to open server ipc connection\nExiting\n" );
+    return 1;
+  }
+  
+  while(true) {
+    std::string request, reply;
+    request = "Planning Service sending request to SimulationService!";
+    printf( "sending request: %s\n", request.c_str() );
+    if( connection->write( request ) != Reveal::Core::connection_c::ERROR_NONE) {
+      printf( "ERROR: connection failed to write request\nExiting\n" );
+      return 1;
+    }
+    
+    if( connection->read( reply ) != Reveal::Core::connection_c::ERROR_NONE ) {
+      printf( "ERROR: connection failed to read reply\nExiting\n" );
+      return 1;
+    }
+    printf( "received reply: %s\n", reply.c_str() );
+  }
+  
+  return 0;
+}
+
+int planner_to_robot( void ) {
+  Reveal::Core::connection_ptr connection;  //< a connection to the simulator
+  
+  // Note: before creating the following new pointer, generate a random string
+  // as the ipc connection identifier and replace the string "insert-rando-id"
+  // in the call to the constructor.  You can then store connection pointers
+  // in a map so that you are guaranteed to talk to the expected worker.  Your
+  // connection-id generator should generate a string with something like the
+  // following syntax <appname>-XXXXXX, e.g. pacer-145681
+  std::string port_id = "pacer-planner-robot";
+  
+  connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c(Reveal::Core::connection_c::IPC_SERVER, port_id ) );
+  
+  if( connection->open() != Reveal::Core::connection_c::ERROR_NONE ) {
+    printf( "planner failed to open server ipc connection\nExiting\n" );
+    return 1;
+  }
+  
+  while(true) {
+    std::string request, reply;
+    request = "Planning Service sending request to Robot!";
+    printf( "sending request: %s\n", request.c_str() );
+    if( connection->write( request ) != Reveal::Core::connection_c::ERROR_NONE) {
+      printf( "ERROR: connection failed to write request\nExiting\n" );
+      return 1;
+    }
+    
+    if( connection->read( reply ) != Reveal::Core::connection_c::ERROR_NONE ) {
+      printf( "ERROR: connection failed to read reply\nExiting\n" );
+      return 1;
+    }
+    printf( "received reply: %s\n", reply.c_str() );
+  }
+  
+  return 0;
+}
+
+
+

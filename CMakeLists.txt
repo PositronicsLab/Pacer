@@ -12,9 +12,6 @@ SET(CMAKE_C_FLAGS_DEBUG "-g")
 SET(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
-# build protobuf messages
-add_subdirectory( src/include/Pacer/messages )
-
 ###############################################################################
 ###############################  SETUP LIBS ###################################
 ###############################################################################

@@ -19,11 +19,13 @@ protocols from class instances
 #include <Pacer/messages/sample.pb.h>
 
 #include <string>
+#include <map>
+#include <vector>
 
 //----------------------------------------------------------------------------
-namespace Reveal {
+namespace Pacer {
 //----------------------------------------------------------------------------
-namespace Analytics {
+namespace Messaging {
 //----------------------------------------------------------------------------
 
 class exchange_c : public Reveal::Core::exchange_c {
@@ -46,7 +48,7 @@ public:
   /// Clears any information buffered in an instantiated exchange  
   virtual void reset( void );
 
-  virtual std::string type( void ) { return "analytics"; }
+  virtual std::string type( void ) { return "sample"; }
 
   virtual bool build( std::string& message );
   virtual bool parse( const std::string& message );
@@ -62,21 +64,27 @@ public:
 
   /// The enumerated set of message types
   enum type_e {
-    TYPE_RESPONSE = 0,    //< an invalid message
+    TYPE_UNDEFINED = 0,    //< an invalid message
+    TYPE_RESPONSE,    //< an invalid message
     TYPE_REQUEST,            //< the message is an error notification
     TYPE_COMMAND        //< the message is an attempt to handshake
   };
   
   enum request_e {
     REQUEST_DATA = 0,
-    REQUEST_PING
+    REQUEST_STATUS
+  };
+  
+  enum error_e {
+    ERROR_NONE = 0,
+    ERROR_GENERAL,
   };
 
   enum command_e {
-    RESPONSE_START = 0,
-    RESPONSE_WAIT,
-    RESPONSE_RESET,
-    RESPONSE_EXIT
+    COMMAND_START = 0,
+    COMMAND_WAIT,
+    COMMAND_RESET,
+    COMMAND_EXIT
   };
 
 
@@ -84,7 +92,6 @@ public:
     RESPONSE_ISSUED = 0,
     RESPONSE_DENIED
   };
-
   /// Sets the origin of the message
   /// @param origin the origin of the message
   void set_origin( origin_e origin );
@@ -98,29 +105,55 @@ public:
   /// Gets the type of the message
   /// @return the type of the message
   type_e get_type( void );
-
+  
+  /// Sets the error of the message
+  /// @param error the error of the message
+  void set_error( error_e error );
+  /// Gets the error of the message
+  /// @return the error of the message
+  error_e get_error( void );
+  
+  /// Sets the request of the message
+  /// @param request the request of the message
+  void set_request( request_e request );
+  /// Gets the request of the message
+  /// @return the request of the message
+  request_e get_request( void );
+  
   /// Sets the response of the message
   /// @param response the response of the message
   void set_response( response_e response );
   /// Gets the response of the message
   /// @return the response of the message
   response_e get_response( void );
+  
+  /// Sets the command of the message
+  /// @param command the command of the message
+  void set_command( command_e command );
+  /// Gets the command of the message
+  /// @return the command of the message
+  command_e get_command( void );
 
 private:
+  
   origin_e            _origin;         //< the message's origin
   type_e              _type;           //< the message's type
+  error_e             _error;
+  request_e           _request;
   response_e          _response;
-
+  command_e           _command;
+    
   bool map_origin( Pacer::Messages::Sample::Message* message );
   bool map_type( Pacer::Messages::Sample::Message* message );
+  bool map_request( Pacer::Messages::Sample::Message* message );
   bool map_response( Pacer::Messages::Sample::Message* message );
+  bool map_command( Pacer::Messages::Sample::Message* message );
 
   bool map_admin_message( Pacer::Messages::Sample::Message* message );
   bool map_worker_message( Pacer::Messages::Sample::Message* message );
 
   bool build_admin_message( Pacer::Messages::Sample::Message* message );
   bool build_worker_message( Pacer::Messages::Sample::Message* message );
-
 };
 
 //----------------------------------------------------------------------------

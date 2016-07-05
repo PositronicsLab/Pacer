@@ -45,7 +45,7 @@ long int max_trials = 1;
 #ifndef USE_GSL
 #error Failing build: This plugin should be built with randomization support from GSL. Set 'USE_GSL' to ON to correct build.
 #endif
-#include <Pacer/Random.h>
+#include "../Random.h"
 #endif
 
 #if SOBOL_SEQUENCE_SEARCH == 1

@@ -1,25 +1,25 @@
+option(BUILD_MONTECARLO_SERVICE "Build Monte carlo simulaton method plugin?" OFF)
+if(BUILD_MONTECARLO_SERVICE)
+
+find_package(reveal REQUIRED)
+  link_directories(${REVEAL_LIBRARY_DIRS})
+  include_directories(${REVEAL_INCLUDE_DIR})
+
+  add_executable(simple-robot simple-robot.cpp)
+add_executable(simple-simulation simple-simulation.cpp )
+add_executable(simple-planner simple-planner.cpp )
+
+  target_link_libraries(simple-robot ${REQLIBS} reveal_core )
+target_link_libraries(simple-simulation ${REQLIBS} reveal_core )
+target_link_libraries(simple-planner ${REQLIBS} reveal_core )
+
+if(USE_PROTOBUF)
+# build protobuf messages
+add_subdirectory( messages )
+endif(USE_PROTOBUF)
 
 
-
-option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
-if(BUILD_MONTECARLO)
-  add_library(monte-carlo-simulation MODULE simulate.cpp)
-  target_link_libraries(monte-carlo-simulation ${REQLIBS})
-endif(BUILD_MONTECARLO)
-
-#find BOOST libraries
-set(Boost_ADDITIONAL_VERSIONS "1.55.0" "1.56.0")
-find_package(Boost COMPONENTS program_options REQUIRED)
-link_directories(${BOOST_LIBRARY_DIRS})
-include_directories(${BOOST_INCLUDE_DIR})
-
-  add_executable(sample.bin Sample.cpp)
-
-if(BUILD_MONTECARLO)
-  target_link_libraries(sample.bin reveal_core)
-endif(BUILD_MONTECARLO)
-
-target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
+  target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver reveal_core)
   IF(USE_DISPLAY)
     #find OSG
     find_package (osg)
@@ -43,8 +43,9 @@ target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
       add_definitions (-DUSE_OSG_DISPLAY)
     ENDIF(OSG_FOUND)
   ENDIF(USE_DISPLAY)
-  
+
   add_library(test-probability MODULE pendulum/pendulum-init.cpp)
   target_link_libraries(test-probability ${REQLIBS})
 
+endif(BUILD_MONTECARLO_SERVICE)
 

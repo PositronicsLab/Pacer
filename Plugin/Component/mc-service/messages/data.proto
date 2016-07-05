@@ -1,5 +1,6 @@
-package Pacer.Messages.Data;
+package Pacer.Messages.Sample;
 
+// PLANNER <--> SIMULATOR
 // The state of the system
 message State {
   repeated double q = 1;
@@ -25,10 +26,23 @@ message Model {
 message Interval {
   optional double min_t = 1;
   optional double max_t = 2;
+  optional double res_t = 3;
 }
 
 message TimeSeries {
   repeated double t = 1;
   repeated Model model = 2;
   optional Interval interval = 3;
+}
+
+// ROBOT <--> PLANNER
+// PLANNER --> SIMULATOR
+message Policy {
+  optional string directory = 1;
+  optional double duration  = 2;
+  optional TimeSeries Result = 3;
+}
+
+message PolicyList {
+  repeated Policy policy = 1;
 }

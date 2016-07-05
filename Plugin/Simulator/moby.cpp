@@ -20,8 +20,6 @@
 #include <osgGA/StateSetManipulator>
 #endif
 
-#include <Pacer/Random.h>
-
 #include <time.h>
 bool control_kinematics = false;
 

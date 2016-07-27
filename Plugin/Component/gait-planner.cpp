@@ -994,11 +994,19 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   gait_pose = boost::shared_ptr<Pose3d>( new Pose3d() );
   
-  if( !ctrl->get_data<Pose3d>("base_stability_frame",*(gait_pose.get())))
-    *(gait_pose.get()) = *(base_frame.get());
-  gait_pose->update_relative_pose(base_frame);
-  gait_pose->q.to_rpy(roll_pitch_yaw);
+//  if( !ctrl->get_data<Pose3d>("base_stability_frame",*(gait_pose.get())))
+//    *(gait_pose.get()) = *(base_frame.get());
+//  gait_pose->update_relative_pose(base_frame);
+//  gait_pose->q.to_rpy(roll_pitch_yaw);
   
+  {
+    std::vector<double> gait_pose_vector;
+    ctrl->get_data< std::vector<double> >(plugin_namespace+".pose",gait_pose_vector);
+    gait_pose->q = Ravelin::Quatd::rpy(gait_pose_vector[3],gait_pose_vector[4],gait_pose_vector[5]);
+    gait_pose->x = Ravelin::Origin3d(gait_pose_vector[0],gait_pose_vector[1],gait_pose_vector[2]);
+    gait_pose->rpose = base_frame;
+  }
+
   // Assign foot origins (ideal foot placemenet at rest)
   std::vector<Origin3d> origins;
   std::vector<Vector3d> origins_visualize(NUM_FEET);
@@ -1012,7 +1020,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->get_data<double>(plugin_namespace+".height",height);
     
     for(int i=0;i<NUM_FEET;i++){
-      Vector3d origin(ctrl->get_data<Origin3d>(foot_names[i]+".base"),gait_pose);
+      Vector3d origin(ctrl->get_data<Origin3d>(foot_names[i]+".base"),base_frame);
       origin[0] *= length;
       origin[1] *= width;
       origin[2] = -min_reach * height;
@@ -1057,6 +1065,12 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));
+    
+//    if(i == 0){
+//      std::cerr << " x_goal: " << foot_pos[i] << std::endl;
+//      std::cerr << " xd_goal: " << foot_vel[i] << std::endl;
+//      std::cerr << " xdd_goal: " << foot_acc[i] << std::endl;
+//    }
   }
 }
 

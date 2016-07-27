@@ -287,12 +287,12 @@ void constraint_callback_fn(std::vector<Moby::Constraint>& constraints, boost::s
       Ravelin::VectorNd q_des = q[(*it).first];
       Ravelin::VectorNd q_val = q_current[(*it).first];
       Ravelin::VectorNd v_des = (*it).second;
-      std::cout << "q_des = " << q_des << std::endl;
-      std::cout << "q = " << q_val << std::endl;
-      std::cout << "qd_des = " <<  v_des << std::endl;
+//      std::cout << "q_des = " << q_des << std::endl;
+//      std::cout << "q = " << q_val << std::endl;
+//      std::cout << "qd_des = " <<  v_des << std::endl;
 
       (c.qdot_des = v_des) += ((q_des -= q_val) *= Kp);
-      std::cout << c.qdot_des << std::endl;
+//      std::cout << c.qdot_des << std::endl;
       c.inv_dyn_joint = joints_map[(*it).first];
       constraints.push_back(c);
     }

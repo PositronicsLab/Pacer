@@ -57,25 +57,38 @@ std::vector<std::string> get_sample_options(){
   OUT_LOG(logDEBUG)  << "<< Random::generate_parameters";
   
   for(Random::ParamValueMap::iterator it = generated_params.begin(); it != generated_params.end();it++){
+    OUT_LOG(logDEBUG) << it->first ;
+    
     std::vector<std::string> params;
     boost::split(params, it->first, boost::is_any_of("."));
+    OUT_LOG(logDEBUG) << params;
+    
     OUT_LOG(logDEBUG) << "--"<< it->first << " " << it->second;
+    
     PARAMETER_ARGV.push_back("--" + it->first);
+    OUT_LOG(logDEBUG) << "Vector size: " << it->second.size();
+
+    bool is_x_state = (params.back().compare("x") == 0);
+    bool is_xd_state = (params.back().compare("xd") == 0);
     for (int i=0;i<it->second.size(); i++) {
       double value = it->second[i];
       
-      if (params.back().compare("x") == 0) {
+      if (is_x_state) {
         value += joint_position[params.front()][i];
-      } else if (params.back().compare("xd") == 0) {
+      } else if (is_xd_state) {
         value = joint_velocity[params.front()][i] * (value+1.0);
       }
       // Convert to command line argument
       PARAMETER_ARGV.push_back(SSTR(value));
+      OUT_LOG(logDEBUG) << "Value (" << i << ") : " << value;
+
     }
   }
-#else 
+#else
   OUT_LOG(logDEBUG)  << ">> no random generator used";
 #endif
+  OUT_LOG(logDEBUG) << "Parameters: " << PARAMETER_ARGV;
+
   return PARAMETER_ARGV;
 }
 
@@ -116,7 +129,7 @@ void loop(){
   std::cout << "NUM end poses: " << completed_poses.size() << " , t = "<< t << " samples: " << sample_idx << std::endl;
 
   for (int i=0; i<completed_poses.size(); i++) {
-    std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
+//    std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
 
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
   }
@@ -146,23 +159,34 @@ void loop(){
       
       std::vector<std::string> SAMPLE_ARGV = get_sample_options();
       
-      SAMPLE_ARGV.push_back("--stand");
-
-      SAMPLE_ARGV.push_back("--sample");
-      SAMPLE_ARGV.push_back(SSTR(sample_idx));
+      OUT_LOG(logDEBUG) << "Parameters: " << SAMPLE_ARGV;
       
+      bool STAND_ROBOT = false;
+      ctrl->get_data<bool>(plugin_namespace+".standing",STAND_ROBOT);
+      if(STAND_ROBOT)
+        SAMPLE_ARGV.push_back("--stand");
+
       bool EXPORT_XML = false;
       ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
       if(EXPORT_XML){
         SAMPLE_ARGV.push_back("--xml");
       }
 
-      char message[MESSAGE_SIZE];
-      int message_size = 0;
-      for(int i=0;i<SAMPLE_ARGV.size();i++){
-        sprintf(&message[message_size]," %s ",SAMPLE_ARGV[i].c_str());
-        message_size += SAMPLE_ARGV[i].size()+1;
-      }
+//      char message[MESSAGE_SIZE];
+//      int message_size = 0;
+//      sprintf(&message[0],"%s",SAMPLE_ARGV[0].c_str());
+//      for(int i=1;i<SAMPLE_ARGV.size();i++){
+//        sprintf(&message[message_size]," %s",SAMPLE_ARGV[i].c_str());
+//        message_size += SAMPLE_ARGV[i].size();
+//      }
+//      message[message_size] = 0;
+      
+      std::string s;
+      for (std::vector<std::string>::const_iterator i = SAMPLE_ARGV.begin(); i != SAMPLE_ARGV.end(); ++i)
+        s += *i + " ";
+
+      char * message = (char *) s.c_str();
+      message[s.size()-1] = 0;
       
       OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
                      << "\nHas simulator options:\n" << SAMPLE_ARGV;
@@ -173,7 +197,7 @@ void loop(){
       
       {  // write to child
         
-        write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,message_size);
+        write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,s.size());
         
 //        siginfo_t info;
 //        timespec timeout;
@@ -196,21 +220,24 @@ void loop(){
 #endif
     
     
-  } else if (available_threads == 0 && sample_idx < NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "All threads are working: sample " << sample_idx << " out of " << NUM_SAMPLES << ".";
+  }
+  
+  if (available_threads == 0 && sample_idx < NUM_SAMPLES) {
+    OUT_LOG(logINFO) << "All threads ( " << available_threads << " out of " << NUM_THREADS << " ) are working: sample ( " << sample_idx << " out of " << NUM_SAMPLES << " ).";
   } else if (available_threads == 0 && sample_idx == NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "All threads are working and all samples have been started.";
+    OUT_LOG(logINFO) << "All threads ( " << available_threads << " out of " << NUM_THREADS << " ) are working and all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
 //    if (!GET_DATA_ONLINE)
 //      ctrl->close_plugin(plugin_namespace);
   } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "Not all threads are working but all samples have been started.";
+    OUT_LOG(logINFO) << "Not all threads are working ( " << available_threads << " out of " << NUM_THREADS << " ) but all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
 //    if (!GET_DATA_ONLINE)
 //      ctrl->close_plugin(plugin_namespace);
   }
   
-  if(/* sample_idx == NUM_SAMPLES && */ available_threads == NUM_THREADS){
+  if( sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
+    OUT_LOG(logINFO) << "All samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started, all threads are done ( " << available_threads << " out of " << NUM_THREADS << " )";
     OUT_LOG(logINFO) << "Experiment Complete";
-    ctrl->close_plugin(plugin_namespace);
+//    ctrl->close_plugin(plugin_namespace);
   }
   
   return;

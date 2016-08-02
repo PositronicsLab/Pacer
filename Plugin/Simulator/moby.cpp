@@ -380,10 +380,6 @@ void post_step_callback_fn(Moby::Simulator* s){
 
   robot_ptr->get_data<bool>("moby.display-moby-skeleton",display_moby_skeleton);
   robot_ptr->get_data<bool>("moby.display-pacer-skeleton",display_pacer_skeleton);
-#ifndef NDEBUG
-  display_moby_skeleton = true;
-  display_pacer_skeleton = true;
-#endif
 
 #ifdef USE_OSG_DISPLAY
   if(display_moby_skeleton){

@@ -5,6 +5,8 @@ option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
   add_library(monte-carlo-simulation MODULE simulate.cpp)
   target_link_libraries(monte-carlo-simulation ${REQLIBS})
+  add_library(monte-carlo-print MODULE print.cpp)
+  target_link_libraries(monte-carlo-print ${REQLIBS})
 endif(BUILD_MONTECARLO)
 
 #find BOOST libraries

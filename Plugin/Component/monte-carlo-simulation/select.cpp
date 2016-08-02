@@ -197,6 +197,7 @@ static void *listen_for_child_return_loop(void* data){
   OUT_LOG(logINFO) << "LISTENER: listen_for_child_return_loop()";
   while(1){
     listen_for_child_return();
+    sleep(1);
   }
 }
 
@@ -266,7 +267,6 @@ static void spawn_process(SampleConditions& sc, int thread_number){
     throw std::runtime_error("Could not open CHILD_TO_PARENT pipe to worker process.");
   }
   
-  
   OUT_LOG(logDEBUG)  << "(CHILD) " << sample_processes[thread_number].CHILD_TO_PARENT[WRITE_INDEX] << " --> " << sample_processes[thread_number].CHILD_TO_PARENT[READ_INDEX] << " (PARENT)";
   OUT_LOG(logDEBUG)  << "(PARENT) " << sample_processes[thread_number].PARENT_TO_CHILD[WRITE_INDEX] << " --> " << sample_processes[thread_number].PARENT_TO_CHILD[READ_INDEX] << " (CHILD)";
   OUT_LOG(logDEBUG) << "Forking Process!";
@@ -300,10 +300,12 @@ static void spawn_process(SampleConditions& sc, int thread_number){
     
     SAMPLE_ARGV.push_back("--stepsize");
     SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
-    
+
     if(ctrl->get_data<bool>(plugin_namespace+".display")){
       SAMPLE_ARGV.push_back("--display");
     }
+    SAMPLE_ARGV.push_back("--sample");
+    SAMPLE_ARGV.push_back("0");
     
     char* const* exec_argv = param_array(SAMPLE_ARGV);
     OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
@@ -422,5 +424,5 @@ void register_exit_sighandler(){
   memset( &action, 0, sizeof(struct sigaction) );
   //  action.sa_handler = exit_sighandler;
   action.sa_sigaction = exit_sighandler; // NEW
-  sigaction( SIGCHLD, &action, NULL );
+//  sigaction( SIGCHLD, &action, NULL );
 }

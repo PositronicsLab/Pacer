@@ -30,7 +30,7 @@
 #define DEBUG_OUTPUT
 #ifndef DEBUG_OUTPUT
 #define logging \
-if (0) ; \
+if (1) ; \
 else std::cout
 #else
 #define logging \
@@ -40,6 +40,22 @@ else std::cout
 
 #define SSTR( x ) (( std::ostringstream() << std::dec << x ) ).str()
 
+#include <cstdlib>
+#include <ctime>
+
+static const char alphanum[] =
+"0123456789"
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+"abcdefghijklmnopqrstuvwxyz";
+
+int stringLength = sizeof(alphanum) - 1;
+
+char genRandom()  // Random string generator function.
+{
+  return alphanum[rand() % stringLength];
+}
+
+  
 using Moby::Simulator;
 using Ravelin::RigidBodyd;
 using Ravelin::Jointd;
@@ -51,6 +67,7 @@ using boost::shared_ptr;
 
 bool EXPORT_XML = false;
 int SAMPLE_NUMBER = 0;
+bool UPDATE_MODEL = true;
 
 int CHILD_TO_PARENT_WRITE = 0;
 int PARENT_TO_CHILD_READ = 0;
@@ -88,7 +105,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   
   po::options_description desc("Monte Carlo Method state (applied at simulator start) uncertainty options");
   desc.add_options()
-  ("help", "produce help message")  
+  ("help", "produce help message")
   ("stand", "put robot on ground")
   ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
   ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
@@ -177,72 +194,72 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   
   // Update robot state
   robot->update_link_poses();
-
+  
   double lowest_point_z = 0;
   
   ///////// Project robot up to standing on plane //////////////
   if(vm.count("stand")){
-  BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
-    shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
-    if(rb->is_end_effector()){ // radius of spherical link
-      boost::shared_ptr<Ravelin::Pose3d> foot_pose(new Ravelin::Pose3d(*(rb->get_pose().get())));
-      foot_pose->update_relative_pose(robot->get_base_link()->get_pose());
-      
-      // get foot geometry
-      Moby::CollisionGeometryPtr foot_geometry;
-      shared_ptr<Moby::SpherePrimitive> foot_primitive;
-
-      BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
-        Moby::PrimitivePtr primitive = cg->get_geometry();
-        foot_primitive = boost::dynamic_pointer_cast<Moby::SpherePrimitive>(primitive);
-        if(foot_primitive){
-          foot_geometry = cg;
-          break;
+    BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
+      shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
+      if(rb->is_end_effector()){ // radius of spherical link
+        boost::shared_ptr<Ravelin::Pose3d> foot_pose(new Ravelin::Pose3d(*(rb->get_pose().get())));
+        foot_pose->update_relative_pose(robot->get_base_link()->get_pose());
+        
+        // get foot geometry
+        Moby::CollisionGeometryPtr foot_geometry;
+        shared_ptr<Moby::SpherePrimitive> foot_primitive;
+        
+        BOOST_FOREACH(Moby::CollisionGeometryPtr cg, rb->geometries){
+          Moby::PrimitivePtr primitive = cg->get_geometry();
+          foot_primitive = boost::dynamic_pointer_cast<Moby::SpherePrimitive>(primitive);
+          if(foot_primitive){
+            foot_geometry = cg;
+            break;
+          }
         }
+        
+        Vector3d foot_radius(0,0,-foot_primitive->get_radius(),Moby::GLOBAL);
+        Vector3d lowest_point = Ravelin::Pose3d::transform_vector(robot->get_base_link()->get_pose(),foot_radius);
+        lowest_point += Vector3d(foot_pose->x,robot->get_base_link()->get_pose());
+        lowest_point_z = std::min(lowest_point_z,lowest_point[2]);
       }
+    }
+    
+    {
+      logging << "moving robot to just above the ground: "<< lowest_point_z << std::endl;
       
-      Vector3d foot_radius(0,0,-foot_primitive->get_radius(),Moby::GLOBAL);
-      Vector3d lowest_point = Ravelin::Pose3d::transform_vector(robot->get_base_link()->get_pose(),foot_radius);
-      lowest_point += Vector3d(foot_pose->x,robot->get_base_link()->get_pose());
-      lowest_point_z = std::min(lowest_point_z,lowest_point[2]);
+      // Get robot velocity
+      Ravelin::VectorNd q;
+      robot->get_generalized_coordinates_euler(q);
+      int N_JOINT_DOFS = q.rows()-7;
+      // update base position
+      q[N_JOINT_DOFS+2] = -lowest_point_z;
+      
+      // apply changes
+      robot->set_generalized_coordinates_euler(q);
+      logging << "Set coords to : " << q << std::endl;
     }
   }
-  
-  {
-    logging << "moving robot to just above the ground: "<< lowest_point_z << std::endl;
-    
-    // Get robot velocity
-    Ravelin::VectorNd q;
-    robot->get_generalized_coordinates_euler(q);
-    int N_JOINT_DOFS = q.rows()-7;
-    // update base position
-      q[N_JOINT_DOFS+2] = -lowest_point_z;
-    
-    // apply changes
-    robot->set_generalized_coordinates_euler(q);
-    logging << "Set coords to : " << q << std::endl;
-  }
-}
-//  else {
-//	  {
-//    logging << "moving robot to not touch the ground: "<< lowest_point_z << std::endl;
-//    
-//    // Get robot velocity
-//    Ravelin::VectorNd q;
-//    robot->get_generalized_coordinates_euler(q);
-//    int N_JOINT_DOFS = q.rows()-7;
-//    // update base position
-//      q[N_JOINT_DOFS+2] = 1;
-//    
-//    // apply changes
-//    robot->set_generalized_coordinates_euler(q);
-//    logging << "Set coords to : " << q << std::endl;
-//  }
-//}
+  //  else {
+  //	  {
+  //    logging << "moving robot to not touch the ground: "<< lowest_point_z << std::endl;
+  //
+  //    // Get robot velocity
+  //    Ravelin::VectorNd q;
+  //    robot->get_generalized_coordinates_euler(q);
+  //    int N_JOINT_DOFS = q.rows()-7;
+  //    // update base position
+  //      q[N_JOINT_DOFS+2] = 1;
+  //
+  //    // apply changes
+  //    robot->set_generalized_coordinates_euler(q);
+  //    logging << "Set coords to : " << q << std::endl;
+  //  }
+  //}
   
   // Update robot state
   robot->update_link_poses();
-
+  
   if(vm.count("BODY0.xd")){
     logging << "applying state uncertainty to base (velocity)" << std::endl;
     
@@ -272,7 +289,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   
   // Update robot state
   robot->update_link_velocities();
-
+  
 }
 
 void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd>& robot){
@@ -281,10 +298,12 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   desc.add_options()
   ("help", "produce help message");
   
+  logging << "Adding Options" << std::endl;
+
   // Joints
   BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
     std::string name,help;
-
+    
     if (jp->num_dof() == 1) {
       name = std::string(jp->joint_id+".axis");
       help = std::string("Axis vector in model (base link) frame of REVOLUTE Joint: "+jp->joint_id);
@@ -293,7 +312,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
     }
   }
-
+  
   
   BOOST_FOREACH(shared_ptr<RigidBodyd> rb, robot->get_links()){
     std::string name,help;
@@ -302,14 +321,14 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       help = std::string("Density [kg/m^3] applied of link (default is solid polycarbonate): "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
+      (name.c_str(), po::value<double>(),help.c_str());
       
       name = std::string(rb->body_id+".mass");
       help = std::string("Mass [kg] applied to link: "+rb->body_id);
       
       desc.add_options()
       (name.c_str(), po::value<double>(),help.c_str());
-
+      
     }
     
     if(rb->is_base()){
@@ -324,13 +343,13 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       name = std::string(rb->body_id+".length");
       help = std::string("LENGTH [m] of link LENGTH dimension (along limb axis): "+rb->body_id);
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(0.1),help.c_str());
+      (name.c_str(), po::value<double>(),help.c_str());
       
       name = std::string(rb->body_id+".radius");
       help = std::string("Radius [m] of link RADIUS dimension: "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(0.005),help.c_str());
+      (name.c_str(), po::value<double>(),help.c_str());
     }
     
     if(rb->is_end_effector()){ // radius of spherical link
@@ -338,13 +357,13 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       help = std::string("Radius [m] of foot RADIUS dimension: "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(0.01),help.c_str());
+      (name.c_str(), po::value<double>(),help.c_str());
       
       name = std::string(rb->body_id+".foot.density");
       help = std::string("Density [kg/m^3] applied to link's spherical end effector (default is solid polycarbonate): "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
+      (name.c_str(), po::value<double>(),help.c_str());
       
       name = std::string(rb->body_id+".foot.mass");
       help = std::string("Mass [kg] applied to link's spherical end effector: "+rb->body_id);
@@ -354,9 +373,13 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     }
   }
   
+  logging << "Parsing Options" << std::endl;
+
   po::variables_map vm;
+  
   po::parsed_options parsed
   = po::command_line_parser(argc, argv).options(desc).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).allow_unregistered().run();
+  
   po::store(parsed, vm);
   
   if ( vm.count("help")  )
@@ -369,10 +392,15 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
    *  Parameter Application
    */
   
-//  shared_ptr<RigidBodyd> base_link_ptr = robot->get_base_link();
-//  shared_ptr<const Pose3d> model_pose = base_link_ptr->get_pose();
+  logging << "Joints" << std::endl;
+
+  
+  //  shared_ptr<RigidBodyd> base_link_ptr = robot->get_base_link();
+  //  shared_ptr<const Pose3d> model_pose = base_link_ptr->get_pose();
   BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
     shared_ptr<RevoluteJointd> rjp = boost::dynamic_pointer_cast<RevoluteJointd>(jp);
+    logging << "Joint: " << jp->joint_id << std::endl;
+
     if(vm.count(jp->joint_id+".axis")){
       std::vector<double> axis = vm[jp->joint_id+".axis"].as<std::vector<double> >();
       
@@ -381,8 +409,8 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       Vector3d new_joint_axis(&axis[0],joint_axis.pose);
       new_joint_axis.normalize();
       logging << "new_joint_axis" << new_joint_axis << std::endl;
-//      Vector3d new_joint_axis_inner_fame = Pose3d::transform_vector(joint_axis.pose,new_joint_axis);
-//      logging << "new_joint_axis_inner_fame" << new_joint_axis_inner_fame << std::endl;
+      //      Vector3d new_joint_axis_inner_fame = Pose3d::transform_vector(joint_axis.pose,new_joint_axis);
+      //      logging << "new_joint_axis_inner_fame" << new_joint_axis_inner_fame << std::endl;
       rjp->set_axis(new_joint_axis);
       rjp->update_spatial_axes();
       robot->update_link_poses();
@@ -390,14 +418,18 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   }
   
   
+  logging << "Links" << std::endl;
+
   // Perturb mass of robot link by scaling by parameter
   BOOST_FOREACH(shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
     shared_ptr<Moby::RigidBody> rb = boost::dynamic_pointer_cast<Moby::RigidBody>(rbd);
+    logging << "Link: " << rb->body_id << std::endl;
+
     // Link Length Adjustment
-//#ifdef USE_OSG_DISPLAY
-//    osg::Group* no_viz_data = new osg::Group();
-//    rb->set_visualization_data(no_viz_data);
-//#endif
+    //#ifdef USE_OSG_DISPLAY
+    //    osg::Group* no_viz_data = new osg::Group();
+    //    rb->set_visualization_data(no_viz_data);
+    //#endif
     
     bool LINK_IS_END_EFFECTOR = rb->is_end_effector();
     bool LINK_IS_BASE = rb->is_base();
@@ -406,21 +438,29 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     double mass     = -1;
     if (vm.count(rb->body_id+".mass")) mass = vm[rb->body_id+".mass"].as<double>();
     
-    double density  =                 vm[rb->body_id+".density"].as<double>();
-    double length   = (LINK_IS_LIMB)? vm[rb->body_id+".length"].as<double>() : 0;
-    double radius   = (LINK_IS_LIMB)? vm[rb->body_id+".radius"].as<double>() : 0;
+    double density  = -1;
+    if(   vm.count(rb->body_id+".density")) density = vm[rb->body_id+".density"].as<double>();
+    double length   = -1;
+    if(   vm.count(rb->body_id+".length")) length = (LINK_IS_LIMB)? vm[rb->body_id+".length"].as<double>() : -1;
+    double radius   = -1;
+    if(   vm.count(rb->body_id+".radius")) radius = (LINK_IS_LIMB)? vm[rb->body_id+".radius"].as<double>() : -1;
     
     //////////////// FOOT DATA /////////////////
     double foot_mass    = -1;
     if (vm.count(rb->body_id+".foot.mass")) foot_mass = vm[rb->body_id+".foot.mass"].as<double>();
     
-    double foot_density = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.density"].as<double>() : 0;
-    double foot_radius  = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.radius"].as<double>() : 0;
+    double foot_density = -1;
+    if(   vm.count(rb->body_id+".foot.density")) foot_density = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.density"].as<double>() : 0;
+    double foot_radius  = -1;
+    if(   vm.count(rb->body_id+".foot.radius")) foot_radius = (LINK_IS_END_EFFECTOR)? vm[rb->body_id+".foot.radius"].as<double>() : 0;
     Moby::CollisionGeometryPtr foot_geometry;
     shared_ptr<Moby::SpherePrimitive> foot_primitive;
     
     //    Moby::CollisionGeometryPtr limb_geometry;
     //    shared_ptr<Moby::CylinderPrimitive> limb_primitive;
+    
+    if(density == -1 && mass == -1 && length == -1 && radius == -1)
+      continue;
     
     Moby::CollisionGeometryPtr base_geometry;
     shared_ptr<Moby::BoxPrimitive> base_primitive;
@@ -521,8 +561,9 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     // Link Mass Adjustment
     {
       Ravelin::SpatialRBInertiad J_link(rb->get_inertia());
-      if (LINK_IS_LIMB){ // Cylinder limb
-                         // cylinder V = pi*h*r^2
+      if (LINK_IS_LIMB && (mass > 0 || (density > 0 && radius > 0) ) ){
+        // Cylinder limb
+        // cylinder V = pi*h*r^2
         double volume = M_PI*length*sqr(radius);
         // m = d*V
         if (mass <= 0) {
@@ -562,7 +603,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
           double J[3] = {inertia,inertia,inertia};
           
           logging << "Sample " << SAMPLE_NUMBER << " : Link (foot) "<< rb->body_id.c_str() << " mass = "<< mass ;
-
+          
           Ravelin::SpatialRBInertiad J_foot;
           J_foot.m = mass;
           J_foot.J = Ravelin::Matrix3d(J[0],0,0,
@@ -582,23 +623,23 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
           J_foot_new.pose = J_link.pose;
           J_link += J_foot_new;
         }
-
+        
       } else if (LINK_IS_BASE) {
         if (vm.count(rb->body_id+".size")) {
           std::vector<double> size = vm[rb->body_id+".size"].as<std::vector<double> >();
           double x = size[0],
-                 y = size[1],
-                 z = size[2];
+          y = size[1],
+          z = size[2];
           
           // Adjust collision and weight affecting values
           base_primitive->set_size(x,y,z);
         }
-
+        
         
         // Box V = x * y * z
         double x = base_primitive->get_x_len(),
-               y = base_primitive->get_y_len(),
-               z = base_primitive->get_z_len();
+        y = base_primitive->get_y_len(),
+        z = base_primitive->get_z_len();
         
         const std::set<shared_ptr<Jointd> >& outers = rb->get_outer_joints();
         // Adjust kinematics
@@ -657,7 +698,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
                                      0,0,J[2]);
       }
       logging << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" mass = " << J_link.m << std::endl
-        <<" inertia = " << J_link.J << std::endl;
+      <<" inertia = " << J_link.J << std::endl;
       rb->set_inertia(J_link);
     }
   }
@@ -671,8 +712,7 @@ void parse_sample_options(int argc, char* argv[]){
   // INPUT BY EXPERIMENT
   ("xml,y","Output XML model file for robot");
   // INPUT BY USER
-//  ("sample", po::value<int>(),"Sample Number");
- 
+  
   logging << "Parsing Variable Map from command line" << std::endl;
   
   po::variables_map vm;
@@ -686,12 +726,12 @@ void parse_sample_options(int argc, char* argv[]){
   
   
   // Get sample number for output
-//  if (vm.count("sample")) {
-//    SAMPLE_NUMBER = vm["sample"].as<int>();
-//  } else {
-//    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
-//    throw std::runtime_error("Sample did not get a sample number, likely parent quit or pipe was closed.  Exiting this simulation.");
-//  }
+  //  if (vm.count("sample")) {
+  //    SAMPLE_NUMBER = vm["sample"].as<int>();
+  //  } else {
+  //    fprintf(stdout,"Sample with PID: %d did not get a sample number", pid);
+  //    throw std::runtime_error("Sample did not get a sample number, likely parent quit or pipe was closed.  Exiting this simulation.");
+  //  }
   
   logging << "Sample with PID: "<< pid << " has sample number "<< SAMPLE_NUMBER << std::endl;
   
@@ -715,9 +755,10 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   ("help", "produce help message")
   ("stepsize,s", po::value<std::string>()->default_value("0.001"), "set step size (virtual time) of each iteration of the simulatior")
   ("display,r","visualize in moby")
+  ("moby",  po::value<std::vector<std::string> >()->multitoken(), "moby options?")
   ("duration", po::value<std::string>()->default_value("0"),"Duration of simulation.");
-//  ("sample", po::value<unsigned>(),"Sample Number");
   
+  //  ("sample", po::value<unsigned>(),"Sample Number");
   logging << "Parsing Variable Map from command line" << std::endl;
   
   po::variables_map vm;
@@ -773,6 +814,13 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
     //argvs.push_back("-v=0");
   }
   argvs.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
+  
+  if (vm.count("moby")) {
+    std::vector<std::string> opts = vm["moby"].as<std::vector<std::string> >();
+    for (int i=0;i<opts.size(); i++) {
+      argvs.push_back(opts[i]);
+    }
+  }
   argvs.push_back("model.xml");
   //  argvs.push_back("start.xml");
   
@@ -808,7 +856,9 @@ void parse_command_line_options(int argc, char* argv[]){
   ("help", "produce help message")
   ("readpipe", po::value<int>()->default_value(0),"PARENT_TO_CHILD_READ")
   ("writepipe", po::value<int>()->default_value(0),"CHILD_TO_PARENT_WRITE")
-  ("no-pipe","expect piped parameters?");
+  ("no-pipe","expect piped parameters?")
+  ("same-model","do not update model?")
+  ("sample",po::value<int>(),"sample number for this process");
   
   logging << "Parsing Variable Map from command line" << std::endl;
   
@@ -821,6 +871,15 @@ void parse_command_line_options(int argc, char* argv[]){
   
   logging << "Parsed Variable Map from command line" << std::endl;
   
+  if(vm.count("sample")){
+    SAMPLE_NUMBER = vm["sample"].as<int>();
+  } else {
+    SAMPLE_NUMBER = 0;
+  }
+
+  
+  if(vm.count("same-model"))
+    UPDATE_MODEL = false;
   if (vm.count("no-pipe")) {
     USE_PIPES = false;
   } else {
@@ -853,19 +912,20 @@ void parse_command_line_options(int argc, char* argv[]){
 
 int main(int argc_main, char* argv_main[]){
   logging << " -- Sample Started -- " << std::endl;
+  srand(time(0));
   
   // Cet this process's PID for debugging
   pid = getpid();
   
   parse_command_line_options(argc_main,argv_main);
-
+  
   
   // Setup this instance of moby
   shared_ptr<Simulator> sim;
   
-  logging << " -- Starting Simulator -- " << std::endl;
+  logging << " -> Starting Simulator -- " << std::endl;
   preload_simulation(argc_main,argv_main, sim);
-  logging << " -- Started Simulator -- " << std::endl;
+  logging << " -- Started Simulator -> " << std::endl;
   
   if(!sim)
     throw std::runtime_error("Could not start Moby");
@@ -879,168 +939,208 @@ int main(int argc_main, char* argv_main[]){
   BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
     if(!robot)
       robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
-    if(!environment)
+    if(!environment){
       environment = boost::dynamic_pointer_cast<RigidBodyd>(db);
+      std::cerr << " Found object : " << db->id << std::endl;
+      if(db->id.compare("BLOCK") != 0){
+        environment.reset();
+      }
+    }
   }
+  if(environment->body_id.compare("BLOCK") != 0)
+    throw std::runtime_error("Could not find block");
   
   // Fail if moby was inited wrong
   if(!robot)
     throw std::runtime_error("Could not find robot");
   
   logging << " -- Found Robot -- " << std::endl;
-
-simulation_start:
-
-  std::string message_str;
   
-  int argc_sample;
-  char** argv_sample;
-  if(USE_PIPES){
-    std::cerr << " Sample with PID: "<< pid <<  " Started! waiting on piped parameters: "<< std::endl;
+    std::string message_str;
     
-    char message[MESSAGE_SIZE];
-    // Block on read until next simulation is scheduled
-    if( read(PARENT_TO_CHILD_READ, message, sizeof(message)) == -1 ) {
-      throw std::runtime_error("Could not read anything from pipe!");
+    int argc_sample;
+    char** argv_sample;
+    if(USE_PIPES){
+      std::cerr << " Sample with PID: "<< pid <<  " Started! waiting on piped parameters: "<< std::endl;
+      
+      char message[MESSAGE_SIZE];
+      // Block on read until next simulation is scheduled
+      if( read(PARENT_TO_CHILD_READ, message, sizeof(message)) == -1 ) {
+        throw std::runtime_error("Could not read anything from pipe!");
+      }
+      
+      std::cerr << "Sample (" << SAMPLE_NUMBER << ") with PID: "<< pid <<  " read message string: [" << message << "]" << std::endl;
+      
+      std::vector<char*> messagev;
+      messagev.push_back("filler");
+      char* chars_array = strtok(message, " ");
+      while(chars_array)
+      {
+        messagev.push_back(chars_array);
+        chars_array = strtok(NULL, " ");
+      }
+      argc_sample = messagev.size();
+      argv_sample = &messagev[0];
+      
+      logging << "Message vector: " << messagev << std::endl;
+    } else {
+      argc_sample = argc_main;
+      argv_sample = argv_main;
     }
+    // Setup this instance of moby
+    logging << " -> parse_sample_options -- " << std::endl;
+    parse_sample_options(argc_sample,argv_sample);
+    logging << " -- parse_sample_options -> " << std::endl;
+    //  sim->current_time = 0;
     
-    std::cerr << "Sample with PID: "<< pid <<  " read message string: " << message << std::endl;
+    //  if(!environment)
+    //    throw std::runtime_error("Could not find environment");
     
-    std::vector<char*> messagev;
-    messagev.push_back("filler");
-    char* chars_array = strtok(message, " ");
-    while(chars_array)
-    {
-      messagev.push_back(chars_array);
-      chars_array = strtok(NULL, " ");
-    }
-    argc_sample = messagev.size();
-    argv_sample = &messagev[0];
+    //  logging << " -- Found Environment -- " << std::endl;
     
-    logging << "Message vector: " << messagev << std::endl;
-  } else {
-    argc_sample = argc_main;
-    argv_sample = argv_main;
-  }
-  // Setup this instance of moby
-  logging << " -- parse_sample_options -- " << std::endl;
-  parse_sample_options(argc_sample,argv_sample);
-  logging << " -- parse_sample_options -- " << std::endl;
-  sim->current_time = 0;
-  
-  //  if(!environment)
-  //    throw std::runtime_error("Could not find environment");
-  
-  //  logging << " -- Found Environment -- " << std::endl;
-  
-//
-  // Apply uncertainty to robot model
-  apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
-  
-  if(EXPORT_XML){
-    // write the file (fails silently)
-    logging << " -- Exporting robot model file -- " << std::endl;
+    //
+    // Apply uncertainty to robot model
+    logging << " -> apply_manufacturing_uncertainty -- " << std::endl;
+    if(UPDATE_MODEL)
+      apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
+    logging << " -- apply_manufacturing_uncertainty -> " << std::endl;
     
-//     Reset robot state to adjust robot model
+    if(EXPORT_XML){
+      // write the file (fails silently)
+      logging << " -- Exporting robot model file -- " << std::endl;
+      
+      //     Reset robot state to adjust robot model
       Ravelin::VectorNd q_starting_position,q_current_position;
       robot->get_generalized_coordinates_euler(q_starting_position);
       q_current_position = q_starting_position;
       q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
       robot->set_generalized_coordinates_euler(q_current_position);
-
-    char buffer[128];
-    sprintf(buffer, "model-%06u.xml", pid);
-    boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
-    Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim );
-    robot->set_generalized_coordinates_euler(q_starting_position);
-  }
-  
-  // Apply uncertainty to robot initial conditions
-  logging << " -- Applying State Uncertainty -- " << std::endl;
-  apply_state_uncertainty(argc_sample,argv_sample,robot);
-  logging << " -- Applied State Uncertainty -- " << std::endl;
-
-  /*
-   *  Running experiment
-   */
-//  robot->set_generalized_coordinates_euler(q_starting_position);
-
+      
+      char buffer[128];
+      sprintf(buffer, "model-%06u.xml", pid);
+      boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
+      Moby::XMLWriter::serialize_to_xml(std::string(buffer), sim );
+      robot->set_generalized_coordinates_euler(q_starting_position);
+    }
+    
+    // Apply uncertainty to robot initial conditions
+    //  logging << " -> Applying State Uncertainty -- " << std::endl;
+    //  if(UPDATE_MODEL)
+    //    apply_state_uncertainty(argc_sample,argv_sample,robot);
+    //  logging << " -- Applied State Uncertainty -> " << std::endl;
+    
+    /*
+     *  Running experiment
+     */
+    //  robot->set_generalized_coordinates_euler(q_starting_position);
+    
 #ifdef USE_OSG_DISPLAY
     sim->update_visualization();
-  osg::Group * MAIN_GROUP;
-//  if (!MAIN_GROUP) {
+    osg::Group * MAIN_GROUP;
+    //  if (!MAIN_GROUP) {
     MAIN_GROUP = new osg::Group;
     MAIN_GROUP->addChild(sim->get_persistent_vdata());
-//    MAIN_GROUP->addChild(sim->get_transient_vdata());
-//  }
+    //    MAIN_GROUP->addChild(sim->get_transient_vdata());
+    //  }
 #endif
-  
-//#ifndef NDEBUG
-  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
-//#endif
-  bool stop_sim = false;
-  unsigned long long ITER = 0;
     
-  while (!stop_sim &&  sim->current_time < DURATION) {
+    //#ifndef NDEBUG
+    std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
+    //#endif
+    bool stop_sim = false;
+    unsigned long long ITER = 0;
+  
+  /////////// LOGGING , get hand
+  boost::shared_ptr<Ravelin::RigidBodyd> hand;
+  BOOST_FOREACH(boost::shared_ptr<Ravelin::RigidBodyd> rbd, robot->get_links()){
+    if(!hand){
+      if (rbd->body_id.compare("HAND") == 0) {
+        hand = rbd;
+      }
+    }
+  }
+  
+        char String[128] = {0};
+        for(unsigned int i = 0; i < 10; ++i)
+        {
+          String[i] = genRandom();
+        }
+    while (!stop_sim &&  sim->current_time < DURATION) {
 #ifdef USE_OSG_DISPLAY
-    if (ITER % 10 == 0) {
+      if (ITER % 100 == 0) {
+        sim->update_visualization();
+        // write the file (fails silently)
+        char buffer[128];
+        // If you use C's char arrays:
+        sprintf(buffer, "frame-%08llu-%s.osg", ITER,String);
+        osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
+      }
+#endif
+      //    logging << " -- Stepping simulation -- " << std::endl;
+      // NOTE: Applied in Pacer -- for now
+      // apply_control_uncertainty(argc_sample,argv_sample,robot);
+#ifdef NDEBUG
+      if (USE_PIPES) {
+        try {
+          stop_sim = !Moby::step(sim);
+        } catch (std::exception& e) {
+          std::cerr << "There was an error that forced the simulation to stop: "<< e.what() << std::endl;
+          stop_sim = true;
+        }
+      } else
+#endif
+      {
+        stop_sim = !Moby::step(sim);
+      }
+      
+      Vector3d block_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,environment->get_pose()));
+      Vector3d hand_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,hand->get_pose()));
+      // Perturb mass of robot link by scaling by parameter
+      fprintf(stderr,"BLOCK_pose = [ %d %f %llu %f %f %f %f %f %f ]\n",SAMPLE_NUMBER,sim->current_time,ITER,block_point[0],block_point[1],block_point[2],hand_point[0],hand_point[1],hand_point[2]);
+      ITER++;
+    }
+    
+#ifdef USE_OSG_DISPLAY
+    {
       sim->update_visualization();
-      // write the file (fails silently)
+      
       char buffer[128];
-      sprintf(buffer, "frame-%08llu-%d-%d.osg", ITER ,pid,SAMPLE_NUMBER);
+      sprintf(buffer, "last-%d-%d.osg",pid,SAMPLE_NUMBER);
       osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
     }
 #endif
-    //    logging << " -- Stepping simulation -- " << std::endl;
-    // NOTE: Applied in Pacer -- for now
-    // apply_control_uncertainty(argc_sample,argv_sample,robot);
-    try {
-      stop_sim = !Moby::step(sim);
-    } catch (std::exception& e) {
-      std::cerr << "There was an error that forced the simulation to stop: "<< e.what() << std::endl;
-      stop_sim = true;
+    
+    //#ifndef NDEBUG
+    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
+    //#endif
+    /*
+     *  Collecting final data
+     */
+    Ravelin::VectorNd q,qd;
+    robot->get_generalized_coordinates_euler(q);
+    logging << "q2 = " << q << std::endl;
+    
+    std::ostringstream oss;
+    oss << std::dec << sim->current_time ;
+    for (int i=q.rows()-7; i<q.rows() ;i++) {
+      oss << " " << q[i] ;
     }
-//#ifndef NDEBUG
-    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER <<  std::endl;
-//#endif
-    ITER++;
-  }
-  
-#ifdef USE_OSG_DISPLAY
-  {
-    sim->update_visualization();
-
-    char buffer[128];
-    sprintf(buffer, "last-%d-%d.osg",pid,SAMPLE_NUMBER);
-    osgDB::writeNodeFile(*MAIN_GROUP, std::string(buffer));
-  }
-#endif
-  
-//#ifndef NDEBUG
-  std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
-//#endif
-  /*
-   *  Collecting final data
-   */
-  Ravelin::VectorNd q,qd;
-  robot->get_generalized_coordinates_euler(q);
-  logging << "q2 = " << q << std::endl;
-  
-  std::ostringstream oss;
-  oss << std::dec << sim->current_time ;
-  for (int i=q.rows()-7; i<q.rows() ;i++) {
-    oss << " " << q[i] ;
-  }
     message_str = oss.str();
-  
-  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << message_str << std::endl;
-  if (USE_PIPES) {
-    write(CHILD_TO_PARENT_WRITE, message_str.c_str(), message_str.length());
-//    execv( argv_main[0] , argv_main );
-    SAMPLE_NUMBER++;
-    goto simulation_start;
-  }
-  
+    
+    std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message: " << message_str << std::endl;
+    if (USE_PIPES) {
+      write(CHILD_TO_PARENT_WRITE, message_str.c_str(), message_str.length());
+      for (int i=1; i<=argc_main; i++) {
+        if(std::string(argv_main[i]).compare("--sample") == 0){
+          argv_main[i+1] = (char*) SSTR(SAMPLE_NUMBER+1).c_str();
+          break;
+        }
+      }
+      execv( argv_main[0] , argv_main );
+//      restart = true;
+    }
+//  }
+//  while (restart);
   // Quit like this because quitting normally leads to weird deconstructor errors.
   throw std::runtime_error("Sample exited!");
   

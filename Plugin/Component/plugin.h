@@ -26,13 +26,13 @@ void update(const boost::shared_ptr<Pacer::Controller>& ctrl, double t){
   static int ITER = -1;
   int RTF = ctrl->get_data<int>(plugin_namespace+".real-time-factor");
   if(++ITER % RTF == 0){
-#ifndef NDEBUG
+#ifdef NDEBUG
     try {
 #endif
       OUT_LOG(logDEBUG4) << plugin_namespace << " is at iteration (" << ITER
       << ") with RTF (" << RTF << ") at time "<< t << std::endl;
       loop();
-#ifndef NDEBUG
+#ifdef NDEBUG
     }
     catch (std::exception& e) {
       throw std::runtime_error(plugin_namespace+" failed with error: " + e.what());

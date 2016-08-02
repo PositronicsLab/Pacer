@@ -65,19 +65,22 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     VISUALIZE(RAY( xdd_global+xd_global+x_global,   xd_global+x_global,   Ravelin::Vector3d(1,1,0),0.005));
 
     ////// enforce maximum reach on legs ////////////
-    Ravelin::Origin3d base_joint = ctrl->get_data<Ravelin::Origin3d>(foot_name+".base");
-    double max_reach = ctrl->get_data<double>(foot_name+".reach");
     
-    Ravelin::Origin3d goal_from_base_joint = x - base_joint;
-    double goal_reach = goal_from_base_joint.norm();
-    OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
-    
-    if(goal_reach > max_reach){
-      OUT_LOG(logDEBUG1) << foot_name << " goal reduced from: " << x ;
-      x = base_joint + goal_from_base_joint * (max_reach/goal_reach);
-      OUT_LOG(logDEBUG1) << " to: " << x ;
+    Ravelin::Origin3d base_joint;
+    if(ctrl->get_data<Ravelin::Origin3d>(foot_name+".base",base_joint)){
+      double max_reach = ctrl->get_data<double>(foot_name+".reach");
+      
+      Ravelin::Origin3d goal_from_base_joint = x - base_joint;
+      double goal_reach = goal_from_base_joint.norm();
+      OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
+      
+      if(goal_reach > max_reach){
+        OUT_LOG(logDEBUG1) << foot_name << " goal reduced from: " << x ;
+        x = base_joint + goal_from_base_joint * (max_reach/goal_reach);
+        OUT_LOG(logDEBUG1) << " to: " << x ;
+      }
     }
-
+    
     foot_pos.push_back(x);
     foot_vel.push_back(xd);
     foot_acc.push_back(xdd);
@@ -109,22 +112,6 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   ctrl->end_effector_inverse_kinematics(ik_feet,foot_pos,foot_vel,foot_acc,q,
                                         q_goal,qd_goal,qdd_goal,TOL);
 
-  Ravelin::VectorNd vqd, vqdd;
-  (vqd = qd_goal) /=  dt;
-  (vqdd = qdd_goal) /= dt;
-  
-  std::cerr << " q_goal: " << q_goal << std::endl;
-  std::cerr << " qd_goal: " << vqd << std::endl;
-  std::cerr << " qdd_goal: " << vqdd << std::endl;
-
-//  if(dt > 0){
-//    qd_goal /=  dt;
-//    qdd_goal /= dt;
-//  } else {
-//    qd_goal.set_zero();
-//    qdd_goal.set_zero();
-//  }
-  
   ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);

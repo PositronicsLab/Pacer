@@ -5,9 +5,38 @@
     <pose>0 0 0 0 0 0</pose>
     
     <!-- =============================== LF leg =============================== -->
+    <link name='LINK_0'>
+      <pose>0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>1</mass>
+        <inertia>
+          <ixx>1.5e-5</ixx>
+          <ixy>0.0</ixy>
+          <ixz>-0.0</ixz>
+          <iyy>3e-5</iyy>
+          <iyz>-0.0</iyz>
+          <izz>3e-5</izz>
+        </inertia>
+      </inertial>
+      
+      <visual name='link_visual'>
+        <geometry>
+          <box>
+            <size>0.05 0.05 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0 0 0 0</emissive>
+        </material>
+      </visual>
+    </link>
+    
     <joint name='X_1' type='revolute'>
       <pose>-0.05 0 0 0 0 0</pose>
-      <parent>world</parent>
+      <parent>LINK_0</parent>
       <child>LINK_1</child>
       <axis>
         <xyz>1 0 0</xyz>
@@ -331,10 +360,10 @@
       -->
     </link>
     
-    <joint name='F_0' type='revolute'>
+    <joint name='F_00' type='revolute'>
       <pose>-0.05 0 0 0 0 0</pose>
       <parent>HAND</parent>
-      <child>FINGER0</child>
+      <child>FINGER00</child>
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
@@ -344,10 +373,10 @@
         <dynamics/>
       </axis>
     </joint>
-    <joint name='F_1' type='revolute'>
+    <joint name='F_01' type='revolute'>
       <pose>-0.05 0 0 0 0 0</pose>
       <parent>HAND</parent>
-      <child>FINGER1</child>
+      <child>FINGER01</child>
       <axis>
         <xyz>0 1 0</xyz>
         <limit>
@@ -357,10 +386,10 @@
         <dynamics/>
       </axis>
     </joint>
-    <joint name='F_2' type='revolute'>
+    <joint name='F_10' type='revolute'>
       <pose>-0.05 0 0 0 0 0</pose>
       <parent>HAND</parent>
-      <child>FINGER2</child>
+      <child>FINGER10</child>
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
@@ -370,10 +399,10 @@
         <dynamics/>
       </axis>
     </joint>
-    <joint name='F_3' type='revolute'>
+    <joint name='F_11' type='revolute'>
       <pose>-0.05 0 0 0 0 0</pose>
       <parent>HAND</parent>
-      <child>FINGER3</child>
+      <child>FINGER11</child>
       <axis>
         <xyz>0 -1 0</xyz>
         <limit>
@@ -384,7 +413,7 @@
       </axis>
     </joint>
     
-    <link name='FINGER0'>
+    <link name='FINGER00'>
       <pose>0.70 -0.02 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -454,7 +483,7 @@
         <update_rate>1000</update_rate>
       </sensor>
     </link>
-    <link name='FINGER1'>
+    <link name='FINGER01'>
       <pose>0.70 0.02 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -524,7 +553,7 @@
         <update_rate>1000</update_rate>
       </sensor>
     </link>
-    <link name='FINGER2'>
+    <link name='FINGER10'>
       <pose>0.70 -0.02 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -594,7 +623,7 @@
         <update_rate>1000</update_rate>
       </sensor>
     </link>
-    <link name='FINGER3'>
+    <link name='FINGER11'>
       <pose>0.70 0.02 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>

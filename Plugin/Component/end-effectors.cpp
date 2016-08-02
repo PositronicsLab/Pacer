@@ -8,8 +8,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   static double start_time = t;
   
   const  std::vector<std::string>
-  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
-  
+//  eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
+  eef_names_ = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".id");
+
   int NUM_FEET = eef_names_.size();
   
   boost::shared_ptr<Ravelin::Pose3d> base_frame( new Ravelin::Pose3d(ctrl->get_data<Ravelin::Pose3d>("base_link_frame")));

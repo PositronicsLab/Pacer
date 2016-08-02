@@ -293,10 +293,10 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   }
   
   std::map<std::string, unsigned> finger_index;
-  finger_index["FINGER_0"] = 0;
-  finger_index["FINGER_1"] = 1;
-  finger_index["FINGER_2"] = 2;
-  finger_index["FINGER_3"] = 3;
+  finger_index["FINGER_00"] = 0;
+  finger_index["FINGER_01"] = 1;
+  finger_index["FINGER_10"] = 2;
+  finger_index["FINGER_00"] = 3;
 
   // Create active contacts vector
   static std::map<std::string, Ravelin::Origin3d> finger_force_idyn;

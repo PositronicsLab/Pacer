@@ -57,6 +57,7 @@ int PARENT_TO_CHILD_READ = 0;
 bool USE_PIPES = false;
 int pid = 0;
 double DURATION = 0;
+bool USE_UNCER = true;
 
 using namespace Ravelin;
 
@@ -275,10 +276,15 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
 }
 
 void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd>& robot){
+
+   
   // Add permissible robot parameters
   po::options_description desc("Monte Carlo Method manufacturing (applied at simulator start) uncertainty options");
   desc.add_options()
   ("help", "produce help message");
+
+  
+  
   
   // Joints
   BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
@@ -301,7 +307,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       help = std::string("Density [kg/m^3] applied of link (default is solid polycarbonate): "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
+      (name.c_str(), po::value<double>()->default_value(std::stod(std::getenv("density"))),help.c_str());
       
       name = std::string(rb->body_id+".mass");
       help = std::string("Mass [kg] applied to link: "+rb->body_id);
@@ -323,13 +329,13 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       name = std::string(rb->body_id+".length");
       help = std::string("LENGTH [m] of link LENGTH dimension (along limb axis): "+rb->body_id);
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(0.1),help.c_str());
+      (name.c_str(), po::value<double>()->default_value(std::stod(std::getenv("lenF1"))),help.c_str());
       
       name = std::string(rb->body_id+".radius");
       help = std::string("Radius [m] of link RADIUS dimension: "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(0.005),help.c_str());
+      (name.c_str(), po::value<double>()->default_value(std::stod(std::getenv("linkRad"))),help.c_str());
     }
     
     if(rb->is_end_effector()){ // radius of spherical link
@@ -337,13 +343,13 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       help = std::string("Radius [m] of foot RADIUS dimension: "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(0.01),help.c_str());
+      (name.c_str(), po::value<double>()->default_value(std::stod(std::getenv("footRad"))),help.c_str());
       
       name = std::string(rb->body_id+".foot.density");
       help = std::string("Density [kg/m^3] applied to link's spherical end effector (default is solid polycarbonate): "+rb->body_id);
       
       desc.add_options()
-      (name.c_str(), po::value<double>()->default_value(1200),help.c_str());
+      (name.c_str(), po::value<double>()->default_value(std::stod(std::getenv("density"))),help.c_str());
       
       name = std::string(rb->body_id+".foot.mass");
       help = std::string("Mass [kg] applied to link's spherical end effector: "+rb->body_id);
@@ -358,6 +364,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
   = po::command_line_parser(argc, argv).options(desc).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).allow_unregistered().run();
   po::store(parsed, vm);
   
+   
   if ( vm.count("help")  )
   {
     logging << "Available options: " << std::endl
@@ -756,7 +763,7 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   
   // run sample
   std::vector<std::string> argvs;
-  argvs.push_back("montecarlo-moby-sample");
+  argvs.push_back("moby-driver");
   // Max time is 0.3 seconds
   argvs.push_back("-s="+step_size);
   // XML output last frame
@@ -807,7 +814,8 @@ void parse_command_line_options(int argc, char* argv[]){
   ("help", "produce help message")
   ("readpipe", po::value<int>()->default_value(0),"PARENT_TO_CHILD_READ")
   ("writepipe", po::value<int>()->default_value(0),"CHILD_TO_PARENT_WRITE")
-  ("no-pipe","expect piped parameters?");
+  ("no-pipe","expect piped parameters?")
+  ("controlled", "gets rid of uncertainty");
   
   logging << "Parsing Variable Map from command line" << std::endl;
   
@@ -819,6 +827,9 @@ void parse_command_line_options(int argc, char* argv[]){
   //  po::notify(vm);
   
   logging << "Parsed Variable Map from command line" << std::endl;
+	if(vm.count("controlled")){
+	USE_UNCER=false;
+}
   
   if (vm.count("no-pipe")) {
     USE_PIPES = false;
@@ -874,7 +885,6 @@ int main(int argc_main, char* argv_main[]){
   // get event driven simulation and dynamics bodies
   shared_ptr<RCArticulatedBodyd> robot;
   shared_ptr<RigidBodyd> environment;
-  
   BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
     if(!robot)
       robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
@@ -934,7 +944,9 @@ simulation_start:
   
   //
   // Apply uncertainty to robot model
-  apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
+  if(USE_UNCER)
+  {apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);}
+
   
   if(EXPORT_XML){
     // write the file (fails silently)
@@ -955,9 +967,10 @@ simulation_start:
   }
   
   // Apply uncertainty to robot initial conditions
-  logging << " -- Applying State Uncertainty -- " << std::endl;
+	if(USE_UNCER)
+  {logging << " -- Applying State Uncertainty -- " << std::endl;
   apply_state_uncertainty(argc_sample,argv_sample,robot);
-  logging << " -- Applied State Uncertainty -- " << std::endl;
+  logging << " -- Applied State Uncertainty -- " << std::endl;}
   
   /*
    *  Running experiment
@@ -993,12 +1006,7 @@ simulation_start:
     //    logging << " -- Stepping simulation -- " << std::endl;
     // NOTE: Applied in Pacer -- for now
     // apply_control_uncertainty(argc_sample,argv_sample,robot);
-    try {
       stop_sim = !Moby::step(sim);
-    } catch (std::exception& e) {
-      std::cerr << "There was an error that forced the simulation to stop: "<< e.what() << std::endl;
-      stop_sim = true;
-    }
     //#ifndef NDEBUG
     std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER <<  std::endl;
     //#endif

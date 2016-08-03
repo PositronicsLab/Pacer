@@ -14,7 +14,7 @@
       <!--    <q type="double">  0.1 1.8 -1.2           -0.1 -1.8 1.2         -0.1 -1.8 1.2          0.1 1.8 -1.2 </q>-->
       <active type="bool">true true true   true true true   true true true   true true true</active>
       <limits>
-        <!-- <u type="double">7.3 7.3 7.3  7.3 7.3 7.3  7.3 7.3 7.3  7.3 7.3 7.3</u> -->
+        <!--<u type="double">15 15 15  15 15 15  15 15 15  15 15 15</u>-->
         <qd type="double">1e6 1e6 1e6  1e6 1e6 1e6  1e6 1e6 1e6  1e6 1e6 1e6</qd>
         <u type="double">1e6 1e6 1e6  1e6 1e6 1e6  1e6 1e6 1e6  1e6 1e6 1e6</u>
         

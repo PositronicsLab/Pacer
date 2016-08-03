@@ -21,9 +21,6 @@ void loop(){
   ctrl->set_joint_generalized_value(Pacer::Controller::position_goal,q_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::velocity_goal,qd_goal);
   ctrl->set_joint_generalized_value(Pacer::Controller::acceleration_goal,qdd_goal);
-  
-  // End Effectors
-  ctrl->set_end_effector_value(Pacer::Controller::position_goal,x_goal);
 }
 
 void setup(){
@@ -32,10 +29,4 @@ void setup(){
   q_goal = ctrl->get_joint_generalized_value(Pacer::Controller::position);
   qd_goal = Ravelin::VectorNd::zero(q_goal.rows());
   qdd_goal = Ravelin::VectorNd::zero(q_goal.rows());
-  
-  x_goal = ctrl->get_end_effector_value(Pacer::Controller::position_goal);
-  for (std::map<std::string,Origin3d>::iterator it = x_goal.begin();  it != x_goal.end(); it++) {
-    xd_goal[it->first] = Origin3d(0,0,0);
-    xdd_goal[it->first] = Origin3d(0,0,0);
-  }
 }

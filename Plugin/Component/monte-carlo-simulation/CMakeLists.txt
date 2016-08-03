@@ -1,9 +1,3 @@
-
-find_package(reveal REQUIRED)
-link_directories(${REVEAL_LIBRARY_DIRS})
-include_directories(${REVEAL_INCLUDE_DIR})
-
-
 option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
   add_library(monte-carlo-simulation MODULE simulate.cpp exchange.cpp)

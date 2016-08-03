@@ -30,7 +30,7 @@ static const double _TWO_PI= M_PI*2.0;
 #include <Pacer/Visualizable.h>
 #include <Pacer/output.h>
 #include <Pacer/Random.h>
-#include <Pacer/Controller.h>
+#include <Pacer/controller.h>
 
 #include <Ravelin/LinAlgd.h>
 

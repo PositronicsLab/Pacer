@@ -3,7 +3,7 @@
 #include "plugin.h"
 
 #ifdef USE_GSL
-#include <Pacer/Random.h>
+#include "monte-carlo-simulation/Random.h"
 Random::ParamValueMap initial_value_parameters;
 Random::ParamMap jitter_parameter_generator;
 #endif

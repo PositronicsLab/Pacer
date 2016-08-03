@@ -30,6 +30,7 @@ void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::Matrix
 }
 
 void Robot::compile(){
+  OUT_LOG(logDEBUG2) << "start COMPILE";
   check_phase_internal(initialization);
   NDOFS = _abrobot->num_generalized_coordinates(Ravelin::DynamicBodyd::eSpatial);
 
@@ -159,6 +160,8 @@ void Robot::compile(){
     
     _id_end_effector_map[_end_effector_ids[i]] = eef;
   }
+  
+  OUT_LOG(logDEBUG2) << "end COMPILE";
 }
 
 void Robot::update(){

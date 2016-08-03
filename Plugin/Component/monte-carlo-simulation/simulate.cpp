@@ -9,12 +9,10 @@
 #include <signal.h>
 #include <errno.h>
 
-#define handle_error_en(en, msg) \
-do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+#define OUT_LOG(x) std::cout << std::endl
 
-#include "common.h"
-
-bool GET_DATA_ONLINE = false;
+#include "service.h"
+using namespace Pacer::Service;
 
 #ifdef USE_GSL
 #include "Random.h"
@@ -23,9 +21,10 @@ Random::ParamMap parameter_generator;
 #error Failing build: This plugin should be built with randomization support from GSL. Set 'USE_GSL' to ON to correct build.
 #endif
 
+bool GET_DATA_ONLINE = false;
 
 //                NAME                  DOF                 RANDOM VALUE        DEFAULT
-std::vector<std::string> get_sample_options(){
+void get_sample_options(std::vector<std::string>& PARAMETER_ARGV){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // Get current state
   std::map<std::string,Ravelin::VectorNd> joint_position, joint_velocity;
@@ -47,7 +46,6 @@ std::vector<std::string> get_sample_options(){
   OUT_LOG(logINFO) << "Positions: \n" << joint_position;
   OUT_LOG(logINFO) << "Velocities: \n" << joint_velocity;
   
-  std::vector<std::string> PARAMETER_ARGV;
   // NOTE: parallelize this loop
 #ifdef USE_GSL
   Random::ParamValueMap generated_params;
@@ -67,7 +65,7 @@ std::vector<std::string> get_sample_options(){
     
     PARAMETER_ARGV.push_back("--" + it->first);
     OUT_LOG(logDEBUG) << "Vector size: " << it->second.size();
-
+    
     bool is_x_state = (params.back().compare("x") == 0);
     bool is_xd_state = (params.back().compare("xd") == 0);
     for (int i=0;i<it->second.size(); i++) {
@@ -81,143 +79,183 @@ std::vector<std::string> get_sample_options(){
       // Convert to command line argument
       PARAMETER_ARGV.push_back(SSTR(value));
       OUT_LOG(logDEBUG) << "Value (" << i << ") : " << value;
-
+      
     }
   }
 #else
   OUT_LOG(logDEBUG)  << ">> no random generator used";
 #endif
   OUT_LOG(logDEBUG) << "Parameters: " << PARAMETER_ARGV;
-
-  return PARAMETER_ARGV;
 }
 
 std::vector<Ravelin::Pose3d> completed_poses;
-#ifdef USE_THREADS
-pthread_mutex_t _sample_processes_mutex;
-#else
-#warning This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
-#endif
 
-const int READ_INDEX  = 0;
-const int WRITE_INDEX = 1;
 struct SampleConditions{
   //////////////////////////////////////////////
   ///// Set when worker process is initied /////
   pid_t   pid;
-  // [ READ WRITE ]
-  int     PARENT_TO_CHILD[2];
-  int     CHILD_TO_PARENT[2];
+  std::string worker_port;
+  
+  Client client;
   
   //////////////////////////////////////////////
   ///// Set each time a new sample begins  /////
   int     sample_number;
   double  start_time;
+  
   bool  active;
   bool  restart;
   bool  inited;
+  
+#ifdef USE_THREADS
+  pthread_mutex_t mutex;
+#else
+#warning This plugin should be buit with threading support, please build with 'USE_THREADS' turned ON.
+#endif
 };
 
 std::vector<SampleConditions> sample_processes;
 
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
-std::string TASK_PATH = "./";
-long long unsigned int sample_idx=1;
 
+#include "select.cpp"
+
+int sample_idx=0;
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  ///////////////////////////////////////////////
+  ///////// Visualize final data   //////////////
   std::cout << "NUM end poses: " << completed_poses.size() << " , t = "<< t << " samples: " << sample_idx << std::endl;
-
   for (int i=0; i<completed_poses.size(); i++) {
-//    std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
-
+    //    std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
     Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
   }
   
   int available_threads = 0;
-
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
-    SampleConditions& sc = sample_processes[thread_number];
-    if(!sc.active)
-      available_threads++;
+    if(!sample_processes[thread_number].active)
+    available_threads++;
   }
   
-  OUT_LOG(logINFO) << "sample_processes: " << ( sample_processes.size() ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
-
+  OUT_LOG(logINFO) << "sample: " << sample_idx << " out of " << NUM_SAMPLES << " total samples:" << sample_idx/NUM_SAMPLES ;
+  
   
   OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
   std::cout << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes." << std::endl;
   
-  if ( available_threads > 0 && sample_idx <= NUM_SAMPLES ){
-#ifdef USE_THREADS
-    pthread_mutex_lock(&_sample_processes_mutex);
-#endif
+  if ( available_threads > 0 && sample_idx < NUM_SAMPLES ){
     for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
-      SampleConditions& sc = sample_processes[thread_number];
-      if(sc.active || sc.restart)
-        continue;
+      if(sample_processes[thread_number].active || sample_processes[thread_number].restart)
+      continue;
       
-      std::vector<std::string> SAMPLE_ARGV = get_sample_options();
+#ifndef INIT_SIM // if i can ever get this to work
+      {
+        std::vector<std::string> SIM_ARGV;
+        SIM_ARGV.push_back("moby-driver-options");
+        SIM_ARGV.push_back("--moby");
+        
+        double dt_sample = 0;
+        ctrl->get_data<double>(plugin_namespace+".dt",dt_sample);
+        SIM_ARGV.push_back("s="+SSTR(dt_sample));
+        
+        static std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
+        OUT_LOG(logINFO) << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
+
+        SIM_ARGV.push_back("p="+pacer_interface_path+"/libPacerMobyPlugin.so");
+        bool DISPLAY_MOBY = false;
+        ctrl->get_data<bool>(plugin_namespace+".display",DISPLAY_MOBY);
+        if(DISPLAY_MOBY){
+          SIM_ARGV.push_back("r");
+        }
+        
+        std::string model_name("model.xml");
+        ctrl->get_data<std::string>(plugin_namespace+".moby-model",model_name);
+        SIM_ARGV.push_back(model_name);
+        
+        std::string s;
+        for (int i=0; i<SIM_ARGV.size(); i++) {
+          s += ( i != 0 )? " " + SIM_ARGV[i] : SIM_ARGV[i];
+        }
+
+        OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
+        << "\nHas simulator options (set online):\n" << SIM_ARGV;
+        
+        std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " at port: [" << sample_processes[thread_number].worker_port << "] Starting at t = " << t << std::endl <<
+        " message (main thread): " << s << std::endl;
+        
+        // expects reply
+        sample_processes[thread_number].client.request( s );
+        // ... holding
+        
+        std::cout << "reply to simulator options " << s << std::endl;
+        
+        if(s.compare("started") != 0){
+          throw std::runtime_error("Message not recieved!");
+        }
+      }
+#endif
+      
+      
+      std::vector<std::string> SAMPLE_ARGV;
+      SAMPLE_ARGV.push_back("moby-model-update-options");
+
+      get_sample_options(SAMPLE_ARGV);
       
       OUT_LOG(logDEBUG) << "Parameters: " << SAMPLE_ARGV;
       
       bool STAND_ROBOT = false;
       ctrl->get_data<bool>(plugin_namespace+".standing",STAND_ROBOT);
       if(STAND_ROBOT)
-        SAMPLE_ARGV.push_back("--stand");
-
+      SAMPLE_ARGV.push_back("--stand");
+      
       bool EXPORT_XML = false;
       ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
       if(EXPORT_XML){
         SAMPLE_ARGV.push_back("--xml");
       }
-
-//      char message[MESSAGE_SIZE];
-//      int message_size = 0;
-//      sprintf(&message[0],"%s",SAMPLE_ARGV[0].c_str());
-//      for(int i=1;i<SAMPLE_ARGV.size();i++){
-//        sprintf(&message[message_size]," %s",SAMPLE_ARGV[i].c_str());
-//        message_size += SAMPLE_ARGV[i].size();
-//      }
-//      message[message_size] = 0;
       
+      SAMPLE_ARGV.push_back("--sample");
+      SAMPLE_ARGV.push_back(SSTR(sample_idx));
+      
+      double duration_sample = 100;
+      ctrl->get_data<double>(plugin_namespace+".duration",duration_sample);
+      SAMPLE_ARGV.push_back("--duration");
+      SAMPLE_ARGV.push_back(SSTR(duration_sample));
+      
+      // concatenate string into message
       std::string s;
-      for (std::vector<std::string>::const_iterator i = SAMPLE_ARGV.begin(); i != SAMPLE_ARGV.end(); ++i)
-        s += *i + " ";
-
-      char * message = (char *) s.c_str();
-      message[s.size()-1] = 0;
+      for (int i = 0; i < SAMPLE_ARGV.size(); i++)
+      s += ( i != 0 )? " " + SAMPLE_ARGV[i] : SAMPLE_ARGV[i];
       
       OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
-                     << "\nHas simulator options:\n" << SAMPLE_ARGV;
+      << "\nHas simulator options:\n" << SAMPLE_ARGV;
       
       std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl <<
-      " message (main thread): " << message << std::endl;
+      " message (main thread): " << s << std::endl;
       
-      
-      {  // write to child
-        
-        write(sc.PARENT_TO_CHILD[WRITE_INDEX],message,s.size());
-        
-//        siginfo_t info;
-//        timespec timeout;
-//        timeout.tv_sec = 0;
-//        timeout.tv_usec = 0;
-//        s = sigtimedwait(&set,&info,&timeout);
-//        if (s != 0)
-//          handle_error_en(s, "sigtimedwait");
+      // expects reply
+      sample_processes[thread_number].client.request( s );      // ... holding
+      std::cout << "reply to sample options: " << s << std::endl;
 
+      if(s.compare("simulating") != 0){
+        throw std::runtime_error("Message not recieved!");
       }
-      
-      sc.start_time = t;
-      sc.sample_number = sample_idx++;
-      sc.active = true;
-      if(sample_idx == NUM_SAMPLES)
-        break;
-    }
 #ifdef USE_THREADS
-    pthread_mutex_lock(&_sample_processes_mutex);
+      pthread_mutex_lock(&sample_processes[thread_number].mutex);
 #endif
+      sample_processes[thread_number].start_time = t;
+      sample_processes[thread_number].sample_number = sample_idx++;
+      sample_processes[thread_number].active = true;
+      
+      start_worker_thread(thread_number);
+#ifdef USE_THREADS
+      pthread_mutex_unlock(&sample_processes[thread_number].mutex);
+#endif
+      
+      if(sample_idx == NUM_SAMPLES)
+      break;
+    }
+    
     
     
   }
@@ -226,24 +264,15 @@ void loop(){
     OUT_LOG(logINFO) << "All threads ( " << available_threads << " out of " << NUM_THREADS << " ) are working: sample ( " << sample_idx << " out of " << NUM_SAMPLES << " ).";
   } else if (available_threads == 0 && sample_idx == NUM_SAMPLES) {
     OUT_LOG(logINFO) << "All threads ( " << available_threads << " out of " << NUM_THREADS << " ) are working and all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
-//    if (!GET_DATA_ONLINE)
-//      ctrl->close_plugin(plugin_namespace);
   } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
     OUT_LOG(logINFO) << "Not all threads are working ( " << available_threads << " out of " << NUM_THREADS << " ) but all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
-//    if (!GET_DATA_ONLINE)
-//      ctrl->close_plugin(plugin_namespace);
-  }
-  
-  if( sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
+  } else if( sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
     OUT_LOG(logINFO) << "All samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started, all threads are done ( " << available_threads << " out of " << NUM_THREADS << " )";
     OUT_LOG(logINFO) << "Experiment Complete";
-//    ctrl->close_plugin(plugin_namespace);
   }
   
   return;
 }
-
-#include "select.cpp"
 
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
@@ -259,64 +288,34 @@ void setup(){
 #endif
   ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
   ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
-
+  
   /////////////////////////////////
   ////  START WORKER PROCESSES ////
+  worker_threads.resize(NUM_THREADS);
   for(int thread_number=0;thread_number<NUM_THREADS;thread_number++){
     sample_processes.push_back(SampleConditions());
-    sample_processes.back().inited = false;
     sample_processes.back().active = false;
     sample_processes.back().restart = true;
+    spawn_process(thread_number);
+#ifdef USE_THREADS
+    pthread_mutex_unlock(&sample_processes[thread_number].mutex);
+#endif
   }
   
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
-
-
   ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
-  if (GET_DATA_ONLINE){
-    OUT_LOG(logINFO) << "INIT: start_listener_thread";
-    start_listener_thread();
-  } else {
-    OUT_LOG(logINFO) << "INIT: NOT - GET_DATA_ONLINE";
-  }
   
   OUT_LOG(logINFO) << "INIT: register_exit_sighandler";
-
+  
   register_exit_sighandler();
   
   OUT_LOG(logINFO) << "INIT: start_process_spawner_thread";
-
+  
   start_process_spawner_thread();
-  
-  {
-    /* Block SIGPIPE; other threads created by main()
-     will inherit a copy of the signal mask. */
     
-    pthread_t thread;
-    sigset_t set;
-    int s;
-    
-    sigemptyset(&set);
-    sigaddset(&set, SIGPIPE);
-    s = pthread_sigmask(SIG_BLOCK, &set, NULL);
-    if (s != 0)
-      handle_error_en(s, "pthread_sigmask");
-  }
-
-  // wait for all new forked processes to start;
-  
-  
-  std::cout << "Sleeping before actually starting anything" << t << std::endl;
-  sleep(5);
-  std::cout << "AFTER: Sleeping before actually starting anything " << t << std::endl;
-
   return;
 }
 
 void destruct(){
-  //  _close(ALL_PIPE_FDS);
-//-      action.sa_sigaction = NULL;  // might not be SIG_DFL
-//-      sigaction( SIGCHLD, &action, NULL );
+  action.sa_sigaction = NULL;  // might not be SIG_DFL
+  sigaction( SIGCHLD, &action, NULL );
 }

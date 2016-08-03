@@ -1,275 +1,34 @@
-//#include <sstream>
-//#include <vector>
-//#include <sys/types.h>
-//#include <sys/mman.h>
-//#include <stdio.h>
-//#include <sys/wait.h>
-//#include <atomic>
-//#include <cstring>
-//#include <signal.h>
-//#include <unistd.h>
-//#include <map>
-//#include <time.h>
-
-#define MAX_TIMER_EVENTS 100
-
-char spstr[512];
-
-////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////// PIPE READING  /////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-bool select( const std::vector<int>& checked_fds , fd_set& pending_fds ) {
-//  __select( subscribed_fds, pending_fds );
-
-  int max_fd = 0;
-
-  int num_fds = 0;
-  
-  FD_ZERO( &pending_fds );
-
-  for(int i=0;i<checked_fds.size();i++){
-    max_fd = std::max( max_fd, checked_fds[i] );
-    FD_SET( checked_fds[i] , &pending_fds );
-    num_fds += 1;
-    OUT_LOG(logINFO) << "SELECT: checking -- fd: " << checked_fds[i];
-  }
-
-  OUT_LOG(logINFO) << "SELECT: max_fd: " << max_fd ;
-
-  if( select( max_fd + 1, &pending_fds, NULL, NULL, NULL ) == -1 ) {
-
-    if( LOG(logINFO) ){
-      char buf[16];
-      if( errno == EBADF ) 
-        sprintf( buf, "EBADF" );
-      else if( errno == EINTR ) 
-        sprintf( buf, "EINTR" );
-      else if( errno == EINVAL ) 
-        sprintf( buf, "EINVAL" );
-      else if( errno == ENOMEM ) 
-        sprintf( buf, "ENOMEM" );
-      else 
-        sprintf( buf, "UNKNOWN" );
-
-      sprintf( spstr, "ERROR : SELECT: (select.cpp) select() failed calling __select(...) : errno[%s]", buf );
-      OUT_LOG(logINFO) << spstr;
-    }
-
-    return false;
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-int read_notifications( const std::vector<int>& checked_threads ,  const std::vector<int>& checked_fds , const fd_set& pending_fds ,
-                       std::vector<std::string>& messages , std::vector<int>& completed_threads, std::vector<int>& error_threads ) {
-  for(int i=0;i<checked_fds.size();i++){
-    char message[MESSAGE_SIZE];
-    int fd;
-    // predator controller
-    OUT_LOG(logINFO) << "LISTENER: Checking for return message ";
-
-    if( FD_ISSET( checked_fds[i], &pending_fds ) != 0 ) {
-      if( read(checked_fds[i], message, sizeof(message)) == -1 ) {
-        message[0] = '\0';
-        OUT_LOG(logINFO) << "LISTENER: Message failed to read from thread = "<< checked_threads[i] <<" FD: "<< checked_fds[i];
-        error_threads.push_back(checked_threads[i]);
-      } else {
-        messages.push_back(std::string(message));
-        completed_threads.push_back(checked_threads[i]);
-        OUT_LOG(logINFO) << "LISTENER: Message read from thread = "<< checked_threads[i] <<": "<<message;
-      }
-    }
-  }
-
-  return messages.size();
-}
-
-//-----------------------------------------------------------------------------
-
-bool init_pipe( int fd[2], bool write_blocking = false ) {
-  int flags;
-  
-  if( pipe( fd ) != 0 ) {
-    return false;
-  }
-  flags = fcntl( fd[0], F_GETFL, 0 );
-  fcntl( fd[0], F_SETFL, flags );
-  flags = fcntl( fd[1], F_GETFL, 0 );
-  if( write_blocking )
-    fcntl( fd[1], F_SETFL, flags );
-  else
-    fcntl( fd[1], F_SETFL, flags | O_NONBLOCK );
-  
-  return true;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// CHILD LISTENER  ///////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-void listen_for_child_return() {
-  std::vector<int> checked_fds,checked_threads;
-  fd_set pending_fds;
-#ifdef USE_THREADS
-  pthread_mutex_lock(&_sample_processes_mutex);
-#endif
-  for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
-    SampleConditions& sc = sample_processes[thread_number];
-    if(sc.restart || !sc.inited || !sc.active){
-      OUT_LOG(logINFO) << "LISTENER: #" << thread_number << ", Restart: " << sc.restart << ", sc.active: " << sc.active << ", sc.inited: " << sc.inited;
-      continue;
-    }
-    OUT_LOG(logINFO) << "LISTENER: checking to : " << thread_number;
-
-    checked_fds.push_back(sc.CHILD_TO_PARENT[READ_INDEX]);
-    checked_threads.push_back(thread_number);
-  }
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
-  if (checked_fds.empty()) {
-    return;
-  }
-
-  OUT_LOG(logINFO) << "LISTENER: listening to : " << checked_threads;
-  OUT_LOG(logINFO) << "LISTENER: with CHILD_TO_PARENT read ends : " << checked_fds;
-
-  OUT_LOG(logINFO) << "LISTENER: Stopping to wait on return messages";
-  if(select(checked_fds,pending_fds)){  /// THIS IS A BLOCKING CALL
-    std::vector<std::string> messages;
-    std::vector<int> completed_threads;
-    std::vector<int> error_threads;
-    int n_messages = read_notifications( checked_threads, checked_fds,pending_fds, messages , completed_threads, error_threads );
-#ifdef USE_THREADS
-    pthread_mutex_lock(&_sample_processes_mutex);
-#endif
-    for(int i=0;i<error_threads.size();i++){
-      int thread_number = error_threads[i];
-      sample_processes[thread_number].restart = true;
-      sample_processes[thread_number].active = false;
-    }
-    for(int i=0;i<completed_threads.size();i++){
-      int thread_number = completed_threads[i];
-      SampleConditions& sc = sample_processes[thread_number];
-
-      if(messages[i].empty()){
-        // Something bad happened
-         OUT_LOG(logINFO) << "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned an empty message!";
-        sc.active = false;
-        sc.restart = true;
-//        throw std::runtime_error("returned an empty message!");
-      }
-
-      double start_time = sc.start_time;
-      
-      OUT_LOG(logINFO) <<  "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned with message: " << messages[i];
-
-      std::vector<std::string> values;
-      // NOTE: trailing spaces will cause errors in boost::split
-      boost::split(values, messages[i], boost::is_any_of(" "));
-      OUT_LOG(logINFO) << "Split message: " << values;
-      
-      // NOTE: this will have to change if I change message size
-      if(values.size() != 8){
-        // Something bad happened
-        OUT_LOG(logINFO) << "Thread "<< thread_number <<  " Sample ("<< sc.sample_number <<") returned a missized message!";
-        sc.active = false;
-        sc.restart = true;
-//        throw std::runtime_error("Recieved bad message from child.");
-        continue;
-      }
-      
-      double time_elapsed = atof(values[0].c_str());
-      completed_poses.push_back(Ravelin::Pose3d(Ravelin::Quatd(atof(values[4].c_str()), atof(values[5].c_str()), atof(values[6].c_str()), atof(values[7].c_str())),
-                                                Ravelin::Origin3d( atof(values[1].c_str()), atof(values[2].c_str()), atof(values[3].c_str()))));
-      OUT_LOG(logINFO) << "Thread "<< thread_number << " Sample ("<< sc.sample_number <<") timeline: " << start_time << "  |======" << time_elapsed << "======>  " << (start_time+time_elapsed);
-      sc.active = false;
-    }
-  }
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
-}
-
-static void *listen_for_child_return_loop(void* data){
-  OUT_LOG(logINFO) << "LISTENER: listen_for_child_return_loop()";
-  while(1){
-    listen_for_child_return();
-    sleep(1);
-  }
-}
-
 #ifdef USE_THREADS
 #include <pthread.h>
-pthread_t listener_thread;
 pthread_t process_spawner_thread;
 #endif
-
-static void start_listener_thread(){
-  OUT_LOG(logINFO) << "LISTENER: start_listener_thread()";
-
-    static int iret = pthread_create( &listener_thread, NULL,&listen_for_child_return_loop,(void*)NULL);
-    if(iret)
-    {
-      fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
-      exit(1);
-    }
-}
 
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// NEW PROCESS SPAWNER /////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-
-static void spawn_process(SampleConditions& sc, int thread_number){
+std::string TASK_PATH = "./";
+static void spawn_process(int thread_number){
   OUT_LOG(logINFO) << "PROCESS SPAWNER: spawn_process(.)";
-
+  
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-
-  std::string SAMPLE_BIN("sample.bin");
-  ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BIN);
+  
+  std::string SAMPLE_BINARY("sample.bin");
+  ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BINARY);
   ctrl->get_data<std::string>(plugin_namespace+".task-directory", TASK_PATH);
   
   if (!getenv("PACER_COMPONENT_PATH"))
-    throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
+  throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
   
   std::string pPath(getenv("PACER_COMPONENT_PATH"));
-  SAMPLE_BIN = pPath + "/" + SAMPLE_BIN ;
+  std::string SAMPLE_BIN = pPath + "/" + SAMPLE_BINARY ;
   
   OUT_LOG(logDEBUG) << "MC-Simulation executable: " << SAMPLE_BIN;
-  
-  std::vector<std::string> SAMPLE_ARGV;
-  
-  //  #ifdef __LINUX__
-  //    SAMPLE_ARGV.push_back("nice");
-  //    SAMPLE_ARGV.push_back("-n");
-  //    SAMPLE_ARGV.push_back("-19");
-  //  #else
-  // Start process with niceness
-//      SAMPLE_ARGV.push_back("nice");
-//      SAMPLE_ARGV.push_back("-n");
-//      SAMPLE_ARGV.push_back("-19");
-//  //  #endif
-  
-  SAMPLE_ARGV.push_back(SAMPLE_BIN);
-  
-  // Before anything else, register thread number with SampleConditions
-  sample_processes[thread_number] = SampleConditions();
-
-  if(!init_pipe(sample_processes[thread_number].PARENT_TO_CHILD, false )){
-    throw std::runtime_error("Could not open PARENT_TO_CHILD pipe to worker process.");
-  }
-  
-  if(!init_pipe(sample_processes[thread_number].CHILD_TO_PARENT, false )){
-    throw std::runtime_error("Could not open CHILD_TO_PARENT pipe to worker process.");
-  }
-  
-  OUT_LOG(logDEBUG)  << "(CHILD) " << sample_processes[thread_number].CHILD_TO_PARENT[WRITE_INDEX] << " --> " << sample_processes[thread_number].CHILD_TO_PARENT[READ_INDEX] << " (PARENT)";
-  OUT_LOG(logDEBUG)  << "(PARENT) " << sample_processes[thread_number].PARENT_TO_CHILD[WRITE_INDEX] << " --> " << sample_processes[thread_number].PARENT_TO_CHILD[READ_INDEX] << " (CHILD)";
-  OUT_LOG(logDEBUG) << "Forking Process!";
   
   // Run each sample as its own process
   pid_t pid = fork();
@@ -281,118 +40,159 @@ static void spawn_process(SampleConditions& sc, int thread_number){
   if( pid == 0 ) {
     ////////////////////////////////////////////////////
     /// ---------- START CHILD PROCESS ------------- ///
-    // Child process is write-only, closes receiving end of pipe
-    close(sample_processes[thread_number].PARENT_TO_CHILD[WRITE_INDEX]);
-    close(sample_processes[thread_number].CHILD_TO_PARENT[READ_INDEX]);
     
     pid = getpid();
     
-    OUT_LOG(logDEBUG) << "Started Thread ("<< thread_number <<") with PID ("<< pid <<")";
+    OUT_LOG(logDEBUG) << "In child process for thread ("<< thread_number <<") with PID ("<< pid <<")";
     
-    SAMPLE_ARGV.push_back("--readpipe");
-    SAMPLE_ARGV.push_back(SSTR(sc.PARENT_TO_CHILD[READ_INDEX]));
+//    OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
+    OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_BIN << std::endl;
     
-    SAMPLE_ARGV.push_back("--writepipe");
-    SAMPLE_ARGV.push_back(SSTR(sc.CHILD_TO_PARENT[WRITE_INDEX]));
-    
-    SAMPLE_ARGV.push_back("--duration");
-    SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".duration")));
-    
-    SAMPLE_ARGV.push_back("--stepsize");
-    SAMPLE_ARGV.push_back(SSTR(ctrl->get_data<double>(plugin_namespace+".dt")));
-
-    if(ctrl->get_data<bool>(plugin_namespace+".display")){
-      SAMPLE_ARGV.push_back("--display");
-    }
-    SAMPLE_ARGV.push_back("--sample");
-    SAMPLE_ARGV.push_back("0");
-    
-    char* const* exec_argv = param_array(SAMPLE_ARGV);
-    OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
-    OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_ARGV << std::endl;
-    
-    chdir(TASK_PATH.c_str());
-    execv( SAMPLE_ARGV.front().c_str() , exec_argv );
+//    chdir( TASK_PATH.c_str() );
+    execl( SAMPLE_BIN.c_str() , SAMPLE_BINARY.c_str() , TASK_PATH.c_str() ,  NULL );
     ///////////////////////////////////////////////////
     /// ---------- EXIT CHILD PROCESS ------------- ///
     ///////////////////////////////////////////////////
     
-    // NOTE: unreachable code (memory leak)
-    // TODO: clean up argv
-    for ( size_t i = 0 ; i <= SAMPLE_ARGV.size() ; i++ )
-      delete [] exec_argv[i];
-    
     // This code should be unreachable unless exec failed
-    perror( "execv" );
-    throw std::runtime_error("This code should be unreachable unless execve failed!");
+    perror( "execl" );
+    throw std::runtime_error("This code should be unreachable unless execl failed!");
     /// ---------- END CHILD PROCESS ------------- ///
     //////////////////////////////////////////////////
   }
   ////////////////////////////////////////////////////////
   /// ---------- CONTINUE PARENT PROCESS ------------- ///
-  // Parent is read-only, closing sending end of pipe
-  close(sample_processes[thread_number].PARENT_TO_CHILD[READ_INDEX]);
-  close(sample_processes[thread_number].CHILD_TO_PARENT[WRITE_INDEX]);
-  
+  OUT_LOG(logINFO) << "Plugin sleeping to permit thread (" << thread_number << ") with PID ("<< pid <<") to start";
+  tick();
+//#ifdef USE_THREADS
+//  pthread_mutex_lock(&sample_processes[thread_number].mutex);
+//#endif
   sample_processes[thread_number].pid = pid;
   
-  sample_processes[thread_number].restart = false;
-  sample_processes[thread_number].inited = true;
-  sample_processes[thread_number].active = false;
+  std::string port_id_simulation = "pacer-planner-" + SSTR(pid);
+  sample_processes[thread_number].worker_port = port_id_simulation;
   
-  OUT_LOG(logINFO) << "Plugin sleeping to permit thread (" << thread_number << ") with PID ("<< pid <<") to start";
-  struct timespec req,rem;
-  req.tv_sec = 0;
-  req.tv_nsec = 1;
-  nanosleep(&req,&rem);
-}
+  OUT_LOG(logINFO) << "Client connecting to server port " << port_id_simulation << " on thread (" << thread_number << ") with PID ("<< pid <<").  Server must be inited by now!";
+  
+  sample_processes[thread_number].client = Client(port_id_simulation);
+  
+  std::string request_reply = "PlanningService-->SimulationService: sending request to SimulationService!";
+  sample_processes[thread_number].client.request( request_reply );
 
-static void close_process(SampleConditions& sc){
-  OUT_LOG(logDEBUG)  << "CLOSING: (CHILD [already closed]) " << sc.CHILD_TO_PARENT[WRITE_INDEX] << " --> " << sc.CHILD_TO_PARENT[READ_INDEX] << " (PARENT [closing now])";
-  close(sc.CHILD_TO_PARENT[READ_INDEX]);
-  OUT_LOG(logDEBUG)  << "CLOSING: (PARENT [closing now]) " << sc.PARENT_TO_CHILD[WRITE_INDEX] << " --> " << sc.PARENT_TO_CHILD[READ_INDEX] << " (CHILD [already closed])";
-  close(sc.PARENT_TO_CHILD[WRITE_INDEX]);
-}
-
-static void process_spawner(){
-  OUT_LOG(logINFO) << "PROCESS SPAWNER: process_spawner()";
-
-  for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
-    SampleConditions& sc = sample_processes[thread_number];
-     if(sc.restart){
-       if(sc.inited){
-         close_process(sc);
-       }
-       spawn_process(sc,thread_number);
-     }
+  
+#ifdef INIT_SIM // if i can ever get this to work
+  
+  std::vector<std::string> SIM_ARGV;
+  SIM_ARGV.push_back("--moby");
+  SIM_ARGV.push_back("-s="+SSTR(dt_sample));
+  SIM_ARGV.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
+  bool DISPLAY_MOBY = false;
+  ctrl->get_data<bool>(plugin_namespace+".display",DISPLAY_MOBY);
+  if(DISPLAY_MOBY){
+    SIM_ARGV.push_back("-r");
   }
+  
+  std::string model_name("model.xml");
+  ctrl->get_data<std::string>(plugin_namespace+".moby-model",model_name);
+  SIM_ARGV.push_back(model_name);
+  
+  std::string s;
+  for(int i = 0; i < SAMPLE_ARGV.size(); i++)
+  s += ( i != 0 )? " " + SAMPLE_ARGV[i] : SAMPLE_ARGV[i];
+  
+  OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
+  << "\nHas simulator options:\n" << SAMPLE_ARGV;
+  
+  std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl <<
+  " message (main thread): " << s << std::endl;
+  
+  // expects reply
+  client.request( s );
+  // ... holding
+  if(message != "started"){
+    throw std::runtime_error("Message not recieved!");
+  }
+  
+#endif
+  sample_processes[thread_number].restart = false;
+  sample_processes[thread_number].active = false;
+//#ifdef USE_THREADS
+//  pthread_mutex_unlock(&sample_processes[thread_number].mutex);
+//#endif
+  
 }
 
 static void *process_spawner_loop(void* data){
   OUT_LOG(logINFO) << "PROCESS SPAWNER: process_spawner_loop(.)";
-
+  
   while(1){
-#ifdef USE_THREADS
-    pthread_mutex_lock(&_sample_processes_mutex);
-#endif
-    process_spawner();
-#ifdef USE_THREADS
-    pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
-    sleep(1);
+    for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
+      if(sample_processes[thread_number].restart){
+        spawn_process(thread_number);
+      }
+      tick(0,1000);
+    }
   }
 }
 
 static void start_process_spawner_thread(){
   OUT_LOG(logINFO) << "PROCESS SPAWNER: start_process_spawner_thread(.)";
+  
+#ifdef USE_THREADS
+  static int iret = pthread_create( &process_spawner_thread, NULL,&process_spawner_loop,(void*)NULL);
+  if(iret)
+  {
+    throw std::runtime_error("Error - pthread_create() return code: " + SSTR(iret));
+  }
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////  WORKER THREADS  //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 #ifdef USE_THREADS
-    static int iret = pthread_create( &process_spawner_thread, NULL,&process_spawner_loop,(void*)NULL);
-    if(iret)
-    {
-      fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
-      exit(1);
+#include <pthread.h>
+std::vector<pthread_t> worker_threads;
+#endif
+
+std::vector< std::vector<std::string> > sample_messages;
+
+static void *thread_worker(void *threadid)
+{
+  long thread_number;
+  thread_number = (long)threadid;
+  
+  std::string request_reply = "PlanningService-->SimulationService: Start this simulation: TODO: POLICY INFO";
+  sample_processes[thread_number].client.request( request_reply );
+  
+  while (sample_processes[thread_number].active) {
+    std::string request_reply = "PlanningService-->SimulationService: Give me simulation data once you're done";
+    sample_processes[thread_number].client.request( request_reply );
+    std::vector<std::string> message;
+    
+    boost::split(message, request_reply, boost::is_any_of(" "));
+    if(message.size() > 1){
+      sample_messages.push_back(message);
+      sample_processes[thread_number].active = 0;
+    } else {
+      sample_processes[thread_number].active = 0;
+      sample_processes[thread_number].restart = 1;
     }
+  }
+  return (void *) 0;
+}
+
+void start_worker_thread(int thread_number){
+  OUT_LOG(logINFO) << "PROCESS SPAWNER: start_process_spawner_thread(.)";
+  
+#ifdef USE_THREADS
+  // start worker thread to check on process
+  static int iret = pthread_create( &worker_threads[thread_number], NULL,&thread_worker, (void *)thread_number);
+  if(iret)
+  {
+    throw std::runtime_error("Error - pthread_create() return code: " + SSTR(iret));
+  }
 #endif
 }
 
@@ -400,23 +200,19 @@ static void start_process_spawner_thread(){
 ////////////////////////////// EXIT SIGNAL HANDLER /////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+#define handle_error_en(en, msg) \
+do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+
 #include <signal.h>
 void exit_sighandler( int signum, siginfo_t* info, void* context ) {
   std::cout << "exit_sighandler entered, something crashed! " << info->si_pid << std::endl;
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-  pthread_mutex_lock(&_sample_processes_mutex);
-#endif
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
-     if(sample_processes[thread_number].pid == info->si_pid){
-       OUT_LOG(logINFO) << "Process on thread (" << thread_number << ") with PID ("<< sample_processes[thread_number].pid <<") crashed!";
-       sample_processes[thread_number].restart = true;
-       sample_processes[thread_number].active = false;
-     }
+    if(sample_processes[thread_number].pid == info->si_pid){
+      OUT_LOG(logINFO) << "Process on thread (" << thread_number << ") with PID ("<< sample_processes[thread_number].pid <<") crashed!";
+      sample_processes[thread_number].restart = true;
+      sample_processes[thread_number].active = false;
+    }
   }
-#ifdef USE_THREADS
-  pthread_mutex_unlock(&_sample_processes_mutex);
-#endif
 }
 
 struct sigaction action;
@@ -424,5 +220,5 @@ void register_exit_sighandler(){
   memset( &action, 0, sizeof(struct sigaction) );
   //  action.sa_handler = exit_sighandler;
   action.sa_sigaction = exit_sighandler; // NEW
-//  sigaction( SIGCHLD, &action, NULL );
+  sigaction( SIGCHLD, &action, NULL );
 }

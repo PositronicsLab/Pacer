@@ -36,7 +36,7 @@ int main( int argc, char* argv[] ) {
     std::string request;
     server.serve(request);
     
-    sleep(5);
+    sleep(10);
     
     std::string reply = "complete";
     server.respond(reply);

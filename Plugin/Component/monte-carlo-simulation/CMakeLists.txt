@@ -3,8 +3,14 @@
 
 option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
+  find_package(reveal REQUIRED)
+  link_directories(${REVEAL_LIBRARY_DIRS})
+  include_directories(${REVEAL_INCLUDE_DIR})
+  add_definitions (-DUSE_ZMQ)
+
+
   add_library(monte-carlo-simulation MODULE simulate.cpp)
-  target_link_libraries(monte-carlo-simulation ${REQLIBS})
+  target_link_libraries(monte-carlo-simulation ${REQLIBS} reveal_core)
   add_library(monte-carlo-print MODULE print.cpp)
   target_link_libraries(monte-carlo-print ${REQLIBS})
 endif(BUILD_MONTECARLO)

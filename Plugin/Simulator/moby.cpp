@@ -520,6 +520,8 @@ extern "C" {
 
 void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
 {
+  OUT_LOG(logDEBUG2) << "start moby controller INIT function";
+
   // pointer to the simulator
   boost::shared_ptr<Moby::Simulator> sim;
   // pointer to the articulated body in Moby
@@ -584,6 +586,8 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   controlled_body->controller                     = &controller_callback;
   
   // ================= INIT ROBOT STATE ==========================
+  OUT_LOG(logDEBUG2) << "INIT ROBOT STATE";
+
   boost::shared_ptr<Moby::ArticulatedBody>
   abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(controlled_body);
   boost::shared_ptr<Moby::RCArticulatedBody>
@@ -639,6 +643,8 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   // send to moby
   abrobot->set_generalized_coordinates_euler(gq);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
+  
+  OUT_LOG(logDEBUG2) << "end moby controller INIT function";
 }
 } // end extern C
 

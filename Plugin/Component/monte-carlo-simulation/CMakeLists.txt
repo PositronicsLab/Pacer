@@ -12,7 +12,7 @@ include_directories(${BOOST_INCLUDE_DIR})
 
   add_executable(sample.bin Sample.cpp)
 
-  target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
+  target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver pacer-driver)
   IF(USE_DISPLAY)
     #find OSG
     find_package (osg)

@@ -116,11 +116,18 @@ file(GLOB SOURCES
   "src/*.cpp"
 )
 
-file(GLOB MAIN_SOURCES
-"src/main/*.cpp"
+set(DRIVER_SOURCES
+  src/main/driver.cpp
 )
-add_executable(pacer-driver ${SOURCES}  ${MAIN_SOURCES})
+
+set(MAIN_SOURCES
+  src/main/main.cpp
+)
+add_library(pacer-driver ${SOURCES}  ${DRIVER_SOURCES})
 target_link_libraries(pacer-driver ${LIBS})
+
+add_executable(pacer-main ${MAIN_SOURCES})
+target_link_libraries(pacer-main pacer-driver)
 # install Pacer binary
 set_target_properties(pacer-driver PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 #install(TARGETS pacer-driver DESTINATION bin)

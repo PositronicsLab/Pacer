@@ -58,6 +58,7 @@ bool USE_PIPES = false;
 int pid = 0;
 double DURATION = 0;
 bool USE_UNCER = true;
+bool PACER_ONLY = false;
 
 using namespace Ravelin;
 
@@ -65,6 +66,11 @@ namespace Moby {
   extern void close();
   extern bool init(int argc, char** argv, boost::shared_ptr<Simulator>& s);
   extern bool step(boost::shared_ptr<Simulator> s);
+}
+
+namespace Pacer {
+  extern void init();
+  extern double step();
 }
 
 void apply_transform(Ravelin::Transform3d& T,const std::set<shared_ptr<Jointd> >& outer_joints){
@@ -705,6 +711,7 @@ void parse_sample_options(int argc, char* argv[]){
     EXPORT_XML = true;
   }
   
+  
   if ( vm.count("help")  )
   {
     logging << "Available options: " << std::endl
@@ -760,7 +767,8 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
    *  Moby Initialization
    */
   logging << " -- Populating command line options -- " << std::endl;
-  
+ 
+  if(!PACER_ONLY){
   // run sample
   std::vector<std::string> argvs;
   argvs.push_back("moby-driver");
@@ -796,7 +804,10 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   Moby::init(argvs.size(), moby_argv,sim);
   
   logging << "Moby Started: " << std::endl;
-  
+  } else {
+  logging << "Moby not Started, using only pacer: " << std::endl;
+
+  }
   // clean up argv
   //  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
   //    delete[] moby_argv[i];
@@ -815,6 +826,7 @@ void parse_command_line_options(int argc, char* argv[]){
   ("readpipe", po::value<int>()->default_value(0),"PARENT_TO_CHILD_READ")
   ("writepipe", po::value<int>()->default_value(0),"CHILD_TO_PARENT_WRITE")
   ("no-pipe","expect piped parameters?")
+  ("kinematic", "load pacer alone (no moby physics)")
   ("controlled", "gets rid of uncertainty");
   
   logging << "Parsing Variable Map from command line" << std::endl;
@@ -826,6 +838,10 @@ void parse_command_line_options(int argc, char* argv[]){
   po::store(parsed, vm);
   //  po::notify(vm);
   
+  if (vm.count("kinematic")) {
+    PACER_ONLY = true;
+	USE_UNCER=false;
+  }
   logging << "Parsed Variable Map from command line" << std::endl;
 	if(vm.count("controlled")){
 	USE_UNCER=false;
@@ -877,7 +893,8 @@ int main(int argc_main, char* argv_main[]){
   preload_simulation(argc_main,argv_main, sim);
   logging << " -- Started Simulator -- " << std::endl;
   
-  if(!sim)
+  if( !PACER_ONLY )
+  if( !sim )
     throw std::runtime_error("Could not start Moby");
   
   logging << " -- Created Simulator -- " << std::endl;
@@ -885,6 +902,7 @@ int main(int argc_main, char* argv_main[]){
   // get event driven simulation and dynamics bodies
   shared_ptr<RCArticulatedBodyd> robot;
   shared_ptr<RigidBodyd> environment;
+  if( !PACER_ONLY )
   BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
     if(!robot)
       robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
@@ -893,6 +911,7 @@ int main(int argc_main, char* argv_main[]){
   }
   
   // Fail if moby was inited wrong
+  if( !PACER_ONLY )
   if(!robot)
     throw std::runtime_error("Could not find robot");
   
@@ -935,6 +954,7 @@ simulation_start:
   logging << " -- parse_sample_options -- " << std::endl;
   parse_sample_options(argc_sample,argv_sample);
   logging << " -- parse_sample_options -- " << std::endl;
+  if( !PACER_ONLY )
   sim->current_time = 0;
   
   //  if(!environment)
@@ -948,6 +968,7 @@ simulation_start:
   {apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);}
 
   
+  if( !PACER_ONLY )
   if(EXPORT_XML){
     // write the file (fails silently)
     logging << " -- Exporting robot model file -- " << std::endl;
@@ -971,7 +992,21 @@ simulation_start:
   {logging << " -- Applying State Uncertainty -- " << std::endl;
   apply_state_uncertainty(argc_sample,argv_sample,robot);
   logging << " -- Applied State Uncertainty -- " << std::endl;}
+
+  if(PACER_ONLY){
+    Pacer::init();
+  std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
+  bool stop_sim = false;
+  unsigned long long ITER = 0;
   
+  double current_time = 0;
+  while (current_time <= DURATION) {
+    current_time = Pacer::step();
+    std::cerr << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << current_time  << ", iteration: " << ITER <<  std::endl;
+    ITER++;
+  }
+
+  }{
   /*
    *  Running experiment
    */
@@ -1044,6 +1079,7 @@ simulation_start:
     //    execv( argv_main[0] , argv_main );
     SAMPLE_NUMBER++;
     goto simulation_start;
+  }
   }
   
   // Quit like this because quitting normally leads to weird deconstructor errors.

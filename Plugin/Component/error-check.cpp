@@ -71,6 +71,8 @@ errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("lenH1") <<
        << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LF_Y_2_tor") 
        << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << "\n";
 
+	setenv("curr_line","0",1);
+	setenv("curr_iter","0",1);
   std::string editor=getenv("BUILDER_GUI_PATH");
 	editor+="/editor";
         pid_t pid=fork();

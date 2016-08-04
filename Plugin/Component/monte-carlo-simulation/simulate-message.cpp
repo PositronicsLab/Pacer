@@ -45,10 +45,10 @@ static void spawn_process(int thread_number){
     
     OUT_LOG(logDEBUG) << "In child process for thread ("<< thread_number <<") with PID ("<< pid <<")";
     
-//    OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
+    //    OUT_LOG(logINFO) << "Moving working directory to: " << TASK_PATH;
     OUT_LOG(logINFO) << ".. then Executing " << SAMPLE_BIN << std::endl;
     
-//    chdir( TASK_PATH.c_str() );
+    //    chdir( TASK_PATH.c_str() );
     execl( SAMPLE_BIN.c_str() , SAMPLE_BINARY.c_str() , TASK_PATH.c_str() ,  NULL );
     ///////////////////////////////////////////////////
     /// ---------- EXIT CHILD PROCESS ------------- ///
@@ -64,9 +64,9 @@ static void spawn_process(int thread_number){
   /// ---------- CONTINUE PARENT PROCESS ------------- ///
   OUT_LOG(logINFO) << "Plugin sleeping to permit thread (" << thread_number << ") with PID ("<< pid <<") to start";
   tick();
-//#ifdef USE_THREADS
-//  pthread_mutex_lock(&sample_processes[thread_number].mutex);
-//#endif
+  //#ifdef USE_THREADS
+  //  pthread_mutex_lock(&sample_processes[thread_number].mutex);
+  //#endif
   sample_processes[thread_number].pid = pid;
   
   std::string port_id_simulation = "pacer-planner-" + SSTR(pid);
@@ -75,50 +75,71 @@ static void spawn_process(int thread_number){
   OUT_LOG(logINFO) << "Client connecting to server port " << port_id_simulation << " on thread (" << thread_number << ") with PID ("<< pid <<").  Server must be inited by now!";
   
   sample_processes[thread_number].client = Client(port_id_simulation);
-  
-  std::string request_reply = "PlanningService-->SimulationService: sending request to SimulationService!";
-  sample_processes[thread_number].client.request( request_reply );
-
-  
-#ifdef INIT_SIM // if i can ever get this to work
-  
-  std::vector<std::string> SIM_ARGV;
-  SIM_ARGV.push_back("--moby");
-  SIM_ARGV.push_back("-s="+SSTR(dt_sample));
-  SIM_ARGV.push_back("-p="+pacer_interface_path+"/libPacerMobyPlugin.so");
-  bool DISPLAY_MOBY = false;
-  ctrl->get_data<bool>(plugin_namespace+".display",DISPLAY_MOBY);
-  if(DISPLAY_MOBY){
-    SIM_ARGV.push_back("-r");
+  {
+    std::string request_reply = "PlanningService-->SimulationService: sending request to SimulationService!";
+    OUT_LOG(logINFO) << "Request: " << request_reply;
+    sample_processes[thread_number].client.request( request_reply );
+    OUT_LOG(logINFO) << "Reply: " << request_reply;
   }
-  
-  std::string model_name("model.xml");
-  ctrl->get_data<std::string>(plugin_namespace+".moby-model",model_name);
-  SIM_ARGV.push_back(model_name);
-  
-  std::string s;
-  for(int i = 0; i < SAMPLE_ARGV.size(); i++)
-  s += ( i != 0 )? " " + SAMPLE_ARGV[i] : SAMPLE_ARGV[i];
-  
-  OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
-  << "\nHas simulator options:\n" << SAMPLE_ARGV;
-  
-  std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl <<
-  " message (main thread): " << s << std::endl;
-  
-  // expects reply
-  client.request( s );
-  // ... holding
-  if(message != "started"){
-    throw std::runtime_error("Message not recieved!");
+#ifdef INIT_SIM
+  {
+    std::vector<std::string> SIM_ARGV;
+    SIM_ARGV.push_back("moby-driver-options");
+    
+    
+    int VISUALIZE_STEP = 0;
+    ctrl->get_data<int>(plugin_namespace+".visualize-step",VISUALIZE_STEP);
+    if (VISUALIZE_STEP != 0) {
+      SIM_ARGV.push_back("--visual");
+      SIM_ARGV.push_back(SSTR(VISUALIZE_STEP));
+    }
+    
+    SIM_ARGV.push_back("--moby");
+    
+    double dt_sample = 0;
+    ctrl->get_data<double>(plugin_namespace+".dt",dt_sample);
+    SIM_ARGV.push_back("s="+SSTR(dt_sample));
+    
+    static std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
+    OUT_LOG(logINFO) << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
+    
+    SIM_ARGV.push_back("p="+pacer_interface_path+"/libPacerMobyPlugin.so");
+    bool DISPLAY_MOBY = false;
+    ctrl->get_data<bool>(plugin_namespace+".display",DISPLAY_MOBY);
+    if(DISPLAY_MOBY){
+      SIM_ARGV.push_back("r");
+    }
+    
+    std::string model_name("model.xml");
+    ctrl->get_data<std::string>(plugin_namespace+".moby-model",model_name);
+    SIM_ARGV.push_back(model_name);
+    
+    std::string s;
+    for (int i=0; i<SIM_ARGV.size(); i++) {
+      s += ( i != 0 )? " " + SIM_ARGV[i] : SIM_ARGV[i];
+    }
+    
+    OUT_LOG(logINFO) << "Process: " << pid << " on thread: " << thread_number << "\nHas simulator options (set offline):\n" << SIM_ARGV;
+    
+    std::cout << "Process: " << pid << " on thread: " << thread_number << " at port: [" << sample_processes[thread_number].worker_port << ", message (main thread): " << s << std::endl;
+    
+    // expects reply
+    sample_processes[thread_number].client.request( s );
+    // ... holding
+    
+    std::cout << "reply to simulator options " << s << std::endl;
+    
+    if(s.compare("started") != 0){
+      throw std::runtime_error("Message not recieved!");
+    }
   }
-  
 #endif
+  
   sample_processes[thread_number].restart = false;
   sample_processes[thread_number].active = false;
-//#ifdef USE_THREADS
-//  pthread_mutex_unlock(&sample_processes[thread_number].mutex);
-//#endif
+  //#ifdef USE_THREADS
+  //  pthread_mutex_unlock(&sample_processes[thread_number].mutex);
+  //#endif
   
 }
 
@@ -163,32 +184,35 @@ static void *thread_worker(void *threadid)
   long thread_number;
   thread_number = (long)threadid;
   
-  std::string request_reply = "PlanningService-->SimulationService: Start this simulation: TODO: POLICY INFO";
+  std::string request_reply = "Give me simulation data once you're done";
+  OUT_LOG(logINFO) <<  "PlanningService-->SimulationService("<< thread_number <<"): " << request_reply;
+
   sample_processes[thread_number].client.request( request_reply );
+  OUT_LOG(logINFO) <<  "PlanningService<--SimulationService("<< thread_number <<"): " << request_reply;
+
+  //  while (sample_processes[thread_number].active) {
+  //    std::string request_reply = "PlanningService-->SimulationService: Give me simulation data once you're done";
+  //    sample_processes[thread_number].client.request( request_reply );
+  std::vector<std::string> message;
   
-  while (sample_processes[thread_number].active) {
-    std::string request_reply = "PlanningService-->SimulationService: Give me simulation data once you're done";
-    sample_processes[thread_number].client.request( request_reply );
-    std::vector<std::string> message;
-    
-    boost::split(message, request_reply, boost::is_any_of(" "));
-    if(message.size() > 1){
-      sample_messages.push_back(message);
-      sample_processes[thread_number].active = 0;
-    } else {
-      sample_processes[thread_number].active = 0;
-      sample_processes[thread_number].restart = 1;
-    }
+  boost::split(message, request_reply, boost::is_any_of(" "));
+  if(message.size() > 1){
+    sample_messages.push_back(message);
+    sample_processes[thread_number].active = 0;
+  } else {
+    sample_processes[thread_number].active = 0;
+    sample_processes[thread_number].restart = 1;
   }
+//  }
   return (void *) 0;
 }
 
 void start_worker_thread(int thread_number){
-  OUT_LOG(logINFO) << "PROCESS SPAWNER: start_process_spawner_thread(.)";
+  OUT_LOG(logINFO) << "Start Worker: start_worker_thread("<< thread_number <<")";
   
 #ifdef USE_THREADS
   // start worker thread to check on process
-  static int iret = pthread_create( &worker_threads[thread_number], NULL,&thread_worker, (void *)thread_number);
+  int iret = pthread_create( &worker_threads[thread_number], NULL,&thread_worker, (void *)thread_number);
   if(iret)
   {
     throw std::runtime_error("Error - pthread_create() return code: " + SSTR(iret));
@@ -209,7 +233,8 @@ void exit_sighandler( int signum, siginfo_t* info, void* context ) {
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
     if(sample_processes[thread_number].pid == info->si_pid){
       OUT_LOG(logINFO) << "Process on thread (" << thread_number << ") with PID ("<< sample_processes[thread_number].pid <<") crashed!";
-      sample_processes[thread_number].restart = true;
+      if(info->si_status != 0)
+        sample_processes[thread_number].restart = true;
       sample_processes[thread_number].active = false;
     }
   }
@@ -218,7 +243,7 @@ void exit_sighandler( int signum, siginfo_t* info, void* context ) {
 struct sigaction action;
 void register_exit_sighandler(){
   memset( &action, 0, sizeof(struct sigaction) );
-  //  action.sa_handler = exit_sighandler;
+//    action.sa_handler = exit_sighandler;
   action.sa_sigaction = exit_sighandler; // NEW
   sigaction( SIGCHLD, &action, NULL );
 }

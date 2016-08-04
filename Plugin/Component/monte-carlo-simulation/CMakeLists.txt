@@ -9,7 +9,7 @@ if(BUILD_MONTECARLO)
   add_definitions (-DUSE_ZMQ)
 
 
-  add_library(monte-carlo-simulation MODULE simulate.cpp)
+  add_library(monte-carlo-simulation MODULE Simulate.cpp)
   target_link_libraries(monte-carlo-simulation ${REQLIBS} reveal_core)
   add_library(monte-carlo-print MODULE print.cpp)
   target_link_libraries(monte-carlo-print ${REQLIBS})
@@ -27,7 +27,7 @@ if(BUILD_MONTECARLO)
   target_link_libraries(sample.bin reveal_core)
 endif(BUILD_MONTECARLO)
 
-target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
+target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver PacerDriver)
   IF(USE_DISPLAY)
     #find OSG
     find_package (osg)

@@ -9,7 +9,9 @@
 #include <signal.h>
 #include <errno.h>
 
-#define OUT_LOG(x) std::cout << std::endl
+#define INIT_SIM
+
+//#define OUT_LOG(x) std::cout << std::endl
 
 #include "service.h"
 using namespace Pacer::Service;
@@ -117,18 +119,27 @@ struct SampleConditions{
 std::vector<SampleConditions> sample_processes;
 
 int NUM_THREADS = 1, NUM_SAMPLES = 1;
-
-#include "select.cpp"
+double START_TIME = 0;
+#include "simulate-message.cpp"
 
 int sample_idx=0;
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   ///////////////////////////////////////////////
   ///////// Visualize final data   //////////////
-  std::cout << "NUM end poses: " << completed_poses.size() << " , t = "<< t << " samples: " << sample_idx << std::endl;
-  for (int i=0; i<completed_poses.size(); i++) {
-    //    std::cout << "Visualizing end pose: " << completed_poses[i]  << std::endl;
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_poses[i],1.0)));
+
+  if (t < START_TIME) {
+    return;
+  }
+  
+  OUT_LOG(logINFO) << "NUM end messages: " << sample_messages.size() << " out of " << sample_idx << " samples that have been run. " << std::endl;
+  for (int i=0; i<sample_messages.size(); i++) {
+    OUT_LOG(logINFO) << " end pose from message: " << sample_messages[i]  << std::endl;
+    //double stod (const string&  str, size_t* idx = 0);
+    Ravelin::Origin3d position(std::stod(sample_messages[i][3]),std::stod(sample_messages[i][4]),std::stod(sample_messages[i][5]));
+    OUT_LOG(logINFO) << "position: " << position << std::endl;
+    Ravelin::Pose3d completed_pose(Ravelin::Quatd::identity(),position,Pacer::GLOBAL);
+    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_pose,1.0)));
   }
   
   int available_threads = 0;
@@ -141,14 +152,13 @@ void loop(){
   
   
   OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
-  std::cout << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes." << std::endl;
   
   if ( available_threads > 0 && sample_idx < NUM_SAMPLES ){
     for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
       if(sample_processes[thread_number].active || sample_processes[thread_number].restart)
       continue;
       
-#ifndef INIT_SIM // if i can ever get this to work
+#ifndef INIT_SIM
       {
         std::vector<std::string> SIM_ARGV;
         SIM_ARGV.push_back("moby-driver-options");
@@ -180,14 +190,14 @@ void loop(){
         OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
         << "\nHas simulator options (set online):\n" << SIM_ARGV;
         
-        std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " at port: [" << sample_processes[thread_number].worker_port << "] Starting at t = " << t << std::endl <<
+        OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " at port: [" << sample_processes[thread_number].worker_port << "] Starting at t = " << t << std::endl <<
         " message (main thread): " << s << std::endl;
         
         // expects reply
         sample_processes[thread_number].client.request( s );
         // ... holding
         
-        std::cout << "reply to simulator options " << s << std::endl;
+        OUT_LOG(logINFO) << "reply to simulator options " << s << std::endl;
         
         if(s.compare("started") != 0){
           throw std::runtime_error("Message not recieved!");
@@ -227,15 +237,15 @@ void loop(){
       for (int i = 0; i < SAMPLE_ARGV.size(); i++)
       s += ( i != 0 )? " " + SAMPLE_ARGV[i] : SAMPLE_ARGV[i];
       
-      OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
-      << "\nHas simulator options:\n" << SAMPLE_ARGV;
+      OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t;
+      OUT_LOG(logINFO) <<  "\nHas simulator options:\n" << SAMPLE_ARGV;
       
-      std::cout << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t << std::endl <<
-      " message (main thread): " << s << std::endl;
+      OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t;
+      OUT_LOG(logINFO) << " message (main thread): " << s;
       
       // expects reply
       sample_processes[thread_number].client.request( s );      // ... holding
-      std::cout << "reply to sample options: " << s << std::endl;
+      OUT_LOG(logINFO) << "reply to sample options: " << s ;
 
       if(s.compare("simulating") != 0){
         throw std::runtime_error("Message not recieved!");
@@ -243,6 +253,8 @@ void loop(){
 #ifdef USE_THREADS
       pthread_mutex_lock(&sample_processes[thread_number].mutex);
 #endif
+      OUT_LOG(logINFO) << "setting up sample_processes, and starting thread worker for : " << thread_number << std::endl;
+
       sample_processes[thread_number].start_time = t;
       sample_processes[thread_number].sample_number = sample_idx++;
       sample_processes[thread_number].active = true;
@@ -261,19 +273,20 @@ void loop(){
   }
   
   if (available_threads == 0 && sample_idx < NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "All threads ( " << available_threads << " out of " << NUM_THREADS << " ) are working: sample ( " << sample_idx << " out of " << NUM_SAMPLES << " ).";
+    OUT_LOG(logINFO) << "No threads are free ( " << available_threads << " out of " << NUM_THREADS << " ), some samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ).";
   } else if (available_threads == 0 && sample_idx == NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "All threads ( " << available_threads << " out of " << NUM_THREADS << " ) are working and all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
-  } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
-    OUT_LOG(logINFO) << "Not all threads are working ( " << available_threads << " out of " << NUM_THREADS << " ) but all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
-  } else if( sample_idx == NUM_SAMPLES && available_threads == NUM_THREADS){
-    OUT_LOG(logINFO) << "All samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started, all threads are done ( " << available_threads << " out of " << NUM_THREADS << " )";
+    OUT_LOG(logINFO) << "No threads are free ( " << available_threads << " out of " << NUM_THREADS << " ), all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
+  } else if(available_threads == NUM_THREADS  && sample_idx == NUM_SAMPLES){
+    OUT_LOG(logINFO) << "All threads are free ( " << available_threads << " out of " << NUM_THREADS << " ), all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started";
     OUT_LOG(logINFO) << "Experiment Complete";
+  } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
+    OUT_LOG(logINFO) << "Some threads are free ( " << available_threads << " out of " << NUM_THREADS << " ), all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
   }
   
   return;
 }
 
+//#define USE_SIGHANDLER
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
@@ -296,26 +309,30 @@ void setup(){
     sample_processes.push_back(SampleConditions());
     sample_processes.back().active = false;
     sample_processes.back().restart = true;
-    spawn_process(thread_number);
 #ifdef USE_THREADS
     pthread_mutex_unlock(&sample_processes[thread_number].mutex);
 #endif
+    spawn_process(thread_number);
   }
   
   ctrl->get_data<bool>(plugin_namespace+".get-data-online", GET_DATA_ONLINE);
+  ctrl->get_data<double>(plugin_namespace+".start-at-time", START_TIME);
   
+#ifdef USE_SIGHANDLER
   OUT_LOG(logINFO) << "INIT: register_exit_sighandler";
   
   register_exit_sighandler();
-  
   OUT_LOG(logINFO) << "INIT: start_process_spawner_thread";
   
   start_process_spawner_thread();
-    
+#endif
+ 
   return;
 }
 
 void destruct(){
+#ifdef USE_SIGHANDLER
   action.sa_sigaction = NULL;  // might not be SIG_DFL
   sigaction( SIGCHLD, &action, NULL );
+#endif
 }

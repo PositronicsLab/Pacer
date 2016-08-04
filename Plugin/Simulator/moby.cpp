@@ -384,7 +384,7 @@ void post_step_callback_fn(Moby::Simulator* s){
 #ifdef USE_OSG_DISPLAY
   if(display_moby_skeleton){
     // display collision
-    static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
+    static std::vector<std::string> _eef_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
 
     boost::shared_ptr<Moby::ArticulatedBody> abrobot(abrobot_weak_ptr);
     BOOST_FOREACH(boost::shared_ptr<Ravelin::RigidBodyd> rbd, abrobot->get_links()){
@@ -402,8 +402,8 @@ void post_step_callback_fn(Moby::Simulator* s){
         visualize_primitive(primitive,cg_pose,sim);
       }
       
-      for (int i=0;i<_foot_ids.size(); i++) {
-        if(rb->body_id.compare(_foot_ids[i]) == 0){
+      for (int i=0;i<_eef_ids.size(); i++) {
+        if(rb->body_id.compare(_eef_ids[i]) == 0){
           boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = rb;
           bool is_foot = true;
           
@@ -443,7 +443,7 @@ void post_step_callback_fn(Moby::Simulator* s){
 #ifdef USE_OSG_DISPLAY
   if(display_pacer_skeleton){
   // display collision
-  static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
+  static std::vector<std::string> _eef_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
   robot_ptr->set_model_state(robot_ptr->get_generalized_value(Pacer::Robot::position));
 
   boost::shared_ptr<Moby::ArticulatedBody> abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(robot_ptr->get_abrobot());
@@ -462,8 +462,8 @@ void post_step_callback_fn(Moby::Simulator* s){
       visualize_primitive(primitive,cg_pose,sim);
     }
     
-    for (int i=0;i<_foot_ids.size(); i++) {
-      if(rb->body_id.compare(_foot_ids[i]) == 0){
+    for (int i=0;i<_eef_ids.size(); i++) {
+      if(rb->body_id.compare(_eef_ids[i]) == 0){
         boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = rb;
         bool is_foot = true;
         do {

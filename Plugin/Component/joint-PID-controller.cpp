@@ -42,6 +42,9 @@ void loop(){
   Ravelin::VectorNd derr = qd;
   derr -= qd_des;
   
+  OUTLOG(perr,"joint_perr",logDEBUG);
+  OUTLOG(derr,"joint_derr",logDEBUG);
+  
   assert(q.rows() == _gains.size());
   
   Ravelin::VectorNd u(q.rows());

@@ -571,7 +571,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 //      joints[i]->q = q_start[joints[i]->joint_id];
 //    }
     gq.segment(joints[i]->get_coord_index(),joints[i]->get_coord_index()+joints[i]->num_dof()) = q_start[joints[i]->joint_id];
-//    gqd.segment(joints[i]->get_coord_index(),joints[i]->get_coord_index()+joints[i]->num_dof()) = qd_start[joints[i]->joint_id];
+    gqd.segment(joints[i]->get_coord_index(),joints[i]->get_coord_index()+joints[i]->num_dof()) = qd_start[joints[i]->joint_id];
   }
   // update moby
 //  rcabrobot->update_link_poses();

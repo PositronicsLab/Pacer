@@ -988,11 +988,11 @@ simulation_start:
   }
   
   // Apply uncertainty to robot initial conditions
-	if(USE_UNCER)
-  {logging << " -- Applying State Uncertainty -- " << std::endl;
+	if(!PACER_ONLY){
+  logging << " -- Applying State Uncertainty -- " << std::endl;
   apply_state_uncertainty(argc_sample,argv_sample,robot);
-  logging << " -- Applied State Uncertainty -- " << std::endl;}
-
+  logging << " -- Applied State Uncertainty -- " << std::endl;
+}
   if(PACER_ONLY){
     Pacer::init();
   std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;

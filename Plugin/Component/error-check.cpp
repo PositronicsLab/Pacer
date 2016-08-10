@@ -75,15 +75,14 @@ errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("lenH1") <<
 	setenv("curr_iter","0",1);
   std::string editor=getenv("BUILDER_GUI_PATH");
 	editor+="/editor";
-        pid_t pid=fork();
-	if(pid==0)
-        {execl(editor.c_str(), editor.c_str(), (char *) 0);}
+        
+        execl(editor.c_str(), editor.c_str(), (char *) 0);
 	
 }
 
 void loop(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-pid_t pid;
+
 double num_rows;
 ctrl->get_data("num_pose_rows",num_rows);
 

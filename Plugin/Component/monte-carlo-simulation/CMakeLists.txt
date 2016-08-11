@@ -8,9 +8,11 @@ if(BUILD_MONTECARLO)
   include_directories(${REVEAL_INCLUDE_DIR})
   add_definitions (-DUSE_ZMQ)
 
+foreach(copy_number RANGE 10)
+  add_library(monte-carlo-simulation-${copy_number} MODULE Simulate.cpp)
+  target_link_libraries(monte-carlo-simulation-${copy_number} ${REQLIBS} reveal_core)
+endforeach()
 
-  add_library(monte-carlo-simulation MODULE Simulate.cpp)
-  target_link_libraries(monte-carlo-simulation ${REQLIBS} reveal_core)
   add_library(monte-carlo-print MODULE print.cpp)
   target_link_libraries(monte-carlo-print ${REQLIBS})
 endif(BUILD_MONTECARLO)
@@ -21,7 +23,7 @@ find_package(Boost COMPONENTS program_options REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
-  add_executable(sample.bin Sample.cpp)
+add_executable(sample.bin Sample.cpp)
 
 if(BUILD_MONTECARLO)
   target_link_libraries(sample.bin reveal_core)

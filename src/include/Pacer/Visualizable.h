@@ -24,6 +24,9 @@ new Pacer::Point(p,c,s)
 #define POSE(p,s) \
 new Pacer::Pose(p,s)
 
+#define CPOSE(p,c) \
+new Pacer::Pose(p,1,0.1,c)
+
 #define TEXT(t,p,q,c,s) \
 new Pacer::Text(t,p,q,c,s)
 
@@ -90,12 +93,13 @@ class Pose : public Visualizable{
 public:
   double shade;
   Ravelin::Pose3d pose;
-  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1){
+  Pose(const Ravelin::Pose3d& p,double sd = 0.5,double s = 0.1, Ravelin::Vector3d c = Ravelin::Vector3d(0,0,0) ){
     pose = Ravelin::Pose3d();
     eType = ePose;
     shade = sd;
     size = s;
     pose = p;
+    color = c;
   }
 };
 

@@ -13,6 +13,7 @@
 
 //#define OUT_LOG(x) std::cout << std::endl
 
+
 #include "service.h"
 using namespace Pacer::Service;
 
@@ -118,45 +119,64 @@ struct SampleConditions{
 
 std::vector<SampleConditions> sample_processes;
 
-int NUM_THREADS = 1, NUM_SAMPLES = 1;
+int NUM_THREADS = 1, NUM_SAMPLES = 1,NUM_WORKING = 100;
 double START_TIME = 0;
+int sample_idx=0;
+
 #include "simulate-message.cpp"
 
-int sample_idx=0;
+//#define ARM
+#define QUAD
+
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   ///////////////////////////////////////////////
   ///////// Visualize final data   //////////////
-
+  
   if (t < START_TIME) {
     return;
   }
   
+  std::vector<double> col = ctrl->get_data<std::vector<double> >(plugin_namespace+".color");
+  static Ravelin::Vector3d color(&col[0]);
   OUT_LOG(logINFO) << "NUM end messages: " << sample_messages.size() << " out of " << sample_idx << " samples that have been run. " << std::endl;
   for (int i=0; i<sample_messages.size(); i++) {
     OUT_LOG(logINFO) << " end pose from message: " << sample_messages[i]  << std::endl;
     //double stod (const string&  str, size_t* idx = 0);
+#ifdef ARM
     Ravelin::Origin3d position(std::stod(sample_messages[i][3]),std::stod(sample_messages[i][4]),std::stod(sample_messages[i][5]));
     OUT_LOG(logINFO) << "position: " << position << std::endl;
     Ravelin::Pose3d completed_pose(Ravelin::Quatd::identity(),position,Pacer::GLOBAL);
-    Utility::visualize.push_back( Pacer::VisualizablePtr( new Pacer::Pose(completed_pose,1.0)));
+    VISUALIZE(CPOSE(completed_pose,color));
+#endif
+#ifdef QUAD
+    Ravelin::Origin3d position(std::stod(sample_messages[i][3]),std::stod(sample_messages[i][4]),std::stod(sample_messages[i][5]));
+    Ravelin::Quatd orient = Ravelin::Quatd::rpy(std::stod(sample_messages[i][6]),std::stod(sample_messages[i][7]),std::stod(sample_messages[i][8]));
+    OUT_LOG(logINFO) << "pose: " << position << " , " << orient << std::endl;
+    Ravelin::Pose3d completed_pose(orient,position,Pacer::GLOBAL);
+    VISUALIZE(CPOSE(completed_pose,color));
+#endif
   }
   
   int available_threads = 0;
   for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
     if(!sample_processes[thread_number].active)
-    available_threads++;
+      available_threads++;
   }
   
-  OUT_LOG(logINFO) << "sample: " << sample_idx << " out of " << NUM_SAMPLES << " total samples:" << sample_idx/NUM_SAMPLES ;
+  OUT_LOG(logDEBUG) << "num sample processes = " << sample_processes.size();
+
+  OUT_LOG(logDEBUG) << "sample: " << sample_idx << " out of " << NUM_SAMPLES << " total samples: " << sample_idx/NUM_SAMPLES ;
   
+  int active_threads = NUM_THREADS-available_threads;
+  OUT_LOG(logINFO) << "num threads =  " << NUM_THREADS << ", available threads = " << available_threads << ", active_threads = " << active_threads;
+
+  OUT_LOG(logINFO) << "Active processes: " << active_threads << " out of " << NUM_WORKING << " allowed simultaneous processes.";
   
-  OUT_LOG(logINFO) << "Active processes: " << ( NUM_THREADS-available_threads ) << " out of " << NUM_THREADS << " allowed simultaneous processes.";
-  
-  if ( available_threads > 0 && sample_idx < NUM_SAMPLES ){
+  if ( active_threads < NUM_WORKING && sample_idx < NUM_SAMPLES ){
     for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
       if(sample_processes[thread_number].active || sample_processes[thread_number].restart)
-      continue;
+        continue;
       
 #ifndef INIT_SIM
       {
@@ -170,7 +190,7 @@ void loop(){
         
         static std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
         OUT_LOG(logINFO) << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
-
+        
         SIM_ARGV.push_back("p="+pacer_interface_path+"/libPacerMobyPlugin.so");
         bool DISPLAY_MOBY = false;
         ctrl->get_data<bool>(plugin_namespace+".display",DISPLAY_MOBY);
@@ -186,7 +206,7 @@ void loop(){
         for (int i=0; i<SIM_ARGV.size(); i++) {
           s += ( i != 0 )? " " + SIM_ARGV[i] : SIM_ARGV[i];
         }
-
+        
         OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
         << "\nHas simulator options (set online):\n" << SIM_ARGV;
         
@@ -208,7 +228,7 @@ void loop(){
       
       std::vector<std::string> SAMPLE_ARGV;
       SAMPLE_ARGV.push_back("moby-model-update-options");
-
+      
       get_sample_options(SAMPLE_ARGV);
       
       OUT_LOG(logDEBUG) << "Parameters: " << SAMPLE_ARGV;
@@ -216,7 +236,7 @@ void loop(){
       bool STAND_ROBOT = false;
       ctrl->get_data<bool>(plugin_namespace+".standing",STAND_ROBOT);
       if(STAND_ROBOT)
-      SAMPLE_ARGV.push_back("--stand");
+        SAMPLE_ARGV.push_back("--stand");
       
       bool EXPORT_XML = false;
       ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
@@ -235,7 +255,7 @@ void loop(){
       // concatenate string into message
       std::string s;
       for (int i = 0; i < SAMPLE_ARGV.size(); i++)
-      s += ( i != 0 )? " " + SAMPLE_ARGV[i] : SAMPLE_ARGV[i];
+        s += ( i != 0 )? " " + SAMPLE_ARGV[i] : SAMPLE_ARGV[i];
       
       OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t;
       OUT_LOG(logINFO) <<  "\nHas simulator options:\n" << SAMPLE_ARGV;
@@ -246,7 +266,7 @@ void loop(){
       // expects reply
       sample_processes[thread_number].client.request( s );      // ... holding
       OUT_LOG(logINFO) << "reply to sample options: " << s ;
-
+      
       if(s.compare("simulating") != 0){
         throw std::runtime_error("Message not recieved!");
       }
@@ -254,7 +274,7 @@ void loop(){
       pthread_mutex_lock(&sample_processes[thread_number].mutex);
 #endif
       OUT_LOG(logINFO) << "setting up sample_processes, and starting thread worker for : " << thread_number << std::endl;
-
+      
       sample_processes[thread_number].start_time = t;
       sample_processes[thread_number].sample_number = sample_idx++;
       sample_processes[thread_number].active = true;
@@ -265,7 +285,7 @@ void loop(){
 #endif
       
       if(sample_idx == NUM_SAMPLES)
-      break;
+        break;
     }
     
     
@@ -300,12 +320,21 @@ void setup(){
   Random::create_distributions("uncertainty",ctrl,parameter_generator);
 #endif
   ctrl->get_data<int>(plugin_namespace+".max-threads", NUM_THREADS);
+  ctrl->get_data<int>(plugin_namespace+".max-working", NUM_WORKING);
+  NUM_WORKING = std::min(NUM_THREADS,NUM_WORKING);
+  OUT_LOG(logDEBUG) << NUM_WORKING << " threads are allowed to work simultaneously" ;
+
   ctrl->get_data<int>(plugin_namespace+".max-samples", NUM_SAMPLES);
   
   /////////////////////////////////
   ////  START WORKER PROCESSES ////
+  OUT_LOG(logDEBUG) << "Starting " << NUM_THREADS << " threads" ;
+
   worker_threads.resize(NUM_THREADS);
   for(int thread_number=0;thread_number<NUM_THREADS;thread_number++){
+    OUT_LOG(logDEBUG) << "Starting thread #" << thread_number;
+    OUT_LOG(logDEBUG) << "adding process to sample_processes: " << sample_processes.size();
+
     sample_processes.push_back(SampleConditions());
     sample_processes.back().active = false;
     sample_processes.back().restart = true;
@@ -326,7 +355,7 @@ void setup(){
   
   start_process_spawner_thread();
 #endif
- 
+  
   return;
 }
 
@@ -336,3 +365,7 @@ void destruct(){
   sigaction( SIGCHLD, &action, NULL );
 #endif
 }
+
+#ifdef INIT_SIM
+#undef INIT_SIM
+#endif

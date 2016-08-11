@@ -25,20 +25,20 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
   ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
   
-//  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
-//    std::string name,help;
-//    name = std::string(jp->joint_id+".x");
-//    help = std::string("Absolute Position [m OR rad] of Joint: "+jp->joint_id);
-//    
-//    desc.add_options()
-//    (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
-//    
-//    name = std::string(jp->joint_id+".xd");
-//    help = std::string("Absolute Velocity [m/s OR rad/s] of Joint: "+jp->joint_id);
-//    
-//    desc.add_options()
-//    (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
-//  }
+  //  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
+  //    std::string name,help;
+  //    name = std::string(jp->joint_id+".x");
+  //    help = std::string("Absolute Position [m OR rad] of Joint: "+jp->joint_id);
+  //
+  //    desc.add_options()
+  //    (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
+  //
+  //    name = std::string(jp->joint_id+".xd");
+  //    help = std::string("Absolute Velocity [m/s OR rad/s] of Joint: "+jp->joint_id);
+  //
+  //    desc.add_options()
+  //    (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
+  //  }
   
   po::variables_map vm;
   
@@ -56,39 +56,39 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
    *  Parameter Application
    */
   if(USE_UNCER)
-  if(vm.count("BODY0.x")){
-    std::vector<double> position = vm["BODY0.x"].as<std::vector<double> >();
-    logging1 << "applying state uncertainty to base (position): "<< position << std::endl;
-    
-    // Get robot positon
-    Ravelin::VectorNd q;
-    robot->get_generalized_coordinates_euler(q);
-    int N_JOINT_DOFS = q.rows()-7;
-    // update base position
-    for (int i=0;i<3; i++) {
-      q[N_JOINT_DOFS+i] = position[i];
+    if(vm.count("BODY0.x")){
+      std::vector<double> position = vm["BODY0.x"].as<std::vector<double> >();
+      logging1 << "applying state uncertainty to base (position): "<< position << std::endl;
+      
+      // Get robot positon
+      Ravelin::VectorNd q;
+      robot->get_generalized_coordinates_euler(q);
+      int N_JOINT_DOFS = q.rows()-7;
+      // update base position
+      for (int i=0;i<3; i++) {
+        q[N_JOINT_DOFS+i] = position[i];
+      }
+      Ravelin::Quatd quat=Ravelin::Quatd::rpy(position[3],position[4],position[5]);
+      for (int i=0;i<4; i++) {
+        q[N_JOINT_DOFS+3+i] = quat[i];
+      }
+      
+      // apply changes
+      robot->set_generalized_coordinates_euler(q);
+      logging1 << "Set coords to : " << q << std::endl;
+      
     }
-    Ravelin::Quatd quat=Ravelin::Quatd::rpy(position[3],position[4],position[5]);
-    for (int i=0;i<4; i++) {
-      q[N_JOINT_DOFS+3+i] = quat[i];
-    }
-    
-    // apply changes
-    robot->set_generalized_coordinates_euler(q);
-    logging1 << "Set coords to : " << q << std::endl;
-    
-  }
   
-////   Joints
-//  if(USE_UNCER)
-//  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
-//    if(vm.count(jp->joint_id+".x")){
-//      std::vector<double> position = vm[jp->joint_id+".x"].as<std::vector<double> >();
-//      for (int i=0; i<jp->num_dof(); i++) {
-//        jp->q[i] = position[i];
-//      }
-//    }
-//  }
+  ////   Joints
+  //  if(USE_UNCER)
+  //  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
+  //    if(vm.count(jp->joint_id+".x")){
+  //      std::vector<double> position = vm[jp->joint_id+".x"].as<std::vector<double> >();
+  //      for (int i=0; i<jp->num_dof(); i++) {
+  //        jp->q[i] = position[i];
+  //      }
+  //    }
+  //  }
   
   // Update robot state
   robot->update_link_poses();
@@ -159,33 +159,33 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   robot->update_link_poses();
   
   if(USE_UNCER)
-  if(vm.count("BODY0.xd")){
-    logging1 << "applying state uncertainty to base (velocity)" << std::endl;
-    
-    std::vector<double> velocity = vm["BODY0.xd"].as<std::vector<double> >();
-    
-    // Get robot velocity
-    Ravelin::VectorNd qd;
-    robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
-    int N_JOINT_DOFS = qd.rows()-6;
-    // update base velocity
-    for (int i=0;i<6; i++) {
-      qd[N_JOINT_DOFS+i] = velocity[i];
+    if(vm.count("BODY0.xd")){
+      logging1 << "applying state uncertainty to base (velocity)" << std::endl;
+      
+      std::vector<double> velocity = vm["BODY0.xd"].as<std::vector<double> >();
+      
+      // Get robot velocity
+      Ravelin::VectorNd qd;
+      robot->get_generalized_velocity(DynamicBodyd::eSpatial,qd);
+      int N_JOINT_DOFS = qd.rows()-6;
+      // update base velocity
+      for (int i=0;i<6; i++) {
+        qd[N_JOINT_DOFS+i] = velocity[i];
+      }
+      // apply changes
+      robot->set_generalized_velocity(DynamicBodyd::eSpatial,qd);
     }
-    // apply changes
-    robot->set_generalized_velocity(DynamicBodyd::eSpatial,qd);
-  }
   
-//  // Joints
-//  if(USE_UNCER)
-//  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
-//    if(vm.count(jp->joint_id+".xd")){
-//      std::vector<double> velocity = vm[jp->joint_id+".xd"].as<std::vector<double> >();
-//      for (int i=0; i<jp->num_dof(); i++) {
-//        jp->qd[i] = velocity[i];
-//      }
-//    }
-//  }
+  //  // Joints
+  //  if(USE_UNCER)
+  //  BOOST_FOREACH(shared_ptr<Jointd> jp, robot->get_joints()){
+  //    if(vm.count(jp->joint_id+".xd")){
+  //      std::vector<double> velocity = vm[jp->joint_id+".xd"].as<std::vector<double> >();
+  //      for (int i=0; i<jp->num_dof(); i++) {
+  //        jp->qd[i] = velocity[i];
+  //      }
+  //    }
+  //  }
   
   // Update robot state
   robot->update_link_velocities();
@@ -216,7 +216,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       
       desc.add_options()
       (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
-
+      
     }
   }
   
@@ -326,7 +326,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       std::cout << "    joint_tare (set): " << tare << std::endl;
       Ravelin::VectorNd tare_v = rjp->get_q_tare();
       std::cout << "    joint_tare (moby): " << tare_v << std::endl;
-
+      
       assert(tare_v.rows() == tare.size());
       for (int i=0; i<tare.size(); i++) {
         tare_v[i] += tare[i];
@@ -380,7 +380,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     //    shared_ptr<Moby::CylinderPrimitive> limb_primitive;
     
     if(density == -1 && mass == -1 && length == -1 && radius == -1)
-    continue;
+      continue;
     
     Moby::CollisionGeometryPtr base_geometry;
     shared_ptr<Moby::BoxPrimitive> base_primitive;
@@ -687,7 +687,7 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   = po::command_line_parser(argc, argv).style(po::command_line_style::unix_style ^ po::command_line_style::allow_short).options(desc).allow_unregistered().run();
   po::store(parsed, vm);
   //  po::notify(vm);
-
+  
   
   logging1 << "Parsed Variable Map from command line" << std::endl;
   
@@ -696,43 +696,43 @@ void preload_simulation(int argc, char* argv[], shared_ptr<Simulator>& sim){
   }
   
   if(!PACER_ONLY){
-  /*
-   *  Moby Initialization
-   */
-  logging1 << " -- Populating command line options -- " << std::endl;
-  
-  // run sample
-  std::vector<std::string> argvs;
-  argvs.push_back("montecarlo-moby-sample");
-  // Max time is 0.3 seconds
-  if (!vm["moby"].empty()) {
-    std::vector<std::string> opts = vm["moby"].as<std::vector<std::string> >();
-    logging1 << " -- setting moby options: " << opts << std::endl;
-    for (int i = 0; i<opts.size()-1; i++) {
-      argvs.push_back("-" + opts[i]);
+    /*
+     *  Moby Initialization
+     */
+    logging1 << " -- Populating command line options -- " << std::endl;
+    
+    // run sample
+    std::vector<std::string> argvs;
+    argvs.push_back("montecarlo-moby-sample");
+    // Max time is 0.3 seconds
+    if (!vm["moby"].empty()) {
+      std::vector<std::string> opts = vm["moby"].as<std::vector<std::string> >();
+      logging1 << " -- setting moby options: " << opts << std::endl;
+      for (int i = 0; i<opts.size()-1; i++) {
+        argvs.push_back("-" + opts[i]);
+      }
+      argvs.push_back(opts[opts.size()-1]);
     }
-    argvs.push_back(opts[opts.size()-1]);
-  }
-  logging1 << "Converting command line options: " << argvs << std::endl;
-  
-  char** moby_argv = param_array_noconst(argvs);
-  
-  logging1 << "Moby Starting: " << std::endl;
-  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
-    logging1 << argvs[i] << " ";
-  }
-  logging1 << std::endl;
-  
-  // Ask Moby to init the simulator with options
-  Moby::init(argvs.size(), moby_argv,sim);
-  
-  logging1 << "Moby Started: " << std::endl;
-  
-  // clean up argv
-  //  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
-  //    delete[] moby_argv[i];
-  //  }
-  //  delete[] moby_argv;
+    logging1 << "Converting command line options: " << argvs << std::endl;
+    
+    char** moby_argv = param_array_noconst(argvs);
+    
+    logging1 << "Moby Starting: " << std::endl;
+    for ( size_t i = 0 ; i < argvs.size() ; i++ ){
+      logging1 << argvs[i] << " ";
+    }
+    logging1 << std::endl;
+    
+    // Ask Moby to init the simulator with options
+    Moby::init(argvs.size(), moby_argv,sim);
+    
+    logging1 << "Moby Started: " << std::endl;
+    
+    // clean up argv
+    //  for ( size_t i = 0 ; i < argvs.size() ; i++ ){
+    //    delete[] moby_argv[i];
+    //  }
+    //  delete[] moby_argv;
   } else {
     logging1 << "Moby not Started, using only pacer: " << std::endl;
   }
@@ -767,7 +767,7 @@ void parse_command_line_options(int argc, char* argv[]){
     PACER_ONLY = true;
     USE_UNCER = false;
   }
-
+  
   if (vm.count("no-pipe")) {
     USE_PIPES = false;
   } else {

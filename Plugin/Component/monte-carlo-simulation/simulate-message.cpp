@@ -12,18 +12,18 @@ pthread_t process_spawner_thread;
 ////////////////////////////// NEW PROCESS SPAWNER /////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-std::string TASK_PATH = "./";
+std::string TASK_PATH;
 static void spawn_process(int thread_number){
-  OUT_LOG(logINFO) << "PROCESS SPAWNER: spawn_process(.)";
+  OUT_LOG(logINFO) << "PROCESS SPAWNER: spawn_process("<<thread_number<<")";
   
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   std::string SAMPLE_BINARY("sample.bin");
   ctrl->get_data<std::string>(plugin_namespace+".executable", SAMPLE_BINARY);
-  ctrl->get_data<std::string>(plugin_namespace+".task-directory", TASK_PATH);
+  TASK_PATH = ctrl->get_data<std::string>(plugin_namespace+".task-directory");
   
   if (!getenv("PACER_COMPONENT_PATH"))
-  throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
+    throw std::runtime_error("Environment variable PACER_PLUGIN_PATH not defined");
   
   std::string pPath(getenv("PACER_COMPONENT_PATH"));
   std::string SAMPLE_BIN = pPath + "/" + SAMPLE_BINARY ;
@@ -100,7 +100,7 @@ static void spawn_process(int thread_number){
     ctrl->get_data<double>(plugin_namespace+".dt",dt_sample);
     SIM_ARGV.push_back("s="+SSTR(dt_sample));
     
-    static std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
+    std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
     OUT_LOG(logINFO) << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
     
     SIM_ARGV.push_back("p="+pacer_interface_path+"/libPacerMobyPlugin.so");
@@ -148,7 +148,7 @@ static void *process_spawner_loop(void* data){
   
   while(1){
     for(int thread_number=0;thread_number<sample_processes.size();thread_number++){
-      if(sample_processes[thread_number].restart){
+      if(sample_processes[thread_number].restart && (sample_idx < NUM_SAMPLES) ){
         spawn_process(thread_number);
       }
       tick(0,1000);
@@ -160,7 +160,7 @@ static void start_process_spawner_thread(){
   OUT_LOG(logINFO) << "PROCESS SPAWNER: start_process_spawner_thread(.)";
   
 #ifdef USE_THREADS
-  static int iret = pthread_create( &process_spawner_thread, NULL,&process_spawner_loop,(void*)NULL);
+  int iret = pthread_create( &process_spawner_thread, NULL,&process_spawner_loop,(void*)NULL);
   if(iret)
   {
     throw std::runtime_error("Error - pthread_create() return code: " + SSTR(iret));
@@ -186,10 +186,10 @@ static void *thread_worker(void *threadid)
   
   std::string request_reply = "Give me simulation data once you're done";
   OUT_LOG(logINFO) <<  "PlanningService-->SimulationService("<< thread_number <<"): " << request_reply;
-
+  
   sample_processes[thread_number].client.request( request_reply );
   OUT_LOG(logINFO) <<  "PlanningService<--SimulationService("<< thread_number <<"): " << request_reply;
-
+  
   //  while (sample_processes[thread_number].active) {
   //    std::string request_reply = "PlanningService-->SimulationService: Give me simulation data once you're done";
   //    sample_processes[thread_number].client.request( request_reply );
@@ -203,7 +203,7 @@ static void *thread_worker(void *threadid)
     sample_processes[thread_number].active = 0;
     sample_processes[thread_number].restart = 1;
   }
-//  }
+  //  }
   return (void *) 0;
 }
 
@@ -243,7 +243,7 @@ void exit_sighandler( int signum, siginfo_t* info, void* context ) {
 struct sigaction action;
 void register_exit_sighandler(){
   memset( &action, 0, sizeof(struct sigaction) );
-//    action.sa_handler = exit_sighandler;
+  //    action.sa_handler = exit_sighandler;
   action.sa_sigaction = exit_sighandler; // NEW
   sigaction( SIGCHLD, &action, NULL );
 }

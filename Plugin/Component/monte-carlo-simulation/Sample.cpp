@@ -31,7 +31,12 @@
 
 #include "service.h"
 
-#define ARM
+#ifdef USE_ZMQ
+using namespace Pacer::Service;
+#endif
+
+//#define ARM
+#define QUAD
 //#define INIT_SIM
 
 //#define DEBUG_OUTPUT
@@ -108,7 +113,6 @@ else std::cerr
 
 #endif
 
-using namespace Pacer::Service;
 
 using Moby::Simulator;
 using Ravelin::RigidBodyd;
@@ -172,14 +176,18 @@ int main(int argc, char* argv[]){
   //  chdir( argv_main[1] );
   
   std::string port_id = "pacer-planner-" + SSTR(pid);
+#ifdef USE_ZMQ
   logging1 << "Server creating server port " << port_id << " on PID ("<< pid <<").  Client can not be inited yet!" << std::endl;
   Server server = Server(port_id);
   logging1 << "Server created to server port " << port_id << " on PID ("<< pid <<").  Client can be inited after this!" << std::endl;
+#endif
+  if(USE_PIPES && argc_main == 2){
+    // CHANGE DIRECTORIES AFTER SETTING UP ZEROMQ
+    logging1 << "Moving working directory to: " << argv_main[1] << std::endl;
+    chdir( argv_main[1] );
+  }
   
-  // CHANGE DIRECTORIES AFTER SETTING UP ZEROMQ
-  logging1 << "Moving working directory to: " << argv_main[1] << std::endl;
-  chdir( argv_main[1] );
-  
+#ifdef USE_ZMQ
   if(USE_PIPES){
     // Wait for message from a client
     std::string request;
@@ -189,9 +197,11 @@ int main(int argc, char* argv[]){
     std::string reply = "SimulationService: [" + port_id + "] , has connected to PlanningService!";
     server.respond(reply);
   }
+#endif
   
   int argc_sim;
   char** argv_sim;
+#ifdef USE_ZMQ
   if(USE_PIPES){
     logging1 << "PID: "<< pid <<  " Started! waiting on simulatior options message at port: " << port_id << std::endl;
     
@@ -212,7 +222,9 @@ int main(int argc, char* argv[]){
       argv_sim[i] = new char[messagev[i].size() + 1];
       std::strcpy(argv_sim[i], messagev[i].c_str());
     }
-  } else {
+  } else
+#endif
+  {
     argc_sim = argc_main;
     argv_sim = argv_main;
   }
@@ -241,8 +253,8 @@ int main(int argc, char* argv[]){
     logging1 << " -- Started Simulator -> " << std::endl;
     
     if( !PACER_ONLY )
-    if(!sim)
-    throw std::runtime_error("Could not start Moby");
+      if(!sim)
+        throw std::runtime_error("Could not start Moby");
     
     logging1 << " -- Created Simulator -- " << std::endl;
     
@@ -250,39 +262,39 @@ int main(int argc, char* argv[]){
     shared_ptr<RCArticulatedBodyd> robot;
     shared_ptr<RigidBodyd> environment;
     if( !PACER_ONLY )
-    BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
-      if(!robot)
-      robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
-      if(!environment){
-        environment = boost::dynamic_pointer_cast<RigidBodyd>(db);
+      BOOST_FOREACH(shared_ptr<Moby::ControlledBody> db, sim->get_dynamic_bodies()){
+        if(!robot)
+          robot = boost::dynamic_pointer_cast<RCArticulatedBodyd>(db);
+        if(!environment){
+          environment = boost::dynamic_pointer_cast<RigidBodyd>(db);
 #ifdef ARM
-        std::cerr << " Found object : " << db->id << std::endl;
-        if(db->id.compare("BLOCK") != 0){
-          environment.reset();
-        }
+          logging2 << " Found object : " << db->id << std::endl;
+          if(db->id.compare("BLOCK") != 0){
+            environment.reset();
+          }
 #endif
 #ifdef QUAD
-        if(db->id.compare("GROUND") != 0){
-          environment.reset();
-        }
+          if(db->id.compare("GROUND") != 0){
+            environment.reset();
+          }
 #endif
+        }
       }
-    }
 #ifdef ARM
     if( !PACER_ONLY )
-    if(environment->body_id.compare("BLOCK") != 0)
-    throw std::runtime_error("Could not find block");
+      if(environment->body_id.compare("BLOCK") != 0)
+        throw std::runtime_error("Could not find block");
 #endif
 #ifdef QUAD
     if( !PACER_ONLY )
-    if(environment->body_id.compare("GROUND") != 0)
-    throw std::runtime_error("Could not find ground");
+      if(environment->body_id.compare("GROUND") != 0)
+        throw std::runtime_error("Could not find ground");
 #endif
     
     // Fail if moby was inited wrong
     if( !PACER_ONLY )
-    if(!robot)
-    throw std::runtime_error("Could not find robot");
+      if(!robot)
+        throw std::runtime_error("Could not find robot");
     
     
     logging1 << " -- Found Robot -- " << std::endl;
@@ -299,12 +311,15 @@ int main(int argc, char* argv[]){
     }
 #endif
     
-    {
+#ifdef USE_ZMQ
+    if(USE_PIPES){
       std::string response("started");
       server.respond(response);
     }
+#endif
     int argc_sample;
     char** argv_sample;
+#ifdef USE_ZMQ
     if(USE_PIPES){
       std::cerr << "Sample (" << SAMPLE_NUMBER << ") with PID: "<< pid <<  " Started Simulation! waiting on parameter message" << std::endl;
       
@@ -327,7 +342,9 @@ int main(int argc, char* argv[]){
         argv_sample[i] = new char[messagev[i].size() + 1];
         std::strcpy(argv_sample[i], messagev[i].c_str());
       }
-    } else {
+    } else
+#endif
+    {
       argc_sample = argc_main;
       argv_sample = argv_main;
     }
@@ -348,25 +365,25 @@ int main(int argc, char* argv[]){
     // Apply uncertainty to robot model
     logging1 << " -> apply_manufacturing_uncertainty -- " << std::endl;
     if(USE_UNCER)
-    apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
+      apply_manufacturing_uncertainty(argc_sample,argv_sample,robot);
     logging1 << " -- apply_manufacturing_uncertainty -> " << std::endl;
     
     if( !PACER_ONLY )
-    if(EXPORT_XML){
-      logging1 << " -- Exporting robot model file -- " << std::endl;
-      
-      //     Reset robot state when exporting model
-      Ravelin::VectorNd q_starting_position,q_current_position;
-      robot->get_generalized_coordinates_euler(q_starting_position);
-      q_current_position = q_starting_position;
-      q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
-      robot->set_generalized_coordinates_euler(q_current_position);
-      
-      std::string model_filename("model-"+SSTR(SAMPLE_NUMBER)+".xml");
-      //      boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
-      Moby::XMLWriter::serialize_to_xml(model_filename, sim );
-      robot->set_generalized_coordinates_euler(q_starting_position);
-    }
+      if(EXPORT_XML){
+        logging1 << " -- Exporting robot model file -- " << std::endl;
+        
+        //     Reset robot state when exporting model
+        Ravelin::VectorNd q_starting_position,q_current_position;
+        robot->get_generalized_coordinates_euler(q_starting_position);
+        q_current_position = q_starting_position;
+        q_current_position.segment(0,q_current_position.rows()-7) = Ravelin::VectorNd::zero(q_current_position.rows()-7);
+        robot->set_generalized_coordinates_euler(q_current_position);
+        
+        std::string model_filename("model-"+SSTR(SAMPLE_NUMBER)+".xml");
+        //      boost::shared_ptr<Moby::RCArticulatedBody> robot_moby = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(robot);
+        Moby::XMLWriter::serialize_to_xml(model_filename, sim );
+        robot->set_generalized_coordinates_euler(q_starting_position);
+      }
     
     // Apply uncertainty to robot initial conditions
     logging1 << " -> Applying State Uncertainty -- " << std::endl;
@@ -379,30 +396,40 @@ int main(int argc, char* argv[]){
 #ifdef USE_OSG_DISPLAY
     osg::Group * MAIN_GROUP;
     if( !PACER_ONLY )
-    if (VISUAL_MOD != 0){
-      sim->update_visualization();
-      //  if (!MAIN_GROUP) {
-      MAIN_GROUP = new osg::Group;
-      MAIN_GROUP->addChild(sim->get_persistent_vdata());
-      //    MAIN_GROUP->addChild(sim->get_transient_vdata());
-      //  }
-    }
+      if (VISUAL_MOD != 0){
+        sim->update_visualization();
+        //  if (!MAIN_GROUP) {
+        MAIN_GROUP = new osg::Group;
+        MAIN_GROUP->addChild(sim->get_persistent_vdata());
+            MAIN_GROUP->addChild(sim->get_transient_vdata());
+        //  }
+      }
 #endif
     
     logging1 << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid <<  " -- Starting simulation ("<< SAMPLE_NUMBER << ")"<< std::endl;
     
     // tell planner you've started
-    {
+#ifdef USE_ZMQ
+    if(USE_PIPES){
       std::string response("simulating");
       server.respond(response);
     }
+#endif
     
     // message set to parent or used fr data recording
     std::string data_message;
     
     bool stop_sim = false;
     unsigned long long ITER = 0;
-
+   
+#ifdef USE_OSG_DISPLAY
+    if (VISUAL_MOD != 0){
+      sim->update_visualization();
+      std::string visual_filename = "first-"+SSTR(SAMPLE_NUMBER)+".osg";
+      osgDB::writeNodeFile(*MAIN_GROUP, visual_filename);
+    }
+#endif
+    
     if(PACER_ONLY){
       Pacer::init();
       std::cerr << "Pacer-only sample (kinematic)" << " with PID: "<< pid <<  " -- Starting simulation"<< std::endl;
@@ -417,14 +444,14 @@ int main(int argc, char* argv[]){
       while (!stop_sim &&  sim->current_time < DURATION) {
 #ifdef USE_OSG_DISPLAY
         if( !PACER_ONLY )
-        if (VISUAL_MOD > 0){
-          if(ITER % VISUAL_MOD == 0) {
-            sim->update_visualization();
-            //          std::string visual_filename = "frame-" +SSTR(ITER)+ "-"+SSTR(pid)+"-"+SSTR(SAMPLE_NUMBER)+".osg";
-            std::string visual_filename = "frame-" +SSTR(ITER)+"-"+SSTR(SAMPLE_NUMBER)+".osg";
-            osgDB::writeNodeFile(*MAIN_GROUP, visual_filename);
+          if (VISUAL_MOD > 0){
+            if(ITER % VISUAL_MOD == 0) {
+              sim->update_visualization();
+              //          std::string visual_filename = "frame-" +SSTR(ITER)+ "-"+SSTR(pid)+"-"+SSTR(SAMPLE_NUMBER)+".osg";
+              std::string visual_filename = "frame-" +SSTR(ITER)+"-"+SSTR(SAMPLE_NUMBER)+".osg";
+              osgDB::writeNodeFile(*MAIN_GROUP, visual_filename);
+            }
           }
-        }
 #endif
         //    logging1 << " -- Stepping simulation -- " << std::endl;
         // NOTE: Applied in Pacer -- for now
@@ -454,9 +481,14 @@ int main(int argc, char* argv[]){
         data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(block_point[0]) + " " + SSTR(block_point[1]) + " " + SSTR(block_point[2]) + " " + SSTR(hand_point[0]) + " " + SSTR(hand_point[1]) + " " + SSTR(hand_point[2]);
 #endif
 #ifdef QUAD
-        Vector3d robot_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,robot->get_pose()));
+//        Vector3d robot_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,robot->get_base_link()->get_pose()));
+        Ravelin::Pose3d robot_pose = *(robot->get_base_link()->get_pose().get());
+        robot_pose.update_relative_pose(Moby::GLOBAL);
+        Origin3d rpy;
+        robot_pose.q.to_rpy(rpy[0],rpy[1],rpy[2]);
         // Perturb mass of robot link by scaling by parameter
-        data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(robot_point[0]) + " " + SSTR(robot_point[1]) + " " + SSTR(robot_point[2]);
+//        data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(robot_point[0]) + " " + SSTR(robot_point[1]) + " " + SSTR(robot_point[2]);
+        data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(robot_pose.x[0]) + " " + SSTR(robot_pose.x[1]) + " " + SSTR(robot_pose.x[2]) + " " + SSTR(rpy[0]) + " " + SSTR(rpy[1]) + " " + SSTR(rpy[2]) ;
 #endif
         
         logging2 << "data_message = [ " << data_message << " ]" << std::endl;
@@ -479,11 +511,13 @@ int main(int argc, char* argv[]){
     
     logging1 << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
     
-    {
+#ifdef USE_ZMQ
+    if(USE_PIPES){
       std::string message;
       server.serve(message);
       std::cerr << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " got! message: " << message << std::endl;
     }
+#endif
     /*
      *  Collecting final data
      */
@@ -497,11 +531,13 @@ int main(int argc, char* argv[]){
     
     logging2 << "Sample: "<< SAMPLE_NUMBER << " with PID: "<< pid << " Ended! message to planner: " << data_message << std::endl;
     
+#ifdef USE_ZMQ
     if (USE_PIPES) {
       server.respond(data_message);
     }
+#endif
     
-    
+#ifdef USE_ZMQ
     for (int i = 0 ; i < argc_sample ; i++)
       delete[] argv_sample[i] ;
     delete[] argv_sample ;
@@ -509,6 +545,7 @@ int main(int argc, char* argv[]){
     for (int i = 0 ; i < argc_sim ; i++)
       delete[] argv_sim[i] ;
     delete[] argv_sim ;
+#endif
     
     return 0;
   }

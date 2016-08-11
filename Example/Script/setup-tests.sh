@@ -10,6 +10,7 @@ do
   sed -E -i.bak "s#\@\@PACER_MODEL_PATH\@\@#${PACER_MODEL_PATH}#g" $newvar
   sed -E -i.bak "s#\@\@TESTING_ROBOT\@\@#${TESTING_ROBOT}#g" $newvar
   sed -E -i.bak "s#\@\@PWD\@\@#${PWD}#g" $newvar
+  sed -E -i.bak "s#\@\@PWD_NOPATH\@\@#${PWD##*/}#g" $newvar
 #newvar="${var}.in"
 #cp -f $var $newvar
 #sed -E -i.bak "s#/links/#/\@\@TESTING_ROBOT\@\@/#g" $newvar

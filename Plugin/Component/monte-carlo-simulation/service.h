@@ -1,6 +1,5 @@
 
 #include <stdio.h>
-#include <reveal/core/connection.h>
 #include <boost/shared_ptr.hpp>
 
 #include <stdio.h>
@@ -9,6 +8,8 @@
 #include <signal.h>
 #include <errno.h>
 
+#ifdef USE_ZMQ
+#include <reveal/core/connection.h>
 //-----------------------------------------------------------------------------
 namespace Reveal {
   //-----------------------------------------------------------------------------
@@ -119,6 +120,7 @@ private:
 
 }
 }
+#endif
 
 #include <time.h>
 static int sleep_duration(double duration){

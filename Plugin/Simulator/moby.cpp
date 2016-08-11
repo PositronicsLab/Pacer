@@ -76,7 +76,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   static unsigned long long ITER = -1;
   static double last_time = -0.001;
 
-  std::cout << "controller: time=" << t << " (dt="<< t - last_time << ")" << std::endl;
+  OUT_LOG(logDEBUG1) << "controller: time=" << t << " (dt="<< t - last_time << ")" << std::endl;
 
   if ((t - last_time) < 0.001-Moby::NEAR_ZERO) {
     cf = control_force;
@@ -87,7 +87,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 
   
   ITER++;
-  std::cout << "controller: iteration=" << ITER << " , time=" << t << " (dt="<< t - last_time << ")" << std::endl;
+  OUT_LOG(logINFO) << "controller: iteration=" << ITER << " , time=" << t << " (dt="<< t - last_time << ")" << std::endl;
 
   double dt = t - last_time;
   last_time = t;
@@ -654,7 +654,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::Simulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::Simulator> sim ) ;
-void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> sim,double lightness = 1, double size=0.1);
+void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> sim,double lightness, double size,const Ravelin::Vector3d& c);
 void draw_text(std::string& text_str, const Ravelin::Vector3d& point, const Ravelin::Quatd& quat, const Ravelin::Vector3d& c, boost::shared_ptr<Moby::Simulator> sim, double size);
 
 void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
@@ -682,7 +682,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
         Pacer::Pose * v = static_cast<Pacer::Pose*>((it)->get());
         if (!std::isfinite(v->pose.x.norm())) break;
         //        if (!std::isfinite(v->pose.q.norm())) break;
-        draw_pose(v->pose,sim,v->shade,v->size);
+          draw_pose(v->pose,sim,v->shade,v->size,v->color);
         break;
       }
       case Pacer::Visualizable::eText:{

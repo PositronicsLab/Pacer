@@ -40,7 +40,7 @@ using namespace Pacer::Service;
 //#define INIT_SIM
 
 //#define DEBUG_OUTPUT
-#define LOGGING_OUTPUT
+//#define LOGGING_OUTPUT
 
 #ifdef LOGGING_OUTPUT
 
@@ -360,8 +360,9 @@ int main(int argc, char* argv[]){
     logging1 << " -- parse_sample_options -> " << std::endl;
     
     
+#ifdef LOGGING_OUTPUT
     Logging::open(pid,SAMPLE_NUMBER);
-    
+#endif    
     // Apply uncertainty to robot model
     logging1 << " -> apply_manufacturing_uncertainty -- " << std::endl;
     if(USE_UNCER)
@@ -473,7 +474,6 @@ int main(int argc, char* argv[]){
           stop_sim = !Moby::step(sim);
         }
         
-        
 #ifdef ARM
         Vector3d block_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,environment->get_pose()));
         Vector3d hand_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,hand->get_pose()));
@@ -492,15 +492,17 @@ int main(int argc, char* argv[]){
 #endif
         
         logging2 << "data_message = [ " << data_message << " ]" << std::endl;
+#ifdef LOGGING_OUTPUT
         Logging::send(data_message);
-        
+#endif        
         ITER++;
       }
       
     }
     
+#ifdef LOGGING_OUTPUT
     Logging::close();
-    
+#endif    
 #ifdef USE_OSG_DISPLAY
     if (VISUAL_MOD != 0){
       sim->update_visualization();

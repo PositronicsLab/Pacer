@@ -425,6 +425,7 @@ int main(int argc, char* argv[]){
     unsigned long long ITER = 0;
    
 #ifdef USE_OSG_DISPLAY
+    if( !PACER_ONLY )
     if (VISUAL_MOD != 0){
       sim->update_visualization();
       std::string visual_filename = "first-"+SSTR(SAMPLE_NUMBER)+".osg";
@@ -505,6 +506,7 @@ int main(int argc, char* argv[]){
     Logging::close();
 #endif    
 #ifdef USE_OSG_DISPLAY
+    if( !PACER_ONLY )
     if (VISUAL_MOD != 0){
       sim->update_visualization();
       std::string visual_filename = "last-"+SSTR(SAMPLE_NUMBER)+".osg";
@@ -512,6 +514,7 @@ int main(int argc, char* argv[]){
     }
 #endif
     
+    if( !PACER_ONLY )
     logging1 << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
     
 #ifdef USE_ZMQ

@@ -387,10 +387,11 @@ int main(int argc, char* argv[]){
       }
     
     // Apply uncertainty to robot initial conditions
+    if( !PACER_ONLY ){
     logging1 << " -> Applying State Uncertainty -- " << std::endl;
     apply_state_uncertainty(argc_sample,argv_sample,robot);
     logging1 << " -- Applied State Uncertainty -> " << std::endl;
-    
+    }
     /*
      *  Running experiment
      */

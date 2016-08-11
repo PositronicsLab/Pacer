@@ -40,7 +40,7 @@ using namespace Pacer::Service;
 //#define INIT_SIM
 
 //#define DEBUG_OUTPUT
-#define LOGGING_OUTPUT
+//#define LOGGING_OUTPUT
 
 #ifdef LOGGING_OUTPUT
 
@@ -360,8 +360,9 @@ int main(int argc, char* argv[]){
     logging1 << " -- parse_sample_options -> " << std::endl;
     
     
+#ifdef LOGGING_OUTPUT
     Logging::open(pid,SAMPLE_NUMBER);
-    
+#endif    
     // Apply uncertainty to robot model
     logging1 << " -> apply_manufacturing_uncertainty -- " << std::endl;
     if(USE_UNCER)
@@ -386,10 +387,11 @@ int main(int argc, char* argv[]){
       }
     
     // Apply uncertainty to robot initial conditions
+    if( !PACER_ONLY ){
     logging1 << " -> Applying State Uncertainty -- " << std::endl;
     apply_state_uncertainty(argc_sample,argv_sample,robot);
     logging1 << " -- Applied State Uncertainty -> " << std::endl;
-    
+    }
     /*
      *  Running experiment
      */
@@ -423,6 +425,7 @@ int main(int argc, char* argv[]){
     unsigned long long ITER = 0;
    
 #ifdef USE_OSG_DISPLAY
+    if( !PACER_ONLY )
     if (VISUAL_MOD != 0){
       sim->update_visualization();
       std::string visual_filename = "first-"+SSTR(SAMPLE_NUMBER)+".osg";
@@ -473,7 +476,6 @@ int main(int argc, char* argv[]){
           stop_sim = !Moby::step(sim);
         }
         
-        
 #ifdef ARM
         Vector3d block_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,environment->get_pose()));
         Vector3d hand_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,hand->get_pose()));
@@ -492,16 +494,19 @@ int main(int argc, char* argv[]){
 #endif
         
         logging2 << "data_message = [ " << data_message << " ]" << std::endl;
+#ifdef LOGGING_OUTPUT
         Logging::send(data_message);
-        
+#endif        
         ITER++;
       }
       
     }
     
+#ifdef LOGGING_OUTPUT
     Logging::close();
-    
+#endif    
 #ifdef USE_OSG_DISPLAY
+    if( !PACER_ONLY )
     if (VISUAL_MOD != 0){
       sim->update_visualization();
       std::string visual_filename = "last-"+SSTR(SAMPLE_NUMBER)+".osg";
@@ -509,6 +514,7 @@ int main(int argc, char* argv[]){
     }
 #endif
     
+    if( !PACER_ONLY )
     logging1 << "Simulation ("<< SAMPLE_NUMBER << ") at time: t = " << sim->current_time  << ", iteration: " << ITER << " Ended!" << std::endl;
     
 #ifdef USE_ZMQ

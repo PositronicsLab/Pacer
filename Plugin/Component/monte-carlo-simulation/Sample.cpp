@@ -141,7 +141,7 @@ namespace Moby {
 
 namespace Pacer {
   extern void init();
-  extern double step();
+  extern double step(double dt = 0);
 }
 
 #include "sample-perturb.cpp"

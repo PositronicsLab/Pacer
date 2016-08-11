@@ -6,7 +6,7 @@
 #include <time.h>
 namespace Pacer{
 extern void init( );
-extern double step( );
+extern double step(double dt = 0);
 }
 
 int main(int argc, char* argv[])

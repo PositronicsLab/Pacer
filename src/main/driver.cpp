@@ -32,7 +32,7 @@ static double get_current_time()
   double STEP_SIZE = 0.001;
   double TIME = 0;
 
-  void init(){
+void init(){
   OUT_LOG(logDEBUG2) << "STARTING PACER" << std::endl;
   
   robot_ptr = boost::shared_ptr<Controller>(new Controller());
@@ -49,16 +49,21 @@ static double get_current_time()
   robot_ptr->control( TIME );
 }
 
-double step(){
-
+double step(double step_size = 0){
+    double step = STEP_SIZE;
+    if(step_size>0)
+      step = step_size;
+  
+  
+  
     if(REAL_TIME){
       TIME = get_current_time();
       std::cerr << "Realtime : " <<  std::endl;
 
     } else {
-      TIME += STEP_SIZE;
+      TIME += step;
     }
-    static double FIRST_TIME = TIME-STEP_SIZE;
+    static double FIRST_TIME = TIME-step;
 
     std::cerr << "time = " << (TIME-FIRST_TIME) << std::endl;
   robot_ptr->control( TIME-FIRST_TIME );

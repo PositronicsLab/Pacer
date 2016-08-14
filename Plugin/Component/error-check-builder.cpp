@@ -5,129 +5,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-void printQandQd()
-{
-  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  std::map<std::string, Ravelin::VectorNd > q, qd,u;
-
-  std::vector<double> torque_limit;
-  std::vector<double> velocity_limit;
-
-  std::ofstream errOut;
-  errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
-
-  std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
-  std::vector<double> joint_dofs = ctrl->get_data<std::vector<double> >("init.joint.dofs");
-  ctrl->get_data<std::vector<double> >("init.joint.limits.u",torque_limit);
-  ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
-  ctrl->get_joint_value(Pacer::Robot::position_goal, q);
-  ctrl->get_joint_value(Pacer::Robot::velocity_goal, qd);
-  ctrl->get_joint_value(Pacer::Robot::load_goal, u);
-
-  for (int i=0, ii=0; i<joint_names.size(); i++) 
-  {
-    for (int j=0; j<joint_dofs[i]; j++,ii++) 
-    {
-        std::ostringstream s;
-        s << joint_names[i] << "_vel";
-        std::string line=s.str();
-        s.clear();//clear any bits set
-        s.str(std::string());
-        if(qd[joint_names[i]][j]>=0)
-        {s << qd[joint_names[i]][j]-velocity_limit[ii];}
-	else
-	{
-		s << (-1*qd[joint_names[i]][j])-velocity_limit[ii];	
-	}
-        
-        setenv(line.c_str(),s.str().c_str(),1);
-    }
-  }
-
-  for (int i=0, ii=0; i<joint_names.size(); i++) 
-  {
-    for (int j=0; j<joint_dofs[i]; j++,ii++) 
-    {
-        std::ostringstream s;
-        s << joint_names[i] << "_tor";
-        std::string line=s.str();
-        s.clear();//clear any bits set
-        s.str(std::string());
-	if(u[joint_names[i]][j]>=0)
-        {s << u[joint_names[i]][j]-torque_limit[ii];}
-	else
-	{
-		s << (-1*u[joint_names[i]][j])-torque_limit[ii];	
-	}
-        setenv(line.c_str(),s.str().c_str(),1);
-    }
- }
-  
-errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("lenH1") << " " << getenv("lenH2") << " " << getenv("base_size_length") << " "<< getenv("base_size_width")
-      << " " << getenv("base_size_height") << " " << getenv("density") << " " << getenv("linkRad") << " " << getenv("footRad") << " " << getenv("footLen")
-       << " "<< getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel")
-       << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel")
-       << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") 
-       << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LF_Y_2_tor") 
-       << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << "\n";
-
-	setenv("curr_line","0",1);
-	setenv("curr_iter","0",1);
-  std::string editor=getenv("BUILDER_GUI_PATH");
-	editor+="/editor";
-        
-        execl(editor.c_str(), editor.c_str(), (char *) 0);
-	
-}
-
 void loop(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-
-double num_rows;
-ctrl->get_data("num_pose_rows",num_rows);
-
-
-std::fstream myfile;
-   myfile.open ("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/FrontEnd/debug.txt", std::ios::in | std::ios::out | std::ios::ate);
-   myfile << "----------------------------error-check.cpp---------------------------------";
-   myfile << "\n";
-   myfile << "modelNo: " << getenv("modelNo") << "\n";
-   myfile << "max_vel: " << getenv("max_vel") << "\n";
-   myfile << "delta_v: " << getenv("delta_v") << "\n";
-   myfile << "curr_vel: " << getenv("curr_vel") << "\n";
-   myfile << "unit_len: " << getenv("unit_len") << "\n";
-   myfile << "unit_den: " << getenv("unit_den") << "\n";
-   myfile << "unit_rad: " << getenv("unit_rad") << "\n";
-   myfile << "test_dur: " << getenv("test_dur") << "\n";
-   myfile << "curr_line: " << getenv("curr_line") << "\n";
-   myfile << "curr_iter: " << getenv("curr_iter") << "\n";
-   myfile << "lenF1: " << getenv("lenF1") << "\n";
-   myfile << "lenF2: " << getenv("lenF2") << "\n";
-   myfile << "lenH1: " << getenv("lenH1") << "\n";
-   myfile << "lenH2: " << getenv("lenH2") << "\n";
-   myfile << "base_size_length: " << getenv("base_size_length") << "\n";
-   myfile << "base_size_width: " << getenv("base_size_width") << "\n";
-   myfile << "base_size_height: " << getenv("base_size_height") << "\n";
-   myfile << "density: " << getenv("density") << "\n";
-   myfile << "linkRad: " << getenv("linkRad") << "\n";
-   myfile << "footRad: " << getenv("footRad") << "\n";
-   myfile << "footLen: " << getenv("footLen") << "\n";
-   myfile << "KINEMATIC: " << getenv("KINEMATIC") << "\n";
-   myfile.close();
-
-
-
-
-
-
-
-
-
-
-
-
   
   Ravelin::VectorNd generalized_fext = ctrl->get_generalized_value(Pacer::Robot::load);
+  std::ostringstream s;
+ std::string line;
+  std::vector<std::string> var_names={"lenF1","lenF2","FfootLen","lenH1","lenH2","HfootLen","base_size_length","base_size_width","base_size_height","FlinkRad","HlinkRad","density","FfootRad","HfootRad"};
+
 /*
   // Unstable simulation.
   if(generalized_fext.norm() > 1e8)
@@ -164,8 +49,9 @@ std::fstream myfile;
   ctrl->get_joint_value(Pacer::Robot::position_goal, q);
   ctrl->get_joint_value(Pacer::Robot::velocity_goal, qd);
   ctrl->get_joint_value(Pacer::Robot::load_goal, u);
-  
-
+  double num_rows;
+  ctrl->get_data("num_pose_rows",num_rows);
+  int jac_count=std::stod(getenv("jac_count"));
 
   std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
   std::vector<double> joint_dofs = ctrl->get_data<std::vector<double> >("init.joint.dofs");
@@ -175,38 +61,205 @@ std::fstream myfile;
   std::vector<double> velocity_limit;
   bool apply_velocity_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
 
+if(jac_count==0)
+{
   for (int i=0, ii=0; i<joint_names.size(); i++) {
     for (int j=0; j<joint_dofs[i]; j++,ii++) {
-      // If motor speed limit met, cancel torque
-      // (if applied in direction of limit)
-        if (qd[joint_names[i]][j] > velocity_limit[ii]) {
-          std::cout << joint_names[i] << ": qd["<<j<<"]= " << qd[joint_names[i]][j] << " exceeds velocity limit: " << velocity_limit[ii] << "\n";
-          printQandQd();
-	  exit(6);
-        } else if  (qd[joint_names[i]][j] < -velocity_limit[ii]) {
-          std::cout << joint_names[i] << ": qd["<<j<<"]= " << qd[joint_names[i]][j] << " exceeds negative velocity limit: " << -velocity_limit[ii] << "\n";
-          printQandQd();
-          exit(6);
+      
+        if (qd[joint_names[i]][j] > velocity_limit[ii] || u[joint_names[i]][j] < -torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || (std::stod(getenv("curr_line"))>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))) {
+          std::ofstream errOut;
+  errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
+	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("lenH1") << " " << getenv("lenH2") << " " << getenv("base_size_length") << " "<< getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("density") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("FfootLen") << " " << getenv("HfootLen") << " "<< getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel")
+       << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel")
+       << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") 
+       << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LF_Y_2_tor") 
+       << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << "\n";
+errOut.close();
+	setenv("curr_line","0",1);
+	setenv("curr_iter","0",1);
+        jac_count++;
+        s << jac_count;
+        line=s.str();
+        setenv("jac_count",s.str().c_str(),1);
+        s.clear();
+        s.str(std::string());
+    
+        double lenF1= std::stod(getenv("lenF1"));
+        double unitLen = std::stod(getenv("unit_len"));
+	
+	lenF1+=unitLen;
+        s << lenF1;
+        line=s.str();
+        setenv("lenF1",line.c_str(),1);
+        s.clear();
+        s.str(std::string());
 
-        }
+	std::string generate=getenv("BUILDER_SCRIPT_PATH");
+	generate+="/generate.sh";
+        
+        execl(generate.c_str(), generate.c_str(), (char *) 0);
 
 
 
-        // Limit torque
-        if (u[joint_names[i]][j] > torque_limit[ii]) {
-          std::cout << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " exceeds torque limit: " << torque_limit[ii] << ", setting to " << torque_limit[ii] << "\n";
-          printQandQd();
-          exit(6);
-        } else if  (u[joint_names[i]][j] < -torque_limit[ii]) {
-          std::cout << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " exceeds torque limit: " << -torque_limit[ii] << ", setting to " << -torque_limit[ii] << "\n";
-          printQandQd();
-          exit(6);
-        }
-
+	  
+        } 
+}}
+for (int i=0, ii=0; i<joint_names.size(); i++) 
+  {
+    for (int j=0; j<joint_dofs[i]; j++,ii++) 
+    {
+        std::ostringstream s;
+        s << joint_names[i] << "_vel";
+        line=s.str();
+        s.clear();//clear any bits set
+        s.str(std::string());
+        if(qd[joint_names[i]][j]>=0)
+        {s << qd[joint_names[i]][j]-velocity_limit[ii];}
+	else
+	{
+		s << (-1*qd[joint_names[i]][j])-velocity_limit[ii];	
+	}
+        
+        setenv(line.c_str(),s.str().c_str(),1);
     }
   }
 
-  
+  for (int i=0, ii=0; i<joint_names.size(); i++) 
+  {
+    for (int j=0; j<joint_dofs[i]; j++,ii++) 
+    {
+        std::ostringstream s;
+        s << joint_names[i] << "_tor";
+        line=s.str();
+        s.clear();//clear any bits set
+        s.str(std::string());
+	if(u[joint_names[i]][j]>=0)
+        {s << u[joint_names[i]][j]-torque_limit[ii];}
+	else
+	{
+		s << (-1*u[joint_names[i]][j])-torque_limit[ii];	
+	}
+        setenv(line.c_str(),s.str().c_str(),1);
+    }
+ }
+}
+else if(jac_count<15)
+{
+  for (int i=0, ii=0; i<joint_names.size(); i++) {
+    for (int j=0; j<joint_dofs[i]; j++,ii++) {
+      
+        if (qd[joint_names[i]][j] > velocity_limit[ii] || u[joint_names[i]][j] < -torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || (std::stod(getenv("curr_line"))>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))) {
+
+	std::cout << "\n" << jac_count << "\n";
+        if(jac_count<14)   
+        {double pastVar= std::stod(getenv(var_names[jac_count-1].c_str()));
+        double currVar= std::stod(getenv(var_names[jac_count].c_str()));
+        
+	pastVar-=0.001;
+        s << pastVar;
+        line=s.str();
+        setenv(var_names[jac_count-1].c_str(),line.c_str(),1);
+        s.clear();
+        s.str(std::string());
+
+	
+	currVar+=0.001;
+        s << currVar;
+        line=s.str();
+        setenv(var_names[jac_count].c_str(),line.c_str(),1);
+        s.clear();
+        s.str(std::string());
+
+        }
+        setenv("curr_line","0",1);
+	setenv("curr_iter","0",1);
+        jac_count++;
+        s << jac_count;
+        line=s.str();
+        setenv("jac_count",s.str().c_str(),1);
+        s.clear();
+        s.str(std::string());
+
+	std::string generate=getenv("BUILDER_SCRIPT_PATH");
+	generate+="/generate.sh";
+        
+        execl(generate.c_str(), generate.c_str(), (char *) 0);
+
+
+
+	  
+        } 
+}}
+for (int i=0, ii=0; i<joint_names.size(); i++) 
+  {
+    for (int j=0; j<joint_dofs[i]; j++,ii++) 
+    {
+        std::ostringstream s,s2;
+        s << jac_count<<"_" << joint_names[i] << "_vel";
+        s2 << joint_names[i] << "_vel";
+        line=s.str();
+        s.clear();//clear any bits set
+        s.str(std::string());
+        if(qd[joint_names[i]][j]>=0)
+        {s << qd[joint_names[i]][j]-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()));}
+	else
+	{
+		s << (-1*qd[joint_names[i]][j])-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()));	
+	}
+        
+        setenv(line.c_str(),s.str().c_str(),1);
+    }
+  }
+
+  for (int i=0, ii=0; i<joint_names.size(); i++) 
+  {
+    for (int j=0; j<joint_dofs[i]; j++,ii++) 
+    {
+        std::ostringstream s,s2;
+        s << jac_count<<"_" << joint_names[i] << "_tor";
+        s2 << joint_names[i] << "_tor";
+        line=s.str();
+        s.clear();//clear any bits set
+        s.str(std::string());
+	if(u[joint_names[i]][j]>=0)
+        {s << u[joint_names[i]][j]-torque_limit[ii]-std::stod(getenv(s2.str().c_str()));}
+	else
+	{
+		s << (-1*u[joint_names[i]][j])-torque_limit[ii]-std::stod(getenv(s2.str().c_str()));	
+	}
+        setenv(line.c_str(),s.str().c_str(),1);
+    }
+ }
+}
+else
+{
+        
+	setenv("curr_line","0",1);
+	setenv("curr_iter","0",1);
+        setenv("jac_count","0",1);
+    
+
+        
+        double HfootRad= std::stod(getenv(var_names[var_names.size()-1].c_str()));
+	
+	HfootRad-=0.001;
+        s << HfootRad;
+        line=s.str();
+        setenv("HfootRad",line.c_str(),1);
+        s.clear();
+        s.str(std::string());
+
+	  std::string editor=getenv("BUILDER_GUI_PATH");
+	  editor+="/editor";
+        
+        execl(editor.c_str(), editor.c_str(), (char *) 0);
+	 
+
+}
+
+
+
+
 }
 
 

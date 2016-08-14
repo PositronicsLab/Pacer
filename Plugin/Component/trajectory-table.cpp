@@ -73,13 +73,173 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   ctrl->get_data("num_pose_rows",num_rows);
 
+std::cout << "\n" << "\n" << "\n" << currLine << "\n" << "\n" << "\n";
+
+ //same deal here, make sure that the init file gets updated!
+    if(currLine>=num_rows && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")))
+    {
+        setenv("curr_line","0",1);
+        setenv("curr_iter","0",1);
+
+
+	double curr_vel=std::stod(getenv("curr_vel"));
+        curr_vel+=std::stod(getenv("delta_v"));
+        std::ostringstream s;
+        s << curr_vel;
+        setenv("curr_vel",s.str().c_str(),1);
+        std::string line=s.str();
+	double modelNo = std::stod(getenv("modelNo"));
+	std::ostringstream file;
+        file << getenv("BUILDER_POSE_PATH") << "/" << modelNo << "-" << curr_vel << "-" << "PoseSet.txt";
+       std::string filename = file.str();
+       std::ifstream nextFile(filename);
+
+	std::string initVals;
+
+
+	std::getline(nextFile,initVals);
+
+	typedef boost::tokenizer<boost::char_separator<char> > 
+            tokenizer;
+            boost::char_separator<char> sep(" ");
+            tokenizer tokens(initVals, sep);
+            tokenizer::iterator tok_iter = tokens.begin();
+
+	    for(int i=0;i<joint_names.size();i++)
+            {
+     		
+		//export q
+                              s.clear();
+                              s.str(std::string());
+                              s << joint_names[i] << "_q";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*tok_iter);
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+			//export qd
+                              s.clear();
+                              s.str(std::string());
+                              s << joint_names[i] << "_qd";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,1)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+			//export qdd
+                              s.clear();
+                              s.str(std::string());
+                              s << joint_names[i] << "_qdd";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,2)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+          	std::advance(tok_iter,3);
+             }        
+				//export body x axis velocity
+		              s.clear();
+                              s.str(std::string());
+                              s << "BODYx";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*tok_iter);
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+
+				//export body y axis velocity
+    		              s.clear();
+                              s.str(std::string());
+                              s << "BODYy";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,1)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+				
+				//export body z axis velocity
+    		              s.clear();
+                              s.str(std::string());
+                              s << "BODYz";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,2)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+		
+				//export body roll axis velocity
+		              s.clear();
+                              s.str(std::string());
+                              s << "BODYr";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,3)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+
+				//export body pitch axis velocity
+    		              s.clear();
+                              s.str(std::string());
+                              s << "BODYp";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,4)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+				
+				//export body yaw axis velocity
+    		              s.clear();
+                              s.str(std::string());
+                              s << "BODYt";
+        		      line=s.str();
+                              s.clear();
+                              s.str(std::string());
+                              s << std::stod(*(std::next(tok_iter,5)));
+                              setenv(line.c_str(),s.str().c_str(),1);
+		              line=std::string();
+                
+                
+                
+                
+                
+
+	
+
+        std::string line3=getenv("BUILDER_SCRIPT_PATH");
+	
+	line3+="/setup-plugins-play.sh";
+        
+	
+        execl(line3.c_str(), line3.c_str(), (char *) 0);
+	
+	
+	
+       
+    	
+    }
+	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))
+	{
+		std::cout << "\n" << "This model works!" << "\n";
+		
+	}
+
 
 
 //now, when we start a new process make sure to edit the init q and qd
-  if(numIter>=testDur-1)
+  if(numIter>=testDur)
    {
         currLine=currLine-testDur;
 	currLine++;
+        s << currLine;
+        //setenv("curr_line",s.str().c_str() ,1);
         setenv("curr_iter","0",1);
         std::string line2=getenv("BUILDER_SCRIPT_PATH");
 	
@@ -232,162 +392,7 @@ for(int joint=0;joint<joint_names.size(); joint++)
         s << currLine;
     setenv("curr_line",s.str().c_str(),1);
     
-    //same deal here, make sure that the init file gets updated!
-    if(currLine>=num_rows && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")))
-    {
-        setenv("curr_line","0",1);
-        setenv("curr_iter","0",1);
-
-
-	double curr_vel=std::stod(getenv("curr_vel"));
-        curr_vel+=std::stod(getenv("delta_v"));
-        std::ostringstream s;
-        s << curr_vel;
-        std::string line=s.str();
-	double modelNo = std::stod(getenv("modelNo"));
-	std::ostringstream file;
-        file << getenv("BUILDER_POSE_PATH") << "/" << modelNo << "-" << curr_vel << "-" << "PoseSet.txt";
-       std::string filename = s.str();
-       std::ifstream nextFile(filename);
-
-	std::string initVals;
-
-
-	std::getline(nextFile,initVals);
-
-	typedef boost::tokenizer<boost::char_separator<char> > 
-            tokenizer;
-            boost::char_separator<char> sep(" ");
-            tokenizer tokens(initVals, sep);
-            tokenizer::iterator tok_iter = tokens.begin();
-
-	    for(int i=0;i<joint_names.size();i++)
-            {
-     		
-		//export q
-                              s.clear();
-                              s.str(std::string());
-                              s << joint_names[i] << "_q";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*tok_iter);
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-			//export qd
-                              s.clear();
-                              s.str(std::string());
-                              s << joint_names[i] << "_qd";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,1)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-			//export qdd
-                              s.clear();
-                              s.str(std::string());
-                              s << joint_names[i] << "_qdd";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,2)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-          	std::advance(tok_iter,3);
-             }        
-				//export body x axis velocity
-		              s.clear();
-                              s.str(std::string());
-                              s << "BODYx";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*tok_iter);
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-
-				//export body y axis velocity
-    		              s.clear();
-                              s.str(std::string());
-                              s << "BODYy";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,1)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-				
-				//export body z axis velocity
-    		              s.clear();
-                              s.str(std::string());
-                              s << "BODYz";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,2)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-		
-				//export body roll axis velocity
-		              s.clear();
-                              s.str(std::string());
-                              s << "BODYr";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,3)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-
-				//export body pitch axis velocity
-    		              s.clear();
-                              s.str(std::string());
-                              s << "BODYp";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,4)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-				
-				//export body yaw axis velocity
-    		              s.clear();
-                              s.str(std::string());
-                              s << "BODYt";
-        		      line=s.str();
-                              s.clear();
-                              s.str(std::string());
-                              s << std::stod(*(std::next(tok_iter,5)));
-                              setenv(line.c_str(),s.str().c_str(),1);
-		              line=std::string();
-                
-                
-                
-                
-                
-
-	setenv("curr_vel",line.c_str(),1);
-
-        std::string line3=getenv("BUILDER_SCRIPT_PATH");
-	
-	line3+="/setup-plugins-play.sh";
-        
-	
-        execl(line3.c_str(), line3.c_str(), (char *) 0);
-	
-	
-
-    	
-    }
-
-	if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))
-	{
-		std::cout << "\n" << "This model works!" << "\n";
-		exit(0);
-	}
-}
-
+ }  
 void setup(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 

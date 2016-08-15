@@ -239,7 +239,10 @@ std::cout << "\n" << "\n" << "\n" << currLine << "\n" << "\n" << "\n";
         currLine=currLine-testDur;
 	currLine++;
         s << currLine;
-        setenv("curr_line",s.str().c_str() ,1);
+        
+        bool properWindow = ctrl->get_data<bool>("propWindow");
+        if(properWindow){
+        setenv("curr_line",s.str().c_str() ,1);}
         setenv("curr_iter","0",1);
         std::string line2=getenv("BUILDER_SCRIPT_PATH");
 	

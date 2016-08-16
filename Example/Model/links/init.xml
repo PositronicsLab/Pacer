@@ -11,7 +11,7 @@
       <id type="string">LF_X_1 LF_Y_2 LF_Y_3  RF_X_1 RF_Y_2 RF_Y_3   LH_X_1 LH_Y_2 LH_Y_3   RH_X_1 RH_Y_2 RH_Y_3</id>
       <dofs type="double">1 1 1   1 1 1  1 1 1  1 1 1</dofs>
       <q type="double">  0.2 0.8 1.2           -0.2 -0.8 -1.2         -0.2 -0.8 -1.2          0.2 0.8 1.2 </q>
-      <q type="double">  0.1 1.8 -1.2           -0.1 -1.8 1.2         -0.1 -1.8 1.2          0.1 1.8 -1.2 </q>
+      <q type="double">  0.1 2.3 -1.6          -0.1 -2.3 1.6         -0.1 -2.3 1.6          0.1 2.3 -1.6 </q>
       <active type="bool">true true true   true true true   true true true   true true true</active>
       <limits>
         <!-- <u type="double">7.3 7.3 7.3  7.3 7.3 7.3  7.3 7.3 7.3  7.3 7.3 7.3</u> -->

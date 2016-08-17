@@ -66,13 +66,24 @@ if(jac_count==0)
   for (int i=0, ii=0; i<joint_names.size(); i++) {
     for (int j=0; j<joint_dofs[i]; j++,ii++) {
       
-        if (qd[joint_names[i]][j] > velocity_limit[ii] || u[joint_names[i]][j] < -torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || (std::stod(getenv("curr_line"))>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))) {
+        if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii]) {
+
+
+          s.clear();
+          s.str(std::string());
+          double fail=std::stod(getenv("curr_line"))-std::stod(getenv("test_dur"));
+          s << fail;
+          setenv("fail_line",getenv("curr_line"),1);
+          setenv("fail_line_start",s.str().c_str(),1);
+          s.clear();
+          s.str(std::string());
+
           std::ofstream errOut;
   errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
 	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("lenH1") << " " << getenv("lenH2") << " " << getenv("base_size_length") << " "<< getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("density") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("FfootLen") << " " << getenv("HfootLen") << " "<< getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel")
-       << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel")
+       << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel")
        << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") 
-       << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LF_Y_2_tor") 
+       << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") 
        << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << "\n";
 errOut.close();
 	setenv("curr_line","0",1);
@@ -94,6 +105,8 @@ errOut.close();
         s.clear();
         s.str(std::string());
 
+
+
 	std::string generate=getenv("BUILDER_SCRIPT_PATH");
 	generate+="/generate.sh";
         
@@ -103,8 +116,9 @@ errOut.close();
 
 	  
         } 
-}}
-for (int i=0, ii=0; i<joint_names.size(); i++) 
+        else
+        {
+                    for (int i=0, ii=0; i<joint_names.size(); i++) 
   {
     for (int j=0; j<joint_dofs[i]; j++,ii++) 
     {
@@ -142,15 +156,19 @@ for (int i=0, ii=0; i<joint_names.size(); i++)
         setenv(line.c_str(),s.str().c_str(),1);
     }
  }
+        }
+}}
+
 }
 else if(jac_count<15)
 {
-  for (int i=0, ii=0; i<joint_names.size(); i++) {
-    for (int j=0; j<joint_dofs[i]; j++,ii++) {
-      
-        if (qd[joint_names[i]][j] > velocity_limit[ii] || u[joint_names[i]][j] < -torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || (std::stod(getenv("curr_line"))>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))) {
 
-	std::cout << "\n" << jac_count << "\n";
+        
+     
+                           
+        if (std::stod(getenv("fail_line_start"))==std::stod(getenv("fail_line"))) {
+
+	std::cout << "\n" << "jac_count: " << jac_count << "\n";
         if(jac_count<14)   
         {double pastVar= std::stod(getenv(var_names[jac_count-1].c_str()));
         double currVar= std::stod(getenv(var_names[jac_count].c_str()));
@@ -171,8 +189,16 @@ else if(jac_count<15)
         s.str(std::string());
 
         }
+
         setenv("curr_line","0",1);
 	setenv("curr_iter","0",1);
+        s.clear();
+          s.str(std::string());
+          double fail=std::stod(getenv("fail_line"))-std::stod(getenv("test_dur"));
+          s << fail;
+          setenv("fail_line_start",s.str().c_str(),1);
+          s.clear();
+          s.str(std::string());
         jac_count++;
         s << jac_count;
         line=s.str();
@@ -189,13 +215,16 @@ else if(jac_count<15)
 
 	  
         } 
-}}
-for (int i=0, ii=0; i<joint_names.size(); i++) 
+        else 
+        {
+             
+        for (int i=0, ii=0; i<joint_names.size(); i++) 
   {
     for (int j=0; j<joint_dofs[i]; j++,ii++) 
     {
         std::ostringstream s,s2;
         s << jac_count<<"_" << joint_names[i] << "_vel";
+        std::cout << "\n" << s.str() << "\n";
         s2 << joint_names[i] << "_vel";
         line=s.str();
         s.clear();//clear any bits set
@@ -210,7 +239,7 @@ for (int i=0, ii=0; i<joint_names.size(); i++)
         setenv(line.c_str(),s.str().c_str(),1);
     }
   }
-
+  
   for (int i=0, ii=0; i<joint_names.size(); i++) 
   {
     for (int j=0; j<joint_dofs[i]; j++,ii++) 
@@ -230,6 +259,8 @@ for (int i=0, ii=0; i<joint_names.size(); i++)
         setenv(line.c_str(),s.str().c_str(),1);
     }
  }
+        }
+
 }
 else
 {

@@ -56,7 +56,16 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   double numIter= std::stod(getenv("curr_iter"));
   double testDur= std::stod(getenv("test_dur"));
   double currVel= std::stod(getenv("curr_vel")); 
-  double currLine=std::stod(getenv("curr_line"));
+
+ double currLine;
+  if(std::stod(getenv("jac_count"))==0)
+{
+   currLine=std::stod(getenv("curr_line"));
+}
+else
+{
+   currLine=std::stod(getenv("fail_line_start"));
+}
   std::ostringstream s;
  
   std::vector<std::vector<double> > allqVals;
@@ -73,13 +82,16 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   ctrl->get_data("num_pose_rows",num_rows);
 
-std::cout << "\n" << "\n" << "\n" << currLine << "\n" << "\n" << "\n";
+
+
 
  //same deal here, make sure that the init file gets updated!
-    if(currLine>=num_rows && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")))
+    if(currLine>=num_rows && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
     {
         setenv("curr_line","0",1);
         setenv("curr_iter","0",1);
+        
+        
 
 
 	double curr_vel=std::stod(getenv("curr_vel"));
@@ -87,6 +99,7 @@ std::cout << "\n" << "\n" << "\n" << currLine << "\n" << "\n" << "\n";
         std::ostringstream s;
         s << curr_vel;
         setenv("curr_vel",s.str().c_str(),1);
+        setenv("fail_vel",getenv("curr_vel"),1);
         std::string line=s.str();
 	double modelNo = std::stod(getenv("modelNo"));
 	std::ostringstream file;
@@ -225,7 +238,7 @@ std::cout << "\n" << "\n" << "\n" << currLine << "\n" << "\n" << "\n";
        
     	
     }
-	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))
+	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
 	{
 		std::cout << "\n" << "This model works!" << "\n";
 		
@@ -234,15 +247,17 @@ std::cout << "\n" << "\n" << "\n" << currLine << "\n" << "\n" << "\n";
 
 
 //now, when we start a new process make sure to edit the init q and qd
-  if(numIter>=testDur)
+  if(numIter>=testDur && std::stod(getenv("jac_count"))==0)
    {
         currLine=currLine-testDur;
 	currLine++;
         s << currLine;
         
-        bool properWindow = ctrl->get_data<bool>("propWindow");
+        bool properWindow;
+ ctrl->get_data<bool>(plugin_namespace+".propWindow",properWindow);
         if(properWindow){
         setenv("curr_line",s.str().c_str() ,1);}
+        setenv("fail_vel",getenv("curr_vel"),1);
         setenv("curr_iter","0",1);
         std::string line2=getenv("BUILDER_SCRIPT_PATH");
 	
@@ -393,7 +408,13 @@ for(int joint=0;joint<joint_names.size(); joint++)
         s.str(std::string());
         currLine+=1;
         s << currLine;
-    setenv("curr_line",s.str().c_str(),1);
+    if(std::stod(getenv("jac_count"))==0)
+   { setenv("curr_line",s.str().c_str(),1);}
+   else
+   {
+     if(currLine<num_rows)
+     setenv("fail_line_start",s.str().c_str(),1);
+   }
     
  }  
 void setup(){
@@ -415,7 +436,11 @@ Ravelin::VectorNd bodyVals;
 
   double modelNo=std::stod(getenv("modelNo"));
   double currVel=std::stod(getenv("curr_vel"));
-  double init=std::stod(getenv("curr_line"));
+ double init;
+  if(std::stod(getenv("jac_count"))==0)
+  {init=std::stod(getenv("curr_line"));}
+  else
+  {init=std::stod(getenv("fail_line_start"));}
   
    std::ostringstream s;
     s << getenv("BUILDER_POSE_PATH") << "/" << modelNo << "-" << currVel << "-" << "PoseSet.txt";

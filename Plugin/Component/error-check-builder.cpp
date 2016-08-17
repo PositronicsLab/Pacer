@@ -251,10 +251,10 @@ else if(jac_count<15)
         s.clear();//clear any bits set
         s.str(std::string());
 	if(u[joint_names[i]][j]>=0)
-        {s << u[joint_names[i]][j]-torque_limit[ii]-std::stod(getenv(s2.str().c_str()));}
+        {s << floorf((u[joint_names[i]][j]-torque_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;}
 	else
 	{
-		s << (-1*u[joint_names[i]][j])-torque_limit[ii]-std::stod(getenv(s2.str().c_str()));	
+		s << floorf(((-1*u[joint_names[i]][j])-torque_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;	
 	}
         setenv(line.c_str(),s.str().c_str(),1);
     }

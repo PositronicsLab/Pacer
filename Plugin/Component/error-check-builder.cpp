@@ -66,7 +66,7 @@ if(jac_count==0)
   for (int i=0, ii=0; i<joint_names.size(); i++) {
     for (int j=0; j<joint_dofs[i]; j++,ii++) {
       
-        if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii]) {
+        if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || qd[joint_names[i]][j] > velocity_limit[ii]) {
 
 
           s.clear();
@@ -230,10 +230,10 @@ else if(jac_count<15)
         s.clear();//clear any bits set
         s.str(std::string());
         if(qd[joint_names[i]][j]>=0)
-        {s << qd[joint_names[i]][j]-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()));}
+        {s << floorf((qd[joint_names[i]][j]-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;}
 	else
 	{
-		s << (-1*qd[joint_names[i]][j])-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()));	
+		s << floorf(((-1*qd[joint_names[i]][j])-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;		
 	}
         
         setenv(line.c_str(),s.str().c_str(),1);

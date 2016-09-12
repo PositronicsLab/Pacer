@@ -13,44 +13,6 @@
 
 void loop(){
 
-
-std::fstream myfile;
-   myfile.open ("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/FrontEnd/debug.txt", std::ios::in | std::ios::out | std::ios::ate);
-   myfile << "----------------------------trajectory-table.cpp---------------------------------";
-   myfile << "\n";
-   myfile << "modelNo: " << getenv("modelNo") << "\n";
-   myfile << "max_vel: " << getenv("max_vel") << "\n";
-   myfile << "delta_v: " << getenv("delta_v") << "\n";
-   myfile << "curr_vel: " << getenv("curr_vel") << "\n";
-   myfile << "unit_len: " << getenv("unit_len") << "\n";
-   myfile << "unit_den: " << getenv("unit_den") << "\n";
-   myfile << "unit_rad: " << getenv("unit_rad") << "\n";
-   myfile << "test_dur: " << getenv("test_dur") << "\n";
-   myfile << "curr_line: " << getenv("curr_line") << "\n";
-   myfile << "curr_iter: " << getenv("curr_iter") << "\n";
-   myfile << "lenF1: " << getenv("lenF1") << "\n";
-   myfile << "lenF2: " << getenv("lenF2") << "\n";
-   myfile << "lenH1: " << getenv("lenH1") << "\n";
-   myfile << "lenH2: " << getenv("lenH2") << "\n";
-   myfile << "base_size_length: " << getenv("base_size_length") << "\n";
-   myfile << "base_size_width: " << getenv("base_size_width") << "\n";
-   myfile << "base_size_height: " << getenv("base_size_height") << "\n";
-   myfile << "density: " << getenv("density") << "\n";
-   myfile << "linkRad: " << getenv("linkRad") << "\n";
-   myfile << "footRad: " << getenv("footRad") << "\n";
-   myfile << "footLen: " << getenv("footLen") << "\n";
-   myfile << "KINEMATIC: " << getenv("KINEMATIC") << "\n";
-   myfile.close();
-
-
-
-
-
-
-
-
-
-
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   double numIter= std::stod(getenv("curr_iter"));
@@ -64,7 +26,9 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 }
 else
 {
+std::cout << "\n" << "\n" << "\n" << "\n"<< "\n" << "fail here?" << "\n"<< "\n"<< "\n"<< "\n" << "\n";
    currLine=std::stod(getenv("fail_line_start"));
+   if(currLine<=0){currLine==1;}
 }
   std::ostringstream s;
  
@@ -88,6 +52,12 @@ else
  //same deal here, make sure that the init file gets updated!
     if(currLine>=num_rows && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
     {
+        std::ofstream errOut;
+  errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
+	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") << " " << getenv("lenH2") << " "<< getenv("HfootLen") << " " << getenv("base_size_length") << " " << getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("massF1") << " " << getenv("massF2") << " " << getenv("massF3") << " " << getenv("massH1") << " " << getenv("massH2") << " "<< getenv("massH3") << " " << getenv("massBase") << " " << getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel") << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel") << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
+errOut.close();
+
+
         setenv("curr_line","0",1);
         setenv("curr_iter","0",1);
         
@@ -241,6 +211,10 @@ else
 	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
 	{
 		std::cout << "\n" << "This model works!" << "\n";
+                std::ofstream errOut;
+  errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
+	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") << " " << getenv("lenH2") << " "<< getenv("HfootLen") << " " << getenv("base_size_length") << " " << getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("massF1") << " " << getenv("massF2") << " " << getenv("massF3") << " " << getenv("massH1") << " " << getenv("massH2") << " "<< getenv("massH3") << " " << getenv("massBase") << " " << getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel") << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel") << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
+errOut.close();
 		
 	}
 
@@ -266,6 +240,7 @@ std::string line;
 for (int i=0; i<joint_names.size(); i++) 
      {
          //export q
+std::cout << "\n" << "segFault?" << "\n";
                               s.clear();
                               s.str(std::string());
                               s << joint_names[i] << "_q";
@@ -378,7 +353,10 @@ for (int i=0; i<joint_names.size(); i++)
 
    std::fstream values;
    values.open ("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/values.txt", std::ios::app | std::ios::out);
-  values << "\n" << "\n" << "\n" << "-------Trajectories-------" << "\n" << "\n" << "\n";
+  std::cout << "\n" << "\n" << "\n" << "currLine:" << currLine<< "\n" << "\n" << "\n";
+ if(currLine<0){currLine=0;
+setenv("fail_line","0",1);
+}
 std::map<std::string, std::vector<double> > q, qd,qdd;
 //revise this for loop to be joint values
 for(int joint=0;joint<joint_names.size(); joint++)
@@ -438,9 +416,14 @@ Ravelin::VectorNd bodyVals;
   double currVel=std::stod(getenv("curr_vel"));
  double init;
   if(std::stod(getenv("jac_count"))==0)
-  {init=std::stod(getenv("curr_line"));}
+  {init=std::stod(getenv("curr_line"));
+   setenv("fail_line_start",getenv("curr_line"),1);
+   setenv("fail_vel",getenv("curr_vel"),1);
+   setenv("fail_line",getenv("curr_line"),1);
+}
   else
   {init=std::stod(getenv("fail_line_start"));}
+  if(init<0){init=0;}
   
    std::ostringstream s;
     s << getenv("BUILDER_POSE_PATH") << "/" << modelNo << "-" << currVel << "-" << "PoseSet.txt";

@@ -471,10 +471,12 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
         std::cerr << "Transform: " << T_21 << std::endl;
         boost::shared_ptr<const Ravelin::Pose3d> p1_const = rb->get_pose();
         Ravelin::Pose3d p1(p1_const->q,p1_const->x,p1_const->rpose);
+        p1.update_relative_pose(outer_joint_wrt_inner_before->rpose);
         std::cerr << "Pose1: " << p1 << std::endl;
 
         Ravelin::Pose3d p2 = T_21.transform(p1);
         std::cerr << "Pose2: " << p2 << std::endl;
+        p2.update_relative_pose(p1_const->rpose);
         rb->set_pose(p2);
         robot->update_link_poses();
       } else {

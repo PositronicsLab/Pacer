@@ -447,6 +447,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       
       boost::shared_ptr<Ravelin::Pose3d> outer_joint_wrt_inner(new Ravelin::Pose3d(outer_pose->q,outer_pose->x,outer_pose->rpose));
       
+    
       // pose of the outer joint defined wrt inner joint
 #ifndef NDEBUG
       logging1 << "Sample " << SAMPLE_NUMBER << " : Link "<< rb->body_id.c_str() <<" length = " << length << std::endl;
@@ -454,6 +455,8 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       
       outer_joint_wrt_inner->update_relative_pose(inner_joint_pose);
       logging1 << "Before: " << *outer_joint_wrt_inner << std::endl;
+      boost::shared_ptr<Ravelin::Pose3d> outer_joint_wrt_inner_before(new Ravelin::Pose3d(outer_joint_wrt_inner->q,outer_joint_wrt_inner->x,outer_joint_wrt_inner->rpose));
+
       // Update transform in link forward direction
       
       outer_joint_wrt_inner->x.normalize();
@@ -461,10 +464,15 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       logging1 << "After: " <<  *outer_joint_wrt_inner << std::endl;
       length = outer_joint_wrt_inner->x.norm();
       
-      
       if (LINK_IS_END_EFFECTOR) {
         outer_joint_wrt_inner->update_relative_pose(outer_pose->rpose);
-        foot_geometry->set_relative_pose(*outer_joint_wrt_inner);
+//        foot_geometry->set_relative_pose(*outer_joint_wrt_inner);
+        Ravelin::Transform3d T_21 = Ravelin::Pose3d::calc_relative_pose(outer_joint_wrt_inner_before,outer_joint_wrt_inner);
+        boost::shared_ptr<const Ravelin::Pose3d> p1_const = rb->get_pose();
+        Ravelin::Pose3d p1(p1_const->q,p1_const->x,p1_const->rpose);
+
+        Ravelin::Pose3d p2 = T_21.transform(p1);
+        rb->set_pose(p2);
       } else {
         const std::set<shared_ptr<Jointd> >& outers = rb->get_outer_joints();
         

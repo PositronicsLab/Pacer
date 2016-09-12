@@ -465,7 +465,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       length = outer_joint_wrt_inner->x.norm();
       
       if (LINK_IS_END_EFFECTOR) {
-        outer_joint_wrt_inner->update_relative_pose(outer_pose->rpose);
+//        outer_joint_wrt_inner->update_relative_pose(outer_pose->rpose);
 //        foot_geometry->set_relative_pose(*outer_joint_wrt_inner);
         Ravelin::Transform3d T_21 = Ravelin::Pose3d::calc_relative_pose(outer_joint_wrt_inner_before,outer_joint_wrt_inner);
         boost::shared_ptr<const Ravelin::Pose3d> p1_const = rb->get_pose();

@@ -22,6 +22,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
   desc.add_options()
   ("help", "produce help message")
   ("stand", "put robot on ground")
+  ("float", "move robot away from ground")
   ("BODY0.x"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Position [m OR rad] of Robot base")
   ("BODY0.xd"    ,   po::value<std::vector<double> >()->multitoken(),  "Absolute Velocity [m/s OR rad/s] of Robot base");
   
@@ -141,7 +142,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     }
   }
   else if(vm.count("float")){
-    logging1 << "moving robot to not touch the ground" << std::endl;
+    std:cerr << "moving robot to not touch the ground" << std::endl;
     
     // Get robot velocity
     Ravelin::VectorNd q;
@@ -152,7 +153,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     
     // apply changes
     robot->set_generalized_coordinates_euler(q);
-    logging1 << "Set coords to : " << q << std::endl;
+    std:cerr << "Set coords to : " << q << std::endl;
   }
   
   // Update robot state

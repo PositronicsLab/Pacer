@@ -31,34 +31,20 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   bool apply_torque_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.u",torque_limit);
   
   std::vector<double> velocity_limit;
-  bool apply_velocity_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
+  ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
   
   for (int i=0, ii=0; i<joint_names.size(); i++) {
     for (int j=0; j<joint_dofs[i]; j++,ii++) {
-      // If motor speed limit met, cancel torque
-      // (if applied in direction of limit)
-      if(apply_velocity_limit){
-        if (qd[joint_names[i]][j] > velocity_limit[ii]) {
-          OUT_LOG(logDEBUG) << joint_names[i] << ": qd["<<j<<"]= " << qd[joint_names[i]][j] << " exceeds velocity limit: " << velocity_limit[ii];
-          if(u[joint_names[i]][j] > 0){
-            OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " is moving towards exceeded velocity limit, setting to 0";
-            u[joint_names[i]][j] = 0;
-          }
-        } else if  (qd[joint_names[i]][j] < -velocity_limit[ii]) {
-          OUT_LOG(logDEBUG) << joint_names[i] << ": qd["<<j<<"]= " << qd[joint_names[i]][j] << " exceeds negative velocity limit: " << -velocity_limit[ii];
-          if(u[joint_names[i]][j] < 0){
-            OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " is moving towards exceeded velocity limit, setting to 0";
-            u[joint_names[i]][j] = 0;
-          }
-        }
-      }
-      
+      // y = ax + b
+      bool torque_limit_at_velocity = (-torque_limit[ii]/velocity_limit[ii]) * fabs(qd[joint_names[i]][j]) + torque_limit[ii];
+
       if(apply_torque_limit){
-        // Limit torque
-        if (u[joint_names[i]][j] > torque_limit[ii]) {
+        if (torque_limit_at_velocity <= 0) {
+          u[joint_names[i]][j] = 0;
+        } else if (u[joint_names[i]][j] > torque_limit_at_velocity && qd[joint_names[i]][j] > 0 ) {
           OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " exceeds torque limit: " << torque_limit[ii] << ", setting to " << torque_limit[ii];
           u[joint_names[i]][j] = torque_limit[ii];
-        } else if  (u[joint_names[i]][j] < -torque_limit[ii]) {
+        } else if  (u[joint_names[i]][j] < -torque_limit_at_velocity && qd[joint_names[i]][j] < 0 ) {
           OUT_LOG(logDEBUG) << joint_names[i] << ": u["<<j<<"]= " << u[joint_names[i]][j] << " exceeds torque limit: " << -torque_limit[ii] << ", setting to " << -torque_limit[ii];
           u[joint_names[i]][j] = -torque_limit[ii];
         }

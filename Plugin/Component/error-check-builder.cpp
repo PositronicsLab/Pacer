@@ -60,7 +60,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
   std::vector<double> velocity_limit;
   bool apply_velocity_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
-
+/*
 if(jac_count==0)
 {
 
@@ -324,7 +324,7 @@ else
 
 }
 
-
+*/
 
 
 }

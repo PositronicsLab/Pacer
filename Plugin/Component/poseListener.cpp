@@ -38,7 +38,7 @@ std::cout << "\n" << "\n" << "\n" << "\n"<< "\n" << "fail here?" << "\n"<< "\n"<
      //get the joint names
      std::map<std::string, Ravelin::VectorNd > q, qd,qdd;
      std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
-     ctrl->get_joint_value(Pacer::Robot::position_goal, q);
+     ctrl->get_joint_value(Pacer::Robot::position, q);
      ctrl->get_joint_value(Pacer::Robot::velocity_goal, qd);
      ctrl->get_joint_value(Pacer::Robot::acceleration_goal, qdd);
      //open the file that is being written to

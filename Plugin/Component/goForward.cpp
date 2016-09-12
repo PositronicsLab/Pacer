@@ -70,7 +70,7 @@ if(duration>=max_duration && std::stod(getenv("curr_vel"))<std::stod(getenv("max
 
 else if(duration>=max_duration && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))
 	{
-                /*
+                
 		std::string line3=getenv("BUILDER_SCRIPT_PATH");
                 
 	        line3+="/setup-plugins-play.sh";
@@ -81,7 +81,7 @@ else if(duration>=max_duration && std::stod(getenv("curr_vel"))==std::stod(geten
 
         	
         	execl("/bin/sh","sh","-c" , line3.c_str(), (char *) 0);
-                */
+                
                 exit(0);
 		
 

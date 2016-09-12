@@ -141,8 +141,9 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
       logging1 << "Set coords to : " << q << std::endl;
     }
   }
-  else if(vm.count("float")){
-    std:cerr << "moving robot to not touch the ground" << std::endl;
+  
+  if(vm.count("float")){
+    std::cerr << "moving robot to not touch the ground" << std::endl;
     
     // Get robot velocity
     Ravelin::VectorNd q;
@@ -153,7 +154,7 @@ void apply_state_uncertainty(int argc,char* argv[],shared_ptr<RCArticulatedBodyd
     
     // apply changes
     robot->set_generalized_coordinates_euler(q);
-    std:cerr << "Set coords to : " << q << std::endl;
+    std::cerr << "Set coords to : " << q << std::endl;
   }
   
   // Update robot state
@@ -454,6 +455,7 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
       outer_joint_wrt_inner->update_relative_pose(inner_joint_pose);
       logging1 << "Before: " << *outer_joint_wrt_inner << std::endl;
       // Update transform in link forward direction
+      
       outer_joint_wrt_inner->x.normalize();
       outer_joint_wrt_inner->x *= length;
       logging1 << "After: " <<  *outer_joint_wrt_inner << std::endl;

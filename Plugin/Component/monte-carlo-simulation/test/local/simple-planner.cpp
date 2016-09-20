@@ -31,10 +31,13 @@ static void *thread_worker(void *threadid)
     workers[process].request( request_reply );
     if(request_reply == "complete"){
       thread_complete[process] = 1;
+      return threadid;
     } else {
       thread_complete[process] = 0;
     }
+    tick();
   }
+  return threadid;
 }
 
 int main( int argc, char* argv[] ) {
@@ -65,7 +68,7 @@ int main( int argc, char* argv[] ) {
     if( pid == 0 ) {
       /// ---------- START CHILD PROCESS ------------- ///
       // execve
-      execl("./Plugin/Component/mc-service/simple-simulation","simple-simulation");
+      execl("./simple-simulation","simple-simulation");
       
       assert(false);
     } else {

@@ -29,6 +29,7 @@ int main( int argc, char* argv[] ) {
     if(request_reply == "complete"){
       break;
     }
+    tick(0,100);
   }
   
   std::cout << "Robot: Completed Successfully!" << std::endl;

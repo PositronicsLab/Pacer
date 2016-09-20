@@ -109,7 +109,7 @@ int main( int argc, char* argv[] ) {
       std::string response = "PlanningService-->Robot: waiting for jobs to complete! ("+ SSTR(sum) + "/" + SSTR(N_THREADS) +")";
       server.respond( response );
     
-    tick(100);
+    tick(0,100);
     std::string request;
     server.serve( request );
 

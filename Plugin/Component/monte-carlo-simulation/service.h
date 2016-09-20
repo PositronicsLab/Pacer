@@ -167,3 +167,14 @@ inline char* const* param_array( std::vector< std::string >& params ) {
   
   return (char* const*) pa;
 }
+
+inline char** param_array_noconst( std::vector< std::string >& params ) {
+  
+  char** pa = (char**)malloc( sizeof(char*) * (params.size() + 1) );
+  for( unsigned i = 0; i < params.size(); i++ ) {
+    pa[i] = (char*)params[i].c_str();
+  }
+  pa[ params.size() ] = NULL;
+  
+  return (char**) pa;
+}

@@ -13,8 +13,13 @@ foreach(copy_number RANGE 10)
   target_link_libraries(monte-carlo-simulation-${copy_number} ${REQLIBS} reveal_core)
 endforeach()
 
-  add_library(monte-carlo-print MODULE print.cpp)
-  target_link_libraries(monte-carlo-print ${REQLIBS})
+#add_library(monte-carlo-print MODULE print.cpp)
+# target_link_libraries(monte-carlo-print ${REQLIBS})
+
+  option(BUILD_MC_TESTS "Build Monte carlo communication tests?" ON)
+  if(BUILD_MC_TESTS)
+    add_subdirectory( test )
+  endif(BUILD_MC_TESTS)
 endif(BUILD_MONTECARLO)
 
 #find BOOST libraries

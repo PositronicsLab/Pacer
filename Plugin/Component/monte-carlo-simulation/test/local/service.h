@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <reveal/core/connection.h>
 #include <boost/shared_ptr.hpp>
 
 #include <stdio.h>
@@ -8,8 +9,6 @@
 #include <signal.h>
 #include <errno.h>
 
-#ifdef USE_ZMQ
-#include <reveal/core/connection.h>
 //-----------------------------------------------------------------------------
 namespace Reveal {
   //-----------------------------------------------------------------------------
@@ -116,11 +115,11 @@ private:
     }
     return 0;
   }
+  
 };
 
 }
 }
-#endif
 
 #include <time.h>
 static int sleep_duration(double duration){
@@ -132,17 +131,10 @@ static int sleep_duration(double duration){
   return 0;//( ( (double) rem.tv_nsec / 1.0e+9 ) + (double) rem.tv_sec);
 }
 
-#include <boost/algorithm/string.hpp>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <unistd.h>
-#include <fcntl.h>
-
-void tick( int sec = 0, int nsec = 1){
-  struct timespec req,rem;
-  req.tv_sec = 0;
+static void tick(){
+  timespec req,rem;
   req.tv_nsec = 1;
+  req.tv_sec = 0;
   nanosleep(&req,&rem);
 }
 
@@ -156,14 +148,3 @@ static std::string SSTR(T x)
   return oss.str();
 }
 
-static int MESSAGE_SIZE = 32768;
-inline char* const* param_array( std::vector< std::string >& params ) {
-  
-  const char** pa = (const char**)malloc( sizeof(char*) * (params.size() + 1) );
-  for( unsigned i = 0; i < params.size(); i++ ) {
-    pa[i] = (const char*)params[i].c_str();
-  }
-  pa[ params.size() ] = NULL;
-  
-  return (char* const*) pa;
-}

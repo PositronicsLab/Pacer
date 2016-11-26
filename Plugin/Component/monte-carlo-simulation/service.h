@@ -62,6 +62,9 @@ public:
     init(port_id);
   }
   
+  Server(const unsigned& port){
+    init(port);
+  }
   
   inline int serve( std::string& request ) {
     read( request);
@@ -86,6 +89,18 @@ private:
     }
     return 0;
   }
+  int init(const unsigned& port){
+    if(_connection)
+      printf( "Connection %s already exists" , port_id.c_str() );
+    
+    _connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c(Reveal::Core::connection_c::TCP_SERVER, port ) );
+    
+    if( _connection->open() != Reveal::Core::connection_c::ERROR_NONE ) {
+      printf( "planner failed to open server ipc connection\nExiting\n" );
+      return 1;
+    }
+    return 0;
+  }
   
 };
 
@@ -95,6 +110,9 @@ public:
   
   Client(const std::string& port_id){
     init(port_id);
+  }
+  Client(const std::string& host, const unsigned& port){
+    init(host,port);
   }
 
   inline int request( std::string& request_reply ) {
@@ -109,6 +127,18 @@ private:
       printf( "Connection %s already exists" , port_id.c_str() );
     
     _connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c( Reveal::Core::connection_c::IPC_CLIENT, port_id ));  //< the connection to the planner
+    
+    if( _connection->open() != Reveal::Core::connection_c::ERROR_NONE ) {
+      printf( "simulator failed to open client ipc connection\nExiting\n" );
+      return 1;
+    }
+    return 0;
+  }
+  int init(const std::string& host, const unsigned& port){
+    if(_connection)
+      printf( "Connection %s already exists" , port_id.c_str() );
+    
+    _connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c( host, port ));  //< the connection to the planner
     
     if( _connection->open() != Reveal::Core::connection_c::ERROR_NONE ) {
       printf( "simulator failed to open client ipc connection\nExiting\n" );

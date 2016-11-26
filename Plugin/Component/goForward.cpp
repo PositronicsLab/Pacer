@@ -49,7 +49,6 @@ void loop(){
   s << duration;
   std::string line=s.str();
   setenv("duration",line.c_str(),1);
-  std::cout << "\n" << "\n" << duration << "\n" << "\n";
   if(std::stod(getenv("jac_count"))==0)
   {
     if(duration>=max_duration && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")))

@@ -19,10 +19,8 @@ void loop(){
      
   double currVel;
   double modelNo= std::stod(getenv("modelNo"));
-std::cout << "\n" << "\n" << "\n" << "\n"<< "\n" << "fail here?" << "\n"<< "\n"<< "\n"<< "\n" << "\n";
   if(std::stod(getenv("jac_count"))>0)
 	{
-            std::cout << "\n" << "\n" << "\n" << "\n"<< "\n" << "fail here?" << "\n"<< "\n"<< "\n"<< "\n" << "\n";
 	    currVel= std::stod(getenv("fail_vel"));	
 	}
         else

@@ -155,6 +155,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='LF_1_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='LF_1_contact' type='contact'>
+        <contact>
+          <collision>LF_1_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
     </link>
     
     <joint name='LF_Y_2' type='revolute'>
@@ -200,6 +226,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='LF_2_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.01</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='LF_2_contact' type='contact'>
+        <contact>
+          <collision>LF_2_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
     </link>
     
@@ -247,6 +299,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='LF_3_collision'>
+        <pose>-0.05 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.005</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='LF_3_contact' type='contact'>
+        <contact>
+          <collision>LF_3_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
       <visual name='LF_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
@@ -334,6 +412,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='RF_1_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='RF_1_contact' type='contact'>
+        <contact>
+          <collision>RF_1_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
     </link>
     
     <joint name='RF_Y_2' type='revolute'>
@@ -379,6 +483,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='RF_2_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.01</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='RF_2_contact' type='contact'>
+        <contact>
+          <collision>RF_2_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
     </link>
     
@@ -426,6 +556,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='RF_3_collision'>
+        <pose>-0.05 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.005</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='RF_3_contact' type='contact'>
+        <contact>
+          <collision>RF_3_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
       <visual name='RF_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
@@ -513,6 +669,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='LH_1_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='LH_1_contact' type='contact'>
+        <contact>
+          <collision>LH_1_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
     </link>
     
     <joint name='LH_Y_2' type='revolute'>
@@ -547,7 +729,7 @@
         <pose>0 0 0 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.01</radius>
+            <radius>0.005</radius>
             <length>0.1</length>
           </cylinder>
         </geometry>
@@ -558,6 +740,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='LH_2_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.005</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='LH_2_contact' type='contact'>
+        <contact>
+          <collision>LH_2_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
     </link>
     
@@ -605,6 +813,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='LH_3_collision'>
+        <pose>0.05 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.005</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='LH_3_contact' type='contact'>
+        <contact>
+          <collision>LH_3_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
       <visual name='LH_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>
@@ -692,6 +926,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='RH_1_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='RH_1_contact' type='contact'>
+        <contact>
+          <collision>RH_1_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
     </link>
     
     <joint name='RH_Y_2' type='revolute'>
@@ -737,6 +997,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='RH_2_collision'>
+        <pose>0 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.01</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='RH_2_contact' type='contact'>
+        <contact>
+          <collision>RH_2_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
     </link>
     
@@ -784,6 +1070,32 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
+
+      <collision name='RH_3_collision'>
+        <pose>0.05 0 0 0 1.579 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.005</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <restitution_coefficient>0</restitution_coefficient>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>100</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      
+      <sensor name='RH_3_contact' type='contact'>
+        <contact>
+          <collision>RH_3_collision</collision>
+        </contact>
+        <update_rate>1000</update_rate>
+      </sensor>
       
       <visual name='RH_FOOT_visual'>
         <pose>0 0 0 0 0 0</pose>

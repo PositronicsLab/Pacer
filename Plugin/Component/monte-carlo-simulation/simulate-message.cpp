@@ -109,7 +109,14 @@ static void spawn_process(int thread_number){
     if(DISPLAY_MOBY){
       SIM_ARGV.push_back("r");
     }
-    
+
+//    int VISUALIZE_STEP = 0;
+//    ctrl->get_data<int>(plugin_namespace+".visualize-step",VISUALIZE_STEP);
+//    if (VISUALIZE_STEP != 0) {
+//      SIM_ARGV.push_back("v="+SSTR(VISUALIZE_STEP));
+//      SIM_ARGV.push_back("y=osg");
+//    }
+
     std::string model_name("model.xml");
     ctrl->get_data<std::string>(plugin_namespace+".moby-model",model_name);
     SIM_ARGV.push_back(model_name);

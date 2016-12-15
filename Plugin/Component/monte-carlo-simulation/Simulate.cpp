@@ -125,8 +125,8 @@ int sample_idx=0;
 
 #include "simulate-message.cpp"
 
-//#define ARM
-#define QUAD
+#define ARM
+//#define QUAD
 
 void loop(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
@@ -178,7 +178,7 @@ void loop(){
       if(sample_processes[thread_number].active || sample_processes[thread_number].restart)
         continue;
       
-#ifndef INIT_SIM
+#ifndef INIT_SIM // NOT USED
       {
         std::vector<std::string> SIM_ARGV;
         SIM_ARGV.push_back("moby-driver-options");
@@ -190,7 +190,14 @@ void loop(){
         
         static std::string pacer_interface_path(getenv ("PACER_SIMULATOR_PATH"));
         OUT_LOG(logINFO) << "PACER_INTERFACE_PATH: " << pacer_interface_path << std::endl;
-        
+
+        int visualize_step = 0;
+        bool OUTPUT_VIZ = ctrl->get_data<int>(plugin_namespace+".visualize-step",visualize_step);
+        if(OUTPUT_VIZ){
+          SIM_ARGV.push_back("v="+SSTR(visualize_step));
+          SIM_ARGV.push_back("y=osg");
+        }
+
         SIM_ARGV.push_back("p="+pacer_interface_path+"/libPacerMobyPlugin.so");
         bool DISPLAY_MOBY = false;
         ctrl->get_data<bool>(plugin_namespace+".display",DISPLAY_MOBY);
@@ -209,6 +216,9 @@ void loop(){
         
         OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
         << "\nHas simulator options (set online):\n" << SIM_ARGV;
+
+        std::cerr << "New Sample: " << sample_idx << " on thread: " << thread_number << " Starting at t = " << t
+        << "\nHas simulator options (set online):\n" << SIM_ARGV << std::endl;
         
         OUT_LOG(logINFO) << "New Sample: " << sample_idx << " on thread: " << thread_number << " at port: [" << sample_processes[thread_number].worker_port << "] Starting at t = " << t << std::endl <<
         " message (main thread): " << s << std::endl;
@@ -240,9 +250,8 @@ void loop(){
       
       bool EXPORT_XML = false;
       ctrl->get_data<bool>(plugin_namespace+".output-model",EXPORT_XML);
-      if(EXPORT_XML){
+      if(EXPORT_XML)
         SAMPLE_ARGV.push_back("--xml");
-      }
       
       SAMPLE_ARGV.push_back("--sample");
       SAMPLE_ARGV.push_back(SSTR(sample_idx));
@@ -309,8 +318,13 @@ void loop(){
 //#define USE_SIGHANDLER
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-  
-  //-----------------------------------------------------------------------------
+
+#ifdef RUNNING_SERVICE
+  int PID = getpid();
+  std::string port_id = "pacer-robot-" + SSTR(PID);
+  Server server = Server(port_id);
+#endif
+    //-----------------------------------------------------------------------------
   // Multi-core execution : Simulation process spawner
   //-----------------------------------------------------------------------------
   // install sighandler to detect when gazebo finishes

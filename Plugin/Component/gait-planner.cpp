@@ -121,15 +121,15 @@ double interval_duration(double t0,double tF){
   return (tF-t0);
 }
 
-FOOT_PHASE gait_phase(double touchdown,double duty_factor,double gait_progress){
+FOOT_PHASE whichPhase(double touchdown, double duty_factor, double gait_progress){
   double liftoff = decimal_part(touchdown + duty_factor),
   left_in_phase = 0;
   
-  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
-  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
-  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
-  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
-  
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+//  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+
   // ----- STANCE PHASE ------
   if(in_interval(gait_progress,touchdown,liftoff)){
     return STANCE;
@@ -139,86 +139,116 @@ FOOT_PHASE gait_phase(double touchdown,double duty_factor,double gait_progress){
   
 }
 
-double gait_phase(double touchdown,double duty_factor,double gait_progress,FOOT_PHASE this_phase){
-  double liftoff = decimal_part(touchdown + duty_factor),left_in_phase = 0;
-  
-  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
-  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
-  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
-  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
-  
-  // ----- STANCE PHASE ------
-  if(this_phase == STANCE){
-    // left in stance phase = negaive time left in phase
-    left_in_phase = (liftoff - gait_progress);
-    if(left_in_phase < 0)
-      left_in_phase = (1.0 - gait_progress) + liftoff;
+FOOT_PHASE whichPhase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double gait_progress) {
+  for(int i=0;i<touchdown.size();i++){
+    if(whichPhase( touchdown[i],  duty_factor[i],  gait_progress) == STANCE)
+      return STANCE;
   }
-  // ----- SWING PHASE -----
-  else {
-    left_in_phase = (touchdown - gait_progress);
-    if(left_in_phase < 0)
-      left_in_phase = (1.0 - gait_progress) + touchdown;
-  }
-  return left_in_phase;
+  return SWING;
 }
 
-bool next_flight_phase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double initial_time,
-                       double& time_until_takeoff,double& flight_phase_duration){
-  for (double t = 0; t<1.0;) {
-    double gait_progress = decimal_part(initial_time + t);
-    OUT_LOG(logERROR) << "Checking time: " << gait_progress << ", t = " << t << std::endl;
-    
-    bool all_swing_phase = true;
-    double next_touchdown = std::numeric_limits<double>::max();
-    double next_liftoff = std::numeric_limits<double>::max();
-    // Check the next phase change for each foot
-    for (int i=0; i<touchdown.size(); i++) {
-      FOOT_PHASE phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
-      OUT_LOG(logERROR) << "Foot: " << i << ", Phase: " << phase << std::endl;
-      if(phase == SWING){
-        double next_phase = interval_duration(gait_progress,touchdown[i]);
-        next_touchdown = std::min(next_touchdown,next_phase);
-        OUT_LOG(logERROR) << "SWING: next_touchdown: " << next_touchdown << std::endl;
-      }else{
-        all_swing_phase = false;
-        double liftoff_time = decimal_part(touchdown[i] + duty_factor[i]);
-        double next_phase = interval_duration(gait_progress,liftoff_time);
-        next_liftoff = std::min(next_liftoff,next_phase);
-        OUT_LOG(logERROR) << "STANCE: next_liftoff: " << next_liftoff << std::endl;
-      }
-    }
-    
-    // if looking at a flight phase, then exit
-    if(all_swing_phase == true){
-      if(gait_progress == initial_time)
-        time_until_takeoff = -1.0;
-      else
-        time_until_takeoff = interval_duration(initial_time,gait_progress);
-      
-      flight_phase_duration = next_touchdown;
-      
-      OUT_LOG(logERROR) << "Next flight phase was found at: " << gait_progress << std::endl
-      << "\tWith duration: " << flight_phase_duration << std::endl
-      << "\toccuring in: " << time_until_takeoff <<" * (gait-duration) seconds";
-      return true;
-    }
-    
-    OUT_LOG(logERROR) << "Not found yet: " << std::endl;
-    OUT_LOG(logERROR) << "next_liftoff: " << next_liftoff<< std::endl;
-    OUT_LOG(logERROR) << "next_touchdown: " << next_touchdown << std::endl;
-    
-    // increment checking point
-    //    t += 0.001;
-    t += next_liftoff;
-    // and loop
+double remainingInPhase(double touchdown, double duty_factor, double gait_progress){
+
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+
+  // ----- STANCE PHASE -----
+  if(whichPhase( touchdown,  duty_factor,  gait_progress) == STANCE){
+    double liftoff = decimal_part(touchdown + duty_factor);
+//    OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+    return interval_duration(gait_progress,liftoff);
   }
-  
-  OUT_LOG(logERROR) << "No flight phase in gait";
-  
-  time_until_takeoff = std::numeric_limits<double>::max();
-  flight_phase_duration = 0;
-  return false;
+  // ----- SWING PHASE -----
+  return interval_duration(gait_progress,touchdown);
+}
+
+double sincePhaseStart(double touchdown, double duty_factor, double gait_progress){
+
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+
+  // ----- SWING PHASE -----
+  if(whichPhase( touchdown,  duty_factor,  gait_progress) == SWING){
+    double liftoff = decimal_part(touchdown + duty_factor);
+//    OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+    return interval_duration(liftoff,gait_progress);
+  }
+  // ----- STANCE PHASE -----
+  return interval_duration(touchdown,gait_progress);
+}
+
+/// Finds the next flight phase and returns the time until that phase and the duration of the phase
+bool identifyNextFlightPhase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double initial_time,
+                       double& time_until_takeoff,double& flight_phase_duration){
+  // if in stance phase
+  time_until_takeoff = 0;
+  if (whichPhase(touchdown,duty_factor,initial_time) == STANCE) {
+    OUT_LOG(logDEBUG) << "initial_time: " << initial_time << std::endl;
+
+    // look for next takeoff, & check for flight phase until time_until_takeoff > 1
+    do {
+      // Until furthest liftoff event
+      double next_liftoff = 1.0;
+      for(int i=0;i<touchdown.size();i++) {
+        double next_event = remainingInPhase(touchdown[i], duty_factor[i],decimal_part(initial_time + time_until_takeoff));
+        // if a liftoff event
+        if(whichPhase(touchdown[i],duty_factor[i],decimal_part(initial_time+time_until_takeoff+next_event+Pacer::NEAR_ZERO)) == SWING) {
+          OUT_LOG(logDEBUG) << "Next liftoff: " << next_event << std::endl;
+          next_liftoff = std::min(next_liftoff, next_event);
+        }
+      }
+      time_until_takeoff += next_liftoff + Pacer::NEAR_ZERO;
+      OUT_LOG(logDEBUG) << "time_until_takeoff: " << time_until_takeoff << std::endl;
+      OUT_LOG(logDEBUG) << "is this a flight phase? " << std::endl;
+
+      if (whichPhase(touchdown,duty_factor,decimal_part(initial_time+time_until_takeoff)) == SWING) {
+        OUT_LOG(logDEBUG) << "     YES " << std::endl;
+        OUT_LOG(logDEBUG) << "found Flight Phase, how long is it?" << std::endl;
+
+        // Until next gait event
+        flight_phase_duration = 1.0;
+        for(int i=0;i<touchdown.size();i++){
+          flight_phase_duration = std::min(flight_phase_duration,remainingInPhase(touchdown[i],duty_factor[i],decimal_part(initial_time+time_until_takeoff)));
+        }
+        OUT_LOG(logDEBUG) << "Next flight phase was found at: " << decimal_part(initial_time + time_until_takeoff) << std::endl
+                          << "\tWith duration: " << flight_phase_duration << std::endl
+                          << "\toccuring in: " << time_until_takeoff;
+        return true;
+      }
+      OUT_LOG(logDEBUG) << "     NO " << std::endl;
+
+    } while(time_until_takeoff<1.0);
+
+    OUT_LOG(logDEBUG) << "No flight phase in gait";
+    return false;
+  }
+  // if currently in flight phase
+
+    OUT_LOG(logDEBUG) << "This flight phase was found at: " << initial_time << std::endl
+                      << "\tWith duration: " << flight_phase_duration;
+    // Until next gait event
+    double remaining_duration = 1.0;
+    for(int i=0;i<touchdown.size();i++){
+      remaining_duration = std::min(remaining_duration,remainingInPhase(touchdown[i],duty_factor[i],initial_time));
+    }
+
+    // Since last gait event
+    double since_phase_start = 1.0;
+    for(int i=0;i<touchdown.size();i++){
+      since_phase_start = std::min(since_phase_start,sincePhaseStart(touchdown[i],duty_factor[i],initial_time));
+    }
+
+    time_until_takeoff = -since_phase_start;
+
+    flight_phase_duration = remaining_duration - time_until_takeoff;
+
+    OUT_LOG(logDEBUG) << "This flight phase was found at: " << initial_time << std::endl
+                      << "\tWith total duration: " << flight_phase_duration << std::endl
+                      << "\tstarted " << time_until_takeoff << " ago";
+
+    return true;
 }
 
 /**
@@ -332,7 +362,7 @@ void walk_toward(// PARAMETERS
   // Check for flight phase
   double flight_phase_duration;
   double until_takeoff;
-  bool has_flight_phase = next_flight_phase(touchdown,duty_factor,gait_progress,until_takeoff,flight_phase_duration);
+  bool has_flight_phase = identifyNextFlightPhase(touchdown,duty_factor,gait_progress,until_takeoff,flight_phase_duration);
   
   // Figure out the phase of each foot
   std::vector<FOOT_PHASE> phase_vector(NUM_FEET);
@@ -348,7 +378,7 @@ void walk_toward(// PARAMETERS
     liftoff[i] = decimal_part(touchdown[i] + duty_factor[i]);
     if(liftoff[i] >= 1.0) liftoff[i] = 0;
     
-    FOOT_PHASE this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
+    FOOT_PHASE this_phase = whichPhase(touchdown[i],duty_factor[i],gait_progress);
     phase_vector[i] = this_phase;
     
     bool active_foot = active_feet[foot_names[i]];
@@ -373,7 +403,7 @@ void walk_toward(// PARAMETERS
     if(this_phase == STANCE)
       early_stance[i] = false;
     
-    double left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,this_phase);
+    double left_in_phase = remainingInPhase(touchdown[i],duty_factor[i],gait_progress);
     
     if(early_stance[i]){
       this_phase = STANCE;
@@ -459,28 +489,32 @@ void walk_toward(// PARAMETERS
     // go up then come back down, we only need enough initial velocity
     // to reach 0 velocity against the pull of gravity after 1/2 the flight time
     double upward_velocity = gravity * flight_phase_seconds * 0.5;
-    
-    // Note: This can be tuned to give the proper compliance
-    // to the compression phase of flighted running
-    double compression_start_velocity = -upward_velocity;
-    
+
     // smoothly propel the robot over the available time toward the jumping velocity
     static double z_axis_command = 0;
-    static double init_until_takeoff = -1;
-    if(until_takeoff >= 0){
-      if( init_until_takeoff < 0 ) init_until_takeoff = until_takeoff;
-      double interpolation_alpha = 1.0 - until_takeoff/init_until_takeoff;
-      OUTLOG(until_takeoff,"until_takeoff",logERROR);
-      OUTLOG(init_until_takeoff,"init_until_takeoff",logERROR);
+    static double new_flight_phase = true;
+    if(until_takeoff > 0){ // in stance phase, time until next take-off
+        static double start_stance_time = 0;
+        if(new_flight_phase){
+            start_stance_time = gait_progress;
+            new_flight_phase = false;
+        }
+        OUTLOG(start_stance_time,"start_stance_time",logERROR);
+        OUTLOG(gait_progress,"gait_progress",logERROR);
+
+        double since_takeoff = interval_duration(start_stance_time,gait_progress);
+      double interpolation_alpha = 1.0 - until_takeoff/(since_takeoff + until_takeoff);
+        OUTLOG(until_takeoff,"until_takeoff",logERROR);
+        OUTLOG(since_takeoff,"since_takeoff",logERROR);
+        OUTLOG((since_takeoff + until_takeoff),"stance duration",logERROR);
       OUTLOG(interpolation_alpha,"interpolation_alpha (0..1)",logERROR);
-      
-      z_axis_command = sigmoid_interp(compression_start_velocity,upward_velocity,interpolation_alpha);
-      OUTLOG(compression_start_velocity,"compression_start_velocity",logERROR);
+      z_axis_command = sigmoid_interp(-upward_velocity,upward_velocity,interpolation_alpha);
+//      OUTLOG(compression_start_velocity,"compression_start_velocity",logERROR);
       OUTLOG(upward_velocity,"upward_velocity",logERROR);
       OUTLOG(z_axis_command,"z_axis_command for flight",logERROR);
     } else {
-      init_until_takeoff = -1;
-      z_axis_command -= gravity*dt;
+        z_axis_command -= gravity*dt;
+        new_flight_phase = true;
     }
     base_command[2] += z_axis_command;
   }
@@ -493,8 +527,8 @@ void walk_toward(// PARAMETERS
   OUTLOG(gait_progress*gait_duration,"gait_progress*gait_duration",logERROR);
   ctrl->set_data<double>("gait-proportion",gait_progress);
   OUTLOG(gait_progress,"gait_progress",logERROR);
-  ctrl->set_data<std::vector<FOOT_PHASE> >("active-feet",phase_vector);
-  OUT_LOG(logERROR) << "phase_vector: " << phase_vector;
+  ctrl->set_data< std::vector<FOOT_PHASE> >("active-feet",phase_vector);
+  OUT_LOG(logDEBUG) << "phase_vector: " << phase_vector;
   
   ///////////////////////////////////////////////////////////////////////
   //////////////////////// FOOT PHASE PLANNING //////////////////////////
@@ -945,9 +979,11 @@ void loop(){
   base_frame = boost::shared_ptr<Pose3d>( new Pose3d(ctrl->get_data<Pose3d>("base_link_frame")));
   
   base_horizontal_frame = boost::shared_ptr<Pose3d>( new Pose3d(ctrl->get_data<Pose3d>("base_horizontal_frame")));
-  
+
   base_horizontal_frame->update_relative_pose(Pacer::GLOBAL);
-  
+
+  std::cout << base_horizontal_frame->x[0] << " " << base_horizontal_frame->x[1] << " "<< base_horizontal_frame->x[2] << std::endl;
+
   // Set up output vectors for gait planner
   int NUM_FEET = foot_names.size();
   std::vector<Vector3d> foot_vel(NUM_FEET),

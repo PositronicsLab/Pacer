@@ -209,16 +209,16 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
     if (jp->num_dof() == 1) {
       name = std::string(jp->joint_id+".axis");
       help = std::string("Axis vector in model (base link) frame of REVOLUTE Joint: "+jp->joint_id);
-      
+
       desc.add_options()
       (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
-      
+
       name = std::string(jp->joint_id+".tare");
       help = std::string("Absolute position [m OR rad] offset of Joint: "+jp->joint_id);
-      
+
       desc.add_options()
       (name.c_str(), po::value<std::vector<double> >()->multitoken() ,help.c_str());
-      
+
     }
   }
   
@@ -468,13 +468,16 @@ void apply_manufacturing_uncertainty(int argc,char* argv[],shared_ptr<RCArticula
 //        outer_joint_wrt_inner->update_relative_pose(outer_pose->rpose);
 //        foot_geometry->set_relative_pose(*outer_joint_wrt_inner);
         Ravelin::Transform3d T_21 = Ravelin::Pose3d::calc_relative_pose(outer_joint_wrt_inner_before,outer_joint_wrt_inner);
-        std::cerr << "Transform: " << T_21 << std::endl;
+        std::cerr << "Transform: \n" << Ravelin::Matrix3d(T_21.q) << " , " << T_21.x << std::endl;
         boost::shared_ptr<const Ravelin::Pose3d> p1_const = rb->get_pose();
         Ravelin::Pose3d p1(p1_const->q,p1_const->x,p1_const->rpose);
         p1.update_relative_pose(outer_joint_wrt_inner_before->rpose);
         std::cerr << "Pose1: " << p1 << std::endl;
 
-        Ravelin::Pose3d p2 = T_21.transform(p1);
+        // TODO: This leads to orientation change in pose, but rotation is Identity, bug in Transform3d
+//        Ravelin::Pose3d p2 = T_21.transform(p1);
+        Ravelin::Pose3d p2 = p1;
+        p2.x += T_21.x;
         std::cerr << "Pose2: " << p2 << std::endl;
         p2.update_relative_pose(p1_const->rpose);
         rb->set_pose(p2);

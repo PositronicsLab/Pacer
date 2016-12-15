@@ -488,8 +488,8 @@
           <xd>
             <distribution type="string">gaussian</distribution>
             <unit   type="string vector">proportional</unit>
-            <min    type="double vector">-0.1 -0.1 -0.1 -0.1 -0.1 -0.1</min>
-            <max    type="double vector"> 0.1  0.1  0.1  0.1  0.1  0.1</max>
+            <min    type="double vector">-0.01 -0.01 -0.01 -0.01 -0.01 -0.01</min>
+            <max    type="double vector"> 0.01  0.01  0.01  0.01  0.01  0.01</max>
           </xd>
         </BODY0>
       </links>

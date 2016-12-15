@@ -253,7 +253,7 @@ int main(int argc, char* argv[]){
     logging1 << " -- Started Simulator -> " << std::endl;
     
     if( !PACER_ONLY )
-      if(!sim)
+      if( !sim )
         throw std::runtime_error("Could not start Moby");
     
     logging1 << " -- Created Simulator -- " << std::endl;
@@ -403,7 +403,7 @@ int main(int argc, char* argv[]){
         //  if (!MAIN_GROUP) {
         MAIN_GROUP = new osg::Group;
         MAIN_GROUP->addChild(sim->get_persistent_vdata());
-            MAIN_GROUP->addChild(sim->get_transient_vdata());
+//        MAIN_GROUP->addChild(sim->get_transient_vdata());
         //  }
       }
 #endif
@@ -451,8 +451,13 @@ int main(int argc, char* argv[]){
             if(ITER % VISUAL_MOD == 0) {
               sim->update_visualization();
               //          std::string visual_filename = "frame-" +SSTR(ITER)+ "-"+SSTR(pid)+"-"+SSTR(SAMPLE_NUMBER)+".osg";
+
               std::string visual_filename = "frame-" +SSTR(ITER)+"-"+SSTR(SAMPLE_NUMBER)+".osg";
+//              char fname_str[100];
+//              sprintf(fname_str,"frame-%5llu-%3d.osg",ITER,SAMPLE_NUMBER);
+//              std::string visual_filename(fname_str);
               osgDB::writeNodeFile(*MAIN_GROUP, visual_filename);
+              std::cerr << "Sample: "<< SAMPLE_NUMBER << ", with PID: "<< pid << ", at time " << sim->current_time << ", output frame: " << visual_filename << std::endl;
             }
           }
 #endif
@@ -475,7 +480,7 @@ int main(int argc, char* argv[]){
         {
           stop_sim = !Moby::step(sim);
         }
-        
+          // log particle trace data
 #ifdef ARM
         Vector3d block_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,environment->get_pose()));
         Vector3d hand_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,hand->get_pose()));
@@ -483,6 +488,38 @@ int main(int argc, char* argv[]){
         data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(block_point[0]) + " " + SSTR(block_point[1]) + " " + SSTR(block_point[2]) + " " + SSTR(hand_point[0]) + " " + SSTR(hand_point[1]) + " " + SSTR(hand_point[2]);
 #endif
 #ifdef QUAD
+          // get "events"
+//          boost::shared_ptr<Moby::ConstraintSimulator> csim;
+//          csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
+//
+//          std::vector<Moby::Constraint>& e = csim->get_rigid_constraints();
+//          std::cerr << "\ncontacts = ";
+//          for(unsigned i=0;i<e.size();i++){
+//              if (e[i].constraint_type == Moby::Constraint::eContact)
+//              {
+//                  boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
+//                  boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
+//
+////                  Ravelin::Vector3d
+////                          normal = e[i].contact_normal,
+////                          tangent = e[i].contact_tan1,
+////                          impulse = Ravelin::Vector3d(0,0,0);//e[i].contact_impulse.get_linear();
+//
+////                  impulse.pose = e[i].contact_point.pose;
+////                  tangent.normalize();
+////                  normal.normalize();
+//
+//                  std::cerr << " " << sb1->body_id << " " << sb2->body_id;
+//
+////                  OUT_LOG(logDEBUG) << "MOBY: contact-ids: " << sb1->body_id << " <-- " << sb2->body_id ;
+////                  OUT_LOG(logDEBUG) << "MOBY: normal: " << normal;
+////                  OUT_LOG(logDEBUG) << "MOBY: tangent: " << tangent;
+////                  OUT_LOG(logDEBUG) << "MOBY: point: " << e[i].contact_point;
+//              }
+//          }
+//          std::cerr << "\n";
+
+          // Get robot state
 //        Vector3d robot_point = Pose3d::transform_point(Moby::GLOBAL, Vector3d(0,0,0,robot->get_base_link()->get_pose()));
         Ravelin::Pose3d robot_pose = *(robot->get_base_link()->get_pose().get());
         robot_pose.update_relative_pose(Moby::GLOBAL);
@@ -490,7 +527,7 @@ int main(int argc, char* argv[]){
         robot_pose.q.to_rpy(rpy[0],rpy[1],rpy[2]);
         // Perturb mass of robot link by scaling by parameter
 //        data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(robot_point[0]) + " " + SSTR(robot_point[1]) + " " + SSTR(robot_point[2]);
-        data_message = SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(robot_pose.x[0]) + " " + SSTR(robot_pose.x[1]) + " " + SSTR(robot_pose.x[2]) + " " + SSTR(rpy[0]) + " " + SSTR(rpy[1]) + " " + SSTR(rpy[2]) ;
+        data_message += SSTR(SAMPLE_NUMBER) + " " + SSTR(sim->current_time) + " " + SSTR(ITER) + " " + SSTR(robot_pose.x[0]) + " " + SSTR(robot_pose.x[1]) + " " + SSTR(robot_pose.x[2]) + " " + SSTR(rpy[0]) + " " + SSTR(rpy[1]) + " " + SSTR(rpy[2]) ;
 #endif
         
         logging2 << "data_message = [ " << data_message << " ]" << std::endl;
@@ -504,7 +541,7 @@ int main(int argc, char* argv[]){
     
 #ifdef LOGGING_OUTPUT
     Logging::close();
-#endif    
+#endif
 #ifdef USE_OSG_DISPLAY
     if( !PACER_ONLY )
     if (VISUAL_MOD != 0){

@@ -91,7 +91,7 @@ private:
   }
   int init(const unsigned& port){
     if(_connection)
-      printf( "Connection %s already exists" , port_id.c_str() );
+      printf( "Connection %u already exists" , port );
     
     _connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c(Reveal::Core::connection_c::TCP_SERVER, port ) );
     
@@ -136,7 +136,7 @@ private:
   }
   int init(const std::string& host, const unsigned& port){
     if(_connection)
-      printf( "Connection %s already exists" , port_id.c_str() );
+      printf( "Connection %s:%u already exists" , host.c_str(),port );
     
     _connection = Reveal::Core::connection_ptr( new Reveal::Core::connection_c( host, port ));  //< the connection to the planner
     

@@ -22,11 +22,6 @@ enum FOOT_PHASE {
   NONE
 };
 
-enum GAIT_PHASE {
-  FULL_SUPPORT,
-  PARTIAL_SUPPORT,
-  FLIGHT
-};
 
 boost::shared_ptr<Pose3d> base_frame,base_horizontal_frame, gait_pose;
 Ravelin::Origin3d roll_pitch_yaw;
@@ -60,8 +55,8 @@ Pose3d end_state(Pose3d state,Origin3d planar_command, double t_max,double dt = 
   Origin3d dir = planar_robot(planar_state,Origin3d(0.1,0,0));
   
   VISUALIZE(RAY(Vector3d(planar_state[0],planar_state[1],0.01),
-     Vector3d(planar_state[0]+dir[0],planar_state[1]+dir[1],0.01),
-     Vector3d(0,0,0),0.05));
+                Vector3d(planar_state[0]+dir[0],planar_state[1]+dir[1],0.01),
+                Vector3d(0,0,0),0.05));
   
   return state_t_max;
 }
@@ -126,15 +121,15 @@ double interval_duration(double t0,double tF){
   return (tF-t0);
 }
 
-FOOT_PHASE gait_phase(double touchdown,double duty_factor,double gait_progress){
+FOOT_PHASE whichPhase(double touchdown, double duty_factor, double gait_progress){
   double liftoff = decimal_part(touchdown + duty_factor),
   left_in_phase = 0;
   
-  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
-  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
-  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
-  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
-  
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+//  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+
   // ----- STANCE PHASE ------
   if(in_interval(gait_progress,touchdown,liftoff)){
     return STANCE;
@@ -144,86 +139,116 @@ FOOT_PHASE gait_phase(double touchdown,double duty_factor,double gait_progress){
   
 }
 
-double gait_phase(double touchdown,double duty_factor,double gait_progress,FOOT_PHASE this_phase){
-  double liftoff = decimal_part(touchdown + duty_factor),left_in_phase = 0;
-  
-  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
-  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
-  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
-  OUT_LOG(logDEBUG) << "liftoff " << liftoff;
-  
-  // ----- STANCE PHASE ------
-  if(this_phase == STANCE){
-    // left in stance phase = negaive time left in phase
-    left_in_phase = (liftoff - gait_progress);
-    if(left_in_phase < 0)
-      left_in_phase = (1.0 - gait_progress) + liftoff;
+FOOT_PHASE whichPhase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double gait_progress) {
+  for(int i=0;i<touchdown.size();i++){
+    if(whichPhase( touchdown[i],  duty_factor[i],  gait_progress) == STANCE)
+      return STANCE;
   }
-  // ----- SWING PHASE -----
-  else {
-    left_in_phase = (touchdown - gait_progress);
-    if(left_in_phase < 0)
-      left_in_phase = (1.0 - gait_progress) + touchdown;
-  }
-  return left_in_phase;
+  return SWING;
 }
 
-bool next_flight_phase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double initial_time,
-                       double& time_until_takeoff,double& flight_phase_duration){
-  for (double t = 0; t<1.0;) {
-    double gait_progress = decimal_part(initial_time + t);
-    OUT_LOG(logERROR) << "Checking time: " << gait_progress << ", t = " << t << std::endl;
+double remainingInPhase(double touchdown, double duty_factor, double gait_progress){
 
-    bool all_swing_phase = true;
-    double next_touchdown = std::numeric_limits<double>::max();
-    double next_liftoff = std::numeric_limits<double>::max();
-    // Check the next phase change for each foot
-    for (int i=0; i<touchdown.size(); i++) {
-      FOOT_PHASE phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
-      OUT_LOG(logERROR) << "Foot: " << i << ", Phase: " << phase << std::endl;
-      if(phase == SWING){
-        double next_phase = interval_duration(gait_progress,touchdown[i]);
-        next_touchdown = std::min(next_touchdown,next_phase);
-        OUT_LOG(logERROR) << "SWING: next_touchdown: " << next_touchdown << std::endl;
-      }else{
-        all_swing_phase = false;
-        double liftoff_time = decimal_part(touchdown[i] + duty_factor[i]);
-        double next_phase = interval_duration(gait_progress,liftoff_time);
-        next_liftoff = std::min(next_liftoff,next_phase);
-        OUT_LOG(logERROR) << "STANCE: next_liftoff: " << next_liftoff << std::endl;
-      }
-    }
-    
-    // if looking at a flight phase, then exit
-    if(all_swing_phase == true){
-      if(gait_progress == initial_time)
-        time_until_takeoff = -1.0;
-      else
-        time_until_takeoff = interval_duration(initial_time,gait_progress);
-      
-      flight_phase_duration = next_touchdown;
-      
-      OUT_LOG(logERROR) << "Next flight phase was found at: " << gait_progress << std::endl
-      << "\tWith duration: " << flight_phase_duration << std::endl
-      << "\toccuring in: " << time_until_takeoff <<" * (gait-duration) seconds";
-      return true;
-    }
-    
-    OUT_LOG(logERROR) << "Not found yet: " << std::endl;
-    OUT_LOG(logERROR) << "next_liftoff: " << next_liftoff<< std::endl;
-    OUT_LOG(logERROR) << "next_touchdown: " << next_touchdown << std::endl;
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
 
-    // increment checking point
-//    t += 0.001;
-    t += next_liftoff;
-    // and loop
+  // ----- STANCE PHASE -----
+  if(whichPhase( touchdown,  duty_factor,  gait_progress) == STANCE){
+    double liftoff = decimal_part(touchdown + duty_factor);
+//    OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+    return interval_duration(gait_progress,liftoff);
   }
+  // ----- SWING PHASE -----
+  return interval_duration(gait_progress,touchdown);
+}
 
-  OUT_LOG(logERROR) << "No flight phase in gait";
-  
-  time_until_takeoff = std::numeric_limits<double>::max();
-  flight_phase_duration = 0;
-  return false;
+double sincePhaseStart(double touchdown, double duty_factor, double gait_progress){
+
+//  OUT_LOG(logDEBUG) << "gait_progress " << gait_progress;
+//  OUT_LOG(logDEBUG) << "touchdown " << touchdown;
+//  OUT_LOG(logDEBUG) << "duty_factor " << duty_factor;
+
+  // ----- SWING PHASE -----
+  if(whichPhase( touchdown,  duty_factor,  gait_progress) == SWING){
+    double liftoff = decimal_part(touchdown + duty_factor);
+//    OUT_LOG(logDEBUG) << "liftoff " << liftoff;
+    return interval_duration(liftoff,gait_progress);
+  }
+  // ----- STANCE PHASE -----
+  return interval_duration(touchdown,gait_progress);
+}
+
+/// Finds the next flight phase and returns the time until that phase and the duration of the phase
+bool identifyNextFlightPhase(const std::vector<double>& touchdown,const std::vector<double>& duty_factor, double initial_time,
+                       double& time_until_takeoff,double& flight_phase_duration){
+  // if in stance phase
+  time_until_takeoff = 0;
+  if (whichPhase(touchdown,duty_factor,initial_time) == STANCE) {
+    OUT_LOG(logDEBUG) << "initial_time: " << initial_time << std::endl;
+
+    // look for next takeoff, & check for flight phase until time_until_takeoff > 1
+    do {
+      // Until furthest liftoff event
+      double next_liftoff = 1.0;
+      for(int i=0;i<touchdown.size();i++) {
+        double next_event = remainingInPhase(touchdown[i], duty_factor[i],decimal_part(initial_time + time_until_takeoff));
+        // if a liftoff event
+        if(whichPhase(touchdown[i],duty_factor[i],decimal_part(initial_time+time_until_takeoff+next_event+Pacer::NEAR_ZERO)) == SWING) {
+          OUT_LOG(logDEBUG) << "Next liftoff: " << next_event << std::endl;
+          next_liftoff = std::min(next_liftoff, next_event);
+        }
+      }
+      time_until_takeoff += next_liftoff + Pacer::NEAR_ZERO;
+      OUT_LOG(logDEBUG) << "time_until_takeoff: " << time_until_takeoff << std::endl;
+      OUT_LOG(logDEBUG) << "is this a flight phase? " << std::endl;
+
+      if (whichPhase(touchdown,duty_factor,decimal_part(initial_time+time_until_takeoff)) == SWING) {
+        OUT_LOG(logDEBUG) << "     YES " << std::endl;
+        OUT_LOG(logDEBUG) << "found Flight Phase, how long is it?" << std::endl;
+
+        // Until next gait event
+        flight_phase_duration = 1.0;
+        for(int i=0;i<touchdown.size();i++){
+          flight_phase_duration = std::min(flight_phase_duration,remainingInPhase(touchdown[i],duty_factor[i],decimal_part(initial_time+time_until_takeoff)));
+        }
+        OUT_LOG(logDEBUG) << "Next flight phase was found at: " << decimal_part(initial_time + time_until_takeoff) << std::endl
+                          << "\tWith duration: " << flight_phase_duration << std::endl
+                          << "\toccuring in: " << time_until_takeoff;
+        return true;
+      }
+      OUT_LOG(logDEBUG) << "     NO " << std::endl;
+
+    } while(time_until_takeoff<1.0);
+
+    OUT_LOG(logDEBUG) << "No flight phase in gait";
+    return false;
+  }
+  // if currently in flight phase
+
+    OUT_LOG(logDEBUG) << "This flight phase was found at: " << initial_time << std::endl
+                      << "\tWith duration: " << flight_phase_duration;
+    // Until next gait event
+    double remaining_duration = 1.0;
+    for(int i=0;i<touchdown.size();i++){
+      remaining_duration = std::min(remaining_duration,remainingInPhase(touchdown[i],duty_factor[i],initial_time));
+    }
+
+    // Since last gait event
+    double since_phase_start = 1.0;
+    for(int i=0;i<touchdown.size();i++){
+      since_phase_start = std::min(since_phase_start,sincePhaseStart(touchdown[i],duty_factor[i],initial_time));
+    }
+
+    time_until_takeoff = -since_phase_start;
+
+    flight_phase_duration = remaining_duration - time_until_takeoff;
+
+    OUT_LOG(logDEBUG) << "This flight phase was found at: " << initial_time << std::endl
+                      << "\tWith total duration: " << flight_phase_duration << std::endl
+                      << "\tstarted " << time_until_takeoff << " ago";
+
+    return true;
 }
 
 /**
@@ -278,7 +303,7 @@ void walk_toward(// PARAMETERS
   Vector3d up =Vector3d(0,0,1,base_frame);
   if(global_up)
     up = Pose3d::transform_vector(base_frame,Vector3d(0,0,1,base_horizontal_frame));
-
+  
   // Find time since last call
   static double last_time = -0.001;
   double dt = t - last_time;
@@ -337,7 +362,7 @@ void walk_toward(// PARAMETERS
   // Check for flight phase
   double flight_phase_duration;
   double until_takeoff;
-  bool has_flight_phase = next_flight_phase(touchdown,duty_factor,gait_progress,until_takeoff,flight_phase_duration);
+  bool has_flight_phase = identifyNextFlightPhase(touchdown,duty_factor,gait_progress,until_takeoff,flight_phase_duration);
   
   // Figure out the phase of each foot
   std::vector<FOOT_PHASE> phase_vector(NUM_FEET);
@@ -353,7 +378,7 @@ void walk_toward(// PARAMETERS
     liftoff[i] = decimal_part(touchdown[i] + duty_factor[i]);
     if(liftoff[i] >= 1.0) liftoff[i] = 0;
     
-    FOOT_PHASE this_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress);
+    FOOT_PHASE this_phase = whichPhase(touchdown[i],duty_factor[i],gait_progress);
     phase_vector[i] = this_phase;
     
     bool active_foot = active_feet[foot_names[i]];
@@ -378,13 +403,13 @@ void walk_toward(// PARAMETERS
     if(this_phase == STANCE)
       early_stance[i] = false;
     
-    double left_in_phase = gait_phase(touchdown[i],duty_factor[i],gait_progress,this_phase);
+    double left_in_phase = remainingInPhase(touchdown[i],duty_factor[i],gait_progress);
     
     if(early_stance[i]){
       this_phase = STANCE;
       left_in_phase = left_in_phase + duty_factor[i];
     }
-
+    
     left_in_phase_v[i] = left_in_phase;
     OUT_LOG(logDEBUG) << "\t Stance Phase? : " << ((this_phase == STANCE)? "STANCE" : "SWING");
     OUT_LOG(logDEBUG) << "\t left in phase (%) : " << left_in_phase * 100.0;
@@ -413,40 +438,33 @@ void walk_toward(// PARAMETERS
     OUTLOG(mid_of_next_step_state[i].x,"mid_of_next_step_state["+boost::icl::to_string<double>::apply(i)+"]",logERROR);
     
 #ifdef DISPLAY
-    Vector3d color;
-    switch(i){
-      case 0: color = Vector3d(1,0,0);
-        break;
-      case 1: color = Vector3d(0,1,0);
-        break;
-      case 2: color = Vector3d(0,0,1);
-        break;
-      case 3: color = Vector3d(1,0,1);
-        break;
-      default:
-        color = Vector3d(0,0,0);
+    static std::vector<Vector3d> colors;
+    if (colors.empty()) {
+      colors.push_back(Vector3d(1,0,0));
+      colors.push_back(Vector3d(0,1,0));
+      colors.push_back(Vector3d(0,0,1));
+      colors.push_back(Vector3d(1,1,0));
     }
     
     VISUALIZE(POINT(Vector3d(end_of_step_state[i].x[0],
-                end_of_step_state[i].x[1],
-                end_of_step_state[i].x[2]-0.05),
-       color,0.1));
-    color = color / 2.0;
+                             end_of_step_state[i].x[1],
+                             end_of_step_state[i].x[2]-0.05),
+                    colors[i],0.1));
     VISUALIZE(POINT(Vector3d(mid_of_next_step_state[i].x[0],
                              mid_of_next_step_state[i].x[1],
                              mid_of_next_step_state[i].x[2]-0.05),
-                    color,0.1));
+                    colors[i] / 2.0 , 0.1 ));
 #endif
     
   }
-
+  
   VISUALIZE(POINT(Vector3d(base_horizontal_frame->x[0],
                            base_horizontal_frame->x[1],
                            base_horizontal_frame->x[2]-0.05),
                   Vector3d(0,0,0),0.1));
   
-//  VISUALIZE(TEXT("THIS IS A TEST",Vector3d(0,0,0),Ravelin::Quatd(0,0,0,1),Vector3d(0,0,0),0.24));
-
+  //  VISUALIZE(TEXT("THIS IS A TEST",Vector3d(0,0,0),Ravelin::Quatd(0,0,0,1),Vector3d(0,0,0),0.24));
+  
   //////////////////////////////////////////////////////////////////////
   /////////////////////// DETERMINE DESIRED BASE VELOCITY //////////////
   // For stance feet only (affects only desired z-axis base velocity)
@@ -458,47 +476,50 @@ void walk_toward(// PARAMETERS
   OUTLOG(gait_progress,"gait_progress",logERROR);
   OUTLOG(until_takeoff,"until_takeoff",logERROR);
   OUTLOG(flight_phase_duration,"flight_phase_duration",logERROR);
-
+  
   // add forces to propel robot over upcoming flight phase
   if(has_flight_phase){
     // Duration of flight
     double flight_phase_seconds = flight_phase_duration * gait_duration;
     OUTLOG(flight_phase_seconds,"flight_phase_seconds",logERROR);
-
+    
     // upward velocity we must reach to return to ground after flight_phase_seconds
     double gravity = 9.8;// m / s*s
     
-     // go up then come back down, we only need enough initial velocity
-     // to reach 0 velocity against the pull of gravity after 1/2 the flight time
+    // go up then come back down, we only need enough initial velocity
+    // to reach 0 velocity against the pull of gravity after 1/2 the flight time
     double upward_velocity = gravity * flight_phase_seconds * 0.5;
-    
-    // Note: This can be tuned to give the proper compliance
-    // to the compression phase of flighted running
-    double compression_start_velocity = -upward_velocity;
-    
+
     // smoothly propel the robot over the available time toward the jumping velocity
     static double z_axis_command = 0;
-    static double init_until_takeoff = -1;
-    if(until_takeoff >= 0){
-      if( init_until_takeoff < 0 ) init_until_takeoff = until_takeoff;
-      double interpolation_alpha = 1.0 - until_takeoff/init_until_takeoff;
-      OUTLOG(until_takeoff,"until_takeoff",logERROR);
-      OUTLOG(init_until_takeoff,"init_until_takeoff",logERROR);
-      OUTLOG(interpolation_alpha,"interpolation_alpha (0..1)",logERROR);
+    static double new_flight_phase = true;
+    if(until_takeoff > 0){ // in stance phase, time until next take-off
+        static double start_stance_time = 0;
+        if(new_flight_phase){
+            start_stance_time = gait_progress;
+            new_flight_phase = false;
+        }
+        OUTLOG(start_stance_time,"start_stance_time",logERROR);
+        OUTLOG(gait_progress,"gait_progress",logERROR);
 
-      z_axis_command = sigmoid_interp(compression_start_velocity,upward_velocity,interpolation_alpha);
-      OUTLOG(compression_start_velocity,"compression_start_velocity",logERROR);
+        double since_takeoff = interval_duration(start_stance_time,gait_progress);
+      double interpolation_alpha = 1.0 - until_takeoff/(since_takeoff + until_takeoff);
+        OUTLOG(until_takeoff,"until_takeoff",logERROR);
+        OUTLOG(since_takeoff,"since_takeoff",logERROR);
+        OUTLOG((since_takeoff + until_takeoff),"stance duration",logERROR);
+      OUTLOG(interpolation_alpha,"interpolation_alpha (0..1)",logERROR);
+      z_axis_command = sigmoid_interp(-upward_velocity,upward_velocity,interpolation_alpha);
+//      OUTLOG(compression_start_velocity,"compression_start_velocity",logERROR);
       OUTLOG(upward_velocity,"upward_velocity",logERROR);
       OUTLOG(z_axis_command,"z_axis_command for flight",logERROR);
     } else {
-      init_until_takeoff = -1;
-      z_axis_command -= gravity*dt;
+        z_axis_command -= gravity*dt;
+        new_flight_phase = true;
     }
     base_command[2] += z_axis_command;
   }
   
   Ravelin::VectorNd base_velocity = base_command;
-
   
   OUTLOG(base_command,"base_command(with flight factored in)",logERROR);
   ctrl->set_data<Ravelin::VectorNd>("base-command",base_command);
@@ -506,9 +527,9 @@ void walk_toward(// PARAMETERS
   OUTLOG(gait_progress*gait_duration,"gait_progress*gait_duration",logERROR);
   ctrl->set_data<double>("gait-proportion",gait_progress);
   OUTLOG(gait_progress,"gait_progress",logERROR);
-  ctrl->set_data<std::vector<FOOT_PHASE> >("active-feet",phase_vector);
-  OUT_LOG(logERROR) << "phase_vector: " << phase_vector;
-
+  ctrl->set_data< std::vector<FOOT_PHASE> >("active-feet",phase_vector);
+  OUT_LOG(logDEBUG) << "phase_vector: " << phase_vector;
+  
   ///////////////////////////////////////////////////////////////////////
   //////////////////////// FOOT PHASE PLANNING //////////////////////////
   ///////////////////////////////////////////////////////////////////////
@@ -530,7 +551,7 @@ void walk_toward(// PARAMETERS
     if(this_phase != STANCE){
       continue;
     }
-
+    
     VectorNd zero_base_generalized_q;
     zero_base_generalized_q.set_zero(NUM_JOINT_DOFS+ctrl->num_base_dof_euler());
     zero_base_generalized_q.set_sub_vec(0,q.segment(0,NUM_JOINT_DOFS));
@@ -680,22 +701,22 @@ void walk_toward(// PARAMETERS
 #ifdef DISPLAY
       // WRT robot local frame
       {
-      Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,x_start);
-//      p1[2] = 0;
-      VISUALIZE(POINT( p1,   Vector3d(1,0,0),0.1));
-//        Vector3d p2 = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
+        Vector3d p1 = Pose3d::transform_point(Pacer::GLOBAL,x_start);
+        //      p1[2] = 0;
+        VISUALIZE(POINT( p1,   Vector3d(1,0,0),0.1));
+        //        Vector3d p2 = Pose3d::transform_point(end_of_step_state_ptr,foot_goal);
         Vector3d p2 = foot_goal;
-      p2.pose = base_horizontal_frame;
-      p2 = Pose3d::transform_point(Pacer::GLOBAL,p2);
-//      p2[2] = 0;
-      VISUALIZE(POINT(  p2,   Vector3d(0,1,0),0.1));
+        p2.pose = base_horizontal_frame;
+        p2 = Pose3d::transform_point(Pacer::GLOBAL,p2);
+        //      p2[2] = 0;
+        VISUALIZE(POINT(  p2,   Vector3d(0,1,0),0.1));
       }
 #endif
       
       control_points.push_back(Origin3d(x_start));
       
       OUT_LOG(logDEBUG) << "Calculating step [" << i << "] : " << control_points[0] << " --> " << foot_goal;
-
+      
       Origin3d foot_destination = Origin3d(foot_goal);
       Origin3d foot_direction = foot_destination - Origin3d(x_start);
       
@@ -709,19 +730,19 @@ void walk_toward(// PARAMETERS
       spline_robustness[2] = 1e-3;
       control_points.push_back(Origin3d(x_start) + up_step - spline_robustness);
       
-//      if(footholds.empty()){
-        control_points.push_back(foot_destination + up_step + overstep*foot_direction + spline_robustness);
-        control_points.push_back(foot_destination);
-//      } else {
-//        Vector3d x_fh = select_foothold(footholds, end_of_step_state[i], foot_destination);
-//        
-//        foot_destination = Origin3d(x_fh);
-//        
-//        // Reach new foothold, account for movement of robot during step
-//        control_points.push_back(foot_destination + up_step);
-//        control_points.push_back(foot_destination);
-//      }
-//      
+      //      if(footholds.empty()){
+      control_points.push_back(foot_destination + up_step + overstep*foot_direction + spline_robustness);
+      control_points.push_back(foot_destination);
+      //      } else {
+      //        Vector3d x_fh = select_foothold(footholds, end_of_step_state[i], foot_destination);
+      //
+      //        foot_destination = Origin3d(x_fh);
+      //
+      //        // Reach new foothold, account for movement of robot during step
+      //        control_points.push_back(foot_destination + up_step);
+      //        control_points.push_back(foot_destination);
+      //      }
+      //
       // create spline using set of control points, place at back of history
       int n = control_points.size();
       std::vector<Origin3d> new_control_points;
@@ -792,7 +813,7 @@ void walk_toward(// PARAMETERS
       if(xd.norm() > 1.0){
         xd.normalize();
       }
-
+      
       n = control_points.size();
 #ifdef DISPLAY
       { // plot control points (and vel)
@@ -801,7 +822,7 @@ void walk_toward(// PARAMETERS
         
         Ravelin::Vector3d vN = Pose3d::transform_vector(Pacer::GLOBAL,Vector3d(xd.data(),base_horizontal_frame));
         Ravelin::Vector3d pN = Pose3d::transform_point(Pacer::GLOBAL,Vector3d(control_points.back().data(),base_horizontal_frame));
-
+        
         VISUALIZE(RAY(  v1+p1,   p1,   Vector3d(1,1,1),0.1));
         VISUALIZE(RAY(  vN+pN,   pN,   Vector3d(1,1,1),0.1));
         for(int j=0;j<n;j++){
@@ -848,9 +869,9 @@ void walk_toward(// PARAMETERS
 #ifdef DISPLAY
   for(int i=0;i<footholds.size();i++){
     VISUALIZE(POINT( Vector3d(footholds[i][0],footholds[i][1],footholds[i][2])
-       ,Vector3d(1,0,0)
-       ,10.0*footholds[i][3])
-     );
+                    ,Vector3d(1,0,0)
+                    ,10.0*footholds[i][3])
+              );
   }
   
   for(int i=0;i<NUM_FEET;i++){
@@ -888,7 +909,7 @@ void walk_toward(// PARAMETERS
       //      Vector3d a = Pose3d::transform_vector(Pacer::GLOBAL,xdd)/100;
       VISUALIZE(POINT(  p,   Vector3d(0,1,0),0.025));
       VISUALIZE(RAY(  v+p,   p,   Vector3d(1,0,0),0.005));
-//      VISUALIZE(RAY(a+v+p, v+p, Vector3d(1,0.5,0),0.01));
+      //      VISUALIZE(RAY(a+v+p, v+p, Vector3d(1,0.5,0),0.01));
     }
   }
 #endif
@@ -896,17 +917,16 @@ void walk_toward(// PARAMETERS
 }
 
 void loop(){
-boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   // Find time since last call
   static double first_time = t;
   static double last_time = t;
   double dt = t - last_time;
-  last_time = t;
   
   /// Moving average for command
   int queue_size = 1;
   ctrl->get_data<int>(plugin_namespace+".command-smoother",queue_size);
-
+  
   static std::deque<Origin3d> command_queue;
   static Origin3d sum_command = Origin3d(0,0,0);
   
@@ -925,7 +945,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   Origin3d command = sum_command / (double) command_queue.size();
   
   OUTLOG(command,"SE2_command",logERROR);
-
+  
   
   VectorNd go_to;
   go_to.set_zero(6);
@@ -936,6 +956,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   std::vector<double>
   duty_factor = ctrl->get_data<std::vector<double> >(plugin_namespace+".duty-factor"),
   this_gait = ctrl->get_data<std::vector<double> >(plugin_namespace+".gait");
+  
   double gait_time = ctrl->get_data<double>(plugin_namespace+".gait-duration");
   double step_height = ctrl->get_data<double>(plugin_namespace+".step-height");
   
@@ -955,18 +976,19 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   foot_names = ctrl->get_data<std::vector<std::string> >(plugin_namespace+".feet");
   
-  base_frame = boost::shared_ptr<Pose3d>( new Pose3d(
-                                                     ctrl->get_data<Pose3d>("base_link_frame")));
-  base_horizontal_frame = boost::shared_ptr<Pose3d>( new Pose3d(
-                                                                ctrl->get_data<Pose3d>("base_horizontal_frame")));
+  base_frame = boost::shared_ptr<Pose3d>( new Pose3d(ctrl->get_data<Pose3d>("base_link_frame")));
   
+  base_horizontal_frame = boost::shared_ptr<Pose3d>( new Pose3d(ctrl->get_data<Pose3d>("base_horizontal_frame")));
+
   base_horizontal_frame->update_relative_pose(Pacer::GLOBAL);
-  
+
+  std::cout << base_horizontal_frame->x[0] << " " << base_horizontal_frame->x[1] << " "<< base_horizontal_frame->x[2] << std::endl;
+
   // Set up output vectors for gait planner
   int NUM_FEET = foot_names.size();
   std::vector<Vector3d> foot_vel(NUM_FEET),
-                        foot_pos(NUM_FEET),
-                        foot_acc(NUM_FEET);
+  foot_pos(NUM_FEET),
+  foot_acc(NUM_FEET);
   q = ctrl->get_generalized_value(Pacer::Robot::position);
   qd_base = ctrl->get_base_value(Pacer::Robot::velocity);
   
@@ -977,7 +999,8 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     min_reach = std::min(min_reach,reach);
     
     Origin3d workv;
-    if(ctrl->get_data<Origin3d>(foot_names[i]+".goal.x",workv)){
+    if(first_time != t){
+      ctrl->get_data<Origin3d>(foot_names[i]+".goal.x",workv);
       foot_pos[i] = Vector3d(workv,base_frame);
     } else {
       ctrl->get_data<Origin3d>(foot_names[i]+".state.x",workv);
@@ -994,10 +1017,14 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   gait_pose = boost::shared_ptr<Pose3d>( new Pose3d() );
   
-  if( !ctrl->get_data<Pose3d>("base_stability_frame",*(gait_pose.get())))
-    *(gait_pose.get()) = *(base_frame.get());
-  gait_pose->update_relative_pose(base_frame);
-  gait_pose->q.to_rpy(roll_pitch_yaw);
+  ctrl->get_data<Pose3d>("base_stability_frame",*(base_frame.get()));
+  {
+    std::vector<double> gait_pose_vector;
+    ctrl->get_data< std::vector<double> >(plugin_namespace+".pose",gait_pose_vector);
+    gait_pose->q = Ravelin::Quatd::rpy(gait_pose_vector[3],gait_pose_vector[4],gait_pose_vector[5]);
+    gait_pose->x = Ravelin::Origin3d(gait_pose_vector[0],gait_pose_vector[1],gait_pose_vector[2]);
+    gait_pose->rpose = base_frame;
+  }
   
   // Assign foot origins (ideal foot placemenet at rest)
   std::vector<Origin3d> origins;
@@ -1012,7 +1039,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->get_data<double>(plugin_namespace+".height",height);
     
     for(int i=0;i<NUM_FEET;i++){
-      Vector3d origin(ctrl->get_data<Origin3d>(foot_names[i]+".base"),gait_pose);
+      Vector3d origin(ctrl->get_data<Origin3d>(foot_names[i]+".base"),base_frame);
       origin[0] *= length;
       origin[1] *= width;
       origin[2] = -min_reach * height;
@@ -1020,7 +1047,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       OUT_LOG(logDEBUG1) << "Length is " << origin[0];
       OUT_LOG(logDEBUG1) << "Width is " << origin[1];
       OUT_LOG(logDEBUG1) << "Height is " << origin[2];
-
+      
       origins_visualize[i] = Pose3d::transform_point(gait_pose,origin);
       origins[i] = Pose3d::transform_point(gait_pose,origin);
     }
@@ -1028,7 +1055,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   
   for(int i=0;i<NUM_FEET;i++)
     VISUALIZE(POINT(Pose3d::transform_point(Pacer::GLOBAL,origins_visualize[i]),Vector3d(0,0,0),0.1));
-
+  
   OUTLOG(this_gait,"this_gait",logINFO);
   OUTLOG(duty_factor,"duty_factor",logINFO);
   
@@ -1053,16 +1080,18 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->set_data<Origin3d>(foot_names[i]+".goal.x",Origin3d(foot_pos[i]));
     ctrl->set_data<Origin3d>(foot_names[i]+".goal.xd",Origin3d(foot_vel[i]));
     ctrl->set_data<Origin3d>(foot_names[i]+".goal.xdd",Origin3d(foot_acc[i]));
-
+    
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::position_goal,Origin3d(foot_pos[i]));
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::velocity_goal,Origin3d(foot_vel[i]));
     ctrl->set_end_effector_value(foot_names[i],Pacer::Controller::acceleration_goal,Origin3d(foot_acc[i]));
   }
+  
+  last_time = t;
 }
 
 void setup(){
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
-
+  
   const  std::vector<std::string>
   eef_names_ = ctrl->get_data<std::vector<std::string> >("init.end-effector.id");
   for(unsigned i=0;i<eef_names_.size();i++){

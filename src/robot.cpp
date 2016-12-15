@@ -30,6 +30,7 @@ void Robot::calc_generalized_inertia(const Ravelin::VectorNd& q, Ravelin::Matrix
 }
 
 void Robot::compile(){
+  OUT_LOG(logDEBUG2) << "start COMPILE";
   check_phase_internal(initialization);
   NDOFS = _abrobot->num_generalized_coordinates(Ravelin::DynamicBodyd::eSpatial);
 
@@ -71,6 +72,7 @@ void Robot::compile(){
   }
   
   _end_effector_ids.clear();
+  _end_effector_ids = get_data<std::vector<std::string> >("init.end-effector.id");
   _root_link = links[0];
   for(unsigned i=0;i<links.size();i++){
     _id_link_map[links[i]->body_id] = links[i];
@@ -87,8 +89,6 @@ void Robot::compile(){
   }
   _link_ids = get_map_keys(_id_link_map);
   
-  // NOTE: This data comes from the robot model now
-//  _end_effector_ids = get_data<std::vector<std::string> >("init.end-effector.id");
   
   // initialize state data with name data
   init_state();
@@ -159,9 +159,9 @@ void Robot::compile(){
     while (rb_ptr != _abrobot->get_base_link());
     
     _id_end_effector_map[_end_effector_ids[i]] = eef;
-    _id_end_effector_map[_end_effector_ids[i]] = eef;
-    
   }
+  
+  OUT_LOG(logDEBUG2) << "end COMPILE";
 }
 
 void Robot::update(){
@@ -207,6 +207,12 @@ void Robot::update(){
   set_data<Ravelin::VectorNd>("qdd",qdd);
   
   set_model_state(generalized_q);
+  
+  for (int i=0; i<_end_effector_ids.size(); i++) {
+    Ravelin::Pose3d eef_frame(*(_id_link_map[_end_effector_ids[i]]->get_pose().get()));
+    set_data<Ravelin::Pose3d>(_end_effector_ids[i]+".frame",eef_frame);
+  }
+  
   update_poses();
 }
 

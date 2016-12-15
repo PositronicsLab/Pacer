@@ -8,7 +8,7 @@
   </base>
   
   <joint>
-    <id type="string">X_1 Y_2 Z_3 X_4 Y_5 Z_6   X_7   F_0 F_1 F_2 F_3</id>
+    <id type="string">X_1 Y_2 Z_3 X_4 Y_5 Z_6   X_7   F_00 F_01 F_10 F_11</id>
     <dofs type="double">1 1 1   1 1 1  1   1 1 1 1</dofs>
     <q type="double"> 1.5708 1.5708 1.5708   1.5708 1.5708 1.5708   1.5708  -0.785398 -0.785398 -0.785398 -0.785398</q>
     <active type="bool">true true true   true true true    true     true true true true</active>
@@ -19,7 +19,7 @@
   </joint>
   
   <end-effector>
-    <id type="string vector">FINGER0 FINGER1 FINGER2 FINGER3</id>
+    <id type="string vector">HAND</id>
   </end-effector>
 </init>
 </XML>

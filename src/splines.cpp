@@ -4,10 +4,10 @@
  * License (obtainable from http://www.apache.org/licenses/LICENSE-2.0).
  ****************************************************************************/
 
-#include<iostream>
-#include<vector>
-#include<algorithm>
-#include<cmath>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cmath>
 #include <Pacer/utilities.h>
 
 static Ravelin::VectorNd workv_;

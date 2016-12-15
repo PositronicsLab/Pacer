@@ -20,8 +20,6 @@
 #include <osgGA/StateSetManipulator>
 #endif
 
-#include <Pacer/Random.h>
-
 #include <time.h>
 bool control_kinematics = false;
 
@@ -78,7 +76,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   static unsigned long long ITER = -1;
   static double last_time = -0.001;
 
-  std::cout << "controller: time=" << t << " (dt="<< t - last_time << ")" << std::endl;
+  OUT_LOG(logDEBUG1) << "controller: time=" << t << " (dt="<< t - last_time << ")" << std::endl;
 
   if ((t - last_time) < 0.001-Moby::NEAR_ZERO) {
     cf = control_force;
@@ -89,7 +87,7 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 
   
   ITER++;
-  std::cout << "controller: iteration=" << ITER << " , time=" << t << " (dt="<< t - last_time << ")" << std::endl;
+  OUT_LOG(logINFO) << "controller: iteration=" << ITER << " , time=" << t << " (dt="<< t - last_time << ")" << std::endl;
 
   double dt = t - last_time;
   last_time = t;
@@ -147,9 +145,9 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
   boost::shared_ptr<Moby::ConstraintSimulator> csim;
   csim = boost::dynamic_pointer_cast<Moby::ConstraintSimulator>(sim);
 
-  std::vector<Moby::UnilateralConstraint>& e = csim->get_rigid_constraints();
+  std::vector<Moby::Constraint>& e = csim->get_rigid_constraints();
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -239,8 +237,9 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
     }
       OUT_LOG(logINFO) << "MOBY: control: " << control_force;
     } else {
+      control_force.set_zero();
       OUT_LOG(logINFO) << "MOBY is controlled kinematically ";
-      assert(control_force.norm_inf() == 0);
+//      assert(control_force.norm_inf() == 0);
     }
   }
 
@@ -255,8 +254,53 @@ Ravelin::VectorNd& controller_callback(boost::shared_ptr<Moby::ControlledBody> c
 // ================================ CALLBACKS =================================
 // ============================================================================
 
+/////////////////////////////////////////////////////////////////////////////////
+//////// This is how we control in the kinematic only simulator /////////////////
+
+//void (*constraint_callback_fn)(std::vector<Constraint>&, boost::shared_ptr<void>);
+void constraint_callback_fn(std::vector<Moby::Constraint>& constraints, boost::shared_ptr<void> data){
+  if(control_kinematics){
+    boost::shared_ptr<Moby::ControlledBody> cbp = controlled_weak_ptr.lock();
+    boost::shared_ptr<Moby::RCArticulatedBody>
+    abrobot = boost::dynamic_pointer_cast<Moby::RCArticulatedBody>(cbp);
+    
+    static std::vector<JointPtr> joints = abrobot->get_joints();
+    static std::map<std::string, boost::shared_ptr<Moby::Joint> > joints_map;
+    if (joints_map.empty()) {
+      for (std::vector<JointPtr>::iterator it = joints.begin(); it != joints.end(); it++){
+        boost::shared_ptr<Ravelin::Jointd> jp = boost::const_pointer_cast<Ravelin::Jointd>(*it);
+        boost::shared_ptr<Moby::Joint> mjp = boost::dynamic_pointer_cast<Moby::Joint>(jp);
+        joints_map[(*it)->joint_id] = mjp;
+      }
+    }
+    
+    double Kp = 0;
+    robot_ptr->get_data<double>("init.control-kinematics-feedback",Kp);
+    
+    std::map<std::string, Ravelin::VectorNd > q, qd,q_current;
+    robot_ptr->get_joint_value(Pacer::Robot::position_goal, q);
+    robot_ptr->get_joint_value(Pacer::Robot::position, q_current);
+    robot_ptr->get_joint_value(Pacer::Robot::velocity_goal, qd);
+    for(std::map<std::string, Ravelin::VectorNd >::iterator it = qd.begin() ; it!=qd.end() ; it++){
+      Moby::Constraint c;
+      c.constraint_type = Moby::Constraint::eInverseDynamics;
+      Ravelin::VectorNd q_des = q[(*it).first];
+      Ravelin::VectorNd q_val = q_current[(*it).first];
+      Ravelin::VectorNd v_des = (*it).second;
+//      std::cout << "q_des = " << q_des << std::endl;
+//      std::cout << "q = " << q_val << std::endl;
+//      std::cout << "qd_des = " <<  v_des << std::endl;
+
+      (c.qdot_des = v_des) += ((q_des -= q_val) *= Kp);
+//      std::cout << c.qdot_des << std::endl;
+      c.inv_dyn_joint = joints_map[(*it).first];
+      constraints.push_back(c);
+    }
+  }
+}
+
 // examines contact events (after they have been handled in Moby)
-void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
+void post_event_callback_fn(const std::vector<Moby::Constraint>& e,
                             boost::shared_ptr<void> empty)
 {
   
@@ -276,7 +320,7 @@ void post_event_callback_fn(const std::vector<Moby::UnilateralConstraint>& e,
   double normal_sum = 0;
 
   for(unsigned i=0;i<e.size();i++){
-    if (e[i].constraint_type == Moby::UnilateralConstraint::eContact)
+    if (e[i].constraint_type == Moby::Constraint::eContact)
     {
       boost::shared_ptr<Ravelin::SingleBodyd> sb1 = e[i].contact_geom1->get_single_body();
       boost::shared_ptr<Ravelin::SingleBodyd> sb2 = e[i].contact_geom2->get_single_body();
@@ -336,15 +380,11 @@ void post_step_callback_fn(Moby::Simulator* s){
 
   robot_ptr->get_data<bool>("moby.display-moby-skeleton",display_moby_skeleton);
   robot_ptr->get_data<bool>("moby.display-pacer-skeleton",display_pacer_skeleton);
-#ifndef NDEBUG
-  display_moby_skeleton = true;
-  display_pacer_skeleton = true;
-#endif
 
 #ifdef USE_OSG_DISPLAY
   if(display_moby_skeleton){
     // display collision
-    static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
+    static std::vector<std::string> _eef_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
 
     boost::shared_ptr<Moby::ArticulatedBody> abrobot(abrobot_weak_ptr);
     BOOST_FOREACH(boost::shared_ptr<Ravelin::RigidBodyd> rbd, abrobot->get_links()){
@@ -362,8 +402,8 @@ void post_step_callback_fn(Moby::Simulator* s){
         visualize_primitive(primitive,cg_pose,sim);
       }
       
-      for (int i=0;i<_foot_ids.size(); i++) {
-        if(rb->body_id.compare(_foot_ids[i]) == 0){
+      for (int i=0;i<_eef_ids.size(); i++) {
+        if(rb->body_id.compare(_eef_ids[i]) == 0){
           boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = rb;
           bool is_foot = true;
           
@@ -403,7 +443,7 @@ void post_step_callback_fn(Moby::Simulator* s){
 #ifdef USE_OSG_DISPLAY
   if(display_pacer_skeleton){
   // display collision
-  static std::vector<std::string> _foot_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
+  static std::vector<std::string> _eef_ids = robot_ptr->get_data< std::vector<std::string> >("init.end-effector.id");
   robot_ptr->set_model_state(robot_ptr->get_generalized_value(Pacer::Robot::position));
 
   boost::shared_ptr<Moby::ArticulatedBody> abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(robot_ptr->get_abrobot());
@@ -422,8 +462,8 @@ void post_step_callback_fn(Moby::Simulator* s){
       visualize_primitive(primitive,cg_pose,sim);
     }
     
-    for (int i=0;i<_foot_ids.size(); i++) {
-      if(rb->body_id.compare(_foot_ids[i]) == 0){
+    for (int i=0;i<_eef_ids.size(); i++) {
+      if(rb->body_id.compare(_eef_ids[i]) == 0){
         boost::shared_ptr<Ravelin::RigidBodyd> rb_ptr = rb;
         bool is_foot = true;
         do {
@@ -466,8 +506,9 @@ void post_step_callback_fn(Moby::Simulator* s){
 //  }
 /////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// Visualize: ///////////////////////////////////
+  #ifdef USE_OSG_DISPLAY
   render(Utility::visualize);
-
+  #endif
 }
 
 // ============================================================================
@@ -479,6 +520,8 @@ extern "C" {
 
 void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map, double time)
 {
+  OUT_LOG(logDEBUG2) << "start moby controller INIT function";
+
   // pointer to the simulator
   boost::shared_ptr<Moby::Simulator> sim;
   // pointer to the articulated body in Moby
@@ -534,12 +577,17 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   if (csim){
     csim->constraint_post_callback_fn        = &post_event_callback_fn;
     robot_ptr->get_data<bool>("init.control-kinematics",control_kinematics);
+    if(control_kinematics){
+      csim->constraint_callback_fn        = &constraint_callback_fn;
+    }
   }
   sim->post_step_callback_fn = &post_step_callback_fn;
   // CONTROLLER CALLBACK
   controlled_body->controller                     = &controller_callback;
   
   // ================= INIT ROBOT STATE ==========================
+  OUT_LOG(logDEBUG2) << "INIT ROBOT STATE";
+
   boost::shared_ptr<Moby::ArticulatedBody>
   abrobot = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(controlled_body);
   boost::shared_ptr<Moby::RCArticulatedBody>
@@ -595,6 +643,8 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
   // send to moby
   abrobot->set_generalized_coordinates_euler(gq);
   abrobot->set_generalized_velocity(Ravelin::DynamicBodyd::eSpatial,gqd);
+  
+  OUT_LOG(logDEBUG2) << "end moby controller INIT function";
 }
 } // end extern C
 
@@ -604,7 +654,7 @@ void init(void* separator, const std::map<std::string, Moby::BasePtr>& read_map,
 
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color, boost::shared_ptr<Moby::Simulator> sim ) ;
 void visualize_ray(   const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec, const Ravelin::Vector3d& color,double point_radius, boost::shared_ptr<Moby::Simulator> sim ) ;
-void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> sim,double lightness = 1, double size=0.1);
+void draw_pose(const Ravelin::Pose3d& pose, boost::shared_ptr<Moby::Simulator> sim,double lightness, double size,const Ravelin::Vector3d& c);
 void draw_text(std::string& text_str, const Ravelin::Vector3d& point, const Ravelin::Quatd& quat, const Ravelin::Vector3d& c, boost::shared_ptr<Moby::Simulator> sim, double size);
 
 void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
@@ -632,7 +682,7 @@ void render( std::vector<Pacer::VisualizablePtr>& viz_vect){
         Pacer::Pose * v = static_cast<Pacer::Pose*>((it)->get());
         if (!std::isfinite(v->pose.x.norm())) break;
         //        if (!std::isfinite(v->pose.q.norm())) break;
-        draw_pose(v->pose,sim,v->shade,v->size);
+          draw_pose(v->pose,sim,v->shade,v->size,v->color);
         break;
       }
       case Pacer::Visualizable::eText:{

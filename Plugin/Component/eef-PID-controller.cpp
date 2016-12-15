@@ -80,16 +80,18 @@ public:
       pos_des =  ctrl_ptr->get_end_effector_value(eef_names[i],Pacer::Robot::position_goal),
       vel_des =  ctrl_ptr->get_end_effector_value(eef_names[i],Pacer::Robot::velocity_goal);
       
-      Ravelin::Origin3d base_joint = ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".base");
-      double max_reach = ctrl_ptr->get_data<double>(eef_names[i]+".reach");
-      
-      Ravelin::Origin3d goal_from_base_joint = pos_des - base_joint;
-      double goal_reach = goal_from_base_joint.norm();
-      OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
-      
-      if(goal_reach > max_reach){
-        pos_des = base_joint + goal_from_base_joint * (max_reach/goal_reach);
-        vel_des.set_zero();
+      Ravelin::Origin3d base_joint;
+      if(ctrl_ptr->get_data<Ravelin::Origin3d>(eef_names[i]+".base",base_joint)){
+        double max_reach = ctrl_ptr->get_data<double>(eef_names[i]+".reach");
+        
+        Ravelin::Origin3d goal_from_base_joint = pos_des - base_joint;
+        double goal_reach = goal_from_base_joint.norm();
+        OUT_LOG(logDEBUG1) << " goal_reach < max_reach : " << goal_reach<<  " < "  << max_reach ;
+        
+        if(goal_reach > max_reach){
+          pos_des = base_joint + goal_from_base_joint * (max_reach/goal_reach);
+          vel_des.set_zero();
+        }
       }
       
 #ifdef USE_OSG_DISPLAY

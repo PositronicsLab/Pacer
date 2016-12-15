@@ -376,7 +376,7 @@ void visualize_ray( const Ravelin::Vector3d& point, const Ravelin::Vector3d& vec
   visualize_ray(point,vec,c,0.1,sim);
 }
 
-void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<Simulator> sim ,double lightness, double size){
+void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<Simulator> sim ,double lightness, double size, const Ravelin::Vector3d& c){
   Ravelin::Pose3d pose(p);
   assert(lightness >= 0.0 && lightness <= 2.0);
   pose.update_relative_pose(Pacer::GLOBAL);
@@ -385,9 +385,15 @@ void draw_pose(const Ravelin::Pose3d& p, boost::shared_ptr<Simulator> sim ,doubl
   double alpha = (lightness > 1.0)? 1.0 : lightness,
   beta = (lightness > 1.0)? lightness-1.0 : 0.0;
   
+  if (c.norm() > 0) {
+    visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,c,size,sim);
+    visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,c*0.75,size,sim);
+    visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,c*0.5,size,sim);
+  } else {
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,0),Rot(1,0),Rot(2,0),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(alpha,beta,beta),size,sim);
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,1),Rot(1,1),Rot(2,1),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,alpha,beta),size,sim);
   visualize_ray(pose.x+Ravelin::Vector3d(Rot(0,2),Rot(1,2),Rot(2,2),Pacer::GLOBAL)*size,Ravelin::Vector3d(0,0,0)+pose.x,Ravelin::Vector3d(beta,beta,alpha),size,sim);
+}
 }
 
 void draw_text(std::string& text_str, const Ravelin::Vector3d& point, const Ravelin::Quatd& quat, const Ravelin::Vector3d& c, boost::shared_ptr<Simulator> sim, double size){

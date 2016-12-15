@@ -41,8 +41,9 @@ std::vector< boost::shared_ptr<Ravelin::Jointd> >& vec_to_joint_state(const Rave
 
 Ravelin::MatrixNd& Robot::link_jacobian(const Ravelin::VectorNd& x,const end_effector_t& foot,const boost::shared_ptr<const Ravelin::Pose3d> frame, Ravelin::MatrixNd& gk){
   gk.resize(6,foot.chain.size());
-  double * foot_origin;
-  foot_origin = Ravelin::Pose3d::transform_point(frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose())).data();
+  Ravelin::Vector3d foot_origin_vec = Ravelin::Pose3d::transform_point(frame,Ravelin::Vector3d(0,0,0,foot.link->get_pose()));
+  double * foot_origin = foot_origin_vec.data();
+//  std::cerr << foot.id << " origin: " << foot_origin_vec << std::endl;
   boost::shared_ptr<Ravelin::Pose3d> jacobian_frame
   (new Ravelin::Pose3d
    (Ravelin::Quatd::identity(),
@@ -349,11 +350,11 @@ void Robot::end_effector_inverse_kinematics(
   qd_des.set_zero(NUM_JOINT_DOFS);
   qdd_des.set_zero(NUM_JOINT_DOFS);
   
-  set_model_state(q);
-  
   int NUM_EEFS = foot_id.size();
   
+  set_model_state(q);
   for(int i=0;i<NUM_EEFS;i++){
+
     end_effector_t& foot = *(_id_end_effector_map[foot_id[i]].get());
     
     // POSITION
@@ -363,15 +364,20 @@ void Robot::end_effector_inverse_kinematics(
     
     //    RMRC(foot,q,Ravelin::VectorNd(6,Ravelin::SVector6d(foot_pos[i],Ravelin::Vector3d::zero()).data()),q_des,TOL);
     OUTLOG(q_des.select(foot.chain_bool,workv_),foot.id + "_q",logDEBUG1);
-    
+  }
+  
+  set_model_state(q);
+  for(int i=0;i<NUM_EEFS;i++){
+    end_effector_t& foot = *(_id_end_effector_map[foot_id[i]].get());
+
     // Calc jacobian for AB at this EEF
     Ravelin::MatrixNd J;
     Ravelin::VectorNd x(foot.chain.size());
     for(int k=0;k<foot.chain.size();k++)                // actuated joints
       x[k] = q[foot.chain[k]];
+
     link_jacobian(x,foot,GLOBAL,J);
-    J = J.get_sub_mat(0,6,0,J.columns(),workM_);
-    
+
     Ravelin::VectorNd qd_foot,qdd_foot;
     // VELOCITY & ACCELERATION
     OUTLOG(J,foot.id + "__J", logDEBUG1);

@@ -59,6 +59,7 @@ bool Controller::remove_plugin(const std::string& plugin_name){
 }
 
 bool Controller::init_plugin(const std::string& plugin_name){
+  OUT_LOG(logDEBUG) << ">> init_plugin("<< plugin_name << ")";
   std::string filename;
   bool plugin_filename_found = get_data<std::string>(plugin_name+".file",filename);
   if (!plugin_filename_found)
@@ -99,6 +100,8 @@ bool Controller::init_plugin(const std::string& plugin_name){
     // Init the plugin
     (*INIT)(this->ptr(),plugin_name.c_str());
   }
+  OUT_LOG(logDEBUG) << "<< init_plugin("<< plugin_name << ")";
+
   return true;
 }
 

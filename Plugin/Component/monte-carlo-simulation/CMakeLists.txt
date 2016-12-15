@@ -1,13 +1,25 @@
 
-find_package(reveal REQUIRED)
-link_directories(${REVEAL_LIBRARY_DIRS})
-include_directories(${REVEAL_INCLUDE_DIR})
 
 
 option(BUILD_MONTECARLO "Build Monte carlo simulaton method plugin?" OFF)
 if(BUILD_MONTECARLO)
-  add_library(monte-carlo-simulation MODULE simulate.cpp exchange.cpp)
-  target_link_libraries(monte-carlo-simulation ${REQLIBS} reveal_core)
+  find_package(reveal REQUIRED)
+  link_directories(${REVEAL_LIBRARY_DIRS})
+  include_directories(${REVEAL_INCLUDE_DIR})
+  add_definitions (-DUSE_ZMQ)
+
+foreach(copy_number RANGE 16)
+  add_library(monte-carlo-simulation-${copy_number} MODULE Simulate.cpp)
+  target_link_libraries(monte-carlo-simulation-${copy_number} ${REQLIBS} reveal_core)
+endforeach()
+
+#add_library(monte-carlo-print MODULE print.cpp)
+# target_link_libraries(monte-carlo-print ${REQLIBS})
+
+  option(BUILD_MC_TESTS "Build Monte carlo communication tests?" ON)
+  if(BUILD_MC_TESTS)
+    add_subdirectory( test )
+  endif(BUILD_MC_TESTS)
 endif(BUILD_MONTECARLO)
 
 #find BOOST libraries
@@ -16,9 +28,13 @@ find_package(Boost COMPONENTS program_options REQUIRED)
 link_directories(${BOOST_LIBRARY_DIRS})
 include_directories(${BOOST_INCLUDE_DIR})
 
-  add_executable(sample.bin Sample.cpp)
+add_executable(sample.bin Sample.cpp)
 
-  target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver)
+if(BUILD_MONTECARLO)
+  target_link_libraries(sample.bin reveal_core)
+endif(BUILD_MONTECARLO)
+
+target_link_libraries(sample.bin ${REQLIBS} boost_program_options MobyDriver PacerDriver)
   IF(USE_DISPLAY)
     #find OSG
     find_package (osg)

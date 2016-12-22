@@ -17,93 +17,10 @@
         </inertia>
       </inertial>
       
-      <visual name='Head'>
-        <pose>0.095 0 0.05 0 -0 0</pose>
-        <geometry>
-          <box>
-            <size>0.035 0.17 0.025</size>
-          </box>
-        </geometry>
-        <material>
-          <diffuse>0.5 0.5 0.5 1</diffuse>
-        </material>
-      </visual>
-      <visual name='Neck'>
-        <pose>0.095 0 0.025 0 -0 0</pose>
-        <geometry>
-          <box>
-            <size>0.02 0.02 0.04</size>
-          </box>
-        </geometry>
-        <material>
-          <diffuse>0.5 0.5 0.5 1</diffuse>
-        </material>
-      </visual>
-      <visual name='REye'>
-        <pose>0.11 -0.03 0.05 0 1.571 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.009</radius>
-            <length>0.015</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.2 0.2 0.2 1</ambient>
-          <diffuse>0.5 0 0 1</diffuse>
-          <specular>0.1 0.1 0.1 1</specular>
-          <emissive>0 0 0 0</emissive>
-        </material>
-      </visual>
-      <visual name='LEye1'>
-        <pose>0.11 0.03 0.05 0 1.571 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.009</radius>
-            <length>0.015</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.2 0.2 0.2 1</ambient>
-          <diffuse>0.5 0 0 1</diffuse>
-          <specular>0.1 0.1 0.1 1</specular>
-          <emissive>0 0 0 0</emissive>
-        </material>
-      </visual>
-      <visual name='LEye2'>
-        <pose>0.11 0.06 0.05 0 1.571 0</pose>
-        <geometry>
-          <cylinder>
-            <radius>0.009</radius>
-            <length>0.015</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.2 0.2 0.2 1</ambient>
-          <diffuse>0.5 0 0 1</diffuse>
-          <specular>0.1 0.1 0.1 1</specular>
-          <emissive>0 0 0 0</emissive>
-        </material>
-      </visual>
-      
-      <visual name='BODY1_visual'>
-        <pose>0.095 0 0 0 -0 0</pose>
-        <geometry>
-          <box>
-            <size>0.04 0.125 0.04</size>
-          </box>
-        </geometry>
-        <material>
-          <ambient>0.2 0.2 0.2 1</ambient>
-          <diffuse>0.5 0.5 0.5 1</diffuse>
-          <specular>0.1 0.1 0.1 1</specular>
-          <emissive>0 0 0 0</emissive>
-        </material>
-      </visual>
-      
       <visual name='BODY0_visual'>
         <geometry>
           <box>
-            <size>0.15 0.08 0.05</size>
+            <size>0.145 0.18 0.06</size>
           </box>
         </geometry>
         <material>
@@ -113,26 +30,11 @@
           <emissive>0 0 0 0</emissive>
         </material>
       </visual>
-      <visual name='BODYN_visual'>
-        <pose>-0.095 0 0 0 -0 0</pose>
-        <geometry>
-          <box>
-            <size>0.04 0.125 0.04</size>
-          </box>
-        </geometry>
-        <material>
-          <ambient>0.2 0.2 0.2 1</ambient>
-          <diffuse>0.5 0.5 0.5 1</diffuse>
-          <specular>0.1 0.1 0.1 1</specular>
-          <emissive>0 0 0 0</emissive>
-        </material>
-      </visual>
-      
       
       <collision name='BODY0_collision'>
         <geometry>
           <box>
-            <size>0.155 0.150 0.035</size>
+            <size>0.145 0.18 0.06</size>
           </box>
         </geometry>
       </collision>
@@ -157,7 +59,7 @@
     
     
     <link name='LF_LEG_1'>
-      <pose>0.1025 0.0625 0 0 0 0</pose>
+      <pose>0.08 0.1 -.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -173,7 +75,7 @@
       <visual name='leg1_visual'>
         <geometry>
           <box>
-            <size>0.05 0.035 0.035</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -200,7 +102,7 @@
     </joint>
     
     <link name='LF_LEG_2'>
-      <pose>0.141 0.0625 -0.005 0 0 0</pose>
+      <pose>0.16 0.11 -0.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -216,7 +118,7 @@
       <visual name='leg2_visual'>
         <geometry>
           <box>
-            <size>0.1 0.03 0.02</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -259,11 +161,11 @@
       </inertial>
       
       <visual name='leg3_visual'>
-        <pose>-0.05 0 0 0 1.579 0</pose>
+        <pose>-0.05 0.04 -0.038 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.005</radius>
-            <length>0.1</length>
+	    <radius>0.00635</radius>
+            <length>0.04</length>
           </cylinder>
         </geometry>
         <material>
@@ -275,7 +177,7 @@
       </visual>
       
       <visual name='LF_FOOT_visual'>
-        <pose>0 0 0 0 0 0</pose>
+        <pose>-0.02 0.04 -0.038 0 0 0</pose>
         <geometry>
           <sphere>
             <radius>0.01</radius>
@@ -326,7 +228,7 @@
     
     
     <link name='RF_LEG_1'>
-      <pose>0.1025 -0.0625 0 0 0 0</pose>
+      <pose>0.08 -0.1 -.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -342,7 +244,7 @@
       <visual name='leg1_visual'>
         <geometry>
           <box>
-            <size>0.05 0.035 0.035</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -369,7 +271,7 @@
     </joint>
     
     <link name='RF_LEG_2'>
-      <pose>0.141 -0.0625 -0.005 0 0 0</pose>
+      <pose>0.16 -0.11 -0.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -385,7 +287,7 @@
       <visual name='leg2_visual'>
         <geometry>
           <box>
-            <size>0.1 0.03 0.02</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -428,11 +330,11 @@
       </inertial>
       
       <visual name='leg3_visual'>
-        <pose>-0.05 0 0 0 1.579 0</pose>
+        <pose>-0.05 -0.04 -0.038 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.005</radius>
-            <length>0.1</length>
+	    <radius>0.00635</radius>
+            <length>0.04</length>
           </cylinder>
         </geometry>
         <material>
@@ -444,7 +346,7 @@
       </visual>
       
       <visual name='RF_FOOT_visual'>
-        <pose>0 0 0 0 0 0</pose>
+        <pose>-0.02 -0.04 -0.038 0 0 0</pose>
         <geometry>
           <sphere>
             <radius>0.01</radius>
@@ -495,7 +397,7 @@
     
     
     <link name='LH_LEG_1'>
-      <pose>-0.1025 0.0625 0 0 0 0</pose>
+      <pose>-0.08 0.1 -.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -511,7 +413,7 @@
       <visual name='leg1_visual'>
         <geometry>
           <box>
-            <size>0.05 0.035 0.035</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -538,7 +440,7 @@
     </joint>
     
     <link name='LH_LEG_2'>
-      <pose>-0.141 0.0625 -0.0065 0 0 0</pose>
+      <pose>-0.16 0.11 -0.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -554,7 +456,7 @@
       <visual name='leg2_visual'>
         <geometry>
           <box>
-            <size>0.1 0.03 0.02</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -597,11 +499,11 @@
       </inertial>
       
       <visual name='leg3_visual'>
-        <pose>0.05 0 0 0 1.579 0</pose>
+        <pose>0.05 0.04 -0.038 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.005</radius>
-            <length>0.1</length>
+	    <radius>0.00635</radius>
+            <length>0.04</length>
           </cylinder>
         </geometry>
         <material>
@@ -613,7 +515,7 @@
       </visual>
       
       <visual name='LH_FOOT_visual'>
-        <pose>0 0 0 0 0 0</pose>
+        <pose>0.02 0.04 -0.038 0 0 0</pose>
         <geometry>
           <sphere>
             <radius>0.01</radius>
@@ -664,7 +566,7 @@
     
     
     <link name='RH_LEG_1'>
-      <pose>-0.1025 -0.0625 0 0 0 0</pose>
+      <pose>-0.08 -0.1 -.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -680,7 +582,7 @@
       <visual name='leg1_visual'>
         <geometry>
           <box>
-            <size>0.05 0.035 0.035</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -707,7 +609,7 @@
     </joint>
     
     <link name='RH_LEG_2'>
-      <pose>-0.141 -0.0625 -0.0065 0 0 0</pose>
+      <pose>-0.16 -0.11 -0.038 0 0 0</pose>
       <inertial>
         <mass>0.10</mass>
         <inertia>
@@ -723,7 +625,7 @@
       <visual name='leg2_visual'>
         <geometry>
           <box>
-            <size>0.1 0.03 0.02</size>
+            <size>0.135 0.01 0.02</size>
           </box>
         </geometry>
         <material>
@@ -766,11 +668,11 @@
       </inertial>
       
       <visual name='leg3_visual'>
-        <pose>0.05 0 0 0 1.579 0</pose>
+        <pose>0.05 -0.04 -0.038 0 1.579 0</pose>
         <geometry>
           <cylinder>
-            <radius>0.005</radius>
-            <length>0.1</length>
+            <radius>0.00635</radius>
+            <length>0.04</length>
           </cylinder>
         </geometry>
         <material>
@@ -782,7 +684,7 @@
       </visual>
       
       <visual name='RH_FOOT_visual'>
-        <pose>0 0 0 0 0 0</pose>
+        <pose>0.02 -0.04 -0.038 0 0 0</pose>
         <geometry>
           <sphere>
             <radius>0.01</radius>
@@ -816,4 +718,3 @@
       </sensor>
     </link>
   </model>
-</sdf>

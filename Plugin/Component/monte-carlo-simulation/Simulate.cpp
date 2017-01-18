@@ -11,7 +11,7 @@
 
 #define INIT_SIM
 
-//#define OUT_LOG(x) std::cout << std::endl
+#define OUT_LOG(x) std::cout << std::endl
 
 
 #include "service.h"
@@ -125,7 +125,7 @@ int sample_idx=0;
 
 #include "simulate-message.cpp"
 
-#define ARM
+//#define ARM
 //#define QUAD
 
 void loop(){
@@ -308,6 +308,7 @@ void loop(){
   } else if(available_threads == NUM_THREADS  && sample_idx == NUM_SAMPLES){
     OUT_LOG(logINFO) << "All threads are free ( " << available_threads << " out of " << NUM_THREADS << " ), all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started";
     OUT_LOG(logINFO) << "Experiment Complete";
+      exit(0);
   } else if (available_threads > 0 && sample_idx == NUM_SAMPLES) {
     OUT_LOG(logINFO) << "Some threads are free ( " << available_threads << " out of " << NUM_THREADS << " ), all samples ( " << sample_idx << " out of " << NUM_SAMPLES << " ) have been started.";
   }

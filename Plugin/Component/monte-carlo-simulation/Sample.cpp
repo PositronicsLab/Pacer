@@ -576,7 +576,7 @@ int main(int argc, char* argv[]){
     
 #ifdef USE_ZMQ
     if (USE_PIPES) {
-      server.respond(data_message);
+      server.respond("completed");
     }
 #endif
     

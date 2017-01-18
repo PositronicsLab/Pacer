@@ -196,11 +196,16 @@ class Joystick
   } // while
  
   Joystick(){}
-  
-  Joystick(int joy_idx){
-    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
- 
-    // FIXME: We don't need video, but without it SDL will fail to work in SDL_WaitEvent()
+
+    SDL_Haptic *RumbleHandles;
+    SDL_Joystick *JoystickHandle;
+    SDL_GameController *ControllerHandles;
+
+    Joystick(int joy_idx){
+      SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+
+
+      // FIXME: We don't need video, but without it SDL will fail to work in SDL_WaitEvent()
     if(SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) < 0)
     {
       throw std::runtime_error("Unable to init SDL");
@@ -230,7 +235,13 @@ class Joystick
       hats    = (unsigned short*) calloc(num_hats,    sizeof(unsigned short));
       balls   = (unsigned short*) calloc(num_balls,   2*sizeof(int));
     }
-  }
+
+      ControllerHandles = SDL_GameControllerOpen(joy_idx);
+      JoystickHandle = SDL_GameControllerGetJoystick(ControllerHandles);
+      RumbleHandles = SDL_HapticOpenFromJoystick(JoystickHandle);
+      SDL_HapticClose(RumbleHandles);
+      SDL_HapticRumblePlay(RumbleHandles, 0.5f, 2000);
+    }
 
   ~Joystick(){
     free(balls);
@@ -483,7 +494,7 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
       const int MAX_VAL =32767;
       int X = 1,Y = 0,THETA = 2;
       if (is_sabrent || is_ps){
-        X = 1;Y = 0;THETA = 2;
+        X = 1;Y = 0;THETA = 3;
       } else if(is_xbox){
         X = 1;Y = 0;THETA = 3;
       }

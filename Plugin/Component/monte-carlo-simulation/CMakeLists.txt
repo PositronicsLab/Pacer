@@ -8,7 +8,7 @@ if(BUILD_MONTECARLO)
   include_directories(${REVEAL_INCLUDE_DIR})
   add_definitions (-DUSE_ZMQ)
 
-foreach(copy_number RANGE 16)
+foreach(copy_number RANGE 4)
   add_library(monte-carlo-simulation-${copy_number} MODULE Simulate.cpp)
   target_link_libraries(monte-carlo-simulation-${copy_number} ${REQLIBS} reveal_core)
 endforeach()

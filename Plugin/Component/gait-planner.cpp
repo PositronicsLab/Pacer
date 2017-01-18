@@ -982,7 +982,7 @@ void loop(){
 
   base_horizontal_frame->update_relative_pose(Pacer::GLOBAL);
 
-  std::cout << base_horizontal_frame->x[0] << " " << base_horizontal_frame->x[1] << " "<< base_horizontal_frame->x[2] << std::endl;
+//  std::cout << base_horizontal_frame->x[0] << " " << base_horizontal_frame->x[1] << " "<< base_horizontal_frame->x[2] << std::endl;
 
   // Set up output vectors for gait planner
   int NUM_FEET = foot_names.size();

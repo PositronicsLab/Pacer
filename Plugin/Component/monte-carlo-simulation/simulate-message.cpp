@@ -203,13 +203,13 @@ static void *thread_worker(void *threadid)
   std::vector<std::string> message;
   
   boost::split(message, request_reply, boost::is_any_of(" "));
-  if(message.size() > 1){
+//  if(message.size() > 1){
     sample_messages.push_back(message);
     sample_processes[thread_number].active = 0;
-  } else {
-    sample_processes[thread_number].active = 0;
-    sample_processes[thread_number].restart = 1;
-  }
+//  } else {
+//    sample_processes[thread_number].active = 0;
+//    sample_processes[thread_number].restart = 1;
+//  }
   //  }
   return (void *) 0;
 }

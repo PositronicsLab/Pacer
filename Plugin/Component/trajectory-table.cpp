@@ -26,10 +26,10 @@ boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 }
 else
 {
-std::cout << "\n" << "\n" << "\n" << "\n"<< "\n" << "fail here?" << "\n"<< "\n"<< "\n"<< "\n" << "\n";
    currLine=std::stod(getenv("fail_line_start"));
    if(currLine<=0){currLine==1;}
 }
+std::cout << "currLine: " << currLine << std::endl;
   std::ostringstream s;
  
   std::vector<std::vector<double> > allqVals;
@@ -52,8 +52,9 @@ std::cout << "\n" << "\n" << "\n" << "\n"<< "\n" << "fail here?" << "\n"<< "\n"<
  //same deal here, make sure that the init file gets updated!
     if(currLine>=num_rows && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
     {
+	std::cout << "\n" << "\n" << "\n" << "\n" << "\n" << "\n" << "here" << "\n" << "\n" << "\n" << "\n";
         std::ofstream errOut;
-  errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
+  errOut.open(getenv("BUILDER_HOME_PATH")+std::string("/matlabData.txt"), std::ios::app);
 	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") << " " << getenv("lenH2") << " "<< getenv("HfootLen") << " " << getenv("base_size_length") << " " << getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("massF1") << " " << getenv("massF2") << " " << getenv("massF3") << " " << getenv("massH1") << " " << getenv("massH2") << " "<< getenv("massH3") << " " << getenv("massBase") << " " << getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel") << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel") << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
 errOut.close();
 
@@ -208,19 +209,22 @@ errOut.close();
        
     	
     }
+	//if no limit is reached then the model works, then record the data in MatlabData.txt and exit the program
 	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
 	{
 		std::cout << "\n" << "This model works!" << "\n";
                 std::ofstream errOut;
-  errOut.open("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/matlabData.txt", std::ios::app);
+  errOut.open(getenv("BUILDER_HOME_PATH")+std::string("/matlabData.txt"), std::ios::app);
 	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") << " " << getenv("lenH2") << " "<< getenv("HfootLen") << " " << getenv("base_size_length") << " " << getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("massF1") << " " << getenv("massF2") << " " << getenv("massF3") << " " << getenv("massH1") << " " << getenv("massH2") << " "<< getenv("massH3") << " " << getenv("massBase") << " " << getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel") << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel") << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
 errOut.close();
-		
+		exit(0);
 	}
 
 
 
 //now, when we start a new process make sure to edit the init q and qd
+//that is, the initial values for the next window must be exported and set in the vars.xml file so the model 
+//immediately matches the beginning of the next test
   if(numIter>=testDur && std::stod(getenv("jac_count"))==0)
    {
         currLine=currLine-testDur;
@@ -239,8 +243,7 @@ errOut.close();
 std::string line;
 for (int i=0; i<joint_names.size(); i++) 
      {
-         //export q
-std::cout << "\n" << "segFault?" << "\n";
+         		      //export q
                               s.clear();
                               s.str(std::string());
                               s << joint_names[i] << "_q";
@@ -348,17 +351,12 @@ std::cout << "\n" << "segFault?" << "\n";
       s << numIter;
       setenv("curr_iter",s.str().c_str(),1);
    }
-  
-  
-
-   std::fstream values;
-   values.open ("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/values.txt", std::ios::app | std::ios::out);
-  std::cout << "\n" << "\n" << "\n" << "currLine:" << currLine<< "\n" << "\n" << "\n";
- if(currLine<0){currLine=0;
-setenv("fail_line","0",1);
+if(currLine<0){currLine=0;
+	setenv("fail_line","0",1);
 }
 std::map<std::string, std::vector<double> > q, qd,qdd;
-//revise this for loop to be joint values
+//get the current position/velocity/acceleration for everything for the current line
+//and set the ctrl values to those values
 for(int joint=0;joint<joint_names.size(); joint++)
 {
 	        q[joint_names[joint]] = std::vector<double>(1);
@@ -368,20 +366,12 @@ for(int joint=0;joint<joint_names.size(); joint++)
                 q[joint_names[joint]][0] = allqVals[currLine][joint];
 		qd[joint_names[joint]][0] = allqdVals[currLine][joint];
 		qdd[joint_names[joint]][0] = allqddVals[currLine][joint];
-		
-		
-		
-	        values << "\n" << "Position of " <<joint_names[joint] << ": " << allqVals[currLine][joint] << "\n";
-		values << "\n" << "Velocity of "<<joint_names[joint] << ": "<< allqdVals[currLine][joint] << "\n";
-		values << "\n" << "Acceleration of "<<joint_names[joint] << ": " << allqddVals[currLine][joint] << "\n";
 }
 
 	    ctrl->set_joint_value(Pacer::Controller::position_goal,q);
             ctrl->set_joint_value(Pacer::Controller::velocity_goal,qd);
             ctrl->set_joint_value(Pacer::Controller::acceleration_goal,qdd);	
             ctrl->set_base_value(Pacer::Controller::velocity_goal,allBodyVals[currLine]);
-	    values << "\n" << "Body: " << allBodyVals[currLine] << "\n";
-        values.close();
         s.clear();
         s.str(std::string());
         currLine+=1;
@@ -433,7 +423,6 @@ Ravelin::VectorNd bodyVals;
 int line_count=0;
 
 std::fstream check;
-   check.open ("/home/brad/Desktop/Tests/pacer-tests/BotBuilder/FrontEnd/debug.txt", std::ios::in | std::ios::out | std::ios::ate);
 //take all values from the file of trajectories and store them in pacer's data storage(edit to use joints instead of eefs)
 while(std::getline(myfile,line))
 {
@@ -457,12 +446,8 @@ for(int i=0;i<joint_names.size();i++)
        
           std::advance(tok_iter,3);
 }
-
-check << "qvals size: " << qVals.size() << "\n";
-check << "qdvals size: " << qdVals.size() << "\n";
-check << "qddvals size: " << qddVals.size() << "\n";
             bodyVals=bodyVals.construct_variable(6,std::stod(*tok_iter),std::stod(*(std::next(tok_iter,1))),std::stod(*(std::next(tok_iter,2))),std::stod(*(std::next(tok_iter,3))),std::stod(*(std::next(tok_iter,4))),std::stod(*(std::next(tok_iter,5))));
-
+//the all variables contain the whole file, where as the normal variables are just one line
 allqVals.push_back(qVals);
 allqdVals.push_back(qdVals);
 allqddVals.push_back(qddVals);
@@ -471,10 +456,10 @@ allBodyVals.push_back(bodyVals);
 	line_count++;
 }
 ctrl->set_data<double>("num_pose_rows",line_count);
-check << "allBodyvals size: " << allBodyVals.size() << "\n";
-check << "Bodyvals size: " << bodyVals.size() << "\n";
 
 check.close();
+//when every line has been scanned and insterted into the "all" variables, create and set some variables to that, so that
+//these values can be accessed without rescanning the file
 ctrl->set_data<std::vector<std::vector<double> > >("q_vals", allqVals);
 ctrl->set_data<std::vector<std::vector<double> > >("qd_vals", allqdVals);
 ctrl->set_data<std::vector<std::vector<double> > >("qdd_vals", allqddVals);

@@ -212,12 +212,12 @@ errOut.close();
 	//if no limit is reached then the model works, then record the data in MatlabData.txt and exit the program
 	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
 	{
-		std::cout << "\n" << "This model works!" << "\n";
+		
                 std::ofstream errOut;
   errOut.open(getenv("BUILDER_HOME_PATH")+std::string("/matlabData.txt"), std::ios::app);
 	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") << " " << getenv("lenH2") << " "<< getenv("HfootLen") << " " << getenv("base_size_length") << " " << getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("massF1") << " " << getenv("massF2") << " " << getenv("massF3") << " " << getenv("massH1") << " " << getenv("massH2") << " "<< getenv("massH3") << " " << getenv("massBase") << " " << getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel") << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel") << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
 errOut.close();
-		exit(0);
+		throw std::runtime_error("The model works! No improvement is required with the current task");
 	}
 
 

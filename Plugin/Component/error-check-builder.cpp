@@ -291,7 +291,7 @@ if(jac_count==0)
   	{
     		for (int j=0; j<joint_dofs[i]; j++,ii++) 
     		{
-        		if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii]) 
+        		if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || qd[joint_names[i]][j] > velocity_limit[ii]) 
 			{
                                //if a limit is exceeded, set the fail line start to the beginning of the current sliding window
 			       //and fail_line to the current line

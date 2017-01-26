@@ -1,4 +1,3 @@
-
 #include <stdexcept>
 #include <Pacer/controller.h>
 #include "plugin.h"
@@ -8,6 +7,8 @@
 void loop(){
 boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
 
+
+//all of these initial checks just go through and check every links contacts to see if they're in contact with anything they shouldn't be touching
 
 std::vector< boost::shared_ptr< Pacer::Robot::contact_t> > contacts;
 //Check body for bad contact
@@ -204,8 +205,9 @@ for (int i=0; i < contacts.size(); i++)
   Ravelin::VectorNd generalized_fext = ctrl->get_generalized_value(Pacer::Robot::load);
   std::ostringstream s;
  std::string line;
-  std::vector<std::string> var_names={"lenF1","lenF2","FfootLen","lenH1","lenH2","HfootLen","base_size_length","base_size_width","base_size_height","FfootRad","HfootRad"};
+  std::vector<std::string> var_names={"lenF2","FfootLen","lenH2","HfootLen","base_size_length","base_size_width"};
 
+ //this is all to get the data we'll be comparing to, all of the positions, velocities, accelerations, and loads
   std::map<std::string, Ravelin::VectorNd > q, qd, u;
   ctrl->get_joint_value(Pacer::Robot::position_goal, q);
   ctrl->get_joint_value(Pacer::Robot::velocity_goal, qd);
@@ -214,6 +216,7 @@ for (int i=0; i < contacts.size(); i++)
   ctrl->get_data("num_pose_rows",num_rows);
   int jac_count=std::stod(getenv("jac_count"));
 
+  //get the various joints and the torque/velocity limits
   std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
   std::vector<double> joint_dofs = ctrl->get_data<std::vector<double> >("init.joint.dofs");
   std::vector<double> torque_limit;
@@ -222,13 +225,17 @@ for (int i=0; i < contacts.size(); i++)
   std::vector<double> velocity_limit;
   bool apply_velocity_limit = ctrl->get_data<std::vector<double> >("init.joint.limits.qd",velocity_limit);
 
-
-	if(q[joint_names[0]][0]>1.8326 || q[joint_names[0]][0]<-1.8326)
+//check to see if any of the joints are past the angles at which they'd collide to their adjacent links
+//this is because the links are technically always in contact, so doing a simple search would always result in failure
+//these values need to be measured on the actual robot and then applied here
+for (int i=0; i<joint_names.size(); i++) 
+{
+	if(q[joint_names[i]][0]>1.8326 || q[joint_names[i]][0]<-1.8326)
 	{
 		std::cout << "Self collision on adjacent link";
 		throw std::runtime_error("Self-Collision!");
 	}
-
+}
 
 
 
@@ -236,53 +243,59 @@ for (int i=0; i < contacts.size(); i++)
 if(jac_count==0)
 {
 
+        //for every joint, get the simple difference between it and its curresponding velocity limit, and set it to the corresponding joint/limit enivornment variable
 	for (int i=0, ii=0; i<joint_names.size(); i++) 
   	{
    		for (int j=0; j<joint_dofs[i]; j++,ii++) 
     		{
-       			std::ostringstream s;
-        		s << joint_names[i] << "_vel";
-        		line=s.str();
-        		s.clear();//clear any bits set
-        		s.str(std::string());
+       			std::ostringstream vel_main;
+        		vel_main << joint_names[i] << "_vel";
+        		line=vel_main.str();
+        		vel_main.clear();//clear any bits set
+        		vel_main.str(std::string());
         		if(qd[joint_names[i]][j]>=0)
         		{
-				s << qd[joint_names[i]][j]-velocity_limit[ii];
+				vel_main << velocity_limit[ii]-qd[joint_names[i]][j];
 			}
 			else
 			{
-				s << (-1*qd[joint_names[i]][j])-velocity_limit[ii];	
+				vel_main << velocity_limit[ii]-(-1*qd[joint_names[i]][j]);	
 			}
-            		setenv(line.c_str(),s.str().c_str(),1);
+            		setenv(line.c_str(),vel_main.str().c_str(),1);
+			std::ostringstream tor_main;
+        		tor_main << joint_names[i] << "_tor";
+        		line=tor_main.str();
+        		tor_main.clear();//clear any bits set
+        		tor_main.str(std::string());
+			if(u[joint_names[i]][j]>=0)
+       			{
+				tor_main << torque_limit[ii]-u[joint_names[i]][j];
+			}
+			else
+			{
+				tor_main << torque_limit[ii]-(-1*u[joint_names[i]][j]);	
+			}
+       		 	setenv(line.c_str(),tor_main.str().c_str(),1);
     		}
   	}
-
+	//for every joint, get the simple difference between it and its curresponding torque limit, and set it to the corresponding joint/limit enivornment variable
   	for (int i=0, ii=0; i<joint_names.size(); i++) 
   	{
     		for (int j=0; j<joint_dofs[i]; j++,ii++) 
     		{
-        		std::ostringstream s;
-        		s << joint_names[i] << "_tor";
-        		line=s.str();
-        		s.clear();//clear any bits set
-        		s.str(std::string());
-			if(u[joint_names[i]][j]>=0)
-       			{
-				s << u[joint_names[i]][j]-torque_limit[ii];
-			}
-			else
-			{
-				s << (-1*u[joint_names[i]][j])-torque_limit[ii];	
-			}
-       		 	setenv(line.c_str(),s.str().c_str(),1);
+        		
     		}
  	}
+        //check every joint to see if they're above/below the torque limit
+        //we haven't been using the velocity limits as of august
 	for (int i=0, ii=0; i<joint_names.size(); i++) 
   	{
     		for (int j=0; j<joint_dofs[i]; j++,ii++) 
     		{
-        		if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii]) 
+        		if (u[joint_names[i]][j] < -torque_limit[ii] || u[joint_names[i]][j] > torque_limit[ii] || qd[joint_names[i]][j] < -velocity_limit[ii] || qd[joint_names[i]][j] > velocity_limit[ii]) 
 			{
+                               //if a limit is exceeded, set the fail line start to the beginning of the current sliding window
+			       //and fail_line to the current line
 				s.clear();
         			s.str(std::string());
         			double fail=std::stod(getenv("curr_line"))-std::stod(getenv("test_dur"));
@@ -291,7 +304,8 @@ if(jac_count==0)
         			setenv("fail_line_start",s.str().c_str(),1);
         			s.clear();
         			s.str(std::string());
-
+				//send all of the information on the current model, its value-limit enivornment variables created above
+			        //and the velocity, line, and model number of the failure
         			std::ofstream errOut;
         			errOut.open(getenv("BUILDER_HOME_PATH")+std::string("/matlabData.txt"), std::ios::app);
 				errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") 
@@ -311,25 +325,28 @@ if(jac_count==0)
 					  << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") 
 					  << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
 				errOut.close();
+                                //reset curr_line and cur_iter for the next test
 				setenv("curr_line","0",1);
 				setenv("curr_iter","0",1);
+				//jac_count is no longer 0, so all of the files will execute the jacobian matrix generation loop
         			jac_count++;
         			s << jac_count;
         			line=s.str();
         			setenv("jac_count",s.str().c_str(),1);
         			s.clear();
         			s.str(std::string());
-    
+    				//this is the first variable in the list, so it is the first one that will be perturbed
         			double lenF1= std::stod(getenv("lenF1"));
-        			double unitLen = std::stod(getenv("unit_len"));
+        			double unitLen = 0.005;
 	
+				//perturb the value by unit size, then set the environment variable to the new value
 				lenF1+=unitLen;
         			s << lenF1;
         			line=s.str();
         			setenv("lenF1",line.c_str(),1);
         			s.clear();
         			s.str(std::string());
-
+				//generate this robot and begin testing it to generate its row for the matrix
 				std::string generate=getenv("BUILDER_SCRIPT_PATH");
 				generate+="/generate.sh";
         
@@ -340,52 +357,50 @@ if(jac_count==0)
 }
 else if(jac_count<=var_names.size())
 {
+	//within the jacobian matrix generation, get the same joint-limit environment variables that we were getting before, except divided by the unit size, then times 100.
+        //the matrix generation process is probably the part I understand the least, so please let me know if anything looks iffy here and 
+	//change it immediately.
 	for (int i=0, ii=0; i<joint_names.size(); i++) 
   	{
     		for (int j=0; j<joint_dofs[i]; j++,ii++) 
     		{
-        		std::ostringstream s,s2;
-        		s << jac_count<<"_" << joint_names[i] << "_vel";
-        		s2 << joint_names[i] << "_vel";
-        		line=s.str();
-        		s.clear();//clear any bits set
-        		s.str(std::string());
+        		std::ostringstream tor,init_tor,vel,init_vel;
+        		vel << jac_count<<"_" << joint_names[i] << "_vel";
+        		init_vel << joint_names[i] << "_vel";
+        		line=vel.str();
+        		vel.clear();//clear any bits set
+        		vel.str(std::string());
         		if(qd[joint_names[i]][j]>=0)
         		{
-				s << floorf((qd[joint_names[i]][j]-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;
+				vel << velocity_limit[ii]-qd[joint_names[i]][j]-std::stod(getenv(init_vel.str().c_str()));
 			}
 			else
 			{
-				s << floorf(((-1*qd[joint_names[i]][j])-velocity_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;		
+				vel << velocity_limit[ii]-(-1*qd[joint_names[i]][j])-std::stod(getenv(init_vel.str().c_str()));		
 			}
         
-        		setenv(line.c_str(),s.str().c_str(),1);
-    		}
-  	}
-  
-  	for (int i=0, ii=0; i<joint_names.size(); i++) 
-  	{
-    		for (int j=0; j<joint_dofs[i]; j++,ii++) 
-    		{
-        		std::ostringstream s,s2;
-        		s << jac_count<<"_" << joint_names[i] << "_tor";
-        		s2 << joint_names[i] << "_tor";
-        		line=s.str();
-        		s.clear();//clear any bits set
-        		s.str(std::string());
+        		setenv(line.c_str(),vel.str().c_str(),1);
+
+			
+        		tor << jac_count<<"_" << joint_names[i] << "_tor";
+        		init_tor << joint_names[i] << "_tor";
+        		line=tor.str();
+        		tor.clear();//clear any bits set
+        		tor.str(std::string());
 			if(u[joint_names[i]][j]>=0)
         		{
-				s << floorf((u[joint_names[i]][j]-torque_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;
+				tor << torque_limit[ii]-u[joint_names[i]][j]-std::stod(getenv(init_tor.str().c_str()));
 			}
 			else
 			{
-				s << floorf(((-1*u[joint_names[i]][j])-torque_limit[ii]-std::stod(getenv(s2.str().c_str()))/std::stod(getenv("unit_len"))) * 100) / 100;	
+				tor << torque_limit[ii]-(-1*u[joint_names[i]][j])-std::stod(getenv(init_tor.str().c_str()));	
 			}
-        		setenv(line.c_str(),s.str().c_str(),1);
+        		setenv(line.c_str(),tor.str().c_str(),1);
     		}
- 	}
+  	}
      
-                           
+        //once the current sliding window for this variable has ended, increment jac_count, rest the past variable to its original value
+	//and then increment the next value by unit size, and then begin testing anew with that variable
         if (std::stod(getenv("fail_line_start"))>=std::stod(getenv("fail_line"))) {
 
         	if(jac_count<var_names.size())   
@@ -393,14 +408,14 @@ else if(jac_count<=var_names.size())
 			double pastVar= std::stod(getenv(var_names[jac_count-1].c_str()));
         		double currVar= std::stod(getenv(var_names[jac_count].c_str()));
         
-			pastVar-=0.001;
+			pastVar-=0.005;
         		s << pastVar;
         		line=s.str();
         		setenv(var_names[jac_count-1].c_str(),line.c_str(),1);
         		s.clear();
         		s.str(std::string());
 
-			currVar+=0.001;
+			currVar+=0.005;
         		s << currVar;
         		line=s.str();
         		setenv(var_names[jac_count].c_str(),line.c_str(),1);
@@ -440,42 +455,23 @@ else
 	setenv("curr_line","0",1);
 	setenv("curr_iter","0",1);
         setenv("jac_count","0",1);
-    
-        double HfootRad= std::stod(getenv(var_names[var_names.size()-1].c_str()));
+        //reset the last variable
+        double last= std::stod(getenv(var_names[var_names.size()-1].c_str()));
 	
-	HfootRad-=0.001;
-        s << HfootRad;
+	last-=0.005;
+        s << last;
         line=s.str();
-        setenv("HfootRad",line.c_str(),1);
+        setenv(var_names[var_names.size()-1].c_str(),line.c_str(),1);
         s.clear();
         s.str(std::string());
 
-        std::string fileLine;
 
-	 std::ostringstream labmat;
-         labmat << getenv("BUILDER_HOME_PATH") << "matlabData.txt";
-         std::string mat = labmat.str();
-         std::ifstream matlab(mat);
-
-	int lines=0;
-        while (std::getline(matlab, fileLine) && lines<3)
-	{
-           ++lines;
-	}
-        if(lines<2)
-	{
-		std::string sample=getenv("BUILDER_BIF_PATH");
-		sample+="/sample/run.sh";
-        
-        	execl(sample.c_str(), sample.c_str(), (char *) 0);
-	}
-	else
-	{
+	
 		std::string editor=getenv("BUILDER_GUI_PATH");
 		editor+="/editor";
         
         	execl(editor.c_str(), editor.c_str(), (char *) 0);
-	}
+
 	 
 
 }

@@ -6,6 +6,11 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+//This file reads the current state of all of the joints and the body at the current step, and stores all of that information in a
+//.txt file, with each line corresponding to the current step in time. It does this in the limb order of LF -> RF -> LH -> RH and
+//information order of position -> velocity -> acceleration followed by the body xyzrpt
+
+
 
 void loop(){
 
@@ -19,6 +24,10 @@ void loop(){
      
   double currVel;
   double modelNo= std::stod(getenv("modelNo"));
+//this is a check to see whether we are in the initial testing loop, where jac_count=0
+//or if we are generating the jacobian matrix
+//in the former case, we need data for every possible velocity from delta_v to the max velocity specified by the user
+//If we are generating the jacobian then we only need 1 velocity, the velocity at which the robot failed
   if(std::stod(getenv("jac_count"))>0)
 	{
 	    currVel= std::stod(getenv("fail_vel"));	
@@ -35,6 +44,7 @@ void loop(){
     filename = s.str();
      //get the joint names
      std::map<std::string, Ravelin::VectorNd > q, qd,qdd;
+     //gets and stores all of the joint names and their respective positions, velocities, and accelerations
      std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
      ctrl->get_joint_value(Pacer::Robot::position, q);
      ctrl->get_joint_value(Pacer::Robot::velocity_goal, qd);
@@ -54,7 +64,7 @@ void loop(){
 
 		if(currVel==deltaV && duration==0.001)
 		{
-			 //export q
+			 //export position
                               s.clear();
                               s.str(std::string());
                               s << joint_names[i] << "_q";
@@ -64,7 +74,7 @@ void loop(){
                               s << q[joint_names[i]][0];
                               setenv(line.c_str(),s.str().c_str(),1);
 		              line=std::string();
-			//export qd
+			//export velocity
                               s.clear();
                               s.str(std::string());
                               s << joint_names[i] << "_qd";
@@ -74,7 +84,7 @@ void loop(){
                               s << qd[joint_names[i]][0];
                               setenv(line.c_str(),s.str().c_str(),1);
 		              line=std::string();
-			//export qdd
+			//export acceleration
                               s.clear();
                               s.str(std::string());
                               s << joint_names[i] << "_qdd";
@@ -100,7 +110,8 @@ void loop(){
      file << command_xd[0] << " " << command_xd[1] << " " << command_xd[2] << " " << command_xd[3] << " " << command_xd[4] << " " << command_xd[5] 
      << "\n"; 
 	    
-
+//if this is the first step of the first test, then set this information in the init environment variables that will be used to
+//set the information when the simulation begins, before we even feed the lines in so that the robot doesn't "jump" into position
 if(currVel==deltaV && duration==0.001)
 	{
 		//export body x axis velocity

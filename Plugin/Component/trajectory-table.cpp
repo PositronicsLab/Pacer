@@ -209,19 +209,22 @@ errOut.close();
        
     	
     }
+	//if no limit is reached then the model works, then record the data in MatlabData.txt and exit the program
 	else if(currLine>=num_rows && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")) && std::stod(getenv("jac_count"))==0)
 	{
-		std::cout << "\n" << "This model works!" << "\n";
+		
                 std::ofstream errOut;
   errOut.open(getenv("BUILDER_HOME_PATH")+std::string("/matlabData.txt"), std::ios::app);
 	  errOut << getenv("lenF1") << " " << getenv("lenF2") << " " << getenv("FfootLen") << " " << getenv("lenH1") << " " << getenv("lenH2") << " "<< getenv("HfootLen") << " " << getenv("base_size_length") << " " << getenv("base_size_width") << " " << getenv("base_size_height") << " " << getenv("FlinkRad") << " " << getenv("HlinkRad") << " " << getenv("FfootRad") << " " << getenv("HfootRad") << " " << getenv("massF1") << " " << getenv("massF2") << " " << getenv("massF3") << " " << getenv("massH1") << " " << getenv("massH2") << " "<< getenv("massH3") << " " << getenv("massBase") << " " << getenv("LF_X_1_vel") << " " << getenv("LF_Y_2_vel") << " " << getenv("LF_Y_3_vel") << " " << getenv("RF_X_1_vel") << " " << getenv("RF_Y_2_vel") << " " << getenv("RF_Y_3_vel") << " " << getenv("LH_X_1_vel") << " " << getenv("LH_Y_2_vel") << " " << getenv("LH_Y_3_vel") << " " << getenv("RH_X_1_vel") << " " << getenv("RH_Y_2_vel") << " " << getenv("RH_Y_3_vel") << " " << getenv("LF_X_1_tor") << " " << getenv("LF_Y_2_tor") << " " << getenv("LF_Y_3_tor") << " " << getenv("RF_X_1_tor") << " " << getenv("RF_Y_2_tor") << " " << getenv("RF_Y_3_tor") << " " << getenv("LH_X_1_tor") << " " << getenv("LH_Y_2_tor") << " " << getenv("LH_Y_3_tor") << " " << getenv("RH_X_1_tor") << " " << getenv("RH_Y_2_tor") << " " << getenv("RH_Y_3_tor") << " " << getenv("curr_vel") << " " << getenv("curr_line") << " " << getenv("modelNo") << "\n";
 errOut.close();
-		
+		throw std::runtime_error("The model works! No improvement is required with the current task");
 	}
 
 
 
 //now, when we start a new process make sure to edit the init q and qd
+//that is, the initial values for the next window must be exported and set in the vars.xml file so the model 
+//immediately matches the beginning of the next test
   if(numIter>=testDur && std::stod(getenv("jac_count"))==0)
    {
         currLine=currLine-testDur;
@@ -352,7 +355,8 @@ if(currLine<0){currLine=0;
 	setenv("fail_line","0",1);
 }
 std::map<std::string, std::vector<double> > q, qd,qdd;
-//revise this for loop to be joint values
+//get the current position/velocity/acceleration for everything for the current line
+//and set the ctrl values to those values
 for(int joint=0;joint<joint_names.size(); joint++)
 {
 	        q[joint_names[joint]] = std::vector<double>(1);
@@ -443,7 +447,7 @@ for(int i=0;i<joint_names.size();i++)
           std::advance(tok_iter,3);
 }
             bodyVals=bodyVals.construct_variable(6,std::stod(*tok_iter),std::stod(*(std::next(tok_iter,1))),std::stod(*(std::next(tok_iter,2))),std::stod(*(std::next(tok_iter,3))),std::stod(*(std::next(tok_iter,4))),std::stod(*(std::next(tok_iter,5))));
-
+//the all variables contain the whole file, where as the normal variables are just one line
 allqVals.push_back(qVals);
 allqdVals.push_back(qdVals);
 allqddVals.push_back(qddVals);
@@ -454,6 +458,8 @@ allBodyVals.push_back(bodyVals);
 ctrl->set_data<double>("num_pose_rows",line_count);
 
 check.close();
+//when every line has been scanned and insterted into the "all" variables, create and set some variables to that, so that
+//these values can be accessed without rescanning the file
 ctrl->set_data<std::vector<std::vector<double> > >("q_vals", allqVals);
 ctrl->set_data<std::vector<std::vector<double> > >("qd_vals", allqdVals);
 ctrl->set_data<std::vector<std::vector<double> > >("qdd_vals", allqddVals);

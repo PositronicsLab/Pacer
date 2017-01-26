@@ -286,9 +286,9 @@ int main(int argc, char* argv[]){
         throw std::runtime_error("Could not find block");
 #endif
 #ifdef QUAD
-    if( !PACER_ONLY )
+    /*if( !PACER_ONLY )
       if(environment->body_id.compare("GROUND") != 0)
-        throw std::runtime_error("Could not find ground");
+        throw std::runtime_error("Could not find ground");*/
 #endif
     
     // Fail if moby was inited wrong

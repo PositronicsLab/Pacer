@@ -11,13 +11,21 @@
 
 
 void loop(){
-  
+//check to see whether in the actual limit testing loop which is when jac_count=0
+//otherwise we are in jacobian matrix generation
+//curr_vel is the current velocity when incrementing through all possible velocities from delta_v to max velocity
+//in increments of delta_v
+//fail_vel is determined by the plugin error_check_builder, and is the velocity a limit was exceeded at
   double currSpeed;
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
+  
   if(std::stod(getenv("jac_count"))==0)
   {currSpeed =std::stod(getenv("curr_vel"));}
   else
   {currSpeed =std::stod(getenv("fail_vel"));}
+
+
+  //gets how long each recording session should be
   double max_duration;
   ctrl->get_data<double>(plugin_namespace+".duration",max_duration);
   
@@ -51,6 +59,7 @@ void loop(){
   setenv("duration",line.c_str(),1);
   if(std::stod(getenv("jac_count"))==0)
   {
+    //if we've reached the end of the current gait, and there are still velocities to record then go again
     if(duration>=max_duration && std::stod(getenv("curr_vel"))<std::stod(getenv("max_vel")))
     {
       std::string line2=getenv("BUILDER_CAPT_PATH");
@@ -66,8 +75,8 @@ void loop(){
     
     
     
-    
-    else if(duration>=max_duration && std::stod(getenv("curr_vel"))==std::stod(getenv("max_vel")))
+    //if we've finished generating poseSets for all velocities, move on to the limit testing step
+    else if(duration>=max_duration && std::stod(getenv("curr_vel"))>=std::stod(getenv("max_vel")))
     {
       
       std::string line3=getenv("BUILDER_SCRIPT_PATH");
@@ -88,13 +97,14 @@ void loop(){
   }
   else
   {
+    //this is the case where we are in jacobian matrix generation
     if(duration>=max_duration)
     {
       
       std::string line3=getenv("BUILDER_SCRIPT_PATH");
       
       line3+="/setup-plugins-play.sh";
-      
+      //make sure the file we open is the file we failed at
       setenv("curr_vel",getenv("fail_vel"),1);
       execl("/bin/sh","sh","-c" , line3.c_str(), (char *) 0);
     }
@@ -107,6 +117,7 @@ void setup(){
   
   boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
   setenv("duration","0",1);
+  //if in normal limit testing loop(jac_count=0), increment the velocity by delta_v and then set the environment variable to the new value
   if(std::stod(getenv("jac_count"))==0)
   {
     double currSpeed =std::stod(getenv("curr_vel"));

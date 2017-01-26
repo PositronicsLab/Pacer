@@ -228,14 +228,14 @@ for (int i=0; i < contacts.size(); i++)
 //check to see if any of the joints are past the angles at which they'd collide to their adjacent links
 //this is because the links are technically always in contact, so doing a simple search would always result in failure
 //these values need to be measured on the actual robot and then applied here
-for (int i=0; i<joint_names.size(); i++) 
+/*for (int i=0; i<joint_names.size(); i++) 
 {
 	if(q[joint_names[i]][0]>1.8326 || q[joint_names[i]][0]<-1.8326)
 	{
 		std::cout << "Self collision on adjacent link";
 		throw std::runtime_error("Self-Collision!");
 	}
-}
+}*/
 
 
 

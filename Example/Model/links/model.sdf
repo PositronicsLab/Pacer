@@ -20,7 +20,7 @@
       <visual name='BODY0_visual'>
         <geometry>
           <box>
-            <size>0.145 0.18 0.06</size>
+            <size>0.234 0.307 0.0762</size>
           </box>
         </geometry>
         <material>

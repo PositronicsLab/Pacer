@@ -11,7 +11,7 @@
 
 #ifdef USE_DXL
 #include <dxl/Dynamixel.h>
-DXL::Dynamixel * dxl_;
+boost::shared_ptr<DXL::Dynamixel> dxl_;
 #endif
 std::vector<std::string> joint_name;
 
@@ -45,14 +45,20 @@ static double get_current_time()
 static void control_motor(){
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     OUT_LOG(logDEBUG2) << ">> control_motor()";
+    std::cout << ">> control_motor()" << std::endl;
 
 
     OUT_LOG(logDEBUG2) << "READ OUT COMMANDS" ;
 
+//#ifdef USE_THREADS
+//    if(pthread_mutex_trylock(&joint_data_mutex_))
+//#endif
     {
 #ifdef USE_THREADS
         pthread_mutex_lock(&joint_data_mutex_);
 #endif
+    std::cout << "control_motor in lock" << std::endl;
+    std::cout << "q_des = " << q_motors << std::endl;
 #ifdef USE_DXL
         #ifndef USE_THREADS
       OUT_LOG(logDEBUG) << "q_des = " << q_motors;
@@ -60,6 +66,7 @@ static void control_motor(){
       OUT_LOG(logDEBUG) << "u_des = " << u_motors;
 #endif
       dxl_->set_state(q_motors,qd_motors);
+      std::cout << "Set State" << std::endl;
 //      static bool fake_state = ctrl->get_data<bool>(plugin_namespace+".fake-state");
 //      if(fake_state){
 //        q_sensor = q_motors;
@@ -74,13 +81,22 @@ static void control_motor(){
 #endif
 #ifdef USE_THREADS
         pthread_mutex_unlock(&joint_data_mutex_);
+    // Hz Frequency
+    int freq = 100;
+    ctrl->get_data<int>(plugin_namespace+".frequency",freq);
+    const double seconds_per_message = 1.0 / (double) freq;
+    double remaining = sleep_duration(seconds_per_message);
 #else
         OUT_LOG(logDEBUG) << ">> motor controller " << t;
 #endif
     }
+//#ifndef USE_THREADS
+//  else {
+//        std::cout << "locked out" << std::endl;
+//  }
+//#endif
 
-    const double seconds_per_message = 0.001;
-    double remaining = sleep_duration(seconds_per_message);
+    std::cout << "<< control_motor()" << std::endl;
 }
 
 static void *control_motor(void* data){
@@ -90,6 +106,7 @@ static void *control_motor(void* data){
 }
 
 static std::map<std::string,Ravelin::VectorNd> q,qd,qdd,u;
+  std::map<std::string, double> robot_init;
 void loop()
 {
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
@@ -100,6 +117,7 @@ void loop()
 
 
     static std::map<std::string,Ravelin::VectorNd>  qd_last = qd;
+/*
 #ifdef USE_THREADS
     pthread_mutex_lock(&joint_data_mutex_);
 #endif
@@ -128,6 +146,7 @@ void loop()
         ctrl->set_joint_value(Pacer::Robot::load,u);
         ctrl->set_joint_value(Pacer::Robot::acceleration,qdd);
     }
+    */
 #ifdef USE_THREADS
     pthread_mutex_lock(&joint_data_mutex_);
 #endif
@@ -141,7 +160,7 @@ void loop()
             OUT_LOG(logDEBUG) << "kineamtic control = " << joint_pos_map;
             for(int i=0;i<joint_name.size();i++){
                 q_motors[i]  = joint_pos_map[joint_name[i]][0];
-                qd_motors[i] = 10;//joint_vel_map[joint_name[i]][0]; // NOTE: change this to 0
+                qd_motors[i] = 0;//joint_vel_map[joint_name[i]][0]; // NOTE: change this to 0
             }
         } else {
             std::map<std::string,Ravelin::VectorNd> joint_load_map;
@@ -180,7 +199,6 @@ void destruct(){
 #endif
 }
 
-
 void setup(){
     boost::shared_ptr<Pacer::Controller> ctrl(ctrl_weak_ptr);
     ctrl->get_joint_value(Pacer::Robot::position,q);
@@ -188,65 +206,59 @@ void setup(){
     ctrl->get_joint_value(Pacer::Robot::load,u);
 
     std::string DEVICE_NAME = ctrl->get_data<std::string>(plugin_namespace+".port");
+  joint_name.push_back("LF_X_1");
+  joint_name.push_back("RF_X_1");
+  joint_name.push_back("LH_X_1");
+  joint_name.push_back("RH_X_1");
+  joint_name.push_back("LF_Y_2");
+  joint_name.push_back("RF_Y_2");
+  joint_name.push_back("LH_Y_2");
+  joint_name.push_back("RH_Y_2");
+  joint_name.push_back("LF_Y_3");
+  joint_name.push_back("RF_Y_3");
+  joint_name.push_back("LH_Y_3");
+  joint_name.push_back("RH_Y_3");
 #ifdef USE_DXL
     // If use robot is active also init dynamixel controllers
-  dxl_ = new DXL::Dynamixel(DEVICE_NAME.c_str());
-#endif
-
-    // Set Dynamixel Names
-    joint_name.push_back("LF_X_1");
-    joint_name.push_back("RF_X_1");
-    joint_name.push_back("LH_X_1");
-    joint_name.push_back("RH_X_1");
-
-    joint_name.push_back("LF_Y_2");
-    joint_name.push_back("RF_Y_2");
-    joint_name.push_back("LH_Y_2");
-    joint_name.push_back("RH_Y_2");
-
-    joint_name.push_back("LF_Y_3");
-    joint_name.push_back("RF_Y_3");
-    joint_name.push_back("LH_Y_3");
-    joint_name.push_back("RH_Y_3");
-#ifdef USE_DXL
+  dxl_ = boost::shared_ptr<DXL::Dynamixel>(new DXL::Dynamixel(DEVICE_NAME.c_str()));
+  DXL::Dynamixel& dxl = *(dxl_.get());
+  dxl.names = joint_name;
     // LINKS robot
-  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl.tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl.tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl.tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
+  dxl.tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
 
-  dxl_->tare.push_back(-M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * RX_24F_RAD2UNIT);
-  dxl_->tare.push_back( M_PI_2 * MX_64R_RAD2UNIT - 270);
-  dxl_->tare.push_back(-M_PI_2 * MX_64R_RAD2UNIT - 20 );
+  dxl.tare.push_back(0);
+  dxl.tare.push_back(0);
+  dxl.tare.push_back(-20  + 300);
+  dxl.tare.push_back(-270 + 300);
 
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
-  dxl_->tare.push_back(0);
+  dxl.tare.push_back(0);
+  dxl.tare.push_back(0);
+  dxl.tare.push_back(0);
+  dxl.tare.push_back(0);
   
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
 
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::MX_64R);
-  dxl_->stype.push_back(DXL::Dynamixel::MX_64R);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::MX_64R);
+  dxl.stype.push_back(DXL::Dynamixel::MX_64R);
 
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
-  dxl_->stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
+  dxl.stype.push_back(DXL::Dynamixel::RX_24F);
 
-  dxl_->names = joint_name;
-
-  for(int i=0;i<dxl_->names.size();i++){
-    dxl_->ids.push_back(i);
+  for(int i=1;i<=dxl.names.size();i++){
+    dxl.ids.push_back(i);
   }
   
-  dxl_->relaxed(false);
+  dxl.relaxed(false);
 #endif
 
     int N = joint_name.size();
@@ -295,7 +307,18 @@ void setup(){
         t1 = get_current_time();
         fprintf(stdout,"refreshing actuators (no threads): TIME: %f \n",t1-t0);
         control_motor();
-        sleep_duration(0.1);
     }
 #endif
+     robot_init["LF_X_1"] = 0.2  ; 
+     robot_init["LF_Y_2"] = 0.8  ;
+     robot_init["LF_Y_3"] = 1.2  ;   
+     robot_init["RF_X_1"] = -0.2 ; 
+     robot_init["RF_Y_2"] = -0.8 ; 
+     robot_init["RF_Y_3"] = -1.2 ;    
+     robot_init["LH_X_1"] = -0.2 ; 
+     robot_init["LH_Y_2"] = -0.8 ; 
+     robot_init["LH_Y_3"] = -1.2 ;    
+     robot_init["RH_X_1"] = 0.2  ;
+     robot_init["RH_Y_2"] = 0.8  ;
+     robot_init["RH_Y_3"] = 1.2  ;
 }

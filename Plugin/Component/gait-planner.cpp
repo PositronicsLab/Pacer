@@ -1038,12 +1038,20 @@ void loop(){
     double height = 1.0;
     ctrl->get_data<double>(plugin_namespace+".height",height);
     
+    bool relative_stance = true; // default to relative stance
+    ctrl->get_data<bool>(plugin_namespace+".relative-stance",relative_stance);
+    
     for(int i=0;i<NUM_FEET;i++){
       Vector3d origin(ctrl->get_data<Origin3d>(foot_names[i]+".base"),base_frame);
-      origin[0] *= length;
-      origin[1] *= width;
-      origin[2] = -min_reach * height;
-      
+      if(relative_stance){
+        origin[0] *= length;
+        origin[1] *= width;
+        origin[2] = -min_reach * height;
+      } else {
+        origin[0] = 0.5*length * Utility::sign(origin[0]);
+        origin[1] = 0.5*width * Utility::sign(origin[1]);
+        origin[2] = -height;
+      }
       OUT_LOG(logDEBUG1) << "Length is " << origin[0];
       OUT_LOG(logDEBUG1) << "Width is " << origin[1];
       OUT_LOG(logDEBUG1) << "Height is " << origin[2];

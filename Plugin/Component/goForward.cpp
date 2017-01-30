@@ -45,10 +45,13 @@ void loop(){
   
   goto_direction = Ravelin::Pose3d::transform_vector(base_horizontal_frame,goto_direction);
   goto_direction.normalize();
-  
+  double arr[] = {currSpeed,0,0,0,0,0};
   Ravelin::Origin3d command_SE2(goto_direction[0]*currSpeed,0,0);
   ctrl->set_data<Ravelin::Origin3d>("SE2_command",command_SE2);
+  Ravelin::VectorNd command_xd = Ravelin::VectorNd(6,arr);
   
+  ctrl->set_data<Ravelin::VectorNd>("base-command",command_xd);
+   ctrl->get_data<Ravelin::VectorNd>("base-command",command_xd);
   
   double duration =std::stod(getenv("duration"));
   duration+=0.001;

@@ -470,6 +470,7 @@ void walk_toward(// PARAMETERS
   // For stance feet only (affects only desired z-axis base velocity)
   
   Ravelin::VectorNd base_command = command;
+
   OUTLOG(touchdown,"touchdown",logERROR);
   OUTLOG(liftoff,"liftoff",logERROR);
   OUTLOG(duty_factor,"duty_factor",logERROR);
@@ -523,6 +524,7 @@ void walk_toward(// PARAMETERS
   
   OUTLOG(base_command,"base_command(with flight factored in)",logERROR);
   ctrl->set_data<Ravelin::VectorNd>("base-command",base_command);
+
   ctrl->set_data<double>("gait-time",gait_progress*gait_duration);
   OUTLOG(gait_progress*gait_duration,"gait_progress*gait_duration",logERROR);
   ctrl->set_data<double>("gait-proportion",gait_progress);
@@ -933,6 +935,7 @@ void loop(){
   {
     Origin3d command = Origin3d(0,0,0);
     ctrl->get_data<Origin3d>("SE2_command",command);
+	
     command_queue.push_front(command);
     sum_command += command;
   }
@@ -1078,7 +1081,8 @@ void loop(){
       active_feet[foot_names[i]] = false;
   }
   std::vector<double> new_command;
-  if(ctrl->get_data<std::vector<double> >(plugin_namespace+".command",new_command)){
+	//Brad edited this line
+  if(ctrl->get_data<std::vector<double> >("base-command",new_command)){
     go_to = VectorNd(6,&new_command[0]);
   }
   

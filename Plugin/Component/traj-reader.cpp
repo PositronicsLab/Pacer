@@ -107,14 +107,13 @@ Ravelin::VectorNd bodyVals;
   //get the end effector names
   std::vector<std::string> joint_names = ctrl->get_data<std::vector<std::string> >("init.joint.id");
 std::cout << getenv("curr_vel") << std::endl;
-  std::string name=std::string(getenv("name"));
   double currVel=0.3;
 std::cout << currVel << std::endl;
  double init;
 init=std::stod(getenv("curr_line"));
 
    std::ostringstream s;
-    s << getenv("POSE_PATH") << "/" << name << "-" << currVel << "-" << "PoseSet.txt";
+    s << getenv("POSE_PATH") ;
 	std::cout << s.str() << std::endl;
     std::string filename = s.str();
   std::ifstream myfile(filename);
